@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "769875296764",
+    "project_id": "money-pilot-mobile",
+    "storage_bucket": "money-pilot-mobile.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:769875296764:android:728dd63aa68467259f3279",
+        "android_client_info": {
+          "package_name": "prasad.vennam.moneypilot"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "769875296764-g1vjv3aegj9kvl6hqeemnvhmkdpc7id1.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "prasad.vennam.moneypilot",
+            "certificate_hash": "9436f5d0bc4c0ac2851d4b1451ba48489b3c0ce1"
+          }
+        },
+        {
+          "client_id": "769875296764-fi8ktc2uq8u0bpjpjv5chv4q2gmk0mc6.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAu4YqtksottKHtcP1qAI0ir9d9SU4yLIY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "769875296764-fi8ktc2uq8u0bpjpjv5chv4q2gmk0mc6.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

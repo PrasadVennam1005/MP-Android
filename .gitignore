@@ -7,6 +7,7 @@ local.properties
 
 # Log/OS Files
 *.log
+.DS_Store
 
 # Android Studio generated files and folders
 captures/
@@ -16,7 +17,7 @@ captures/
 *.apk
 output-metadata.json
 
-# IntelliJ
+# IntelliJ / Android Studio IDE config
 *.iml
 .idea/
 misc.xml
