@@ -45,6 +45,20 @@ class TransactionViewModel @Inject constructor(
         }
     }
 
+    fun saveCategory(category: Category) {
+        viewModelScope.launch {
+            userPreferences.setSynced(false)
+            repository.insertCategory(category)
+        }
+    }
+
+    fun deleteCategory(category: Category) {
+        viewModelScope.launch {
+            userPreferences.setSynced(false)
+            repository.deleteCategory(category)
+        }
+    }
+
     suspend fun getTransactionById(id: Long): Transaction? {
         return repository.getTransactionById(id)
     }

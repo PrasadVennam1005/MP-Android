@@ -39,20 +39,51 @@ fun SettingsScreen(
     onNavigateToCategories: () -> Unit
 ) {
     val userData by mainViewModel.userData.collectAsState()
-    val currentCurrency by mainViewModel.currency.collectAsState()
-    
+    val isSynced by mainViewModel.isSynced.collectAsState()
+    val spreadsheetId by mainViewModel.spreadsheetId.collectAsState()
+    val currentCurrencyCode by mainViewModel.currency.collectAsState()
+
+    val scope = rememberCoroutineScope()
+    val isGuest = remember(userData) { userData?.email == "guest@moneypilot.app" }
+    val context = LocalContext.current
+    var isSyncing by remember { mutableStateOf(false) }
+
+    var showLogoutWarning by remember { mutableStateOf(false) }
+    var showExportFormatDialog by remember { mutableStateOf(false) }
     var showCurrencySheet by remember { mutableStateOf(false) }
+    val currencySheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    val currencyOptions = listOf(
+        CurrencyOption("INR", "₹", "Indian Rupee", "🇮🇳"),
+        CurrencyOption("USD", "$", "US Dollar", "🇺🇸"),
+        CurrencyOption("EUR", "€", "Euro", "🇪🇺"),
+        CurrencyOption("GBP", "£", "British Pound", "🇬🇧"),
+        CurrencyOption("JPY", "¥", "Japanese Yen", "🇯🇵"),
+        CurrencyOption("AUD", "A$", "Australian Dollar", "🇦🇺"),
+        CurrencyOption("CAD", "C$", "Canadian Dollar", "🇨🇦"),
+        CurrencyOption("CHF", "Fr", "Swiss Franc", "🇨🇭"),
+        CurrencyOption("CNY", "¥", "Chinese Yuan", "🇨🇳"),
+        CurrencyOption("SGD", "S$", "Singapore Dollar", "🇸🇬"),
+        CurrencyOption("AED", "د.إ", "UAE Dirham", "🇦🇪"),
+        CurrencyOption("SAR", "ر.س", "Saudi Riyal", "🇸🇦"),
+        CurrencyOption("ZAR", "R", "South African Rand", "🇿🇦"),
+        CurrencyOption("BRL", "R$", "Brazilian Real", "🇧🇷"),
+        CurrencyOption("MXN", "$", "Mexican Peso", "🇲🇽"),
+        CurrencyOption("KRW", "₩", "South Korean Won", "🇰🇷")
+    )
+    
+    val currentCurrency = currencyOptions.find { it.code == currentCurrencyCode } ?: currencyOptions[0]
 
     if (showCurrencySheet) {
         CurrencySelectionBottomSheet(
-            selectedCurrencyCode = currentCurrency,
+            selectedCurrencyCode = currentCurrency.code,
             onCurrencySelect = { 
-                // 4. Settings Analytics: Track currency change
                 analyticsHelper.logEvent("currency_changed", mapOf(
-                    "from" to currentCurrency,
+                    "from" to currentCurrencyCode,
                     "to" to it
                 ))
-                mainViewModel.setCurrency(it) 
+                mainViewModel.setCurrency(it)
+                showCurrencySheet = false
             },
             onDismiss = { showCurrencySheet = false }
         )
@@ -85,11 +116,10 @@ fun SettingsScreen(
             // General Settings
             item {
                 SettingsGroup(title = "General") {
-                    val currencyInfo = currencies.find { it.code == currentCurrency }
                     SettingsItem(
                         icon = Icons.Rounded.CurrencyExchange,
                         title = "Currency",
-                        subtitle = "${currencyInfo?.flag ?: ""} ${currencyInfo?.name ?: currentCurrency}",
+                        subtitle = "${currentCurrency.name} (${currentCurrency.symbol})",
                         onClick = { showCurrencySheet = true }
                     )
                     SettingsItem(
