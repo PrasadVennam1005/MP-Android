@@ -29,33 +29,49 @@ class TransactionViewModel @Inject constructor(
 
     fun saveTransaction(transaction: Transaction) {
         viewModelScope.launch {
-            userPreferences.setSynced(false)
-            if (transaction.id == 0L) {
-                repository.insertTransaction(transaction)
-            } else {
-                repository.updateTransaction(transaction)
+            try {
+                userPreferences.setSynced(false)
+                if (transaction.id == 0L) {
+                    repository.insertTransaction(transaction)
+                } else {
+                    repository.updateTransaction(transaction)
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("TransactionViewModel", "Error saving transaction", e)
             }
         }
     }
 
     fun deleteTransaction(transaction: Transaction) {
         viewModelScope.launch {
-            userPreferences.setSynced(false)
-            repository.deleteTransaction(transaction)
+            try {
+                userPreferences.setSynced(false)
+                repository.deleteTransaction(transaction)
+            } catch (e: Exception) {
+                android.util.Log.e("TransactionViewModel", "Error deleting transaction", e)
+            }
         }
     }
 
     fun saveCategory(category: Category) {
         viewModelScope.launch {
-            userPreferences.setSynced(false)
-            repository.insertCategory(category)
+            try {
+                userPreferences.setSynced(false)
+                repository.insertCategory(category)
+            } catch (e: Exception) {
+                android.util.Log.e("TransactionViewModel", "Error saving category", e)
+            }
         }
     }
 
     fun deleteCategory(category: Category) {
         viewModelScope.launch {
-            userPreferences.setSynced(false)
-            repository.deleteCategory(category)
+            try {
+                userPreferences.setSynced(false)
+                repository.deleteCategory(category)
+            } catch (e: Exception) {
+                android.util.Log.e("TransactionViewModel", "Error deleting category", e)
+            }
         }
     }
 

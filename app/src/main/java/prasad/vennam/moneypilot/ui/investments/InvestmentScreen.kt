@@ -28,22 +28,39 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import prasad.vennam.moneypilot.data.entity.Investment
 import prasad.vennam.moneypilot.ui.viewmodel.AutoFillState
+import prasad.vennam.moneypilot.util.inRupees
+import prasad.vennam.moneypilot.util.inPaisa
 import prasad.vennam.moneypilot.ui.viewmodel.InvestmentViewModel
 import prasad.vennam.moneypilot.util.FinancePriceFetcher
+import prasad.vennam.moneypilot.util.CurrencyFormatter
+import prasad.vennam.moneypilot.util.LocalCurrencyCode
+import java.util.Currency
 import java.text.SimpleDateFormat
 import java.util.Date
+import prasad.vennam.moneypilot.R
+import androidx.compose.ui.res.stringResource
+import prasad.vennam.moneypilot.data.UserPreferences
+import prasad.vennam.moneypilot.ui.components.ProfileIconButton
+import prasad.vennam.moneypilot.ui.dashboard.SyncState
+import prasad.vennam.moneypilot.ui.dashboard.SyncStatusIndicator
+import androidx.compose.material3.TopAppBar
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun InvestmentScreen(
     viewModel: InvestmentViewModel,
+    userData: UserPreferences.UserData?,
+    syncState: SyncState?,
+    onProfileClick: () -> Unit,
 ) {
     val investments by viewModel.allInvestments.collectAsState()
     var showFormSheet by remember { mutableStateOf(false) }
     var investmentToEdit by remember { mutableStateOf<Investment?>(null) }
+    val currencyCode = LocalCurrencyCode.current
 
-    val totalInvested = remember(investments) { investments.sumOf { it.investedAmount } }
-    val totalCurrent = remember(investments) { investments.sumOf { it.currentValue } }
+    val investmentSummary by viewModel.investmentSummary.collectAsState()
+    val totalInvested = investmentSummary.totalInvested
+    val totalCurrent = investmentSummary.totalCurrent
     val totalGain = remember(totalCurrent, totalInvested) { totalCurrent - totalInvested }
     val gainPercent = remember(totalGain, totalInvested) {
         if (totalInvested > 0) (totalGain / totalInvested) * 100 else 0.0
@@ -51,14 +68,17 @@ fun InvestmentScreen(
 
     Scaffold(
         topBar = {
-            CenterAlignedTopAppBar(
+            TopAppBar(
                 title = {
                     Text(
-                        "Investments",
+                        stringResource(R.string.investments),
                         style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
                     )
                 },
                 actions = {
+                    if (syncState != null) {
+                        SyncStatusIndicator(syncState)
+                    }
                     val isRefreshing by viewModel.isRefreshing.collectAsState()
                     if (isRefreshing) {
                         CircularProgressIndicator(
@@ -72,10 +92,11 @@ fun InvestmentScreen(
                         IconButton(onClick = { viewModel.refreshAllPrices() }) {
                             Icon(
                                 imageVector = Icons.Rounded.Refresh,
-                                contentDescription = "Refresh prices"
+                                contentDescription = stringResource(R.string.refresh_prices)
                             )
                         }
                     }
+                    ProfileIconButton(userData = userData, onClick = onProfileClick)
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.background,
@@ -96,7 +117,7 @@ fun InvestmentScreen(
                 contentColor = MaterialTheme.colorScheme.onPrimary,
                 shape = MaterialTheme.shapes.large
             ) {
-                Icon(Icons.Rounded.Add, contentDescription = "Add Investment")
+                Icon(Icons.Rounded.Add, contentDescription = stringResource(R.string.add_investment))
             }
         }
     ) { innerPadding ->
@@ -113,7 +134,7 @@ fun InvestmentScreen(
 
             item {
                 Text(
-                    "Your Portfolio",
+                    stringResource(R.string.your_portfolio),
                     style = MaterialTheme.typography.titleLarge,
                     modifier = Modifier.padding(vertical = 8.dp)
                 )
@@ -152,12 +173,13 @@ fun InvestmentScreen(
                             Investment(
                                 name = name,
                                 type = type,
-                                investedAmount = invested,
-                                currentValue = current,
+                                investedAmount = invested.inPaisa,
+                                currentValue = current.inPaisa,
                                 symbol = symbol,
                                 quantity = qty,
                                 interestRate = rate,
-                                startDate = start
+                                startDate = start,
+                                currencyCode = currencyCode
                             )
                         )
                     } else {
@@ -165,8 +187,8 @@ fun InvestmentScreen(
                             investmentToEdit!!.copy(
                                 name = name,
                                 type = type,
-                                investedAmount = invested,
-                                currentValue = current,
+                                investedAmount = invested.inPaisa,
+                                currentValue = current.inPaisa,
                                 symbol = symbol,
                                 quantity = qty,
                                 interestRate = rate,
@@ -186,6 +208,7 @@ fun InvestmentScreen(
 
 @Composable
 fun InvestmentSummaryCard(totalValue: Double, gain: Double, percent: Double) {
+    val currencyCode = LocalCurrencyCode.current
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
@@ -194,13 +217,13 @@ fun InvestmentSummaryCard(totalValue: Double, gain: Double, percent: Double) {
     ) {
         Column(modifier = Modifier.padding(24.dp)) {
             Text(
-                "TOTAL PORTFOLIO VALUE",
+                stringResource(R.string.total_portfolio_value),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f),
                 fontWeight = FontWeight.Bold
             )
             Text(
-                "₹${String.format(LocalLocale.current.platformLocale, "%,.0f", totalValue)}",
+                CurrencyFormatter.format(totalValue, currencyCode),
                 style = MaterialTheme.typography.displayMedium,
                 color = MaterialTheme.colorScheme.onPrimaryContainer,
                 fontWeight = FontWeight.SemiBold
@@ -214,14 +237,10 @@ fun InvestmentSummaryCard(totalValue: Double, gain: Double, percent: Double) {
                     modifier = Modifier.size(20.dp)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
+                val formattedGain = CurrencyFormatter.format(kotlin.math.abs(gain), currencyCode)
+                val sign = if (gain >= 0) "+" else "-"
                 Text(
-                    text = "${if (gain >= 0) "+" else ""}₹${
-                        String.format(
-                            LocalLocale.current.platformLocale,
-                            "%,.0f",
-                            gain
-                        )
-                    } (${String.format(LocalLocale.current.platformLocale, "%.1f", percent)}%)",
+                    text = "$sign$formattedGain (${String.format(LocalLocale.current.platformLocale, "%.1f", percent)}%)",
                     style = MaterialTheme.typography.titleMedium,
                     color = if (gain >= 0) Color(0xFF4CAF50) else MaterialTheme.colorScheme.error,
                     fontWeight = FontWeight.SemiBold
@@ -238,6 +257,7 @@ fun SwipeableInvestmentCard(
     onEdit: () -> Unit,
     onDelete: () -> Unit,
 ) {
+    val currencyCode = LocalCurrencyCode.current
     val dismissState = rememberSwipeToDismissBoxState()
 
     LaunchedEffect(dismissState.currentValue) {
@@ -294,9 +314,10 @@ fun SwipeableInvestmentCard(
 
 @Composable
 fun InvestmentItem(investment: Investment) {
-    val gain = investment.currentValue - investment.investedAmount
-    val gainPercent =
-        if (investment.investedAmount > 0) (gain / investment.investedAmount) * 100 else 0.0
+    val currencyCode = LocalCurrencyCode.current
+    val gain = investment.currentValue.inRupees - investment.investedAmount.inRupees
+    val gainPercentage =
+        if (investment.investedAmount > 0) (gain / investment.investedAmount.inRupees) * 100 else 0.0
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -337,13 +358,7 @@ fun InvestmentItem(investment: Investment) {
 
             Column(horizontalAlignment = Alignment.End) {
                 Text(
-                    "₹${
-                        String.format(
-                            LocalLocale.current.platformLocale,
-                            "%,.0f",
-                            investment.currentValue
-                        )
-                    }",
+                    CurrencyFormatter.format(investment.currentValue.inRupees, investment.currencyCode),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold
                 )
@@ -352,7 +367,7 @@ fun InvestmentItem(investment: Investment) {
                         String.format(
                             LocalLocale.current.platformLocale,
                             "%.1f",
-                            gainPercent
+                            gainPercentage
                         )
                     }%",
                     style = MaterialTheme.typography.labelSmall,
@@ -374,10 +389,11 @@ fun InvestmentFormBottomSheet(
 ) {
     var name by remember { mutableStateOf(initialInvestment?.name ?: "") }
     var type by remember { mutableStateOf(initialInvestment?.type ?: "Stock") }
-    var invested by remember { mutableStateOf(initialInvestment?.investedAmount?.toString() ?: "") }
     
     // Tracking fields
     var symbol by remember { mutableStateOf(initialInvestment?.symbol ?: "") }
+    var invested by remember { mutableStateOf(initialInvestment?.investedAmount?.inRupees?.toString()?.removeSuffix(".0") ?: "") }
+    var current by remember { mutableStateOf(initialInvestment?.currentValue?.inRupees?.toString()?.removeSuffix(".0") ?: "") }
     var quantity by remember { mutableStateOf(initialInvestment?.quantity?.toString() ?: "") }
     var interestRate by remember { mutableStateOf(initialInvestment?.interestRate?.toString() ?: "") }
     var startDate by remember { mutableLongStateOf(initialInvestment?.startDate ?: System.currentTimeMillis()) }
@@ -410,6 +426,9 @@ fun InvestmentFormBottomSheet(
 
     val locale = LocalLocale.current.platformLocale
     val dateFormatter = remember(locale) { SimpleDateFormat("dd MMM, yyyy", locale) }
+    
+    val currencyCode = LocalCurrencyCode.current
+    val currencySymbol = remember(currencyCode) { Currency.getInstance(currencyCode).symbol }
 
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
@@ -460,7 +479,7 @@ fun InvestmentFormBottomSheet(
                 ) {
                     Icon(
                         Icons.Rounded.Close,
-                        contentDescription = "Close",
+                        contentDescription = stringResource(R.string.close),
                         modifier = Modifier.size(18.dp)
                     )
                 }
@@ -479,8 +498,8 @@ fun InvestmentFormBottomSheet(
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
-                    label = { Text("Investment Name") },
-                    placeholder = { Text("e.g. Bitcoin, Apple Stocks") },
+                    label = { Text(stringResource(R.string.investment_name)) },
+                    placeholder = { Text(stringResource(R.string.eg_bitcoin_apple_stocks)) },
                     leadingIcon = {
                         Icon(
                             Icons.AutoMirrored.Rounded.Label,
@@ -498,7 +517,7 @@ fun InvestmentFormBottomSheet(
                         value = type,
                         onValueChange = {},
                         readOnly = true,
-                        label = { Text("Asset Type") },
+                        label = { Text(stringResource(R.string.asset_type)) },
                         leadingIcon = {
                             AssetTypeIcon(
                                 type = type,
@@ -531,15 +550,15 @@ fun InvestmentFormBottomSheet(
                         label = {
                             Text(
                                 when (type) {
-                                    "FD" -> "Principal Invested (₹)"
-                                    "Real Estate" -> "Purchase Price (₹)"
-                                    else -> "Invested (₹)"
+                                    "FD" -> "Principal Invested"
+                                    "Real Estate" -> "Purchase Price"
+                                    else -> "Invested"
                                 }
                             )
                         },
                         leadingIcon = {
                             Text(
-                                "₹",
+                                currencySymbol,
                                 color = MaterialTheme.colorScheme.primary,
                                 fontWeight = FontWeight.Bold
                             )
@@ -629,7 +648,7 @@ fun InvestmentFormBottomSheet(
                                         }) {
                                             Icon(
                                                 Icons.Rounded.Close,
-                                                contentDescription = "Clear",
+                                                contentDescription = stringResource(R.string.clear),
                                                 modifier = Modifier.size(16.dp)
                                             )
                                         }
@@ -655,7 +674,7 @@ fun InvestmentFormBottomSheet(
                                     if (it.isEmpty() || it.toDoubleOrNull() != null) quantity = it
                                 },
                                 label = { Text(if (type == "Mutual Fund") "Units" else "Quantity") },
-                                placeholder = { Text("e.g. 1.5") },
+                                placeholder = { Text(stringResource(R.string.eg_15)) },
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                                 shape = MaterialTheme.shapes.large,
                                 modifier = Modifier.weight(0.8f)
@@ -723,7 +742,7 @@ fun InvestmentFormBottomSheet(
                                             modifier = Modifier.size(16.dp)
                                         )
                                         Spacer(modifier = Modifier.width(8.dp))
-                                        Text("Auto-calculate quantity from invested date price")
+                                        Text(stringResource(R.string.autocalculate_quantity_from_invested_date))
                                     }
                                 }
                                 AutoFillState.Loading -> {
@@ -801,7 +820,7 @@ fun InvestmentFormBottomSheet(
                                                 modifier = Modifier.size(18.dp)
                                             )
                                             Text(
-                                                "Price not available for this symbol/date. Enter quantity manually.",
+                                                stringResource(R.string.price_not_available_for_this),
                                                 style = MaterialTheme.typography.bodySmall,
                                                 color = MaterialTheme.colorScheme.error
                                             )
@@ -825,7 +844,7 @@ fun InvestmentFormBottomSheet(
                                 if (type == "FD") "Interest Rate (% Annual)" else "Appreciation Rate (% Year)"
                             )
                         },
-                        placeholder = { Text("e.g. 7.5") },
+                        placeholder = { Text(stringResource(R.string.eg_75)) },
                         leadingIcon = {
                             Icon(Icons.Rounded.Percent, null, tint = MaterialTheme.colorScheme.primary)
                         },
@@ -853,7 +872,7 @@ fun InvestmentFormBottomSheet(
                                 startDate = finalStart
                             )
                         } else {
-                            initialInvestment?.currentValue ?: investedValue
+                            initialInvestment?.currentValue?.inRupees ?: investedValue
                         }
 
                         onSave(
@@ -875,7 +894,7 @@ fun InvestmentFormBottomSheet(
                 ) {
                     Icon(Icons.Rounded.Check, null)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Save Investment", style = MaterialTheme.typography.titleMedium)
+                    Text(stringResource(R.string.save_investment), style = MaterialTheme.typography.titleMedium)
                 }
             }
         }
@@ -887,7 +906,7 @@ fun InvestmentFormBottomSheet(
             ) {
                 Column(modifier = Modifier.padding(bottom = 32.dp)) {
                     Text(
-                        "Select Asset Type",
+                        stringResource(R.string.select_asset_type),
                         style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
                         modifier = Modifier.padding(24.dp)
                     )
@@ -920,10 +939,10 @@ fun InvestmentFormBottomSheet(
                     TextButton(onClick = {
                         datePickerState.selectedDateMillis?.let { startDate = it }
                         showStartDatePicker = false
-                    }) { Text("OK") }
+                    }) { Text(stringResource(R.string.ok)) }
                 },
                 dismissButton = {
-                    TextButton(onClick = { showStartDatePicker = false }) { Text("Cancel") }
+                    TextButton(onClick = { showStartDatePicker = false }) { Text(stringResource(R.string.cancel)) }
                 }
             ) {
                 DatePicker(state = datePickerState)
@@ -949,12 +968,12 @@ fun EmptyInvestmentState() {
         )
         Spacer(modifier = Modifier.height(16.dp))
         Text(
-            "Portfolio is empty",
+            stringResource(R.string.portfolio_is_empty),
             style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.outline
         )
         Text(
-            "Tap + to add your first investment",
+            stringResource(R.string.tap_to_add_your_first),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.outline.copy(alpha = 0.7f)
         )

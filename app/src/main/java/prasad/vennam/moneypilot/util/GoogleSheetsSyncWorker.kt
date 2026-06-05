@@ -44,25 +44,14 @@ class GoogleSheetsSyncWorker(
             return Result.success()
         }
 
-        val transactions = repository.allTransactions.first()
-        val categories = repository.allCategories.first()
-        val budgets = repository.allBudgets.first()
-        val investments = repository.allInvestments.first()
-
-        Log.d("GoogleSheetsSyncWorker", "doWork: Performing sheet sync for ${userData.email}")
-        val syncResult = GoogleSheetsSyncHelper.performSync(
+        Log.d("GoogleSheetsSyncWorker", "doWork: Performing 2-way sheet sync for ${userData.email}")
+        val syncResult = GoogleSheetsSyncHelper.performTwoWaySync(
             context = appContext,
             email = userData.email,
-            transactions = transactions,
-            categories = categories,
-            budgets = budgets,
-            investments = investments,
+            repository = repository,
             spreadsheetId = spreadsheetId,
-            onSpreadsheetIdCreated = { id ->
+            onSpreadsheetIdFound = { id ->
                 userPreferences.saveSpreadsheetId(id)
-            },
-            onSpreadsheetIdCleared = {
-                userPreferences.clearSpreadsheetId()
             }
         )
 
@@ -83,6 +72,10 @@ class GoogleSheetsSyncWorker(
                 } else {
                     Result.failure()
                 }
+            }
+            is SyncResult.NoBackupFound -> {
+                Log.w("GoogleSheetsSyncWorker", "doWork: No backup found.")
+                Result.failure()
             }
         }
     }

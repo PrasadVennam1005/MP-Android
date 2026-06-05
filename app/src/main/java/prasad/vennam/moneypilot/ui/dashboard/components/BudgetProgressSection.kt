@@ -21,12 +21,16 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import prasad.vennam.moneypilot.R
 import prasad.vennam.moneypilot.ui.viewmodel.BudgetProgress
+import prasad.vennam.moneypilot.util.inRupees
+import prasad.vennam.moneypilot.util.CurrencyFormatter
+import prasad.vennam.moneypilot.util.LocalCurrencyCode
 
 @Composable
 fun BudgetProgressSection(
     budgetProgresses: List<BudgetProgress>,
     unknownString: String
 ) {
+    val currencyCode = LocalCurrencyCode.current
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         budgetProgresses.take(3).forEach { budgetProgress ->
             val budget = budgetProgress.budget
@@ -50,14 +54,10 @@ fun BudgetProgressSection(
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.Bold
                         )
-                        Text(buildString {
-                            append("₹")
-                            append(String.format(buildString {
-                                append("%.0f")
-                            }, spent))
-                            append(" / ₹")
-                            append(String.format("%.0f", budget.amount))
-                        }, style = MaterialTheme.typography.labelMedium)
+                        Text(
+                            "${CurrencyFormatter.format(spent, currencyCode)} / ${CurrencyFormatter.format(budgetProgress.limit, currencyCode)}",
+                            style = MaterialTheme.typography.labelMedium
+                        )
                     }
                     Spacer(modifier = Modifier.height(8.dp))
                     LinearProgressIndicator(

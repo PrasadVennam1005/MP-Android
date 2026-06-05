@@ -14,7 +14,7 @@ data class ParsedReceipt(
 object ReceiptParser {
 
     private val amountRegex = Pattern.compile(
-        "(?i)(?:₹|rs\\.?|inr)?\\s*([\\d,]+(?:\\.\\d{1,2})?)"
+        "(?i)(?:\\p{Sc}|rs\\.?|inr)?\\s*([\\d,]+(?:\\.\\d{1,2})?)"
     )
 
     private val merchantIgnoreWords = setOf(
@@ -118,7 +118,7 @@ object ReceiptParser {
                     }
                 }
 
-                if (line.contains("₹")) score += 20
+                if (line.contains(Regex("\\p{Sc}"))) score += 20
                 if (line.contains("Rs", true)) score += 20
                 if (line.contains("INR", true)) score += 20
 

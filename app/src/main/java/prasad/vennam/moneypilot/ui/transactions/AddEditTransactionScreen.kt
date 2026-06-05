@@ -17,6 +17,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.automirrored.rounded.TrendingUp
 import androidx.compose.material.icons.rounded.CalendarToday
 import androidx.compose.material.icons.rounded.Category
 import androidx.compose.material.icons.rounded.Check
@@ -79,6 +80,7 @@ import androidx.compose.ui.unit.dp
 import prasad.vennam.moneypilot.data.entity.Transaction
 import prasad.vennam.moneypilot.data.entity.TransactionType
 import prasad.vennam.moneypilot.ui.viewmodel.TransactionViewModel
+import prasad.vennam.moneypilot.util.LocalCurrencyCode
 import prasad.vennam.moneypilot.util.AnalyticsHelper
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -100,6 +102,8 @@ fun AddEditTransactionScreen(
     var paymentMode by remember { mutableStateOf("Cash") }
     var timestamp by remember { mutableStateOf(System.currentTimeMillis()) }
 
+    val currencyCode = LocalCurrencyCode.current
+
     var showDatePicker by remember { mutableStateOf(false) }
     var showCategoryMenu by remember { mutableStateOf(false) }
     var showPaymentMenu by remember { mutableStateOf(false) }
@@ -116,7 +120,7 @@ fun AddEditTransactionScreen(
         if (transactionId != null && transactionId != 0L) {
             val transaction = viewModel.getTransactionById(transactionId)
             transaction?.let {
-                amount = it.amount.toString()
+                amount = (it.amount / 100.0).let { value -> if (value % 1 == 0.0) value.toLong().toString() else value.toString() }
                 note = it.note
                 type = it.type
                 categoryId = it.categoryId
@@ -225,13 +229,14 @@ fun AddEditTransactionScreen(
 
                     val transaction = Transaction(
                         id = transactionId ?: 0L,
-                        amount = amountValue,
+                        amount = (amountValue * 100).toLong(),
                         note = note,
                         timestamp = timestamp,
                         type = type,
                         categoryId = categoryId,
                         subCategory = subCategory,
-                        paymentMode = paymentMode
+                        paymentMode = paymentMode,
+                        currencyCode = currencyCode
                     )
                     viewModel.saveTransaction(transaction)
                     onNavigateBack()
@@ -371,7 +376,7 @@ fun PremiumAmountField(value: String, onValueChange: (String) -> Unit, color: Co
                     unfocusedIndicatorColor = Color.Transparent
                 ),
                 modifier = Modifier.fillMaxWidth(),
-                prefix = { Text("₹", style = MaterialTheme.typography.displayMedium.copy(color = color)) }
+                prefix = { Text(java.util.Currency.getInstance(LocalCurrencyCode.current).symbol, style = MaterialTheme.typography.displayMedium.copy(color = color)) }
             )
         }
     }
@@ -445,7 +450,7 @@ fun CategoryIcon(category: prasad.vennam.moneypilot.data.entity.Category) {
                 "school" -> Icons.Rounded.School
                 "flight" -> Icons.Rounded.Flight
                 "receipt" -> Icons.Rounded.Receipt
-                "trending_up" -> Icons.Rounded.TrendingUp
+                "trending_up" -> Icons.AutoMirrored.Rounded.TrendingUp
                 else -> Icons.Rounded.Category
             }
             Icon(icon, contentDescription = null, tint = Color(category.color), modifier = Modifier.size(16.dp))

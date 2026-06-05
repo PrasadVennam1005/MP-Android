@@ -28,6 +28,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import prasad.vennam.moneypilot.R
+import prasad.vennam.moneypilot.util.CurrencyFormatter
+import prasad.vennam.moneypilot.util.LocalCurrencyCode
 
 @Composable
 fun KPISection(
@@ -38,6 +40,7 @@ fun KPISection(
     investment: Double,
     currentInvestmentValue: Double,
 ) {
+    val currencyCode = LocalCurrencyCode.current
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -49,6 +52,7 @@ fun KPISection(
                 icon = Icons.Rounded.Today,
                 containerColor = MaterialTheme.colorScheme.errorContainer,
                 contentColor = MaterialTheme.colorScheme.onErrorContainer,
+                currencyCode = currencyCode,
                 modifier = Modifier.weight(1f)
             )
             KPICard(
@@ -57,6 +61,7 @@ fun KPISection(
                 icon = Icons.Rounded.AccountBalance,
                 containerColor = MaterialTheme.colorScheme.primaryContainer,
                 contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                currencyCode = currencyCode,
                 modifier = Modifier.weight(1f)
             )
         }
@@ -70,6 +75,7 @@ fun KPISection(
                 icon = Icons.Rounded.ArrowUpward,
                 containerColor = MaterialTheme.colorScheme.secondaryContainer,
                 contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                currencyCode = currencyCode,
                 modifier = Modifier.weight(1f)
             )
             KPICard(
@@ -78,6 +84,7 @@ fun KPISection(
                 icon = Icons.Rounded.ArrowDownward,
                 containerColor = MaterialTheme.colorScheme.tertiaryContainer,
                 contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
+                currencyCode = currencyCode,
                 modifier = Modifier.weight(1f)
             )
         }
@@ -91,6 +98,7 @@ fun KPISection(
                 icon = Icons.Rounded.Savings,
                 containerColor = MaterialTheme.colorScheme.primaryContainer,
                 contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                currencyCode = currencyCode,
                 modifier = Modifier.weight(1f)
             )
             KPICard(
@@ -99,6 +107,7 @@ fun KPISection(
                 icon = Icons.Rounded.AddChart,
                 containerColor = MaterialTheme.colorScheme.tertiaryContainer,
                 contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
+                currencyCode = currencyCode,
                 modifier = Modifier.weight(1f)
             )
         }
@@ -112,6 +121,7 @@ fun KPICard(
     icon: ImageVector,
     containerColor: Color,
     contentColor: Color,
+    currencyCode: String,
     modifier: Modifier = Modifier,
 ) {
     Card(
@@ -133,10 +143,7 @@ fun KPICard(
                 color = contentColor.copy(alpha = 0.7f)
             )
             Text(
-                buildString {
-                    append("₹")
-                    append(String.format("%,.0f", amount))
-                },
+                CurrencyFormatter.format(amount, currencyCode),
                 style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
                 color = contentColor
             )

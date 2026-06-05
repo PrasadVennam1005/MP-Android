@@ -30,6 +30,10 @@ class UserPreferences @Inject constructor(private val context: Context) {
     private val isSyncedKey = booleanPreferencesKey("is_synced")
     private val spreadsheetIdKey = androidx.datastore.preferences.core.stringPreferencesKey("spreadsheet_id")
     private val currencyKey = androidx.datastore.preferences.core.stringPreferencesKey("selected_currency")
+    private val financialGoalKey = androidx.datastore.preferences.core.stringPreferencesKey("financial_goal")
+    private val monthlySavingsTargetKey = androidx.datastore.preferences.core.longPreferencesKey("monthly_savings_target")
+    private val isOnboardingCompletedKey = booleanPreferencesKey("is_onboarding_completed")
+    private val themeModeKey = androidx.datastore.preferences.core.intPreferencesKey("theme_mode")
 
     val isLoggedIn: Flow<Boolean> = context.dataStore.data
         .map { preferences ->
@@ -39,6 +43,26 @@ class UserPreferences @Inject constructor(private val context: Context) {
     val currency: Flow<String> = context.dataStore.data
         .map { preferences ->
             preferences[currencyKey] ?: "INR"
+        }
+
+    val financialGoal: Flow<String> = context.dataStore.data
+        .map { preferences ->
+            preferences[financialGoalKey] ?: "Track Expenses"
+        }
+
+    val monthlySavingsTarget: Flow<Long> = context.dataStore.data
+        .map { preferences ->
+            preferences[monthlySavingsTargetKey] ?: 20L
+        }
+
+    val isOnboardingCompleted: Flow<Boolean> = context.dataStore.data
+        .map { preferences ->
+            preferences[isOnboardingCompletedKey] ?: false
+        }
+
+    val themeMode: Flow<Int> = context.dataStore.data
+        .map { preferences ->
+            preferences[themeModeKey] ?: 0 // Default to SYSTEM (0)
         }
 
     val isSynced: Flow<Boolean> = context.dataStore.data
@@ -114,6 +138,26 @@ class UserPreferences @Inject constructor(private val context: Context) {
     suspend fun setCurrency(currencyCode: String) {
         context.dataStore.edit { preferences ->
             preferences[currencyKey] = currencyCode
+        }
+    }
+
+    suspend fun savePreferences(goal: String, target: Long) {
+        context.dataStore.edit { preferences ->
+            preferences[financialGoalKey] = goal
+            preferences[monthlySavingsTargetKey] = target
+            preferences[isOnboardingCompletedKey] = true
+        }
+    }
+
+    suspend fun setOnboardingCompleted(completed: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[isOnboardingCompletedKey] = completed
+        }
+    }
+
+    suspend fun setThemeMode(mode: Int) {
+        context.dataStore.edit { preferences ->
+            preferences[themeModeKey] = mode
         }
     }
 }

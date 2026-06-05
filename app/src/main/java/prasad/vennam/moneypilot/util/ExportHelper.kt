@@ -16,7 +16,8 @@ object ExportHelper {
     fun exportToCsv(
         transactions: List<Transaction>,
         categories: List<Category>,
-        outputStream: OutputStream
+        outputStream: OutputStream,
+        currencyCode: String
     ) {
         val writer = outputStream.bufferedWriter()
         writer.write("Date,Type,Category,Payment Mode,Amount,Note\n")
@@ -35,7 +36,7 @@ object ExportHelper {
                 escapedNote
             }
 
-            writer.write("$dateStr,${transaction.type.name},$categoryName,${transaction.paymentMode},${transaction.amount},$formattedNote\n")
+            writer.write("$dateStr,${transaction.type.name},$categoryName,${transaction.paymentMode},${transaction.amount.inRupees},$formattedNote\n")
         }
         writer.flush()
     }
@@ -43,7 +44,8 @@ object ExportHelper {
     fun exportToPdf(
         transactions: List<Transaction>,
         categories: List<Category>,
-        outputStream: OutputStream
+        outputStream: OutputStream,
+        currencyCode: String
     ) {
         val document = PdfDocument()
         val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
@@ -117,7 +119,7 @@ object ExportHelper {
 
             val dateStr = dateFormat.format(Date(transaction.timestamp))
             val categoryName = categories.find { it.id == transaction.categoryId }?.name ?: "Other"
-            val amountStr = String.format("₹%,.2f", transaction.amount)
+            val amountStr = CurrencyFormatter.format(transaction.amount.inRupees, currencyCode)
 
             // Adjust amount color based on transaction type (Green for Income, Red for Expense)
             val amountPaint = Paint(textPaint).apply {

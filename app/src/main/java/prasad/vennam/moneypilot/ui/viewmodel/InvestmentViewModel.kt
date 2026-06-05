@@ -15,7 +15,16 @@ import prasad.vennam.moneypilot.data.UserPreferences
 import prasad.vennam.moneypilot.data.entity.Investment
 import prasad.vennam.moneypilot.data.repository.MoneyPilotRepository
 import prasad.vennam.moneypilot.util.FinancePriceFetcher
+import prasad.vennam.moneypilot.util.inPaisa
+import prasad.vennam.moneypilot.util.inRupees
 import javax.inject.Inject
+import prasad.vennam.moneypilot.data.repository.ExchangeRateRepository
+import kotlinx.coroutines.flow.combine
+
+data class InvestmentSummary(
+    val totalInvested: Double = 0.0,
+    val totalCurrent: Double = 0.0
+)
 
 // ─── Auto-fill quantity state ─────────────────────────────────────────────────
 sealed class AutoFillState {
@@ -28,11 +37,31 @@ sealed class AutoFillState {
 @HiltViewModel
 class InvestmentViewModel @Inject constructor(
     private val repository: MoneyPilotRepository,
+    private val exchangeRateRepo: ExchangeRateRepository,
     private val userPreferences: UserPreferences
 ) : ViewModel() {
 
     val allInvestments: StateFlow<List<Investment>> = repository.allInvestments
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val investmentSummary: StateFlow<InvestmentSummary> = combine(
+        repository.allInvestments,
+        exchangeRateRepo.allRates,
+        userPreferences.currency
+    ) { investments, rates, currentCurrency ->
+        fun convertAmount(amountInPaisa: Long, fromCurrency: String): Double {
+            if (fromCurrency == currentCurrency) return amountInPaisa / 100.0
+            val rateFrom = rates[fromCurrency] ?: 1.0
+            val rateTo = rates[currentCurrency] ?: 1.0
+            val amountInUSD = (amountInPaisa / 100.0) / rateFrom
+            return amountInUSD * rateTo
+        }
+
+        val totalInvested = investments.sumOf { convertAmount(it.investedAmount, it.currencyCode) }
+        val totalCurrent = investments.sumOf { convertAmount(it.currentValue, it.currencyCode) }
+
+        InvestmentSummary(totalInvested, totalCurrent)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), InvestmentSummary())
 
     // ── Live price refresh ────────────────────────────────────────────────────
     private val _isRefreshing = MutableStateFlow(false)
@@ -160,7 +189,7 @@ class InvestmentViewModel @Inject constructor(
                         val start = investment.startDate ?: 0L
                         if (rate > 0.0 && start > 0L) {
                             FinancePriceFetcher.calculateCompoundedValue(
-                                investedAmount = investment.investedAmount,
+                                investedAmount = investment.investedAmount.inRupees,
                                 annualRate = rate,
                                 startDate = start
                             )
@@ -168,12 +197,20 @@ class InvestmentViewModel @Inject constructor(
                     }
                     else -> null
                 }
-                if (updatedValue != null && updatedValue != investment.currentValue) {
-                    repository.updateInvestment(investment.copy(currentValue = updatedValue))
-                    updatedAny = true
+                try {
+                    if (updatedValue != null && updatedValue.inPaisa != investment.currentValue) {
+                        repository.updateInvestment(investment.copy(currentValue = updatedValue.inPaisa))
+                        updatedAny = true
+                    }
+                } catch (e: Exception) {
+                    android.util.Log.e("InvestmentViewModel", "Error updating investment", e)
                 }
             }
-            if (updatedAny) userPreferences.setSynced(false)
+            try {
+                if (updatedAny) userPreferences.setSynced(false)
+            } catch (e: Exception) {
+                android.util.Log.e("InvestmentViewModel", "Error refreshing investments", e)
+            }
             _isRefreshing.value = false
         }
     }
@@ -183,19 +220,27 @@ class InvestmentViewModel @Inject constructor(
     // ──────────────────────────────────────────────────────────────────────────
     fun saveInvestment(investment: Investment) {
         viewModelScope.launch {
-            userPreferences.setSynced(false)
-            if (investment.id == 0L) {
-                repository.insertInvestment(investment)
-            } else {
-                repository.updateInvestment(investment)
+            try {
+                userPreferences.setSynced(false)
+                if (investment.id == 0L) {
+                    repository.insertInvestment(investment)
+                } else {
+                    repository.updateInvestment(investment)
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("InvestmentViewModel", "Error saving investment", e)
             }
         }
     }
 
     fun deleteInvestment(investment: Investment) {
         viewModelScope.launch {
-            userPreferences.setSynced(false)
-            repository.deleteInvestment(investment)
+            try {
+                userPreferences.setSynced(false)
+                repository.deleteInvestment(investment)
+            } catch (e: Exception) {
+                android.util.Log.e("InvestmentViewModel", "Error deleting investment", e)
+            }
         }
     }
 }

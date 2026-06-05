@@ -32,6 +32,8 @@ import androidx.compose.ui.unit.dp
 import prasad.vennam.moneypilot.R
 import prasad.vennam.moneypilot.data.entity.Category
 import prasad.vennam.moneypilot.ui.components.SpendingDonutChart
+import prasad.vennam.moneypilot.util.CurrencyFormatter
+import prasad.vennam.moneypilot.util.LocalCurrencyCode
 
 @Composable
 fun ExpenseChartCard(spendingByCategory: Map<Category?, Double>, colors: List<Color>, unknownString: String) {
@@ -39,6 +41,7 @@ fun ExpenseChartCard(spendingByCategory: Map<Category?, Double>, colors: List<Co
     val stringKeyedMap = spendingByCategory.mapKeys { it.key?.name ?: unknownString }
     val sortedList = stringKeyedMap.toList().sortedByDescending { it.second }
     val displayList = sortedList.take(10)
+    val currencyCode = LocalCurrencyCode.current
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -65,10 +68,7 @@ fun ExpenseChartCard(spendingByCategory: Map<Category?, Double>, colors: List<Co
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
-                        buildString {
-                            append("₹")
-                            append(String.format("%,.0f", totalExpense))
-                        },
+                        CurrencyFormatter.format(totalExpense, currencyCode),
                         style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
                     )
                 }
@@ -86,6 +86,7 @@ fun ExpenseChartCard(spendingByCategory: Map<Category?, Double>, colors: List<Co
                                 name = pair.first,
                                 color = colors.getOrElse(colorIndex) { Color.Gray },
                                 amount = pair.second,
+                                currencyCode = currencyCode,
                                 modifier = Modifier.weight(1f)
                             )
                         }
@@ -105,6 +106,7 @@ fun CategoryBreakdownBottomSheet(
     unknownString: String,
     onDismiss: () -> Unit,
 ) {
+    val currencyCode = LocalCurrencyCode.current
     val stringKeyedMap = spendingByCategory.mapKeys { it.key?.name ?: unknownString }
     val sortedList = stringKeyedMap.toList().sortedByDescending { it.second }
     ModalBottomSheet(onDismissRequest = onDismiss, dragHandle = null) {
@@ -122,12 +124,13 @@ fun CategoryBreakdownBottomSheet(
                 verticalArrangement = Arrangement.spacedBy(12.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                items(sortedList) { pair ->
+                items(sortedList, key = { it.first }) { pair ->
                     val colorIndex = sortedList.indexOf(pair)
                     LegendItem(
                         name = pair.first,
                         color = colors.getOrElse(colorIndex) { Color.Gray },
                         amount = pair.second,
+                        currencyCode = currencyCode,
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
@@ -137,7 +140,7 @@ fun CategoryBreakdownBottomSheet(
 }
 
 @Composable
-fun LegendItem(name: String, color: Color, amount: Double, modifier: Modifier = Modifier) {
+fun LegendItem(name: String, color: Color, amount: Double, currencyCode: String, modifier: Modifier = Modifier) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = modifier
@@ -158,10 +161,11 @@ fun LegendItem(name: String, color: Color, amount: Double, modifier: Modifier = 
                 overflow = TextOverflow.Ellipsis,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            Text(buildString {
-                append("₹")
-                append(String.format("%,.0f", amount))
-            }, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+            Text(
+                CurrencyFormatter.format(amount, currencyCode),
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Bold
+            )
         }
     }
 }

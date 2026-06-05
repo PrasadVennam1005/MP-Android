@@ -78,9 +78,19 @@ import prasad.vennam.moneypilot.data.entity.Category
 import prasad.vennam.moneypilot.data.entity.Transaction
 import prasad.vennam.moneypilot.data.entity.TransactionType
 import prasad.vennam.moneypilot.ui.viewmodel.TransactionViewModel
+import prasad.vennam.moneypilot.util.inRupees
+import prasad.vennam.moneypilot.util.CurrencyFormatter
+import prasad.vennam.moneypilot.util.LocalCurrencyCode
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import prasad.vennam.moneypilot.R
+import androidx.compose.ui.res.stringResource
+import prasad.vennam.moneypilot.data.UserPreferences
+import prasad.vennam.moneypilot.ui.components.ProfileIconButton
+import prasad.vennam.moneypilot.ui.dashboard.SyncState
+import prasad.vennam.moneypilot.ui.dashboard.SyncStatusIndicator
+import androidx.compose.material3.TopAppBar
 
 data class TransactionItemState(
     val transaction: Transaction,
@@ -93,6 +103,9 @@ fun HistoryScreen(
     viewModel: TransactionViewModel,
     onAddTransaction: () -> Unit,
     onEditTransaction: (Long) -> Unit,
+    userData: UserPreferences.UserData?,
+    syncState: SyncState?,
+    onProfileClick: () -> Unit,
     fixedType: TransactionType? = null,
 ) {
     val transactions by viewModel.allTransactions.collectAsState()
@@ -126,16 +139,22 @@ fun HistoryScreen(
     Scaffold(
         topBar = {
             Column(modifier = Modifier.background(MaterialTheme.colorScheme.background)) {
-                CenterAlignedTopAppBar(
+                TopAppBar(
                     title = {
                         Text(
                             when (fixedType) {
-                                TransactionType.INCOME -> "Income"
-                                TransactionType.EXPENSE -> "Expenses"
-                                else -> "History"
+                                TransactionType.INCOME -> stringResource(R.string.income)
+                                TransactionType.EXPENSE -> stringResource(R.string.expenses)
+                                else -> stringResource(R.string.history)
                             },
                             style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
                         )
+                    },
+                    actions = {
+                        if (syncState != null) {
+                            SyncStatusIndicator(syncState)
+                        }
+                        ProfileIconButton(userData = userData, onClick = onProfileClick)
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = MaterialTheme.colorScheme.background,
@@ -162,7 +181,7 @@ fun HistoryScreen(
                 contentColor = MaterialTheme.colorScheme.onPrimary,
                 shape = MaterialTheme.shapes.large
             ) {
-                Icon(Icons.Rounded.Add, contentDescription = "Add")
+                Icon(Icons.Rounded.Add, contentDescription = stringResource(R.string.add))
             }
         }
     ) { innerPadding ->
@@ -226,13 +245,13 @@ fun SearchBar(
         modifier = modifier
             .fillMaxWidth()
             .height(56.dp),
-        placeholder = { Text("Search transactions...") },
-        leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null) },
+        placeholder = { Text(stringResource(R.string.search_transactions)) },
+        leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = stringResource(R.string.search)) },
         trailingIcon = {
             IconButton(onClick = onFilterClick) {
                 Icon(
                     Icons.Rounded.FilterList,
-                    contentDescription = "Filter",
+                    contentDescription = stringResource(R.string.filter),
                     tint = MaterialTheme.colorScheme.primary
                 )
             }
@@ -318,6 +337,7 @@ fun FintechTransactionCard(
 ) {
     val locale = androidx.compose.ui.platform.LocalLocale.current.platformLocale
     val dateFormatter = remember(locale) { SimpleDateFormat("dd MMM, yyyy", locale) }
+    val currencyCode = LocalCurrencyCode.current
 
     Card(
         onClick = onClick,
@@ -369,13 +389,13 @@ fun FintechTransactionCard(
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = transaction.note.ifBlank { category?.name ?: "Transaction" },
+                    text = transaction.note.ifBlank { category?.name ?: stringResource(R.string.transaction) },
                     style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
-                    text = "${category?.name ?: "General"} • ${dateFormatter.format(Date(transaction.timestamp))}",
+                    text = "${category?.name ?: stringResource(R.string.general)} • ${dateFormatter.format(Date(transaction.timestamp))}",
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -396,13 +416,10 @@ fun FintechTransactionCard(
             }
 
             Column(horizontalAlignment = Alignment.End) {
+                val formattedAmount = CurrencyFormatter.format(transaction.amount.inRupees, transaction.currencyCode)
+                val sign = if (transaction.type == TransactionType.INCOME) "+" else "-"
                 Text(
-                    text = "${if (transaction.type == TransactionType.INCOME) "+" else "-"}₹${
-                        String.format(
-                            "%,.0f",
-                            transaction.amount
-                        )
-                    }",
+                    text = "$sign$formattedAmount",
                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.ExtraBold),
                     color = if (transaction.type == TransactionType.INCOME) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
                 )
@@ -435,16 +452,16 @@ fun FilterBottomSheet(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    "Filters",
+                    stringResource(R.string.filters),
                     style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold)
                 )
-                TextButton(onClick = onReset) { Text("Reset") }
+                TextButton(onClick = onReset) { Text(stringResource(R.string.reset)) }
             }
 
             Spacer(modifier = Modifier.height(24.dp))
 
             Text(
-                "Category",
+                stringResource(R.string.category),
                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
             )
             LazyRow(
@@ -457,10 +474,10 @@ fun FilterBottomSheet(
                     FilterChip(
                         selected = selectedCategoryId == null,
                         onClick = { onCategorySelect(null) },
-                        label = { Text("All") }
+                        label = { Text(stringResource(R.string.all)) }
                     )
                 }
-                items(categories) { category ->
+                items(categories, key = { it.id }) { category ->
                     FilterChip(
                         selected = selectedCategoryId == category.id,
                         onClick = { onCategorySelect(category.id) },
@@ -472,7 +489,7 @@ fun FilterBottomSheet(
             Spacer(modifier = Modifier.height(16.dp))
 
             Text(
-                "Payment Mode",
+                stringResource(R.string.payment_mode),
                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
             )
             val modes = listOf("Cash", "UPI", "Bank Transfer", "Credit Card", "Debit Card")
@@ -486,10 +503,10 @@ fun FilterBottomSheet(
                     FilterChip(
                         selected = selectedPaymentMode == null,
                         onClick = { onPaymentModeSelect(null) },
-                        label = { Text("All") }
+                        label = { Text(stringResource(R.string.all)) }
                     )
                 }
-                items(modes) { mode ->
+                items(modes, key = { it }) { mode ->
                     FilterChip(
                         selected = selectedPaymentMode == mode,
                         onClick = { onPaymentModeSelect(mode) },
@@ -506,7 +523,7 @@ fun FilterBottomSheet(
                     .height(56.dp),
                 shape = MaterialTheme.shapes.large
             ) {
-                Text("Apply Filters")
+                Text(stringResource(R.string.apply_filters))
             }
         }
     }
@@ -527,7 +544,7 @@ fun EmptyState(isSearching: Boolean) {
         )
         Spacer(modifier = Modifier.height(16.dp))
         Text(
-            if (isSearching) "No results found" else "No transactions yet",
+            if (isSearching) stringResource(R.string.no_results_found) else stringResource(R.string.no_transactions_yet),
             style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.outline
         )

@@ -30,12 +30,18 @@ import prasad.vennam.moneypilot.ui.dashboard.SyncState
 import prasad.vennam.moneypilot.ui.dashboard.SyncStatusIndicator
 import java.util.Calendar
 
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
+import androidx.compose.material.icons.rounded.Notifications
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DashboardTopBar(
     userData: UserPreferences.UserData?,
     syncState: SyncState?,
+    unreadCount: Int,
     onProfileClick: () -> Unit,
+    onNotificationClick: () -> Unit
 ) {
     val greeting = when (Calendar.getInstance().get(Calendar.HOUR_OF_DAY)) {
         in 0..11 -> stringResource(R.string.good_morning)
@@ -61,6 +67,26 @@ fun DashboardTopBar(
         actions = {
             if (syncState != null) {
                 SyncStatusIndicator(syncState)
+            }
+            IconButton(onClick = onNotificationClick) {
+                BadgedBox(
+                    badge = {
+                        if (unreadCount > 0) {
+                            Badge(
+                                containerColor = MaterialTheme.colorScheme.error,
+                                contentColor = MaterialTheme.colorScheme.onError
+                            ) {
+                                Text(unreadCount.toString())
+                            }
+                        }
+                    }
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Notifications,
+                        contentDescription = "Notifications",
+                        tint = MaterialTheme.colorScheme.onSurface
+                    )
+                }
             }
             IconButton(
                 onClick = onProfileClick,

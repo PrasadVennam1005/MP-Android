@@ -7,10 +7,7 @@ import prasad.vennam.moneypilot.data.entity.TransactionType
 @Serializable
 sealed interface Destination : NavKey {
     @Serializable
-    data object Splash : Destination
-
-    @Serializable
-    data object Login : Destination
+    data class Auth(val skipSplash: Boolean = false) : Destination
 
     @Serializable
     data object History : Destination
@@ -44,4 +41,7 @@ sealed interface Destination : NavKey {
 
     @Serializable
     data object ReceiptScanner : Destination
+
+    @Serializable
+    data object Notifications : Destination
 }

@@ -1,5 +1,10 @@
 package prasad.vennam.moneypilot.ui.settings
 
+import android.app.Activity
+import android.util.Log
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -18,15 +23,27 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.automirrored.rounded.Logout
+import androidx.credentials.CredentialManager
+import androidx.credentials.GetCredentialRequest
+import androidx.credentials.exceptions.GetCredentialException
+import com.google.android.libraries.identity.googleid.GetGoogleIdOption
+import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import coil.compose.AsyncImage
 import prasad.vennam.moneypilot.ui.viewmodel.MainViewModel
 import prasad.vennam.moneypilot.ui.viewmodel.TransactionViewModel
 import prasad.vennam.moneypilot.ui.viewmodel.BudgetViewModel
 import prasad.vennam.moneypilot.ui.viewmodel.InvestmentViewModel
+import prasad.vennam.moneypilot.ui.viewmodel.RestoreState
+import prasad.vennam.moneypilot.data.UserPreferences
 import prasad.vennam.moneypilot.util.AnalyticsHelper
+import prasad.vennam.moneypilot.util.ExportHelper
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
 import kotlin.collections.find
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -38,12 +55,18 @@ fun SettingsScreen(
     mainViewModel: MainViewModel,
     analyticsHelper: AnalyticsHelper,
     onLogout: () -> Unit,
-    onNavigateToCategories: () -> Unit
+    onNavigateToCategories: () -> Unit,
+    onNavigateToNotifications: () -> Unit
 ) {
     val userData by mainViewModel.userData.collectAsState()
     val isSynced by mainViewModel.isSynced.collectAsState()
     val spreadsheetId by mainViewModel.spreadsheetId.collectAsState()
     val currentCurrencyCode by mainViewModel.currency.collectAsState()
+    val transactions by transactionViewModel.allTransactions.collectAsState()
+    val categories by transactionViewModel.allCategories.collectAsState()
+    val exchangeRates by mainViewModel.exchangeRates.collectAsState()
+    val currentGoal by mainViewModel.financialGoal.collectAsState()
+    val currentTarget by mainViewModel.monthlySavingsTarget.collectAsState()
 
     val scope = rememberCoroutineScope()
     val isGuest = remember(userData) { userData?.email == "guest@moneypilot.app" }
@@ -55,26 +78,183 @@ fun SettingsScreen(
     var showCurrencySheet by remember { mutableStateOf(false) }
     val currencySheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
+    var showLoginRequiredDialog by remember { mutableStateOf(false) }
+    var showThemeDialog by remember { mutableStateOf(false) }
+    val currentThemeMode by mainViewModel.themeMode.collectAsState()
+    val themeSubtitle = when (currentThemeMode) {
+        1 -> "Light"
+        2 -> "Dark"
+        else -> "System Default"
+    }
+    var pendingFeatureName by remember { mutableStateOf("") }
+    val credentialManager = remember { CredentialManager.create(context) }
+    val restoreState by mainViewModel.restoreState.collectAsState()
+
+    val authLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            mainViewModel.checkAndPerformRestore(context)
+        }
+    }
+
+    LaunchedEffect(restoreState) {
+        when (val state = restoreState) {
+            is RestoreState.Success -> {
+                Toast.makeText(context, context.run { getString(prasad.vennam.moneypilot.R.string.backup_successfully_restored) }, Toast.LENGTH_LONG).show()
+                mainViewModel.resetRestoreCheck()
+            }
+            is RestoreState.NeedAuthorization -> {
+                authLauncher.launch(state.intent)
+            }
+            is RestoreState.Error -> {
+                Toast.makeText(context, context.run { getString(prasad.vennam.moneypilot.R.string.restore_failed, state.message) }, Toast.LENGTH_LONG).show()
+                mainViewModel.resetRestoreCheck()
+            }
+            else -> {}
+        }
+    }
+
+    val checkGuestAction = { featureName: String, onAuthorized: () -> Unit ->
+        if (isGuest) {
+            pendingFeatureName = featureName
+            showLoginRequiredDialog = true
+        } else {
+            onAuthorized()
+        }
+    }
+
+    val triggerGoogleLogin = {
+        scope.launch {
+            try {
+                val googleIdOption = GetGoogleIdOption.Builder()
+                    .setFilterByAuthorizedAccounts(false)
+                    .setServerClientId(prasad.vennam.moneypilot.BuildConfig.GOOGLE_CLIENT_ID)
+                    .setAutoSelectEnabled(true)
+                    .build()
+
+                val request = GetCredentialRequest.Builder()
+                    .addCredentialOption(googleIdOption)
+                    .build()
+
+                val result = credentialManager.getCredential(
+                    request = request,
+                    context = context
+                )
+
+                val credential = result.credential
+                val googleIdTokenCredential = try {
+                    if (credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
+                        GoogleIdTokenCredential.createFrom(credential.data)
+                    } else {
+                        null
+                    }
+                } catch (e: Exception) {
+                    null
+                }
+
+                if (googleIdTokenCredential != null) {
+                    analyticsHelper.logEvent("login", mapOf("method" to "google"))
+                    mainViewModel.saveUserData(
+                        UserPreferences.UserData(
+                            name = googleIdTokenCredential.displayName ?: "User",
+                            email = googleIdTokenCredential.id,
+                            photoUrl = googleIdTokenCredential.profilePictureUri?.toString()
+                        )
+                    ) {
+                        mainViewModel.checkAndPerformRestore(context)
+                        showLoginRequiredDialog = false
+                    }
+                }
+            } catch (e: GetCredentialException) {
+                Log.e("SettingsScreen", "Login failed: ${e.message}")
+                Toast.makeText(context, "Login failed: ${e.message}", Toast.LENGTH_LONG).show()
+            } catch (e: Exception) {
+                Log.e("SettingsScreen", "Error: ${e.message}")
+                Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+    val csvExportLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("text/csv")
+    ) { uri ->
+        if (uri != null) {
+            scope.launch(Dispatchers.IO) {
+                try {
+                    context.contentResolver.openOutputStream(uri)?.use { outputStream ->
+                        ExportHelper.exportToCsv(
+                            transactions = transactions,
+                            categories = categories,
+                            outputStream = outputStream,
+                            currencyCode = currentCurrencyCode
+                        )
+                        scope.launch(Dispatchers.Main) {
+                            Toast.makeText(context, "Data exported successfully as CSV!", Toast.LENGTH_LONG).show()
+                        }
+                    }
+                } catch (e: Exception) {
+                    scope.launch(Dispatchers.Main) {
+                        Toast.makeText(context, "Export failed: ${e.message}", Toast.LENGTH_LONG).show()
+                    }
+                }
+            }
+        }
+    }
+
+    val pdfExportLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("application/pdf")
+    ) { uri ->
+        if (uri != null) {
+            scope.launch(Dispatchers.IO) {
+                try {
+                    context.contentResolver.openOutputStream(uri)?.use { outputStream ->
+                        ExportHelper.exportToPdf(
+                            transactions = transactions,
+                            categories = categories,
+                            outputStream = outputStream,
+                            currencyCode = currentCurrencyCode
+                        )
+                        scope.launch(Dispatchers.Main) {
+                            Toast.makeText(context, "Data exported successfully as PDF!", Toast.LENGTH_LONG).show()
+                        }
+                    }
+                } catch (e: Exception) {
+                    scope.launch(Dispatchers.Main) {
+                        Toast.makeText(context, "Export failed: ${e.message}", Toast.LENGTH_LONG).show()
+                    }
+                }
+            }
+        }
+    }
+
     val currencyOptions = listOf(
-        CurrencyOption("INR", "₹", "Indian Rupee", "🇮🇳"),
-        CurrencyOption("USD", "$", "US Dollar", "🇺🇸"),
-        CurrencyOption("EUR", "€", "Euro", "🇪🇺"),
-        CurrencyOption("GBP", "£", "British Pound", "🇬🇧"),
-        CurrencyOption("JPY", "¥", "Japanese Yen", "🇯🇵"),
-        CurrencyOption("AUD", "A$", "Australian Dollar", "🇦🇺"),
-        CurrencyOption("CAD", "C$", "Canadian Dollar", "🇨🇦"),
-        CurrencyOption("CHF", "Fr", "Swiss Franc", "🇨🇭"),
-        CurrencyOption("CNY", "¥", "Chinese Yuan", "🇨🇳"),
-        CurrencyOption("SGD", "S$", "Singapore Dollar", "🇸🇬"),
-        CurrencyOption("AED", "د.إ", "UAE Dirham", "🇦🇪"),
-        CurrencyOption("SAR", "ر.س", "Saudi Riyal", "🇸🇦"),
-        CurrencyOption("ZAR", "R", "South African Rand", "🇿🇦"),
-        CurrencyOption("BRL", "R$", "Brazilian Real", "🇧🇷"),
-        CurrencyOption("MXN", "$", "Mexican Peso", "🇲🇽"),
-        CurrencyOption("KRW", "₩", "South Korean Won", "🇰🇷")
+        CurrencyInfo("INR", "Indian Rupee", "₹", "🇮🇳"),
+        CurrencyInfo("USD", "US Dollar", "$", "🇺🇸"),
+        CurrencyInfo("EUR", "Euro", "€", "🇪🇺"),
+        CurrencyInfo("GBP", "British Pound", "£", "🇬🇧"),
+        CurrencyInfo("JPY", "Japanese Yen", "¥", "🇯🇵"),
+        CurrencyInfo("AUD", "Australian Dollar", "A$", "🇦🇺"),
+        CurrencyInfo("CAD", "Canadian Dollar", "C$", "🇨🇦"),
+        CurrencyInfo("CHF", "Swiss Franc", "Fr", "🇨🇭"),
+        CurrencyInfo("CNY", "Chinese Yuan", "¥", "🇨🇳"),
+        CurrencyInfo("SGD", "Singapore Dollar", "S$", "🇸🇬"),
+        CurrencyInfo("AED", "UAE Dirham", "د.إ", "🇦🇪"),
+        CurrencyInfo("SAR", "Saudi Riyal", "ر.س", "🇸🇦"),
+        CurrencyInfo("ZAR", "South African Rand", "R", "🇿🇦"),
+        CurrencyInfo("BRL", "Brazilian Real", "R$", "🇧🇷"),
+        CurrencyInfo("MXN", "Mexican Peso", "$", "🇲🇽"),
+        CurrencyInfo("KRW", "South Korean Won", "₩", "🇰🇷")
     )
     
     val currentCurrency = currencyOptions.find { it.code == currentCurrencyCode } ?: currencyOptions[0]
+
+    val rateAgainstUSD = exchangeRates[currentCurrencyCode] ?: 1.0
+    val liveRateText = if (currentCurrencyCode == "USD") {
+        "Base Currency"
+    } else {
+        "1 USD = ${currentCurrency.symbol}${String.format(java.util.Locale.US, "%.2f", rateAgainstUSD)}"
+    }
 
     if (showCurrencySheet) {
         CurrencySelectionBottomSheet(
@@ -95,8 +275,12 @@ fun SettingsScreen(
         topBar = {
             CenterAlignedTopAppBar(
                 title = { Text("Settings", style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)) },
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background,
+                    scrolledContainerColor = Color.Unspecified,
+                    navigationIconContentColor = Color.Unspecified,
+                    titleContentColor = Color.Unspecified,
+                    actionIconContentColor = Color.Unspecified
                 )
             )
         }
@@ -121,20 +305,38 @@ fun SettingsScreen(
                     SettingsItem(
                         icon = Icons.Rounded.CurrencyExchange,
                         title = "Currency",
-                        subtitle = "${currentCurrency.name} (${currentCurrency.symbol})",
-                        onClick = { showCurrencySheet = true }
+                        subtitle = "${currentCurrency.name} (${currentCurrency.symbol}) • $liveRateText",
+                        isLocked = isGuest,
+                        onClick = {
+                            checkGuestAction("Currency Change") {
+                                showCurrencySheet = true
+                            }
+                        }
+                    )
+                    SettingsItem(
+                        icon = Icons.Rounded.Flag,
+                        title = "Financial Goal",
+                        subtitle = "$currentGoal (Target: $currentTarget% savings)",
+                        onClick = {
+                            mainViewModel.resetOnboarding()
+                        }
                     )
                     SettingsItem(
                         icon = Icons.Rounded.Category,
                         title = "Manage Categories",
                         subtitle = "Add or edit transaction categories",
-                        onClick = onNavigateToCategories
+                        isLocked = isGuest,
+                        onClick = {
+                            checkGuestAction("Manage Categories") {
+                                onNavigateToCategories()
+                            }
+                        }
                     )
                     SettingsItem(
                         icon = Icons.Rounded.Palette,
                         title = "Theme",
-                        subtitle = "System Default",
-                        onClick = { /* TODO */ }
+                        subtitle = themeSubtitle,
+                        onClick = { showThemeDialog = true }
                     )
                 }
             }
@@ -148,19 +350,24 @@ fun SettingsScreen(
                         icon = Icons.Rounded.Notifications,
                         title = "Notifications",
                         subtitle = "Daily reminders & alerts",
-                        onClick = { /* TODO */ }
+                        isLocked = isGuest,
+                        onClick = {
+                            checkGuestAction("Notifications") {
+                                onNavigateToNotifications()
+                            }
+                        }
                     )
-                    SettingsItem(
-                        icon = Icons.Rounded.CloudSync,
-                        title = "Google Sheets Sync",
-                        subtitle = "Auto-export your data",
-                        onClick = { /* TODO */ }
-                    )
+
                     SettingsItem(
                         icon = Icons.Rounded.FileDownload,
                         title = "Export Data",
-                        subtitle = "Download as CSV or JSON",
-                        onClick = { /* TODO */ }
+                        subtitle = "Download as CSV or PDF",
+                        isLocked = isGuest,
+                        onClick = {
+                            checkGuestAction("Export Data") {
+                                showExportFormatDialog = true
+                            }
+                        }
                     )
                 }
             }
@@ -197,7 +404,7 @@ fun SettingsScreen(
                     shape = MaterialTheme.shapes.large,
                     elevation = null
                 ) {
-                    Icon(Icons.Rounded.Logout, contentDescription = null)
+                    Icon(Icons.AutoMirrored.Rounded.Logout, contentDescription = null)
                     Spacer(modifier = Modifier.width(12.dp))
                     Text("Logout", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold))
                 }
@@ -205,11 +412,117 @@ fun SettingsScreen(
         }
     }
 
-    if (showCurrencySheet) {
-        CurrencySelectionBottomSheet(
-            selectedCurrencyCode = currentCurrency,
-            onCurrencySelect = { mainViewModel.setCurrency(it) },
-            onDismiss = { showCurrencySheet = false }
+    if (showLoginRequiredDialog) {
+        LoginRequiredDialog(
+            featureName = pendingFeatureName,
+            onDismiss = { showLoginRequiredDialog = false },
+            onLoginClick = { triggerGoogleLogin() }
+        )
+    }
+
+    if (showExportFormatDialog) {
+        AlertDialog(
+            onDismissRequest = { showExportFormatDialog = false },
+            title = { Text("Export Data", style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)) },
+            text = { Text("Select the format to export your transaction report.") },
+            confirmButton = {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End)
+                ) {
+                    TextButton(
+                        onClick = {
+                            showExportFormatDialog = false
+                            csvExportLauncher.launch("moneypilot_transactions_${System.currentTimeMillis()}.csv")
+                        }
+                    ) {
+                        Text("CSV", fontWeight = FontWeight.Bold)
+                    }
+                    TextButton(
+                        onClick = {
+                            showExportFormatDialog = false
+                            pdfExportLauncher.launch("moneypilot_report_${System.currentTimeMillis()}.pdf")
+                        }
+                    ) {
+                        Text("PDF", fontWeight = FontWeight.Bold)
+                    }
+                    TextButton(onClick = { showExportFormatDialog = false }) {
+                        Text("Cancel")
+                    }
+                }
+            },
+            shape = RoundedCornerShape(20.dp),
+            containerColor = MaterialTheme.colorScheme.surface,
+            tonalElevation = 6.dp
+        )
+    }
+
+    if (showThemeDialog) {
+        AlertDialog(
+            onDismissRequest = { showThemeDialog = false },
+            title = { Text("Choose Theme", style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)) },
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    val modes = listOf(
+                        Triple(0, "System Default", Icons.Rounded.SettingsSuggest),
+                        Triple(1, "Light Mode", Icons.Rounded.LightMode),
+                        Triple(2, "Dark Mode", Icons.Rounded.DarkMode)
+                    )
+                    modes.forEach { (mode, name, icon) ->
+                        val isSelected = currentThemeMode == mode
+                        Surface(
+                            onClick = {
+                                mainViewModel.setThemeMode(mode)
+                                showThemeDialog = false
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = MaterialTheme.shapes.medium,
+                            color = if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f) else Color.Transparent,
+                            border = androidx.compose.foundation.BorderStroke(
+                                width = 1.dp,
+                                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant
+                            )
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        imageVector = icon,
+                                        contentDescription = null,
+                                        tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Text(name, style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold))
+                                }
+                                if (isSelected) {
+                                    Icon(
+                                        imageVector = Icons.Rounded.Check,
+                                        contentDescription = "Selected",
+                                        tint = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { showThemeDialog = false }) {
+                    Text("Close")
+                }
+            },
+            shape = RoundedCornerShape(20.dp),
+            containerColor = MaterialTheme.colorScheme.surface,
+            tonalElevation = 6.dp
         )
     }
 }
@@ -282,6 +595,7 @@ fun SettingsItem(
     icon: ImageVector,
     title: String,
     subtitle: String? = null,
+    isLocked: Boolean = false,
     onClick: () -> Unit
 ) {
     Surface(
@@ -325,14 +639,124 @@ fun SettingsItem(
                 }
             }
 
-            Icon(
-                imageVector = Icons.AutoMirrored.Rounded.KeyboardArrowRight,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
-                modifier = Modifier.size(20.dp)
-            )
+            if (isLocked) {
+                Icon(
+                    imageVector = Icons.Rounded.Lock,
+                    contentDescription = "Sign-in required",
+                    tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
+                    modifier = Modifier.size(18.dp)
+                )
+            } else {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Rounded.KeyboardArrowRight,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+                    modifier = Modifier.size(20.dp)
+                )
+            }
         }
     }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun LoginRequiredDialog(
+    featureName: String,
+    onDismiss: () -> Unit,
+    onLoginClick: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            Button(
+                onClick = onLoginClick,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
+                ),
+                shape = MaterialTheme.shapes.large,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(50.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.CloudSync,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Login with Google", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold))
+                }
+            }
+        },
+        dismissButton = {
+            TextButton(
+                onClick = onDismiss,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    "Cancel",
+                    style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        },
+        icon = {
+            Box(
+                modifier = Modifier
+                    .size(80.dp)
+                    .background(
+                        brush = androidx.compose.ui.graphics.Brush.linearGradient(
+                            colors = listOf(
+                                MaterialTheme.colorScheme.primary,
+                                MaterialTheme.colorScheme.secondary
+                            )
+                        ),
+                        shape = CircleShape
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.CloudSync,
+                    contentDescription = null,
+                    modifier = Modifier.size(44.dp),
+                    tint = MaterialTheme.colorScheme.onPrimary
+                )
+            }
+        },
+        title = {
+            Text(
+                text = "Backup & Sync Required",
+                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth()
+            )
+        },
+        text = {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    text = "To access $featureName, please sign in with Google.",
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+                    textAlign = TextAlign.Center,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "All your current transactions and data will be automatically synced and secured in your personal Google Sheets backup.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    textAlign = TextAlign.Center,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
+                )
+            }
+        },
+        shape = RoundedCornerShape(28.dp),
+        containerColor = MaterialTheme.colorScheme.surface,
+        tonalElevation = 8.dp
+    )
 }
 
 @Composable

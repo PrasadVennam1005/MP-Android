@@ -49,7 +49,10 @@ import androidx.compose.ui.unit.dp
 import prasad.vennam.moneypilot.R
 import prasad.vennam.moneypilot.data.entity.Budget
 import prasad.vennam.moneypilot.data.entity.Category
+import prasad.vennam.moneypilot.util.inRupees
 import prasad.vennam.moneypilot.ui.budget.utils.getCategoryIcon
+import prasad.vennam.moneypilot.util.LocalCurrencyCode
+import java.util.Currency
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -60,8 +63,10 @@ fun BudgetFormBottomSheet(
     onSave: (Long, Double) -> Unit,
 ) {
     var selectedCategoryId by remember { mutableStateOf(initialBudget?.categoryId) }
-    var amount by remember { mutableStateOf(initialBudget?.amount?.toString() ?: "") }
+    var amount by remember { mutableStateOf(initialBudget?.amount?.inRupees?.toString()?.removeSuffix(".0") ?: "") }
     var expanded by remember { mutableStateOf(false) }
+    val currencyCode = LocalCurrencyCode.current
+    val currencySymbol = remember(currencyCode) { Currency.getInstance(currencyCode).symbol }
 
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
@@ -86,7 +91,7 @@ fun BudgetFormBottomSheet(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = if (initialBudget == null) "Set New Budget" else "Edit Budget",
+                    text = if (initialBudget == null) stringResource(R.string.set_new_budget) else stringResource(R.string.edit_budget),
                     style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold)
                 )
                 IconButton(
@@ -119,7 +124,7 @@ fun BudgetFormBottomSheet(
                 Box(modifier = Modifier.fillMaxWidth()) {
                     OutlinedTextField(
                         value = categories.find { it.id == selectedCategoryId }?.name
-                            ?: "Select Category",
+                            ?: stringResource(R.string.select_category),
                         onValueChange = {},
                         readOnly = true,
                         label = { Text(stringResource(R.string.category)) },
@@ -179,7 +184,7 @@ fun BudgetFormBottomSheet(
                     },
                     prefix = {
                         Text(
-                            "₹",
+                            currencySymbol,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.primary
                         )

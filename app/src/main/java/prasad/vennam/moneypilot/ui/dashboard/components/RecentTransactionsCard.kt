@@ -30,6 +30,9 @@ import prasad.vennam.moneypilot.R
 import prasad.vennam.moneypilot.data.entity.Category
 import prasad.vennam.moneypilot.data.entity.Transaction
 import prasad.vennam.moneypilot.data.entity.TransactionType
+import prasad.vennam.moneypilot.util.inRupees
+import prasad.vennam.moneypilot.util.CurrencyFormatter
+import prasad.vennam.moneypilot.util.LocalCurrencyCode
 import java.text.SimpleDateFormat
 import java.util.Date
 
@@ -53,6 +56,7 @@ fun RecentTransactionsCard(transactions: List<Transaction>, categories: List<Cat
 
 @Composable
 fun TransactionItem(transaction: Transaction, category: Category?) {
+    val currencyCode = LocalCurrencyCode.current
     val dateFormatter = SimpleDateFormat("dd MMM, hh:mm a", LocalLocale.current.platformLocale)
     Row(
         modifier = Modifier
@@ -68,7 +72,7 @@ fun TransactionItem(transaction: Transaction, category: Category?) {
             Box(contentAlignment = Alignment.Center) {
                 Icon(
                     imageVector = if (transaction.type == TransactionType.INCOME) Icons.Rounded.Add else Icons.Rounded.Remove,
-                    contentDescription = null,
+                    contentDescription = stringResource(R.string.add),
                     tint = if (transaction.type == TransactionType.INCOME) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onErrorContainer,
                     modifier = Modifier.size(20.dp)
                 )
@@ -92,8 +96,7 @@ fun TransactionItem(transaction: Transaction, category: Category?) {
         Text(
             text = buildString {
                 append(if (transaction.type == TransactionType.INCOME) "+" else "-")
-                append("₹")
-                append(String.format("%,.0f", transaction.amount))
+                append(CurrencyFormatter.format(transaction.amount.inRupees, transaction.currencyCode))
             },
             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
             color = if (transaction.type == TransactionType.INCOME) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error

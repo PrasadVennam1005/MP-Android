@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.ClickableText
@@ -71,6 +72,12 @@ import kotlinx.coroutines.launch
 import prasad.vennam.moneypilot.data.UserPreferences
 import prasad.vennam.moneypilot.ui.viewmodel.MainViewModel
 import prasad.vennam.moneypilot.util.AnalyticsHelper
+import prasad.vennam.moneypilot.R
+import androidx.compose.ui.res.stringResource
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
+
 
 @Composable
 fun AuthScreen(
@@ -183,7 +190,7 @@ fun AuthScreen(
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
-                            text = "MoneyPilot",
+                            text = stringResource(R.string.moneypilot),
                             style = MaterialTheme.typography.displaySmall.copy(
                                 fontWeight = FontWeight.Bold,
                                 letterSpacing = 2.sp
@@ -193,7 +200,7 @@ fun AuthScreen(
                         )
                         Spacer(modifier = Modifier.height(12.dp))
                         Text(
-                            text = "Track. Save. Grow.",
+                            text = stringResource(R.string.track_save_grow),
                             style = MaterialTheme.typography.bodyLarge.copy(
                                 fontWeight = FontWeight.Medium,
                                 letterSpacing = 4.sp,
@@ -213,7 +220,7 @@ fun AuthScreen(
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
-                            text = "Welcome to MoneyPilot",
+                            text = stringResource(R.string.welcome_to_moneypilot),
                             style = MaterialTheme.typography.headlineMedium.copy(
                                 fontWeight = FontWeight.Bold,
                                 letterSpacing = 0.5.sp
@@ -222,7 +229,7 @@ fun AuthScreen(
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = "Your journey to financial freedom starts here.",
+                            text = stringResource(R.string.your_journey_to_financial_freedom),
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = TextAlign.Center
@@ -250,7 +257,7 @@ fun AuthScreen(
                                 )
                                 Spacer(modifier = Modifier.height(16.dp))
                                 Text(
-                                    "Track Expenses • Set Budgets • Manage Investments",
+                                    stringResource(R.string.track_expenses_set_budgets_manage),
                                     style = MaterialTheme.typography.labelLarge,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.padding(16.dp)
@@ -271,7 +278,7 @@ fun AuthScreen(
                                         try {
                                             val googleIdOption = GetGoogleIdOption.Builder()
                                                 .setFilterByAuthorizedAccounts(false)
-                                                .setServerClientId("769875296764-fi8ktc2uq8u0bpjpjv5chv4q2gmk0mc6.apps.googleusercontent.com")
+                                                .setServerClientId(prasad.vennam.moneypilot.BuildConfig.GOOGLE_CLIENT_ID)
                                                 .setAutoSelectEnabled(true)
                                                 .build()
 
@@ -321,23 +328,29 @@ fun AuthScreen(
                                     .height(56.dp),
                                 shape = MaterialTheme.shapes.large,
                                 colors = ButtonDefaults.buttonColors(
-                                    containerColor = MaterialTheme.colorScheme.surface,
-                                    contentColor = MaterialTheme.colorScheme.onSurface
+                                    containerColor = Color.White,
+                                    contentColor = Color(0xFF1F1F1F)
                                 ),
+                                border = BorderStroke(1.dp, Color(0xFFDADCE0)),
                                 elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp)
                             ) {
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.Center
                                 ) {
-                                    Text(
-                                        "G ",
-                                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                                        color = MaterialTheme.colorScheme.primary
+                                    Icon(
+                                        painter = painterResource(id = R.drawable.ic_google_logo),
+                                        contentDescription = "Google Logo",
+                                        tint = Color.Unspecified,
+                                        modifier = Modifier.size(22.dp)
                                     )
+                                    Spacer(modifier = Modifier.width(12.dp))
                                     Text(
-                                        "Continue with Google",
-                                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold)
+                                        stringResource(R.string.continue_with_google),
+                                        style = MaterialTheme.typography.titleMedium.copy(
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = Color(0xFF1F1F1F)
+                                        )
                                     )
                                 }
                             }
@@ -372,7 +385,7 @@ fun AuthScreen(
                                 )
                             ) {
                                 Text(
-                                    "Continue as Guest",
+                                    stringResource(R.string.continue_as_guest),
                                     style = MaterialTheme.typography.titleMedium.copy(
                                         fontWeight = FontWeight.SemiBold,
                                         color = MaterialTheme.colorScheme.primary
@@ -386,13 +399,13 @@ fun AuthScreen(
                         // Privacy Policy Text
                         val annotatedText = buildAnnotatedString {
                             append("By continuing, you agree to our ")
-                            pushStringAnnotation(tag = "terms", annotation = "https://moneypilot.app/terms")
+                            pushStringAnnotation(tag = "terms", annotation = "https://prasadvennam1005.github.io/MP-Android/terms.html")
                             withStyle(style = SpanStyle(color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.SemiBold, textDecoration = TextDecoration.Underline)) {
                                 append("Terms of Service")
                             }
                             pop()
                             append(" and ")
-                            pushStringAnnotation(tag = "privacy", annotation = "https://moneypilot.app/privacy")
+                            pushStringAnnotation(tag = "privacy", annotation = "https://prasadvennam1005.github.io/MP-Android/privacy.html")
                             withStyle(style = SpanStyle(color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.SemiBold, textDecoration = TextDecoration.Underline)) {
                                 append("Privacy Policy")
                             }

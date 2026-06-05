@@ -31,26 +31,40 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import prasad.vennam.moneypilot.R
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import prasad.vennam.moneypilot.ui.budget.utils.getCategoryIcon
+import prasad.vennam.moneypilot.ui.viewmodel.BudgetProgress
 import prasad.vennam.moneypilot.data.entity.Budget
 import prasad.vennam.moneypilot.data.entity.Category
-import prasad.vennam.moneypilot.ui.budget.utils.getCategoryIcon
+import prasad.vennam.moneypilot.util.CurrencyFormatter
+import prasad.vennam.moneypilot.util.LocalCurrencyCode
+import prasad.vennam.moneypilot.util.inRupees
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PremiumBudgetCard(
-    category: Category?,
-    budget: Budget,
-    spent: Double,
+    budgetProgress: BudgetProgress,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
 ) {
-    val remaining = (budget.amount - spent).coerceAtLeast(0.0)
-    val progress = if (budget.amount > 0) (spent / budget.amount).toFloat() else 0f
+    var expanded by remember { mutableStateOf(false) }
+    val currencyCode = LocalCurrencyCode.current
+
+    val category = budgetProgress.category
+    val budget = budgetProgress.budget
+    val spent = budgetProgress.spent
+    
+    val limit = budgetProgress.limit
+    val remaining = (limit - spent).coerceAtLeast(0.0)
+    val progress = budgetProgress.progress
 
     val progressColor = when {
         progress < 0.7f -> Color(0xFF4CAF50) // Green
-        progress < 0.9f -> Color(0xFFFF9800) // Orange
-        else -> Color(0xFFF44336) // Red
+        progress < 0.9f -> Color(0xFFFFA000) // Orange
+        else -> MaterialTheme.colorScheme.error // Red
     }
 
     Card(
@@ -83,7 +97,7 @@ fun PremiumBudgetCard(
                     }
                     Spacer(modifier = Modifier.width(12.dp))
                     Text(
-                        category?.name ?: "Unknown",
+                        category?.name ?: stringResource(R.string.unknown),
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
                     )
                 }
@@ -103,13 +117,11 @@ fun PremiumBudgetCard(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                BudgetStat(label = "Budget", amount = budget.amount)
-                BudgetStat(label = "Used", amount = spent, color = progressColor)
-                BudgetStat(
-                    label = "Remaining",
-                    amount = remaining,
-                    color = if (remaining > 0) Color(0xFF4CAF50) else Color(0xFFF44336)
-                )
+                BudgetStat(stringResource(R.string.budget), limit, currencyCode = currencyCode)
+                Spacer(modifier = Modifier.weight(1f))
+                BudgetStat(stringResource(R.string.total_spent), spent, color = progressColor, currencyCode = currencyCode)
+                Spacer(modifier = Modifier.weight(1f))
+                BudgetStat(stringResource(R.string.remaining), remaining, color = if (remaining > 0) Color(0xFF4CAF50) else MaterialTheme.colorScheme.error, currencyCode = currencyCode)
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -127,7 +139,7 @@ fun PremiumBudgetCard(
 
             if (progress > 1f) {
                 Text(
-                    "Exceeded by ₹${String.format("%,.0f", spent - budget.amount)}",
+                    stringResource(R.string.exceeded_by_amount, CurrencyFormatter.format(spent - limit, currencyCode)),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.error,
                     modifier = Modifier.padding(top = 8.dp)
@@ -138,7 +150,7 @@ fun PremiumBudgetCard(
 }
 
 @Composable
-fun BudgetStat(label: String, amount: Double, color: Color = MaterialTheme.colorScheme.onSurface) {
+fun BudgetStat(label: String, amount: Double, color: Color = MaterialTheme.colorScheme.onSurface, currencyCode: String) {
     Column {
         Text(
             label,
@@ -146,7 +158,7 @@ fun BudgetStat(label: String, amount: Double, color: Color = MaterialTheme.color
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Text(
-            "₹${String.format("%,.0f", amount)}",
+            CurrencyFormatter.format(amount, currencyCode),
             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.ExtraBold),
             color = color
         )

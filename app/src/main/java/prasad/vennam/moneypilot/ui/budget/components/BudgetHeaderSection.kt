@@ -24,27 +24,24 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import prasad.vennam.moneypilot.R
 import prasad.vennam.moneypilot.data.entity.Budget
+import prasad.vennam.moneypilot.util.inRupees
 import prasad.vennam.moneypilot.data.entity.Transaction
 import prasad.vennam.moneypilot.data.entity.TransactionType
+import prasad.vennam.moneypilot.util.CurrencyFormatter
+import prasad.vennam.moneypilot.util.LocalCurrencyCode
 import java.util.Calendar
+
+import prasad.vennam.moneypilot.ui.viewmodel.BudgetProgress
 
 @Composable
 fun BudgetHeaderSection(
-    budgets: List<Budget>,
-    transactions: List<Transaction>,
+    budgetProgresses: List<BudgetProgress>,
     month: Int,
     year: Int,
 ) {
-    val totalBudget = remember(budgets) { budgets.sumOf { it.amount } }
-    val totalSpent = remember(transactions, budgets, month, year) {
-        transactions.filter {
-            val transCal = Calendar.getInstance().apply { timeInMillis = it.timestamp }
-            it.type == TransactionType.EXPENSE &&
-                    transCal.get(Calendar.MONTH) == month &&
-                    transCal.get(Calendar.YEAR) == year &&
-                    budgets.any { b -> b.categoryId == it.categoryId }
-        }.sumOf { it.amount }
-    }
+    val currencyCode = LocalCurrencyCode.current
+    val totalBudget = remember(budgetProgresses) { budgetProgresses.sumOf { it.limit } }
+    val totalSpent = remember(budgetProgresses) { budgetProgresses.sumOf { it.spent } }
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -77,7 +74,7 @@ fun BudgetHeaderSection(
                 Column {
                     Text(stringResource(R.string.total_budget), style = MaterialTheme.typography.labelSmall)
                     Text(
-                        "₹${String.format("%,.0f", totalBudget)}",
+                        CurrencyFormatter.format(totalBudget, currencyCode),
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold
                     )
@@ -85,7 +82,7 @@ fun BudgetHeaderSection(
                 Column(horizontalAlignment = Alignment.End) {
                     Text(stringResource(R.string.total_spent), style = MaterialTheme.typography.labelSmall)
                     Text(
-                        "₹${String.format("%,.0f", totalSpent)}",
+                        CurrencyFormatter.format(totalSpent, currencyCode),
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary

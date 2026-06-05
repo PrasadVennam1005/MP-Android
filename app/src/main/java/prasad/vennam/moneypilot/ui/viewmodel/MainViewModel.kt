@@ -12,7 +12,7 @@ import prasad.vennam.moneypilot.data.UserPreferences
 import prasad.vennam.moneypilot.data.entity.Category
 import prasad.vennam.moneypilot.data.repository.MoneyPilotRepository
 import prasad.vennam.moneypilot.util.GoogleSheetsSyncHelper
-import prasad.vennam.moneypilot.util.RestoreResult
+import prasad.vennam.moneypilot.util.SyncResult
 import javax.inject.Inject
 
 sealed interface RestoreState {
@@ -27,8 +27,15 @@ sealed interface RestoreState {
 @HiltViewModel
 class MainViewModel @Inject constructor(
     private val repository: MoneyPilotRepository,
-    private val userPreferences: UserPreferences
+    private val userPreferences: UserPreferences,
+    private val exchangeRateRepo: prasad.vennam.moneypilot.data.repository.ExchangeRateRepository
 ) : ViewModel() {
+
+    init {
+        viewModelScope.launch {
+            exchangeRateRepo.syncRates()
+        }
+    }
 
     val userData: StateFlow<UserPreferences.UserData?> = userPreferences.userData
         .stateIn(viewModelScope, SharingStarted.Eagerly, null)
@@ -44,6 +51,21 @@ class MainViewModel @Inject constructor(
 
     val currency: StateFlow<String> = userPreferences.currency
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "INR")
+
+    val isOnboardingCompleted: StateFlow<Boolean> = userPreferences.isOnboardingCompleted
+        .stateIn(viewModelScope, SharingStarted.Eagerly, false)
+
+    val financialGoal: StateFlow<String> = userPreferences.financialGoal
+        .stateIn(viewModelScope, SharingStarted.Eagerly, "Track Expenses")
+
+    val monthlySavingsTarget: StateFlow<Long> = userPreferences.monthlySavingsTarget
+        .stateIn(viewModelScope, SharingStarted.Eagerly, 20L)
+
+    val exchangeRates: StateFlow<Map<String, Double>> = exchangeRateRepo.allRates
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
+
+    val themeMode: StateFlow<Int> = userPreferences.themeMode
+        .stateIn(viewModelScope, SharingStarted.Eagerly, 0)
 
     private val _restoreState = MutableStateFlow<RestoreState>(RestoreState.Idle)
     val restoreState: StateFlow<RestoreState> = _restoreState.asStateFlow()
@@ -89,35 +111,33 @@ class MainViewModel @Inject constructor(
 
             viewModelScope.launch {
                 Log.d("MoneyPilotRestore", "Launching restore scope coroutine...")
-                val result = GoogleSheetsSyncHelper.checkForRestoreAndExecute(
+                val result = GoogleSheetsSyncHelper.performTwoWaySync(
                     context = context,
                     email = email,
+                    repository = repository,
+                    spreadsheetId = currentSpreadsheetId,
                     onSpreadsheetIdFound = { id ->
                         Log.d("MoneyPilotRestore", "onSpreadsheetIdFound: id=$id")
                         userPreferences.saveSpreadsheetId(id)
-                    },
-                    onRestoreData = { categories, transactions, budgets, investments ->
-                        Log.d("MoneyPilotRestore", "onRestoreData invoked: categories=${categories.size}, transactions=${transactions.size}, budgets=${budgets.size}, investments=${investments.size}")
-                        repository.restoreBackup(categories, transactions, budgets, investments)
                         userPreferences.setSynced(true)
                     }
                 )
 
                 Log.d("MoneyPilotRestore", "Restore check finished with result: $result")
                 when (result) {
-                    is RestoreResult.Success -> {
+                    is SyncResult.Success -> {
                         Log.d("MoneyPilotRestore", "Restore success! Updating state to Success.")
                         _restoreState.value = RestoreState.Success
                     }
-                    is RestoreResult.NeedAuthorization -> {
+                    is SyncResult.NeedAuthorization -> {
                         Log.d("MoneyPilotRestore", "Restore requires user authorization. Redirecting to intent.")
                         _restoreState.value = RestoreState.NeedAuthorization(result.intent)
                     }
-                    is RestoreResult.NoBackupFound -> {
+                    is SyncResult.NoBackupFound -> {
                         Log.d("MoneyPilotRestore", "No backup spreadsheet was found on Google Drive.")
                         _restoreState.value = RestoreState.NoBackup
                     }
-                    is RestoreResult.Error -> {
+                    is SyncResult.Error -> {
                         Log.e("MoneyPilotRestore", "Restore failed with error: ${result.exception.message}", result.exception)
                         _restoreState.value = RestoreState.Error(result.exception.message ?: "Unknown error")
                     }
@@ -146,6 +166,25 @@ class MainViewModel @Inject constructor(
     fun setCurrency(currencyCode: String) {
         viewModelScope.launch {
             userPreferences.setCurrency(currencyCode)
+        }
+    }
+
+    fun savePreferences(goal: String, target: Long, currencyCode: String) {
+        viewModelScope.launch {
+            userPreferences.savePreferences(goal, target)
+            userPreferences.setCurrency(currencyCode)
+        }
+    }
+
+    fun resetOnboarding() {
+        viewModelScope.launch {
+            userPreferences.setOnboardingCompleted(false)
+        }
+    }
+
+    fun setThemeMode(mode: Int) {
+        viewModelScope.launch {
+            userPreferences.setThemeMode(mode)
         }
     }
 }

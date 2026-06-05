@@ -2,7 +2,6 @@ package prasad.vennam.moneypilot.ui.scanner
 
 import android.Manifest
 import android.net.Uri
-import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -47,11 +46,16 @@ import prasad.vennam.moneypilot.data.entity.Category
 import prasad.vennam.moneypilot.data.entity.Transaction
 import prasad.vennam.moneypilot.data.entity.TransactionType
 import prasad.vennam.moneypilot.ui.viewmodel.TransactionViewModel
+import prasad.vennam.moneypilot.util.inPaisa
 import prasad.vennam.moneypilot.util.AnalyticsHelper
 import prasad.vennam.moneypilot.util.ParsedReceipt
 import prasad.vennam.moneypilot.util.PermissionGate
 import prasad.vennam.moneypilot.util.ReceiptParser
+import prasad.vennam.moneypilot.util.LocalCurrencyCode
+import java.util.Currency
 import java.util.concurrent.Executors
+import prasad.vennam.moneypilot.R
+import androidx.compose.ui.res.stringResource
 
 @Composable
 fun ReceiptScannerScreen(
@@ -106,7 +110,8 @@ fun ReceiptScannerContent(
                         isScanning = false
                         showResultsSheet = true
                     } else {
-                        Toast.makeText(context, "Could not detect amount in this image. Please try another.", Toast.LENGTH_LONG).show()
+                        Toast.makeText(context,
+                            context.run { getString(R.string.could_not_detect_amount_in_this_image_please_try_another) }, Toast.LENGTH_LONG).show()
                     }
                 }
         }
@@ -150,7 +155,7 @@ fun ReceiptScannerContent(
                         imageAnalysis
                     )
                 } catch (e: Exception) {
-                    Log.e("Scanner", "Use case binding failed", e)
+                    // Ignore use case binding failures
                 }
             }, ContextCompat.getMainExecutor(context))
         }
@@ -160,15 +165,15 @@ fun ReceiptScannerContent(
         containerColor = Color.Black,
         topBar = {
             TopAppBar(
-                title = { Text("Scan Receipt", style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)) },
+                title = { Text(stringResource(R.string.scan_receipt), style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Back", tint = Color.White)
+                        Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.back), tint = Color.White)
                     }
                 },
                 actions = {
                     IconButton(onClick = { galleryLauncher.launch("image/*") }) {
-                        Icon(Icons.Rounded.Collections, contentDescription = "Gallery", tint = Color.White)
+                        Icon(Icons.Rounded.Collections, contentDescription = stringResource(R.string.gallery), tint = Color.White)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -178,7 +183,9 @@ fun ReceiptScannerContent(
             )
         }
     ) { innerPadding ->
-        Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
+        Box(modifier = Modifier
+            .fillMaxSize()
+            .padding(innerPadding)) {
             AndroidView(
                 factory = { previewView },
                 modifier = Modifier.fillMaxSize()
@@ -189,8 +196,10 @@ fun ReceiptScannerContent(
 
             if (isScanning) {
                 Text(
-                    "Position receipt within the frame",
-                    modifier = Modifier.align(Alignment.Center).padding(top = 350.dp),
+                    stringResource(R.string.position_receipt_within_the_frame),
+                    modifier = Modifier
+                        .align(Alignment.Center)
+                        .padding(top = 350.dp),
                     color = Color.White,
                     style = MaterialTheme.typography.bodyMedium
                 )
@@ -218,8 +227,8 @@ fun ReceiptScannerContent(
     if (showSuccessDialog) {
         AlertDialog(
             onDismissRequest = { showSuccessDialog = false },
-            title = { Text("Expense Saved!", fontWeight = FontWeight.Bold) },
-            text = { Text("Would you like to scan another receipt?") },
+            title = { Text(stringResource(R.string.expense_saved), fontWeight = FontWeight.Bold) },
+            text = { Text(stringResource(R.string.would_you_like_to_scan)) },
             confirmButton = {
                 Button(
                     onClick = {
@@ -228,13 +237,13 @@ fun ReceiptScannerContent(
                         detectedData = null
                     },
                     shape = MaterialTheme.shapes.large
-                ) { Text("Scan Another") }
+                ) { Text(stringResource(R.string.scan_another)) }
             },
             dismissButton = {
                 TextButton(onClick = {
                     showSuccessDialog = false
                     onNavigateBack()
-                }) { Text("Go to Dashboard") }
+                }) { Text(stringResource(R.string.go_to_dashboard)) }
             }
         )
     }
@@ -248,6 +257,8 @@ fun ReceiptResultsBottomSheet(
     onDismiss: () -> Unit,
     onSave: (Transaction) -> Unit
 ) {
+    val currencyCode = LocalCurrencyCode.current
+    val currencySymbol = remember(currencyCode) { Currency.getInstance(currencyCode).symbol }
     var merchant by remember { mutableStateOf(detectedData.merchant ?: "") }
     var amount by remember { mutableStateOf(detectedData.amount?.toString() ?: "") }
     var selectedCategoryId by remember { mutableStateOf<Long?>(null) }
@@ -273,10 +284,15 @@ fun ReceiptResultsBottomSheet(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Confirm Details", style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold))
+                Text(stringResource(R.string.confirm_details), style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold))
                 IconButton(
                     onClick = onDismiss, 
-                    modifier = Modifier.size(32.dp).background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f), CircleShape)
+                    modifier = Modifier
+                        .size(32.dp)
+                        .background(
+                            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                            CircleShape
+                        )
                 ) {
                     Icon(Icons.Rounded.Close, null, modifier = Modifier.size(18.dp))
                 }
@@ -291,7 +307,7 @@ fun ReceiptResultsBottomSheet(
                 OutlinedTextField(
                     value = merchant,
                     onValueChange = { merchant = it },
-                    label = { Text("Merchant") },
+                    label = { Text(stringResource(R.string.merchant)) },
                     leadingIcon = { Icon(Icons.Rounded.Store, null, tint = MaterialTheme.colorScheme.primary) },
                     modifier = Modifier.fillMaxWidth(),
                     shape = MaterialTheme.shapes.large
@@ -300,8 +316,8 @@ fun ReceiptResultsBottomSheet(
                 OutlinedTextField(
                     value = amount,
                     onValueChange = { if (it.isEmpty() || it.toDoubleOrNull() != null) amount = it },
-                    label = { Text("Amount (₹)") },
-                    leadingIcon = { Text("₹", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 12.dp)) },
+                    label = { Text(stringResource(R.string.amount_1)) },
+                    leadingIcon = { Text(currencySymbol, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 12.dp)) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     modifier = Modifier.fillMaxWidth(),
                     shape = MaterialTheme.shapes.large
@@ -313,13 +329,15 @@ fun ReceiptResultsBottomSheet(
                         value = categories.find { it.id == selectedCategoryId }?.name ?: "Select Category",
                         onValueChange = {},
                         readOnly = true,
-                        label = { Text("Category") },
+                        label = { Text(stringResource(R.string.category)) },
                         leadingIcon = { Icon(Icons.Rounded.Category, null, tint = MaterialTheme.colorScheme.primary) },
                         modifier = Modifier.fillMaxWidth(),
                         shape = MaterialTheme.shapes.large,
-                        trailingIcon = { IconButton(onClick = { showCategoryMenu = true }) { Icon(Icons.Rounded.ArrowDropDown, null) } }
+                        trailingIcon = { IconButton(onClick = { showCategoryMenu = true }) { Icon(Icons.Rounded.ArrowDropDown, contentDescription = stringResource(R.string.select_category)) } }
                     )
-                    Box(modifier = Modifier.matchParentSize().clickable { showCategoryMenu = true })
+                    Box(modifier = Modifier
+                        .matchParentSize()
+                        .clickable { showCategoryMenu = true })
                     DropdownMenu(
                         expanded = showCategoryMenu, 
                         onDismissRequest = { showCategoryMenu = false },
@@ -345,20 +363,22 @@ fun ReceiptResultsBottomSheet(
                 Button(
                     onClick = {
                         onSave(Transaction(
-                            amount = amount.toDoubleOrNull() ?: 0.0,
+                            amount = (amount.toDoubleOrNull() ?: 0.0).inPaisa,
                             timestamp = timestamp,
                             categoryId = selectedCategoryId,
                             note = merchant,
                             type = TransactionType.EXPENSE
                         ))
                     },
-                    modifier = Modifier.fillMaxWidth().height(60.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(60.dp),
                     shape = MaterialTheme.shapes.large,
                     enabled = amount.isNotBlank() && selectedCategoryId != null
                 ) {
                     Icon(Icons.Rounded.Check, null)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Save Expense", style = MaterialTheme.typography.titleMedium)
+                    Text(stringResource(R.string.save_expense), style = MaterialTheme.typography.titleMedium)
                 }
             }
         }

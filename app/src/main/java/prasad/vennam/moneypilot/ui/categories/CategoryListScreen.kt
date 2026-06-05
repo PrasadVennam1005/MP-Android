@@ -19,8 +19,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import prasad.vennam.moneypilot.data.entity.Category
-import prasad.vennam.moneypilot.ui.budget.getCategoryIcon
+import prasad.vennam.moneypilot.ui.budget.utils.getCategoryIcon
 import prasad.vennam.moneypilot.ui.viewmodel.TransactionViewModel
+import prasad.vennam.moneypilot.R
+import androidx.compose.ui.res.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -30,6 +32,7 @@ fun CategoryListScreen(
 ) {
     val categories by viewModel.allCategories.collectAsState()
     var showAddSheet by remember { mutableStateOf(false) }
+    var editingCategory by remember { mutableStateOf<Category?>(null) }
     var categoryToDelete by remember { mutableStateOf<Category?>(null) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
@@ -37,25 +40,32 @@ fun CategoryListScreen(
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text("Manage Categories", style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)) },
+                title = { Text(stringResource(R.string.manage_categories), style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 },
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background,
+                    scrolledContainerColor = Color.Unspecified,
+                    navigationIconContentColor = Color.Unspecified,
+                    titleContentColor = Color.Unspecified,
+                    actionIconContentColor = Color.Unspecified
                 )
             )
         },
         floatingActionButton = {
             FloatingActionButton(
-                onClick = { showAddSheet = true },
+                onClick = { 
+                    editingCategory = null
+                    showAddSheet = true 
+                },
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary,
                 shape = MaterialTheme.shapes.large
             ) {
-                Icon(Icons.Rounded.Add, contentDescription = "Add Category")
+                Icon(Icons.Rounded.Add, contentDescription = stringResource(R.string.add_category))
             }
         }
     ) { innerPadding ->
@@ -74,8 +84,15 @@ fun CategoryListScreen(
                 item {
                     CategoryHeader("Expenses")
                 }
-                items(expenseCategories) { category ->
-                    CategoryItem(category) { categoryToDelete = it }
+                items(expenseCategories, key = { it.id }) { category ->
+                    CategoryItem(
+                        category = category,
+                        onClick = { 
+                            editingCategory = it
+                            showAddSheet = true
+                        },
+                        onDelete = { categoryToDelete = it }
+                    )
                 }
             }
 
@@ -83,8 +100,15 @@ fun CategoryListScreen(
                 item {
                     CategoryHeader("Income")
                 }
-                items(incomeCategories) { category ->
-                    CategoryItem(category) { categoryToDelete = it }
+                items(incomeCategories, key = { it.id }) { category ->
+                    CategoryItem(
+                        category = category,
+                        onClick = { 
+                            editingCategory = it
+                            showAddSheet = true
+                        },
+                        onDelete = { categoryToDelete = it }
+                    )
                 }
             }
         }
@@ -92,16 +116,21 @@ fun CategoryListScreen(
 
     if (showAddSheet) {
         ModalBottomSheet(
-            onDismissRequest = { showAddSheet = false },
+            onDismissRequest = { 
+                showAddSheet = false
+                editingCategory = null
+            },
             sheetState = sheetState,
             containerColor = MaterialTheme.colorScheme.surface
         ) {
             AddCategorySheetContent(
+                initialCategory = editingCategory,
                 onSave = { newCategory ->
                     viewModel.saveCategory(newCategory)
                     scope.launch { sheetState.hide() }.invokeOnCompletion {
                         if (!sheetState.isVisible) {
                             showAddSheet = false
+                            editingCategory = null
                         }
                     }
                 },
@@ -109,6 +138,7 @@ fun CategoryListScreen(
                     scope.launch { sheetState.hide() }.invokeOnCompletion {
                         if (!sheetState.isVisible) {
                             showAddSheet = false
+                            editingCategory = null
                         }
                     }
                 }
@@ -119,7 +149,7 @@ fun CategoryListScreen(
     categoryToDelete?.let { cat ->
         AlertDialog(
             onDismissRequest = { categoryToDelete = null },
-            title = { Text("Delete Category") },
+            title = { Text(stringResource(R.string.delete_category)) },
             text = { Text("Are you sure you want to delete '${cat.name}'? Transactions using this category will remain, but the category won't be available for new transactions.") },
             confirmButton = {
                 Button(
@@ -129,12 +159,12 @@ fun CategoryListScreen(
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
                 ) {
-                    Text("Delete")
+                    Text(stringResource(R.string.delete))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { categoryToDelete = null }) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.cancel))
                 }
             }
         )
@@ -152,9 +182,9 @@ fun CategoryHeader(title: String) {
 }
 
 @Composable
-fun CategoryItem(category: Category, onDelete: (Category) -> Unit) {
+fun CategoryItem(category: Category, onClick: (Category) -> Unit, onDelete: (Category) -> Unit) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().clickable { onClick(category) },
         shape = MaterialTheme.shapes.large,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.5.dp)
@@ -186,7 +216,7 @@ fun CategoryItem(category: Category, onDelete: (Category) -> Unit) {
             IconButton(onClick = { onDelete(category) }) {
                 Icon(
                     imageVector = Icons.Rounded.DeleteOutline,
-                    contentDescription = "Delete",
+                    contentDescription = stringResource(R.string.delete),
                     tint = MaterialTheme.colorScheme.error.copy(alpha = 0.7f)
                 )
             }
@@ -196,11 +226,12 @@ fun CategoryItem(category: Category, onDelete: (Category) -> Unit) {
 
 @Composable
 fun AddCategorySheetContent(
+    initialCategory: Category?,
     onSave: (Category) -> Unit,
     onCancel: () -> Unit
 ) {
-    var name by remember { mutableStateOf("") }
-    var isExpense by remember { mutableStateOf(true) }
+    var name by remember(initialCategory) { mutableStateOf(initialCategory?.name ?: "") }
+    var isExpense by remember(initialCategory) { mutableStateOf(initialCategory?.isExpense ?: true) }
     
     val availableColors = listOf(
         0xFFF44336, 0xFFE91E63, 0xFF9C27B0, 0xFF673AB7, 
@@ -209,7 +240,7 @@ fun AddCategorySheetContent(
         0xFFFFEB3B, 0xFFFFC107, 0xFFFF9800, 0xFFFF5722, 
         0xFF795548, 0xFF9E9E9E, 0xFF607D8B
     )
-    var selectedColor by remember { mutableStateOf(availableColors[0]) }
+    var selectedColor by remember(initialCategory) { mutableLongStateOf(initialCategory?.color?.toLong() ?: availableColors[0]) }
 
     val availableIcons = listOf(
         "restaurant", "directions_car", "shopping_cart", "movie", 
@@ -218,7 +249,7 @@ fun AddCategorySheetContent(
         "payments", "work", "trending_up", "apartment", 
         "redeem", "history", "category"
     )
-    var selectedIcon by remember { mutableStateOf(availableIcons[0]) }
+    var selectedIcon by remember(initialCategory) { mutableStateOf(initialCategory?.iconName ?: availableIcons[0]) }
 
     Column(
         modifier = Modifier
@@ -227,7 +258,7 @@ fun AddCategorySheetContent(
             .padding(bottom = 24.dp)
     ) {
         Text(
-            text = "New Category",
+            text = if (initialCategory == null) "New Category" else "Edit Category",
             style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
         )
         Spacer(modifier = Modifier.height(24.dp))
@@ -242,7 +273,7 @@ fun AddCategorySheetContent(
                     contentColor = if (isExpense) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
                 )
             ) {
-                Text("Expense")
+                Text(stringResource(R.string.expense))
             }
             Spacer(modifier = Modifier.width(8.dp))
             OutlinedButton(
@@ -253,7 +284,7 @@ fun AddCategorySheetContent(
                     contentColor = if (!isExpense) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
                 )
             ) {
-                Text("Income")
+                Text(stringResource(R.string.income))
             }
         }
         
@@ -262,21 +293,21 @@ fun AddCategorySheetContent(
         OutlinedTextField(
             value = name,
             onValueChange = { name = it },
-            label = { Text("Category Name") },
+            label = { Text(stringResource(R.string.category_name)) },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
             shape = MaterialTheme.shapes.large
         )
         
         Spacer(modifier = Modifier.height(24.dp))
-        Text("Color", style = MaterialTheme.typography.labelLarge)
+        Text(stringResource(R.string.color), style = MaterialTheme.typography.labelLarge)
         Spacer(modifier = Modifier.height(8.dp))
         
         // Color Picker
         androidx.compose.foundation.lazy.LazyRow(
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            items(availableColors) { color ->
+            items(availableColors, key = { it }) { color ->
                 Box(
                     modifier = Modifier
                         .size(40.dp)
@@ -288,7 +319,7 @@ fun AddCategorySheetContent(
                     if (selectedColor == color) {
                         Icon(
                             imageVector = Icons.Rounded.Check,
-                            contentDescription = null,
+                            contentDescription = stringResource(R.string.save),
                             tint = Color.White
                         )
                     }
@@ -297,14 +328,14 @@ fun AddCategorySheetContent(
         }
 
         Spacer(modifier = Modifier.height(24.dp))
-        Text("Icon", style = MaterialTheme.typography.labelLarge)
+        Text(stringResource(R.string.icon), style = MaterialTheme.typography.labelLarge)
         Spacer(modifier = Modifier.height(8.dp))
         
         // Icon Picker
         androidx.compose.foundation.lazy.LazyRow(
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            items(availableIcons) { iconName ->
+            items(availableIcons, key = { it }) { iconName ->
                 Surface(
                     color = if (selectedIcon == iconName) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
                     shape = CircleShape,
@@ -330,18 +361,24 @@ fun AddCategorySheetContent(
             horizontalArrangement = Arrangement.End
         ) {
             TextButton(onClick = onCancel) {
-                Text("Cancel")
+                Text(stringResource(R.string.cancel))
             }
             Spacer(modifier = Modifier.width(8.dp))
             Button(
                 onClick = {
                     if (name.isNotBlank()) {
-                        onSave(Category(name = name.trim(), iconName = selectedIcon, color = selectedColor, isExpense = isExpense))
+                        onSave(Category(
+                            id = initialCategory?.id ?: 0,
+                            name = name.trim(), 
+                            iconName = selectedIcon, 
+                            color = selectedColor, 
+                            isExpense = isExpense
+                        ))
                     }
                 },
                 enabled = name.isNotBlank()
             ) {
-                Text("Save")
+                Text(stringResource(R.string.save))
             }
         }
     }
