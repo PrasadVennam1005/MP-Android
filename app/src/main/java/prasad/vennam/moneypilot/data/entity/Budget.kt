@@ -20,6 +20,7 @@ import androidx.room.PrimaryKey
 data class Budget(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val categoryId: Long,
-    val amount: Double,
-    val period: String
+    val amount: Long,
+    val period: String,
+    val currencyCode: String = "INR"
 )

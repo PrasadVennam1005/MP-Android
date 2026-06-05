@@ -1,0 +1,426 @@
+package prasad.vennam.moneypilot.ui.login
+
+import android.util.Log
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.ClickableText
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.AccountBalance
+import androidx.compose.material.icons.rounded.AirplanemodeActive
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.lerp
+import androidx.compose.ui.unit.sp
+import androidx.credentials.CredentialManager
+import androidx.credentials.GetCredentialRequest
+import androidx.credentials.exceptions.GetCredentialException
+import com.google.android.libraries.identity.googleid.GetGoogleIdOption
+import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import prasad.vennam.moneypilot.data.UserPreferences
+import prasad.vennam.moneypilot.ui.viewmodel.MainViewModel
+import prasad.vennam.moneypilot.util.AnalyticsHelper
+
+@Composable
+fun AuthScreen(
+    mainViewModel: MainViewModel,
+    analyticsHelper: AnalyticsHelper,
+    skipSplash: Boolean = false,
+    onAuthSuccess: () -> Unit
+) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val uriHandler = LocalUriHandler.current
+    val credentialManager = remember { CredentialManager.create(context) }
+    
+    val isLoggedIn by mainViewModel.isLoggedIn.collectAsState()
+    var isLoading by remember { mutableStateOf(false) }
+    var isSplash by remember { mutableStateOf(!skipSplash) }
+
+    val transitionProgress by animateFloatAsState(
+        targetValue = if (isSplash) 0f else 1f,
+        animationSpec = tween(durationMillis = 800, easing = FastOutSlowInEasing),
+        label = "SplashToLoginTransition"
+    )
+
+    val initialScale = remember { Animatable(if (skipSplash) 1f else 0f) }
+    val initialAlpha = remember { Animatable(if (skipSplash) 1f else 0f) }
+
+    LaunchedEffect(Unit) {
+        if (!skipSplash) {
+            launch {
+                initialScale.animateTo(
+                    1f,
+                    animationSpec = spring(
+                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                        stiffness = Spring.StiffnessLow
+                    )
+                )
+            }
+            launch {
+                initialAlpha.animateTo(1f, animationSpec = tween(1000))
+            }
+            
+            delay(2500)
+            
+            if (isLoggedIn) {
+                onAuthSuccess()
+            } else {
+                isSplash = false
+            }
+        } else {
+             if (isLoggedIn) onAuthSuccess()
+        }
+    }
+
+    // Logo size shrinks during transition
+    val logoSurfaceSize = lerp(120.dp, 80.dp, transitionProgress)
+    val logoIconSize = lerp(64.dp, 40.dp, transitionProgress)
+    val logoSpacer = lerp(32.dp, 24.dp, transitionProgress)
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(
+                brush = Brush.verticalGradient(
+                    colors = listOf(
+                        MaterialTheme.colorScheme.background,
+                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f - (0.1f * transitionProgress)),
+                        MaterialTheme.colorScheme.background
+                    )
+                )
+            ),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(24.dp)
+                .animateContentSize(animationSpec = tween(800, easing = FastOutSlowInEasing)),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            // Shared Logo
+            Surface(
+                modifier = Modifier
+                    .size(logoSurfaceSize)
+                    .scale(initialScale.value)
+                    .alpha(initialAlpha.value),
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.primary,
+                tonalElevation = lerp(8.dp, 4.dp, transitionProgress)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = Icons.Rounded.AirplanemodeActive,
+                        contentDescription = null,
+                        modifier = Modifier.size(logoIconSize),
+                        tint = MaterialTheme.colorScheme.onPrimary
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(logoSpacer))
+
+            // Box wrapping the dynamic content
+            Box(contentAlignment = Alignment.TopCenter) {
+                // SPLASH CONTENT
+                androidx.compose.animation.AnimatedVisibility(
+                    visible = isSplash,
+                    enter = fadeIn(),
+                    exit = fadeOut(tween(400)) + slideOutVertically(tween(800, easing = FastOutSlowInEasing)) { it / 2 }
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = "MoneyPilot",
+                            style = MaterialTheme.typography.displaySmall.copy(
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 2.sp
+                            ),
+                            color = MaterialTheme.colorScheme.onBackground,
+                            modifier = Modifier.alpha(initialAlpha.value)
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text(
+                            text = "Track. Save. Grow.",
+                            style = MaterialTheme.typography.bodyLarge.copy(
+                                fontWeight = FontWeight.Medium,
+                                letterSpacing = 4.sp,
+                                fontSize = 18.sp
+                            ),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                            modifier = Modifier.alpha(initialAlpha.value)
+                        )
+                    }
+                }
+
+                // LOGIN CONTENT
+                androidx.compose.animation.AnimatedVisibility(
+                    visible = !isSplash,
+                    enter = fadeIn(tween(400, delayMillis = 400)) + slideInVertically(tween(800, easing = FastOutSlowInEasing)) { it / 4 },
+                    exit = fadeOut()
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = "Welcome to MoneyPilot",
+                            style = MaterialTheme.typography.headlineMedium.copy(
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 0.5.sp
+                            ),
+                            color = MaterialTheme.colorScheme.onBackground
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "Your journey to financial freedom starts here.",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center
+                        )
+
+                        Spacer(modifier = Modifier.height(48.dp))
+
+                        // Illustration Placeholder
+                        Surface(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(200.dp),
+                            shape = RoundedCornerShape(24.dp),
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                        ) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Rounded.AccountBalance,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(100.dp),
+                                    tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+                                )
+                                Spacer(modifier = Modifier.height(16.dp))
+                                Text(
+                                    "Track Expenses • Set Budgets • Manage Investments",
+                                    style = MaterialTheme.typography.labelLarge,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(16.dp)
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(48.dp))
+
+                        // Google Sign In Button
+                        if (isLoading) {
+                            CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                        } else {
+                            Button(
+                                onClick = {
+                                    scope.launch {
+                                        isLoading = true
+                                        try {
+                                            val googleIdOption = GetGoogleIdOption.Builder()
+                                                .setFilterByAuthorizedAccounts(false)
+                                                .setServerClientId("769875296764-fi8ktc2uq8u0bpjpjv5chv4q2gmk0mc6.apps.googleusercontent.com")
+                                                .setAutoSelectEnabled(true)
+                                                .build()
+
+                                            val request = GetCredentialRequest.Builder()
+                                                .addCredentialOption(googleIdOption)
+                                                .build()
+
+                                            val result = credentialManager.getCredential(
+                                                request = request,
+                                                context = context
+                                            )
+
+                                            val credential = result.credential
+                                            val googleIdTokenCredential = try {
+                                                if (credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
+                                                    GoogleIdTokenCredential.createFrom(credential.data)
+                                                } else {
+                                                    null
+                                                }
+                                            } catch (e: Exception) {
+                                                null
+                                            }
+
+                                            if (googleIdTokenCredential != null) {
+                                                analyticsHelper.logEvent("login", mapOf("method" to "google"))
+                                                mainViewModel.saveUserData(
+                                                    UserPreferences.UserData(
+                                                        name = googleIdTokenCredential.displayName ?: "User",
+                                                        email = googleIdTokenCredential.id,
+                                                        photoUrl = googleIdTokenCredential.profilePictureUri?.toString()
+                                                    )
+                                                ) {
+                                                    onAuthSuccess()
+                                                }
+                                            }
+                                        } catch (e: GetCredentialException) {
+                                            Log.e("AuthScreen", "Login failed: ${e.message}")
+                                        } catch (e: Exception) {
+                                            Log.e("AuthScreen", "Error: ${e.message}")
+                                        } finally {
+                                            isLoading = false
+                                        }
+                                    }
+                                },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(56.dp),
+                                shape = MaterialTheme.shapes.large,
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = MaterialTheme.colorScheme.surface,
+                                    contentColor = MaterialTheme.colorScheme.onSurface
+                                ),
+                                elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp)
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.Center
+                                ) {
+                                    Text(
+                                        "G ",
+                                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                    Text(
+                                        "Continue with Google",
+                                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold)
+                                    )
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(16.dp))
+
+                            OutlinedButton(
+                                onClick = {
+                                    scope.launch {
+                                        mainViewModel.saveUserData(
+                                            UserPreferences.UserData(
+                                                name = "Guest Pilot",
+                                                email = "guest@moneypilot.app",
+                                                photoUrl = null
+                                            )
+                                        ) {
+                                            onAuthSuccess()
+                                        }
+                                    }
+                                },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(56.dp),
+                                shape = MaterialTheme.shapes.large,
+                                border = ButtonDefaults.outlinedButtonBorder(enabled = true).copy(
+                                    brush = Brush.linearGradient(
+                                        listOf(
+                                            MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
+                                            MaterialTheme.colorScheme.primary
+                                        )
+                                    )
+                                )
+                            ) {
+                                Text(
+                                    "Continue as Guest",
+                                    style = MaterialTheme.typography.titleMedium.copy(
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(24.dp))
+
+                        // Privacy Policy Text
+                        val annotatedText = buildAnnotatedString {
+                            append("By continuing, you agree to our ")
+                            pushStringAnnotation(tag = "terms", annotation = "https://moneypilot.app/terms")
+                            withStyle(style = SpanStyle(color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.SemiBold, textDecoration = TextDecoration.Underline)) {
+                                append("Terms of Service")
+                            }
+                            pop()
+                            append(" and ")
+                            pushStringAnnotation(tag = "privacy", annotation = "https://moneypilot.app/privacy")
+                            withStyle(style = SpanStyle(color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.SemiBold, textDecoration = TextDecoration.Underline)) {
+                                append("Privacy Policy")
+                            }
+                            pop()
+                            append(".")
+                        }
+
+                        ClickableText(
+                            text = annotatedText,
+                            style = MaterialTheme.typography.labelMedium.copy(
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                                textAlign = TextAlign.Center
+                            ),
+                            onClick = { offset ->
+                                annotatedText.getStringAnnotations(tag = "terms", start = offset, end = offset)
+                                    .firstOrNull()?.let { annotation ->
+                                        uriHandler.openUri(annotation.item)
+                                    }
+                                annotatedText.getStringAnnotations(tag = "privacy", start = offset, end = offset)
+                                    .firstOrNull()?.let { annotation ->
+                                        uriHandler.openUri(annotation.item)
+                                    }
+                            },
+                            modifier = Modifier.padding(horizontal = 32.dp)
+                        )
+                    }
+                }
+            }
+        }
+    }
+}

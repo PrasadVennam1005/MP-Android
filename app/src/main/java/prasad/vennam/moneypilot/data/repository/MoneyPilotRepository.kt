@@ -14,10 +14,10 @@ import androidx.room.withTransaction
 import prasad.vennam.moneypilot.data.MoneyPilotDatabase
 
 class MoneyPilotRepository(
-    private val categoryDao: CategoryDao,
-    private val transactionDao: TransactionDao,
-    private val budgetDao: BudgetDao,
-    private val investmentDao: InvestmentDao,
+    val categoryDao: CategoryDao,
+    val transactionDao: TransactionDao,
+    val budgetDao: BudgetDao,
+    val investmentDao: InvestmentDao,
     private val database: MoneyPilotDatabase
 ) {
     // Categories

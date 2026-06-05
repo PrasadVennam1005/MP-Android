@@ -9,6 +9,9 @@ interface InvestmentDao {
     @Query("SELECT * FROM investments")
     fun getAllInvestments(): Flow<List<Investment>>
 
+    @Query("SELECT * FROM investments")
+    suspend fun getAllInvestmentsSync(): List<Investment>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertInvestment(investment: Investment)
 

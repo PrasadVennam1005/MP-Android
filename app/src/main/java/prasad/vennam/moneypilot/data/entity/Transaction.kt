@@ -19,13 +19,14 @@ import androidx.room.PrimaryKey
 )
 data class Transaction(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
-    val amount: Double,
+    val amount: Long,
     val timestamp: Long,
     val categoryId: Long?,
     val subCategory: String = "",
     val paymentMode: String = "Cash",
     val note: String,
-    val type: TransactionType
+    val type: TransactionType,
+    val currencyCode: String = "INR"
 )
 
 enum class TransactionType {

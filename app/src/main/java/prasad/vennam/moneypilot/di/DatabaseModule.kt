@@ -19,7 +19,9 @@ import prasad.vennam.moneypilot.data.UserPreferences
 import prasad.vennam.moneypilot.data.dao.BudgetDao
 import prasad.vennam.moneypilot.data.dao.CategoryDao
 import prasad.vennam.moneypilot.data.dao.InvestmentDao
+import prasad.vennam.moneypilot.data.dao.ExchangeRateDao
 import prasad.vennam.moneypilot.data.dao.TransactionDao
+import prasad.vennam.moneypilot.data.dao.NotificationDao
 import prasad.vennam.moneypilot.data.entity.Category
 import prasad.vennam.moneypilot.data.repository.MoneyPilotRepository
 import javax.inject.Provider
@@ -53,9 +55,16 @@ object DatabaseModule {
                     }
                 }
             })
-            .fallbackToDestructiveMigration(true)
+            .addMigrations(
+                MoneyPilotDatabase.MIGRATION_1_2,
+                MoneyPilotDatabase.MIGRATION_2_3,
+                MoneyPilotDatabase.MIGRATION_3_4
+            )
             .build()
     }
+
+    @Provides
+    fun provideNotificationDao(database: MoneyPilotDatabase): NotificationDao = database.notificationDao()
 
     @Provides
     fun provideCategoryDao(database: MoneyPilotDatabase): CategoryDao = database.categoryDao()
@@ -69,6 +78,10 @@ object DatabaseModule {
     @Provides
     @Singleton
     fun provideInvestmentDao(database: MoneyPilotDatabase): InvestmentDao = database.investmentDao()
+
+    @Provides
+    @Singleton
+    fun provideExchangeRateDao(database: MoneyPilotDatabase): ExchangeRateDao = database.exchangeRateDao()
 
     @Provides
     @Singleton
