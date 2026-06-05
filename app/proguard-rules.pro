@@ -17,5 +17,18 @@
 #-keepattributes SourceFile,LineNumberTable
 
 # If you keep the line number information, uncomment this to
-# hide the original source file name.
 #-renamesourcefileattribute SourceFile
+
+# Retrofit
+-keepattributes Signature
+-keepattributes Exceptions
+-keepclasseswithmembers class * {
+    @retrofit2.http.* <methods>;
+}
+
+# Moshi
+-keep class com.squareup.moshi.** { *; }
+-keep interface com.squareup.moshi.** { *; }
+# Keep data classes that Moshi will serialize/deserialize
+-keep class prasad.vennam.moneypilot.data.entity.** { *; }
+-keep class prasad.vennam.moneypilot.util.FinancePriceFetcher$** { *; }

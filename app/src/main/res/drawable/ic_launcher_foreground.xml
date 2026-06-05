@@ -3,21 +3,13 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <!-- Chart Trail symbolizing growth/tracking -->
-    <path
-        android:strokeColor="#81C784"
-        android:strokeWidth="3"
-        android:pathData="M25,85 Q40,85 50,65"
-        android:strokeLineCap="round"/>
-
-    <!-- Paper Plane (The Pilot) -->
-    <path
-        android:fillColor="#4CAF50"
-        android:pathData="M45,55 L82,26 L55,50 Z" />
-    <path
-        android:fillColor="#388E3C"
-        android:pathData="M55,50 L82,26 L60,82 Z" />
-    <path
-        android:fillColor="#1B5E20"
-        android:pathData="M55,50 L60,82 L50,70 Z" />
+    <group
+        android:translateX="30"
+        android:translateY="30"
+        android:scaleX="2.0"
+        android:scaleY="2.0">
+        <path
+            android:fillColor="#00D09C"
+            android:pathData="M16,6 L18.29,8.29 L13.41,13.17 L9.41,9.17 L2,16.59 L3.41,18 L9.41,12 L13.41,16 L19.71,9.71 L22,12 L22,6 Z" />
+    </group>
 </vector>
