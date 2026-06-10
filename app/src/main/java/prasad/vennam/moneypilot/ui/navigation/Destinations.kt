@@ -7,7 +7,9 @@ import prasad.vennam.moneypilot.data.entity.TransactionType
 @Serializable
 sealed interface Destination : NavKey {
     @Serializable
-    data class Auth(val skipSplash: Boolean = false) : Destination
+    data class Auth(
+        val skipSplash: Boolean = false,
+    ) : Destination
 
     @Serializable
     data object History : Destination
@@ -15,12 +17,18 @@ sealed interface Destination : NavKey {
     @Serializable
     data class AddEditTransaction(
         val transactionId: Long? = null,
-        val initialType: TransactionType = TransactionType.EXPENSE
+        val initialType: TransactionType = TransactionType.EXPENSE,
     ) : Destination
 
     @Serializable
     data object Dashboard : Destination
-    
+
+    @Serializable
+    data object Insights : Destination
+
+    @Serializable
+    data object AiChat : Destination
+
     @Serializable
     data object Expenses : Destination
 
@@ -29,6 +37,9 @@ sealed interface Destination : NavKey {
 
     @Serializable
     data object Investments : Destination
+
+    @Serializable
+    data object Loans : Destination
 
     @Serializable
     data object Reports : Destination

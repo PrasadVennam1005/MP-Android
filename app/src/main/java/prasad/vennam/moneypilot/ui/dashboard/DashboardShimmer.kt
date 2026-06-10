@@ -32,152 +32,168 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 
-fun Modifier.shimmerEffect(): Modifier = composed {
-    var size by remember { mutableStateOf(IntSize.Zero) }
-    val transition = rememberInfiniteTransition(label = "shimmer")
-    val startOffsetX by transition.animateFloat(
-        initialValue = -2 * size.width.toFloat(),
-        targetValue = 2 * size.width.toFloat(),
-        animationSpec = infiniteRepeatable(
-            animation = tween(1000)
-        ),
-        label = "shimmer_offset"
-    )
-    
-    background(
-        brush = Brush.linearGradient(
-            colors = listOf(
-                Color.LightGray.copy(alpha = 0.6f),
-                Color.LightGray.copy(alpha = 0.2f),
-                Color.LightGray.copy(alpha = 0.6f)
-            ),
-            start = Offset(startOffsetX, 0f),
-            end = Offset(startOffsetX + size.width.toFloat(), size.height.toFloat())
+fun Modifier.shimmerEffect(): Modifier =
+    composed {
+        var size by remember { mutableStateOf(IntSize.Zero) }
+        val transition = rememberInfiniteTransition(label = "shimmer")
+        val startOffsetX by transition.animateFloat(
+            initialValue = -2 * size.width.toFloat(),
+            targetValue = 2 * size.width.toFloat(),
+            animationSpec =
+                infiniteRepeatable(
+                    animation = tween(1000),
+                ),
+            label = "shimmer_offset",
         )
-    ).onGloballyPositioned {
-        size = it.size
+
+        background(
+            brush =
+                Brush.linearGradient(
+                    colors =
+                        listOf(
+                            Color.LightGray.copy(alpha = 0.6f),
+                            Color.LightGray.copy(alpha = 0.2f),
+                            Color.LightGray.copy(alpha = 0.6f),
+                        ),
+                    start = Offset(startOffsetX, 0f),
+                    end = Offset(startOffsetX + size.width.toFloat(), size.height.toFloat()),
+                ),
+        ).onGloballyPositioned {
+            size = it.size
+        }
     }
-}
 
 @Composable
 fun DashboardShimmer() {
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(24.dp)
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(24.dp),
     ) {
         // KPI row 1
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .height(100.dp)
-                    .clip(RoundedCornerShape(16.dp))
-                    .shimmerEffect()
+                modifier =
+                    Modifier
+                        .weight(1f)
+                        .height(100.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .shimmerEffect(),
             )
             Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .height(100.dp)
-                    .clip(RoundedCornerShape(16.dp))
-                    .shimmerEffect()
+                modifier =
+                    Modifier
+                        .weight(1f)
+                        .height(100.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .shimmerEffect(),
             )
         }
         // KPI row 2
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .height(100.dp)
-                    .clip(RoundedCornerShape(16.dp))
-                    .shimmerEffect()
+                modifier =
+                    Modifier
+                        .weight(1f)
+                        .height(100.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .shimmerEffect(),
             )
             Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .height(100.dp)
-                    .clip(RoundedCornerShape(16.dp))
-                    .shimmerEffect()
+                modifier =
+                    Modifier
+                        .weight(1f)
+                        .height(100.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .shimmerEffect(),
             )
         }
-        
+
         Spacer(modifier = Modifier.height(8.dp))
-        
+
         // Budget Progress Header
         Box(
-            modifier = Modifier
-                .width(150.dp)
-                .height(24.dp)
-                .clip(RoundedCornerShape(4.dp))
-                .shimmerEffect()
+            modifier =
+                Modifier
+                    .width(150.dp)
+                    .height(24.dp)
+                    .clip(RoundedCornerShape(4.dp))
+                    .shimmerEffect(),
         )
-        
+
         // Budgets
         repeat(2) {
             Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(80.dp)
-                    .clip(RoundedCornerShape(16.dp))
-                    .shimmerEffect()
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .height(80.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .shimmerEffect(),
             )
         }
-        
+
         Spacer(modifier = Modifier.height(8.dp))
-        
+
         // Transactions Header
         Box(
-            modifier = Modifier
-                .width(180.dp)
-                .height(24.dp)
-                .clip(RoundedCornerShape(4.dp))
-                .shimmerEffect()
+            modifier =
+                Modifier
+                    .width(180.dp)
+                    .height(24.dp)
+                    .clip(RoundedCornerShape(4.dp))
+                    .shimmerEffect(),
         )
-        
+
         // Transactions
         repeat(3) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
             ) {
                 Box(
-                    modifier = Modifier
-                        .size(48.dp)
-                        .clip(RoundedCornerShape(24.dp))
-                        .shimmerEffect()
+                    modifier =
+                        Modifier
+                            .size(48.dp)
+                            .clip(RoundedCornerShape(24.dp))
+                            .shimmerEffect(),
                 )
                 Column(
                     modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     Box(
-                        modifier = Modifier
-                            .fillMaxWidth(0.6f)
-                            .height(16.dp)
-                            .clip(RoundedCornerShape(4.dp))
-                            .shimmerEffect()
+                        modifier =
+                            Modifier
+                                .fillMaxWidth(0.6f)
+                                .height(16.dp)
+                                .clip(RoundedCornerShape(4.dp))
+                                .shimmerEffect(),
                     )
                     Box(
-                        modifier = Modifier
-                            .fillMaxWidth(0.4f)
-                            .height(12.dp)
-                            .clip(RoundedCornerShape(4.dp))
-                            .shimmerEffect()
+                        modifier =
+                            Modifier
+                                .fillMaxWidth(0.4f)
+                                .height(12.dp)
+                                .clip(RoundedCornerShape(4.dp))
+                                .shimmerEffect(),
                     )
                 }
                 Box(
-                    modifier = Modifier
-                        .width(60.dp)
-                        .height(16.dp)
-                        .clip(RoundedCornerShape(4.dp))
-                        .shimmerEffect()
+                    modifier =
+                        Modifier
+                            .width(60.dp)
+                            .height(16.dp)
+                            .clip(RoundedCornerShape(4.dp))
+                            .shimmerEffect(),
                 )
             }
         }

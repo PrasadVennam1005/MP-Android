@@ -49,9 +49,9 @@ import androidx.compose.ui.unit.dp
 import prasad.vennam.moneypilot.R
 import prasad.vennam.moneypilot.data.entity.Budget
 import prasad.vennam.moneypilot.data.entity.Category
-import prasad.vennam.moneypilot.util.inRupees
 import prasad.vennam.moneypilot.ui.budget.utils.getCategoryIcon
 import prasad.vennam.moneypilot.util.LocalCurrencyCode
+import prasad.vennam.moneypilot.util.inRupees
 import java.util.Currency
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -63,7 +63,15 @@ fun BudgetFormBottomSheet(
     onSave: (Long, Double) -> Unit,
 ) {
     var selectedCategoryId by remember { mutableStateOf(initialBudget?.categoryId) }
-    var amount by remember { mutableStateOf(initialBudget?.amount?.inRupees?.toString()?.removeSuffix(".0") ?: "") }
+    var amount by remember {
+        mutableStateOf(
+            initialBudget
+                ?.amount
+                ?.inRupees
+                ?.toString()
+                ?.removeSuffix(".0") ?: "",
+        )
+    }
     var expanded by remember { mutableStateOf(false) }
     val currencyCode = LocalCurrencyCode.current
     val currencySymbol = remember(currencyCode) { Currency.getInstance(currencyCode).symbol }
@@ -74,57 +82,61 @@ fun BudgetFormBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
         containerColor = MaterialTheme.colorScheme.surface,
-        dragHandle = null
+        dragHandle = null,
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 32.dp)
-                .verticalScroll(rememberScrollState())
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 32.dp)
+                    .verticalScroll(rememberScrollState()),
         ) {
             // Header with Close Icon
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 24.dp, vertical = 20.dp),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp, vertical = 20.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
                     text = if (initialBudget == null) stringResource(R.string.set_new_budget) else stringResource(R.string.edit_budget),
-                    style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold)
+                    style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
                 )
                 IconButton(
                     onClick = onDismiss,
-                    modifier = Modifier
-                        .size(32.dp)
-                        .background(
-                            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                            CircleShape
-                        )
+                    modifier =
+                        Modifier
+                            .size(32.dp)
+                            .background(
+                                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                                CircleShape,
+                            ),
                 ) {
                     Icon(
                         Icons.Rounded.Close,
                         contentDescription = stringResource(R.string.close),
-                        modifier = Modifier.size(18.dp)
+                        modifier = Modifier.size(18.dp),
                     )
                 }
             }
 
             HorizontalDivider(
                 modifier = Modifier.padding(bottom = 24.dp),
-                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
             )
 
             Column(
                 modifier = Modifier.padding(horizontal = 24.dp),
-                verticalArrangement = Arrangement.spacedBy(20.dp)
+                verticalArrangement = Arrangement.spacedBy(20.dp),
             ) {
                 // Category Picker
                 Box(modifier = Modifier.fillMaxWidth()) {
                     OutlinedTextField(
-                        value = categories.find { it.id == selectedCategoryId }?.name
-                            ?: stringResource(R.string.select_category),
+                        value =
+                            categories.find { it.id == selectedCategoryId }?.name
+                                ?: stringResource(R.string.select_category),
                         onValueChange = {},
                         readOnly = true,
                         label = { Text(stringResource(R.string.category)) },
@@ -132,21 +144,23 @@ fun BudgetFormBottomSheet(
                             Icon(
                                 Icons.Rounded.Category,
                                 null,
-                                tint = MaterialTheme.colorScheme.primary
+                                tint = MaterialTheme.colorScheme.primary,
                             )
                         },
                         modifier = Modifier.fillMaxWidth(),
                         shape = MaterialTheme.shapes.large,
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) }
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
                     )
                     Box(
-                        modifier = Modifier
-                            .matchParentSize()
-                            .clickable { expanded = true })
+                        modifier =
+                            Modifier
+                                .matchParentSize()
+                                .clickable { expanded = true },
+                    )
                     DropdownMenu(
                         expanded = expanded,
                         onDismissRequest = { expanded = false },
-                        modifier = Modifier.fillMaxWidth(0.8f)
+                        modifier = Modifier.fillMaxWidth(0.8f),
                     ) {
                         categories.forEach { category ->
                             DropdownMenuItem(
@@ -156,13 +170,13 @@ fun BudgetFormBottomSheet(
                                         imageVector = getCategoryIcon(category.iconName),
                                         contentDescription = null,
                                         tint = Color(category.color),
-                                        modifier = Modifier.size(20.dp)
+                                        modifier = Modifier.size(20.dp),
                                     )
                                 },
                                 onClick = {
                                     selectedCategoryId = category.id
                                     expanded = false
-                                }
+                                },
                             )
                         }
                     }
@@ -172,26 +186,26 @@ fun BudgetFormBottomSheet(
                 OutlinedTextField(
                     value = amount,
                     onValueChange = {
-                        if (it.isEmpty() || it.toDoubleOrNull() != null) amount = it
+                        if (it.isEmpty() || (it.toDoubleOrNull() != null && it.toDouble() >= 0.0)) amount = it
                     },
                     label = { Text(stringResource(R.string.monthly_budget_amount)) },
                     leadingIcon = {
                         Icon(
                             Icons.Rounded.Payments,
                             null,
-                            tint = MaterialTheme.colorScheme.primary
+                            tint = MaterialTheme.colorScheme.primary,
                         )
                     },
                     prefix = {
                         Text(
                             currencySymbol,
                             fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
+                            color = MaterialTheme.colorScheme.primary,
                         )
                     },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     shape = MaterialTheme.shapes.large,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
                 )
 
                 Spacer(modifier = Modifier.height(12.dp))
@@ -201,11 +215,12 @@ fun BudgetFormBottomSheet(
                     onClick = {
                         onSave(selectedCategoryId!!, amount.toDoubleOrNull() ?: 0.0)
                     },
-                    enabled = selectedCategoryId != null && amount.isNotBlank(),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(60.dp),
-                    shape = MaterialTheme.shapes.large
+                    enabled = selectedCategoryId != null && (amount.toDoubleOrNull() ?: 0.0) > 0.0,
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .height(60.dp),
+                    shape = MaterialTheme.shapes.large,
                 ) {
                     Icon(Icons.Rounded.Check, null)
                     Spacer(modifier = Modifier.width(8.dp))

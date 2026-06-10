@@ -1,8 +1,8 @@
 {
   "formatVersion": 1,
   "database": {
-    "version": 5,
-    "identityHash": "f14cc7801e892bc4a302cff338385950",
+    "version": 6,
+    "identityHash": "a28638a8b09c11b231846c23559368e9",
     "entities": [
       {
         "tableName": "categories",
@@ -354,7 +354,7 @@
       },
       {
         "tableName": "loans",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL, `totalAmount` INTEGER NOT NULL, `outstandingAmount` INTEGER NOT NULL, `emiAmount` INTEGER NOT NULL, `nextEmiDate` INTEGER NOT NULL, `currencyCode` TEXT NOT NULL)",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL, `totalAmount` INTEGER NOT NULL, `outstandingAmount` INTEGER NOT NULL, `emiAmount` INTEGER NOT NULL, `nextEmiDate` INTEGER NOT NULL, `currencyCode` TEXT NOT NULL, `lenderName` TEXT NOT NULL, `interestRate` REAL NOT NULL, `tenureMonths` INTEGER NOT NULL, `dueDayOfMonth` INTEGER NOT NULL, `isNotificationEnabled` INTEGER NOT NULL)",
         "fields": [
           {
             "fieldPath": "id",
@@ -397,6 +397,36 @@
             "columnName": "currencyCode",
             "affinity": "TEXT",
             "notNull": true
+          },
+          {
+            "fieldPath": "lenderName",
+            "columnName": "lenderName",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "interestRate",
+            "columnName": "interestRate",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "tenureMonths",
+            "columnName": "tenureMonths",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "dueDayOfMonth",
+            "columnName": "dueDayOfMonth",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isNotificationEnabled",
+            "columnName": "isNotificationEnabled",
+            "affinity": "INTEGER",
+            "notNull": true
           }
         ],
         "primaryKey": {
@@ -409,7 +439,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'f14cc7801e892bc4a302cff338385950')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'a28638a8b09c11b231846c23559368e9')"
     ]
   }
 }

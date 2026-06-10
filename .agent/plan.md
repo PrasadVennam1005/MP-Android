@@ -1,82 +1,38 @@
-# Project Plan
+# MoneyPilot - Core Development Plan
 
-MoneyPilot: A premium fintech redesign. Implementing a high-quality, card-based UI with specific premium colors and typography. Features include a new 5-tab navigation (Dashboard, Expenses, Income, Investments, Reports), investment tracking, and advanced analytics. Target: Indian users (Salaried, Business, Farmers).
+This document outlines the iteration plans and task tracking records for the MoneyPilot personal finance project.
 
-## Project Brief
+## Current Iteration: Compliance & Publishing Readiness
+*Focus: Google Play Console compliance, public document hosting, and Google authentication interface standardization.*
 
-# MoneyPilot - Project Brief
+### Active Goals
+- **Host Policy Pages**: Create and host a public Privacy Policy and Terms of Service for store reviews using **GitHub Pages** (free hosting via `/docs` directory).
+- **Google Sign-In Compliance**: Revamp the Google login button to follow Google Identity Brand guidelines (using official vector icons, white container background, standard dimensions, and text).
+- **Link Redirections**: Point the interactive policy text links in the app's onboarding screen directly to the live GitHub Pages URLs.
 
+---
 
-MoneyPilot is a premium fintech Android application designed for the diverse Indian demographic, including salaried professionals, business owners, and agriculture specialists. It delivers a high-quality, trustworthy experience inspired by leading financial platforms like CRED and INDmoney.
+## Future Roadmap: Restructuring & Modularization
 
-## Features
-*   **Premium Financial Dashboard:** A high-impact visual summary of net worth, liquidity, and recent activity using sophisticated card-based layouts and soft shadows.
-*   **Transaction Tracking (Income & Expenses):** Streamlined interfaces for logging and categorizing financial flows, optimized for clarity and speed.
-*   **Investment Portfolio Monitor:** A dedicated module to track and visualize various investment assets with a professional, data-rich aesthetic.
-*   **Advanced Analytics & Reports:** Comprehensive visual reports that provide deep insights into spending habits and financial trends through modern data visualization.
+### Phase 1: Native Hilt WorkManager Integration
+- Migrate `DailyNewsWorker` and `GoogleSheetsSyncWorker` to use `@HiltWorker` with Assisted Inject.
+- Implement custom `Configuration.Provider` in `MoneyPilotApplication` to initialize Hilt worker factory.
 
-## High-Level Technical Stack
-*   **Language:** Kotlin
-*   **UI Framework:** Jetpack Compose (Material Design 3) with a custom premium theme (Colors: #2563EB, #10B981; Corner Radius: 20dp).
-*   **Navigation:** Jetpack Navigation 3 (State-driven) implementing a five-tab bottom navigation system.
-*   **Adaptive Strategy:** Compose Material Adaptive library to ensure a premium experience across all Android form factors.
-*   **Concurrency:** Kotlin Coroutines for fluid, non-blocking UI interactions.
-*   **Architecture:** Clean MVVM architecture with a focus on robust state management.
+### Phase 2: Domain Layer (Use Cases)
+- Extract logic from ViewModels into single-responsibility Use Cases:
+  - `SyncSheetsUseCase` (Handles backing up transactions to Google Sheets)
+  - `CalculateBudgetsUseCase` (Evaluates categories limits)
+  - `ParseReceiptUseCase` (OCR parsing from receipts)
 
-## Implementation Steps
+### Phase 3: Project Modularization
+- Split the monolithic `:app` module into clean Gradle sub-projects:
+  - `:core:database` (DB, Room entities, migrations)
+  - `:core:network` (Retrofit, feed fetching API, RSS parsers)
+  - `:core:ui` (Theme styling, custom charts, profile buttons)
+  - `:features:dashboard`, `:features:budget`, `:features:settings` (Self-contained feature scopes)
 
-### Task_1_Data_Theme: Set up the core data layer with Room (Transactions, Categories, Budgets) and the Material 3 theme with vibrant colors and Edge-to-Edge support.
-- **Status:** COMPLETED
-- **Updates:** - Created Room entities for Transaction, Category, and Budget.
-- **Acceptance Criteria:**
-  - Room database and entities defined
-  - M3 theme with light/dark vibrant colors implemented
-  - Edge-to-Edge enabled
-  - Project builds successfully
+### Phase 4: Model-View-Intent (MVI) State Flow
+- Convert complex screen architectures to a single-stream immutable `UiState`, `UiIntent`, and `UiEffect` flows to prevent UI state inconsistencies.
 
-### Task_2_Navigation_Tracking: Implement the Navigation 3 structure and the Transaction Tracking features, including screens for adding/editing transactions and a filterable history list.
-- **Status:** COMPLETED
-- **Updates:** - Implemented state-driven Navigation 3 with type-safe destinations.
-- **Acceptance Criteria:**
-  - Navigation 3 setup working
-  - Add/Edit transaction screens functional
-  - Transaction history list displaying data
-  - Transactions persisted in Room
-
-### Task_3_Dashboard_Budgeting: Develop the Visual Dashboard with spending charts and the Budget Management features to set and monitor monthly targets.
-- **Status:** COMPLETED
-- **Updates:** - Developed Visual Dashboard with total balance summary and custom Donut Chart (Compose Canvas).
-- **Acceptance Criteria:**
-  - Dashboard displays total balance and spending breakdown
-  - Charts/Visualizations implemented with M3
-  - Budget targets can be set and monitored
-  - UI is adaptive for different screen sizes
-
-### Task_4_Polish_Verify: Refine UI details, create an adaptive app icon, and perform a final run to verify stability and requirement alignment.
-- **Status:** COMPLETED
-- **Updates:** - Adaptive app icon implemented.
-- **Acceptance Criteria:**
-  - Adaptive app icon implemented
-  - No crashes during manual testing
-  - UI aligns with M3 and energetic design aesthetic
-  - Final build passes and app is stable
-
-### Task_5_Premium_Redesign_Investments: Redesign the UI with premium colors (#2563EB, #10B981) and 20dp corners. Implement 5-tab navigation and the Investment Portfolio Monitor module.
-- **Status:** COMPLETED
-- **Acceptance Criteria:**
-  - Premium theme applied (colors and 20dp corners)
-  - 5-tab bottom navigation functional
-  - Investment portfolio tracking implemented
-  - Existing screens updated to card-based UI
-
-### Task_6_Analytics_Final_Verify: Implement the Advanced Analytics & Reports module and perform final verification. Instruct critic_agent to verify stability and alignment with requirements.
-- **Status:** COMPLETED
-- **Acceptance Criteria:**
-  - Advanced analytics reports implemented
-  - Adaptive UI verified
-  - Build pass
-  - App does not crash
-  - Existing tests pass
-  - Stability and requirement alignment verified by critic_agent
-
-
+### Phase 5: Compose Component Decomposition
+- Decouple Stateful Screen orchestrators from Stateless layout hosts and stateless sub-components to support full Preview support and isolated unit UI testing.

@@ -12,10 +12,10 @@ import androidx.room.PrimaryKey
             entity = Category::class,
             parentColumns = ["id"],
             childColumns = ["categoryId"],
-            onDelete = ForeignKey.SET_NULL
-        )
+            onDelete = ForeignKey.SET_NULL,
+        ),
     ],
-    indices = [Index("categoryId")]
+    indices = [Index("categoryId")],
 )
 data class Transaction(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
@@ -26,9 +26,10 @@ data class Transaction(
     val paymentMode: String = "Cash",
     val note: String,
     val type: TransactionType,
-    val currencyCode: String = "INR"
+    val currencyCode: String = "INR",
 )
 
 enum class TransactionType {
-    INCOME, EXPENSE
+    INCOME,
+    EXPENSE,
 }

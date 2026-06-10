@@ -15,20 +15,20 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
+import prasad.vennam.moneypilot.R
 import prasad.vennam.moneypilot.data.entity.Category
 import prasad.vennam.moneypilot.ui.budget.utils.getCategoryIcon
 import prasad.vennam.moneypilot.ui.viewmodel.TransactionViewModel
-import prasad.vennam.moneypilot.R
-import androidx.compose.ui.res.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CategoryListScreen(
     viewModel: TransactionViewModel,
-    onNavigateBack: () -> Unit
+    onNavigateBack: () -> Unit,
 ) {
     val categories by viewModel.allCategories.collectAsState()
     var showAddSheet by remember { mutableStateOf(false) }
@@ -40,42 +40,49 @@ fun CategoryListScreen(
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text(stringResource(R.string.manage_categories), style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)) },
+                title = {
+                    Text(
+                        stringResource(R.string.manage_categories),
+                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background,
-                    scrolledContainerColor = Color.Unspecified,
-                    navigationIconContentColor = Color.Unspecified,
-                    titleContentColor = Color.Unspecified,
-                    actionIconContentColor = Color.Unspecified
-                )
+                colors =
+                    TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.background,
+                        scrolledContainerColor = Color.Unspecified,
+                        navigationIconContentColor = Color.Unspecified,
+                        titleContentColor = Color.Unspecified,
+                        actionIconContentColor = Color.Unspecified,
+                    ),
             )
         },
         floatingActionButton = {
             FloatingActionButton(
-                onClick = { 
+                onClick = {
                     editingCategory = null
-                    showAddSheet = true 
+                    showAddSheet = true
                 },
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary,
-                shape = MaterialTheme.shapes.large
+                shape = MaterialTheme.shapes.large,
             ) {
                 Icon(Icons.Rounded.Add, contentDescription = stringResource(R.string.add_category))
             }
-        }
+        },
     ) { innerPadding ->
         LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .background(MaterialTheme.colorScheme.background),
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+                    .background(MaterialTheme.colorScheme.background),
             contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             val expenseCategories = categories.filter { it.isExpense }
             val incomeCategories = categories.filter { !it.isExpense }
@@ -87,11 +94,11 @@ fun CategoryListScreen(
                 items(expenseCategories, key = { it.id }) { category ->
                     CategoryItem(
                         category = category,
-                        onClick = { 
+                        onClick = {
                             editingCategory = it
                             showAddSheet = true
                         },
-                        onDelete = { categoryToDelete = it }
+                        onDelete = { categoryToDelete = it },
                     )
                 }
             }
@@ -103,11 +110,11 @@ fun CategoryListScreen(
                 items(incomeCategories, key = { it.id }) { category ->
                     CategoryItem(
                         category = category,
-                        onClick = { 
+                        onClick = {
                             editingCategory = it
                             showAddSheet = true
                         },
-                        onDelete = { categoryToDelete = it }
+                        onDelete = { categoryToDelete = it },
                     )
                 }
             }
@@ -116,12 +123,12 @@ fun CategoryListScreen(
 
     if (showAddSheet) {
         ModalBottomSheet(
-            onDismissRequest = { 
+            onDismissRequest = {
                 showAddSheet = false
                 editingCategory = null
             },
             sheetState = sheetState,
-            containerColor = MaterialTheme.colorScheme.surface
+            containerColor = MaterialTheme.colorScheme.surface,
         ) {
             AddCategorySheetContent(
                 initialCategory = editingCategory,
@@ -141,7 +148,7 @@ fun CategoryListScreen(
                             editingCategory = null
                         }
                     }
-                }
+                },
             )
         }
     }
@@ -150,14 +157,18 @@ fun CategoryListScreen(
         AlertDialog(
             onDismissRequest = { categoryToDelete = null },
             title = { Text(stringResource(R.string.delete_category)) },
-            text = { Text("Are you sure you want to delete '${cat.name}'? Transactions using this category will remain, but the category won't be available for new transactions.") },
+            text = {
+                Text(
+                    "Are you sure you want to delete '${cat.name}'? Transactions using this category will remain, but the category won't be available for new transactions.",
+                )
+            },
             confirmButton = {
                 Button(
                     onClick = {
                         viewModel.deleteCategory(cat)
                         categoryToDelete = null
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
                 ) {
                     Text(stringResource(R.string.delete))
                 }
@@ -166,7 +177,7 @@ fun CategoryListScreen(
                 TextButton(onClick = { categoryToDelete = null }) {
                     Text(stringResource(R.string.cancel))
                 }
-            }
+            },
         )
     }
 }
@@ -177,33 +188,37 @@ fun CategoryHeader(title: String) {
         text = title,
         style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
         color = MaterialTheme.colorScheme.primary,
-        modifier = Modifier.padding(vertical = 8.dp, horizontal = 4.dp)
+        modifier = Modifier.padding(vertical = 8.dp, horizontal = 4.dp),
     )
 }
 
 @Composable
-fun CategoryItem(category: Category, onClick: (Category) -> Unit, onDelete: (Category) -> Unit) {
+fun CategoryItem(
+    category: Category,
+    onClick: (Category) -> Unit,
+    onDelete: (Category) -> Unit,
+) {
     Card(
         modifier = Modifier.fillMaxWidth().clickable { onClick(category) },
         shape = MaterialTheme.shapes.large,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.5.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.5.dp),
     ) {
         Row(
             modifier = Modifier.padding(16.dp).fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             Surface(
                 color = Color(category.color).copy(alpha = 0.15f),
                 shape = CircleShape,
-                modifier = Modifier.size(44.dp)
+                modifier = Modifier.size(44.dp),
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
                         imageVector = getCategoryIcon(category.iconName),
                         contentDescription = null,
                         tint = Color(category.color),
-                        modifier = Modifier.size(22.dp)
+                        modifier = Modifier.size(22.dp),
                     )
                 }
             }
@@ -211,13 +226,13 @@ fun CategoryItem(category: Category, onClick: (Category) -> Unit, onDelete: (Cat
             Text(
                 text = category.name,
                 style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
             )
             IconButton(onClick = { onDelete(category) }) {
                 Icon(
                     imageVector = Icons.Rounded.DeleteOutline,
                     contentDescription = stringResource(R.string.delete),
-                    tint = MaterialTheme.colorScheme.error.copy(alpha = 0.7f)
+                    tint = MaterialTheme.colorScheme.error.copy(alpha = 0.7f),
                 )
             }
         }
@@ -228,38 +243,69 @@ fun CategoryItem(category: Category, onClick: (Category) -> Unit, onDelete: (Cat
 fun AddCategorySheetContent(
     initialCategory: Category?,
     onSave: (Category) -> Unit,
-    onCancel: () -> Unit
+    onCancel: () -> Unit,
 ) {
     var name by remember(initialCategory) { mutableStateOf(initialCategory?.name ?: "") }
     var isExpense by remember(initialCategory) { mutableStateOf(initialCategory?.isExpense ?: true) }
-    
-    val availableColors = listOf(
-        0xFFF44336, 0xFFE91E63, 0xFF9C27B0, 0xFF673AB7, 
-        0xFF3F51B5, 0xFF2196F3, 0xFF03A9F4, 0xFF00BCD4, 
-        0xFF009688, 0xFF4CAF50, 0xFF8BC34A, 0xFFCDDC39, 
-        0xFFFFEB3B, 0xFFFFC107, 0xFFFF9800, 0xFFFF5722, 
-        0xFF795548, 0xFF9E9E9E, 0xFF607D8B
-    )
+
+    val availableColors =
+        listOf(
+            0xFFF44336,
+            0xFFE91E63,
+            0xFF9C27B0,
+            0xFF673AB7,
+            0xFF3F51B5,
+            0xFF2196F3,
+            0xFF03A9F4,
+            0xFF00BCD4,
+            0xFF009688,
+            0xFF4CAF50,
+            0xFF8BC34A,
+            0xFFCDDC39,
+            0xFFFFEB3B,
+            0xFFFFC107,
+            0xFFFF9800,
+            0xFFFF5722,
+            0xFF795548,
+            0xFF9E9E9E,
+            0xFF607D8B,
+        )
     var selectedColor by remember(initialCategory) { mutableLongStateOf(initialCategory?.color?.toLong() ?: availableColors[0]) }
 
-    val availableIcons = listOf(
-        "restaurant", "directions_car", "shopping_cart", "movie", 
-        "medical_services", "lightbulb", "home", "school", 
-        "card_giftcard", "flight", "security", "receipt", 
-        "payments", "work", "trending_up", "apartment", 
-        "redeem", "history", "category"
-    )
+    val availableIcons =
+        listOf(
+            "restaurant",
+            "directions_car",
+            "shopping_cart",
+            "movie",
+            "medical_services",
+            "lightbulb",
+            "home",
+            "school",
+            "card_giftcard",
+            "flight",
+            "security",
+            "receipt",
+            "payments",
+            "work",
+            "trending_up",
+            "apartment",
+            "redeem",
+            "history",
+            "category",
+        )
     var selectedIcon by remember(initialCategory) { mutableStateOf(initialCategory?.iconName ?: availableIcons[0]) }
 
     Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(24.dp)
-            .padding(bottom = 24.dp)
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(24.dp)
+                .padding(bottom = 24.dp),
     ) {
         Text(
             text = if (initialCategory == null) "New Category" else "Edit Category",
-            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
+            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
         )
         Spacer(modifier = Modifier.height(24.dp))
 
@@ -268,10 +314,11 @@ fun AddCategorySheetContent(
             OutlinedButton(
                 onClick = { isExpense = true },
                 modifier = Modifier.weight(1f),
-                colors = ButtonDefaults.outlinedButtonColors(
-                    containerColor = if (isExpense) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
-                    contentColor = if (isExpense) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
-                )
+                colors =
+                    ButtonDefaults.outlinedButtonColors(
+                        containerColor = if (isExpense) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
+                        contentColor = if (isExpense) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface,
+                    ),
             ) {
                 Text(stringResource(R.string.expense))
             }
@@ -279,15 +326,16 @@ fun AddCategorySheetContent(
             OutlinedButton(
                 onClick = { isExpense = false },
                 modifier = Modifier.weight(1f),
-                colors = ButtonDefaults.outlinedButtonColors(
-                    containerColor = if (!isExpense) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
-                    contentColor = if (!isExpense) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
-                )
+                colors =
+                    ButtonDefaults.outlinedButtonColors(
+                        containerColor = if (!isExpense) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
+                        contentColor = if (!isExpense) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface,
+                    ),
             ) {
                 Text(stringResource(R.string.income))
             }
         }
-        
+
         Spacer(modifier = Modifier.height(16.dp))
 
         OutlinedTextField(
@@ -296,31 +344,32 @@ fun AddCategorySheetContent(
             label = { Text(stringResource(R.string.category_name)) },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
-            shape = MaterialTheme.shapes.large
+            shape = MaterialTheme.shapes.large,
         )
-        
+
         Spacer(modifier = Modifier.height(24.dp))
         Text(stringResource(R.string.color), style = MaterialTheme.typography.labelLarge)
         Spacer(modifier = Modifier.height(8.dp))
-        
+
         // Color Picker
         androidx.compose.foundation.lazy.LazyRow(
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             items(availableColors, key = { it }) { color ->
                 Box(
-                    modifier = Modifier
-                        .size(40.dp)
-                        .clip(CircleShape)
-                        .background(Color(color))
-                        .clickable { selectedColor = color },
-                    contentAlignment = Alignment.Center
+                    modifier =
+                        Modifier
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(Color(color))
+                            .clickable { selectedColor = color },
+                    contentAlignment = Alignment.Center,
                 ) {
                     if (selectedColor == color) {
                         Icon(
                             imageVector = Icons.Rounded.Check,
                             contentDescription = stringResource(R.string.save),
-                            tint = Color.White
+                            tint = Color.White,
                         )
                     }
                 }
@@ -330,24 +379,39 @@ fun AddCategorySheetContent(
         Spacer(modifier = Modifier.height(24.dp))
         Text(stringResource(R.string.icon), style = MaterialTheme.typography.labelLarge)
         Spacer(modifier = Modifier.height(8.dp))
-        
+
         // Icon Picker
         androidx.compose.foundation.lazy.LazyRow(
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             items(availableIcons, key = { it }) { iconName ->
                 Surface(
-                    color = if (selectedIcon == iconName) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
+                    color =
+                        if (selectedIcon ==
+                            iconName
+                        ) {
+                            MaterialTheme.colorScheme.primaryContainer
+                        } else {
+                            MaterialTheme.colorScheme.surfaceVariant
+                        },
                     shape = CircleShape,
-                    modifier = Modifier
-                        .size(48.dp)
-                        .clickable { selectedIcon = iconName }
+                    modifier =
+                        Modifier
+                            .size(48.dp)
+                            .clickable { selectedIcon = iconName },
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Icon(
                             imageVector = getCategoryIcon(iconName),
                             contentDescription = null,
-                            tint = if (selectedIcon == iconName) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
+                            tint =
+                                if (selectedIcon ==
+                                    iconName
+                                ) {
+                                    MaterialTheme.colorScheme.onPrimaryContainer
+                                } else {
+                                    MaterialTheme.colorScheme.onSurfaceVariant
+                                },
                         )
                     }
                 }
@@ -355,10 +419,10 @@ fun AddCategorySheetContent(
         }
 
         Spacer(modifier = Modifier.height(32.dp))
-        
+
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.End
+            horizontalArrangement = Arrangement.End,
         ) {
             TextButton(onClick = onCancel) {
                 Text(stringResource(R.string.cancel))
@@ -367,16 +431,18 @@ fun AddCategorySheetContent(
             Button(
                 onClick = {
                     if (name.isNotBlank()) {
-                        onSave(Category(
-                            id = initialCategory?.id ?: 0,
-                            name = name.trim(), 
-                            iconName = selectedIcon, 
-                            color = selectedColor, 
-                            isExpense = isExpense
-                        ))
+                        onSave(
+                            Category(
+                                id = initialCategory?.id ?: 0,
+                                name = name.trim(),
+                                iconName = selectedIcon,
+                                color = selectedColor,
+                                isExpense = isExpense,
+                            ),
+                        )
                     }
                 },
-                enabled = name.isNotBlank()
+                enabled = name.isNotBlank(),
             ) {
                 Text(stringResource(R.string.save))
             }

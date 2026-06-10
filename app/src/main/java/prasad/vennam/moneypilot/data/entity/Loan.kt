@@ -11,5 +11,10 @@ data class Loan(
     val outstandingAmount: Long,
     val emiAmount: Long,
     val nextEmiDate: Long,
-    val currencyCode: String = "INR"
+    val currencyCode: String = "INR",
+    val lenderName: String = "",
+    val interestRate: Double = 0.0,
+    val tenureMonths: Int = 12,
+    val dueDayOfMonth: Int = 1,
+    val isNotificationEnabled: Boolean = true,
 )

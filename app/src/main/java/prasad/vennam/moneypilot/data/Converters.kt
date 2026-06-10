@@ -5,12 +5,8 @@ import prasad.vennam.moneypilot.data.entity.TransactionType
 
 class Converters {
     @TypeConverter
-    fun fromTransactionType(value: TransactionType): String {
-        return value.name
-    }
+    fun fromTransactionType(value: TransactionType): String = value.name
 
     @TypeConverter
-    fun toTransactionType(value: String): TransactionType {
-        return TransactionType.valueOf(value)
-    }
+    fun toTransactionType(value: String): TransactionType = TransactionType.valueOf(value)
 }

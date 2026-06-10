@@ -13,23 +13,25 @@ object WorkManagerSyncScheduler {
     const val UNIQUE_WORK_NAME = "google_sheets_sync_work"
 
     fun scheduleSync(context: Context) {
-        val constraints = Constraints.Builder()
-            .setRequiredNetworkType(NetworkType.CONNECTED)
-            .build()
+        val constraints =
+            Constraints
+                .Builder()
+                .setRequiredNetworkType(NetworkType.CONNECTED)
+                .build()
 
-        val syncWorkRequest = OneTimeWorkRequestBuilder<GoogleSheetsSyncWorker>()
-            .setConstraints(constraints)
-            .setBackoffCriteria(
-                BackoffPolicy.EXPONENTIAL,
-                15,
-                TimeUnit.SECONDS
-            )
-            .build()
+        val syncWorkRequest =
+            OneTimeWorkRequestBuilder<GoogleSheetsSyncWorker>()
+                .setConstraints(constraints)
+                .setBackoffCriteria(
+                    BackoffPolicy.EXPONENTIAL,
+                    15,
+                    TimeUnit.SECONDS,
+                ).build()
 
         WorkManager.getInstance(context).enqueueUniqueWork(
             UNIQUE_WORK_NAME,
             ExistingWorkPolicy.REPLACE,
-            syncWorkRequest
+            syncWorkRequest,
         )
     }
 

@@ -11,5 +11,5 @@ data class Notification(
     val category: String, // Alerts, Sync, Budget, System
     val timestamp: Long,
     val isRead: Boolean = false,
-    val url: String? = null
+    val url: String? = null,
 )

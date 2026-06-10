@@ -32,38 +32,44 @@ enum class SyncState { SYNCED, SYNCING, PENDING_CONNECTION, FAILED }
 
 @Composable
 fun SyncStatusIndicator(state: SyncState) {
-    val infiniteTransition = rememberInfiniteTransition()
+    val infiniteTransition = rememberInfiniteTransition(label = "syncPulse")
     val alpha by infiniteTransition.animateFloat(
         initialValue = 0.4f,
         targetValue = 1f,
         animationSpec = infiniteRepeatable(animation = tween(1000), repeatMode = RepeatMode.Reverse),
-        label = "syncAlpha"
+        label = "syncAlpha",
     )
-    val (icon, color, label) = when (state) {
-        SyncState.SYNCED -> Triple(Icons.Rounded.CloudDone, Color(0xFF4CAF50), stringResource(R.string.cloud_synced))
-        SyncState.SYNCING -> Triple(
-            Icons.Rounded.CloudSync,
-            MaterialTheme.colorScheme.primary,
-            stringResource(R.string.syncing)
-        )
+    val (icon, color, label) =
+        when (state) {
+            SyncState.SYNCED -> Triple(Icons.Rounded.CloudDone, Color(0xFF4CAF50), stringResource(R.string.cloud_synced))
+            SyncState.SYNCING ->
+                Triple(
+                    Icons.Rounded.CloudSync,
+                    MaterialTheme.colorScheme.primary,
+                    stringResource(R.string.syncing),
+                )
 
-        SyncState.PENDING_CONNECTION -> Triple(
-            Icons.Rounded.CloudOff,
-            MaterialTheme.colorScheme.outline,
-            stringResource(R.string.not_connected)
-        )
+            SyncState.PENDING_CONNECTION ->
+                Triple(
+                    Icons.Rounded.CloudOff,
+                    MaterialTheme.colorScheme.outline,
+                    stringResource(R.string.not_connected),
+                )
 
-        SyncState.FAILED -> Triple(
-            Icons.Rounded.Warning,
-            MaterialTheme.colorScheme.error,
-            stringResource(R.string.sync_failed)
-        )
-    }
+            SyncState.FAILED ->
+                Triple(
+                    Icons.Rounded.Warning,
+                    MaterialTheme.colorScheme.error,
+                    stringResource(R.string.sync_failed),
+                )
+        }
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier
-            .padding(end = 8.dp)
-            .graphicsLayer { if (state == SyncState.SYNCING) this.alpha = alpha }) {
+        modifier =
+            Modifier
+                .padding(end = 8.dp)
+                .graphicsLayer { if (state == SyncState.SYNCING) this.alpha = alpha },
+    ) {
         Icon(icon, null, tint = color, modifier = Modifier.size(18.dp))
         Spacer(Modifier.width(4.dp))
         Text(label, style = MaterialTheme.typography.labelSmall, color = color)

@@ -42,46 +42,64 @@ fun QuickActionSection(
     onAddExpense: () -> Unit,
     onAddIncome: () -> Unit,
     onAddInvestment: () -> Unit,
+    onAddLoan: () -> Unit,
     onScanReceipt: () -> Unit,
     isGuest: Boolean,
 ) {
     Column {
         SectionHeader(stringResource(R.string.quick_actions))
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             QuickActionButton(
                 stringResource(R.string.expense),
                 Icons.Rounded.RemoveCircleOutline,
                 MaterialTheme.colorScheme.error,
                 onAddExpense,
-                Modifier.weight(1f)
+                Modifier.weight(1f),
             )
             QuickActionButton(
                 stringResource(R.string.income),
                 Icons.Rounded.AddCircleOutline,
                 MaterialTheme.colorScheme.secondary,
                 onAddIncome,
-                Modifier.weight(1f)
+                Modifier.weight(1f),
             )
             QuickActionButton(
                 stringResource(R.string.investment),
                 Icons.Rounded.AccountBalanceWallet,
                 MaterialTheme.colorScheme.primary,
                 onAddInvestment,
-                Modifier.weight(1f)
+                Modifier.weight(1f),
             )
+            QuickActionButton(
+                stringResource(R.string.loans),
+                Icons.Rounded.AccountBalanceWallet,
+                MaterialTheme.colorScheme.tertiary,
+                onAddLoan,
+                Modifier.weight(1f),
+            )
+        }
+        Row(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
             QuickActionButton(
                 stringResource(R.string.scan),
                 Icons.Rounded.Camera,
-                MaterialTheme.colorScheme.tertiary,
+                MaterialTheme.colorScheme.outline,
                 onScanReceipt,
                 Modifier.weight(1f),
-                isGuest
+                isGuest,
             )
+            Spacer(modifier = Modifier.weight(3f))
         }
     }
 }
@@ -97,19 +115,23 @@ fun QuickActionButton(
 ) {
     OutlinedCard(
         onClick = if (disabled) ({}) else onClick,
-        modifier = modifier
-            .height(90.dp)
-            .graphicsLayer { alpha = if (disabled) 0.5f else 1f },
+        modifier =
+            modifier
+                .height(90.dp)
+                .graphicsLayer { alpha = if (disabled) 0.5f else 1f },
         shape = MaterialTheme.shapes.large,
-        border = CardDefaults.outlinedCardBorder()
-            .copy(brush = Brush.linearGradient(listOf(color.copy(alpha = 0.5f), color)))
+        border =
+            CardDefaults
+                .outlinedCardBorder()
+                .copy(brush = Brush.linearGradient(listOf(color.copy(alpha = 0.5f), color))),
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(8.dp),
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(8.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+            verticalArrangement = Arrangement.Center,
         ) {
             Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(24.dp))
             Spacer(modifier = Modifier.height(4.dp))
@@ -118,7 +140,7 @@ fun QuickActionButton(
                 style = MaterialTheme.typography.labelMedium,
                 textAlign = TextAlign.Center,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis,
             )
         }
     }
@@ -133,12 +155,12 @@ fun SectionHeader(
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
                 title,
-                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
             )
             if (onInfoClick != null) {
                 IconButton(onClick = onInfoClick, modifier = Modifier.size(32.dp)) {
@@ -146,7 +168,7 @@ fun SectionHeader(
                         Icons.Rounded.Info,
                         null,
                         modifier = Modifier.size(18.dp),
-                        tint = MaterialTheme.colorScheme.primary
+                        tint = MaterialTheme.colorScheme.primary,
                     )
                 }
             }

@@ -21,22 +21,23 @@ import prasad.vennam.moneypilot.R
 @Composable
 fun EmptyBudgetState() {
     Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 48.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(vertical = 48.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Icon(
             Icons.Rounded.AccountBalanceWallet,
             null,
             modifier = Modifier.size(64.dp),
-            tint = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+            tint = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
         )
         Spacer(modifier = Modifier.height(16.dp))
         Text(
             stringResource(R.string.no_budgets_set_yet),
             style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.outline
+            color = MaterialTheme.colorScheme.outline,
         )
     }
 }

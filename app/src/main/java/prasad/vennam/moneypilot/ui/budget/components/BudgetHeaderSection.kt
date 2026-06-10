@@ -23,15 +23,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import prasad.vennam.moneypilot.R
-import prasad.vennam.moneypilot.data.entity.Budget
-import prasad.vennam.moneypilot.util.inRupees
-import prasad.vennam.moneypilot.data.entity.Transaction
-import prasad.vennam.moneypilot.data.entity.TransactionType
+import prasad.vennam.moneypilot.ui.viewmodel.BudgetProgress
 import prasad.vennam.moneypilot.util.CurrencyFormatter
 import prasad.vennam.moneypilot.util.LocalCurrencyCode
-import java.util.Calendar
-
-import prasad.vennam.moneypilot.ui.viewmodel.BudgetProgress
 
 @Composable
 fun BudgetHeaderSection(
@@ -46,37 +40,52 @@ fun BudgetHeaderSection(
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.extraLarge,
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer.copy(
-                alpha = 0.3f
-            )
-        )
+        colors =
+            CardDefaults.cardColors(
+                containerColor =
+                    MaterialTheme.colorScheme.primaryContainer.copy(
+                        alpha = 0.3f,
+                    ),
+            ),
     ) {
         Column(modifier = Modifier.padding(24.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
                     Icons.Rounded.Analytics,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary
+                    tint = MaterialTheme.colorScheme.primary,
                 )
                 Spacer(modifier = Modifier.width(12.dp))
-                Text(
-                    stringResource(R.string.budget_overview),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
+                val monthName = remember(month) {
+                    val symbols = java.text.DateFormatSymbols.getInstance(java.util.Locale.getDefault())
+                    symbols.months.getOrNull(month) ?: ""
+                }
+                Column {
+                    Text(
+                        stringResource(R.string.budget_overview),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    if (monthName.isNotEmpty()) {
+                        Text(
+                            text = "$monthName $year",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                        )
+                    }
+                }
             }
             Spacer(modifier = Modifier.height(16.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.SpaceBetween,
             ) {
                 Column {
                     Text(stringResource(R.string.total_budget), style = MaterialTheme.typography.labelSmall)
                     Text(
                         CurrencyFormatter.format(totalBudget, currencyCode),
                         style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
                     )
                 }
                 Column(horizontalAlignment = Alignment.End) {
@@ -85,7 +94,7 @@ fun BudgetHeaderSection(
                         CurrencyFormatter.format(totalSpent, currencyCode),
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary
+                        color = MaterialTheme.colorScheme.primary,
                     )
                 }
             }

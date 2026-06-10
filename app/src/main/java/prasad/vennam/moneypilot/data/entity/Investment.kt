@@ -14,5 +14,5 @@ data class Investment(
     val quantity: Double? = null,
     val interestRate: Double? = null,
     val startDate: Long? = null,
-    val currencyCode: String = "INR"
+    val currencyCode: String = "INR",
 )

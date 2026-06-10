@@ -16,81 +16,82 @@ import prasad.vennam.moneypilot.data.repository.MoneyPilotRepository
 import javax.inject.Inject
 
 @HiltViewModel
-class TransactionViewModel @Inject constructor(
-    private val repository: MoneyPilotRepository,
-    private val userPreferences: UserPreferences
-) : ViewModel() {
+class TransactionViewModel
+    @Inject
+    constructor(
+        private val repository: MoneyPilotRepository,
+        private val userPreferences: UserPreferences,
+    ) : ViewModel() {
+        val allTransactions: StateFlow<List<Transaction>> =
+            repository.allTransactions
+                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val allTransactions: StateFlow<List<Transaction>> = repository.allTransactions
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+        val allCategories: StateFlow<List<Category>> =
+            repository.allCategories
+                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val allCategories: StateFlow<List<Category>> = repository.allCategories
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-
-    fun saveTransaction(transaction: Transaction) {
-        viewModelScope.launch {
-            try {
-                userPreferences.setSynced(false)
-                if (transaction.id == 0L) {
-                    repository.insertTransaction(transaction)
-                } else {
-                    repository.updateTransaction(transaction)
+        fun saveTransaction(transaction: Transaction) {
+            viewModelScope.launch {
+                try {
+                    userPreferences.setSynced(false)
+                    if (transaction.id == 0L) {
+                        repository.insertTransaction(transaction)
+                    } else {
+                        repository.updateTransaction(transaction)
+                    }
+                } catch (e: Exception) {
+                    android.util.Log.e("TransactionViewModel", "Error saving transaction", e)
                 }
-            } catch (e: Exception) {
-                android.util.Log.e("TransactionViewModel", "Error saving transaction", e)
             }
         }
-    }
 
-    fun deleteTransaction(transaction: Transaction) {
-        viewModelScope.launch {
-            try {
-                userPreferences.setSynced(false)
-                repository.deleteTransaction(transaction)
-            } catch (e: Exception) {
-                android.util.Log.e("TransactionViewModel", "Error deleting transaction", e)
+        fun deleteTransaction(transaction: Transaction) {
+            viewModelScope.launch {
+                try {
+                    userPreferences.setSynced(false)
+                    repository.deleteTransaction(transaction)
+                } catch (e: Exception) {
+                    android.util.Log.e("TransactionViewModel", "Error deleting transaction", e)
+                }
             }
         }
-    }
 
-    fun saveCategory(category: Category) {
-        viewModelScope.launch {
-            try {
-                userPreferences.setSynced(false)
-                repository.insertCategory(category)
-            } catch (e: Exception) {
-                android.util.Log.e("TransactionViewModel", "Error saving category", e)
+        fun saveCategory(category: Category) {
+            viewModelScope.launch {
+                try {
+                    userPreferences.setSynced(false)
+                    repository.insertCategory(category)
+                } catch (e: Exception) {
+                    android.util.Log.e("TransactionViewModel", "Error saving category", e)
+                }
             }
         }
-    }
 
-    fun deleteCategory(category: Category) {
-        viewModelScope.launch {
-            try {
-                userPreferences.setSynced(false)
-                repository.deleteCategory(category)
-            } catch (e: Exception) {
-                android.util.Log.e("TransactionViewModel", "Error deleting category", e)
+        fun deleteCategory(category: Category) {
+            viewModelScope.launch {
+                try {
+                    userPreferences.setSynced(false)
+                    repository.deleteCategory(category)
+                } catch (e: Exception) {
+                    android.util.Log.e("TransactionViewModel", "Error deleting category", e)
+                }
             }
         }
-    }
 
-    suspend fun getTransactionById(id: Long): Transaction? {
-        return repository.getTransactionById(id)
-    }
+        suspend fun getTransactionById(id: Long): Transaction? = repository.getTransactionById(id)
 
-    suspend fun restoreBackup(
-        categories: List<Category>,
-        transactions: List<Transaction>,
-        budgets: List<Budget>,
-        investments: List<Investment>
-    ) {
-        repository.restoreBackup(categories, transactions, budgets, investments)
-        userPreferences.setSynced(true)
-    }
+        suspend fun restoreBackup(
+            categories: List<Category>,
+            transactions: List<Transaction>,
+            budgets: List<Budget>,
+            investments: List<Investment>,
+        ) {
+            repository.restoreBackup(categories, transactions, budgets, investments)
+            userPreferences.setSynced(true)
+        }
 
-    suspend fun clearLocalDatabase() {
-        repository.restoreBackup(Category.DEFAULT_CATEGORIES, emptyList(), emptyList(), emptyList())
-        userPreferences.setSynced(true)
+        suspend fun clearLocalDatabase() {
+            repository.restoreBackup(Category.DEFAULT_CATEGORIES, emptyList(), emptyList(), emptyList())
+            userPreferences.setSynced(true)
+        }
     }
-}

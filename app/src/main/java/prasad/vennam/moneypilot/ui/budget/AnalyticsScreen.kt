@@ -21,7 +21,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.res.stringResource
@@ -29,7 +28,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import prasad.vennam.moneypilot.R
-import prasad.vennam.moneypilot.data.entity.Category
 import prasad.vennam.moneypilot.ui.components.SpendingDonutChart
 import prasad.vennam.moneypilot.ui.components.TrendLineChart
 import prasad.vennam.moneypilot.ui.viewmodel.AnalyticsState
@@ -43,41 +41,43 @@ import prasad.vennam.moneypilot.util.CurrencyFormatter
 @Composable
 fun AnalyticsScreen(
     viewModel: AnalyticsViewModel,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     val state by viewModel.uiState.collectAsState()
     val currencyCode = prasad.vennam.moneypilot.util.LocalCurrencyCode.current
 
-    val chartColors = listOf(
-        MaterialTheme.colorScheme.primary,
-        MaterialTheme.colorScheme.secondary,
-        MaterialTheme.colorScheme.tertiary,
-        MaterialTheme.colorScheme.error,
-        MaterialTheme.colorScheme.primaryContainer,
-        MaterialTheme.colorScheme.secondaryContainer,
-        MaterialTheme.colorScheme.tertiaryContainer,
-        MaterialTheme.colorScheme.outline
-    )
+    val chartColors =
+        listOf(
+            MaterialTheme.colorScheme.primary,
+            MaterialTheme.colorScheme.secondary,
+            MaterialTheme.colorScheme.tertiary,
+            MaterialTheme.colorScheme.error,
+            MaterialTheme.colorScheme.primaryContainer,
+            MaterialTheme.colorScheme.secondaryContainer,
+            MaterialTheme.colorScheme.tertiaryContainer,
+            MaterialTheme.colorScheme.outline,
+        )
 
     Scaffold(
-        modifier = modifier
+        modifier = modifier,
     ) { innerPadding ->
         AnimatedVisibility(
             visible = !state.isLoading,
             enter = fadeIn(),
-            exit = fadeOut()
+            exit = fadeOut(),
         ) {
             LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize(),
+                modifier =
+                    Modifier
+                        .fillMaxSize(),
                 contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
                 // 1. Time Filter Row
                 item {
                     TimeFilterRow(
                         selectedFilter = state.timeFilter,
-                        onFilterSelected = { viewModel.setTimeFilter(it) }
+                        onFilterSelected = { viewModel.setTimeFilter(it) },
                     )
                 }
 
@@ -92,24 +92,28 @@ fun AnalyticsScreen(
                         modifier = Modifier.fillMaxWidth(),
                         shape = MaterialTheme.shapes.extraLarge,
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
                             Text(
                                 text = stringResource(R.string.income_vs_expense),
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
+                                color = MaterialTheme.colorScheme.onSurface,
                             )
                             Spacer(modifier = Modifier.height(16.dp))
                             TrendLineChart(
                                 points = state.trendPoints,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(220.dp),
+                                modifier =
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .height(220.dp),
                                 incomeColor = MaterialTheme.colorScheme.secondary,
                                 expenseColor = MaterialTheme.colorScheme.primary,
-                                currencySymbol = java.util.Currency.getInstance(currencyCode).getSymbol(java.util.Locale.getDefault())
+                                currencySymbol =
+                                    java.util.Currency
+                                        .getInstance(currencyCode)
+                                        .getSymbol(java.util.Locale.getDefault()),
                             )
                         }
                     }
@@ -122,58 +126,61 @@ fun AnalyticsScreen(
                             modifier = Modifier.fillMaxWidth(),
                             shape = MaterialTheme.shapes.extraLarge,
                             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
                         ) {
                             Column(modifier = Modifier.padding(16.dp)) {
                                 Text(
                                     text = stringResource(R.string.expense_breakdown),
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onSurface
+                                    color = MaterialTheme.colorScheme.onSurface,
                                 )
                                 Spacer(modifier = Modifier.height(16.dp))
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
-                                    verticalAlignment = Alignment.CenterVertically
+                                    verticalAlignment = Alignment.CenterVertically,
                                 ) {
-                                    val sortedList = state.spendingByCategory.toList()
-                                        .map { (it.first?.name ?: "Other") to it.second }
-                                        .sortedByDescending { it.second }
+                                    val sortedList =
+                                        state.spendingByCategory
+                                            .toList()
+                                            .map { (it.first?.name ?: "Other") to it.second }
+                                            .sortedByDescending { it.second }
 
                                     SpendingDonutChart(
                                         sortedSpending = sortedList,
                                         colors = chartColors,
-                                        modifier = Modifier.size(120.dp)
+                                        modifier = Modifier.size(120.dp),
                                     )
                                     Spacer(modifier = Modifier.width(24.dp))
                                     Column(
                                         verticalArrangement = Arrangement.spacedBy(8.dp),
-                                        modifier = Modifier.weight(1f)
+                                        modifier = Modifier.weight(1f),
                                     ) {
                                         sortedList.take(4).forEachIndexed { index, pair ->
                                             Row(
                                                 verticalAlignment = Alignment.CenterVertically,
                                                 horizontalArrangement = Arrangement.SpaceBetween,
-                                                modifier = Modifier.fillMaxWidth()
+                                                modifier = Modifier.fillMaxWidth(),
                                             ) {
                                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                                     Box(
-                                                        modifier = Modifier
-                                                            .size(10.dp)
-                                                            .background(chartColors.getOrElse(index) { Color.Gray }, CircleShape)
+                                                        modifier =
+                                                            Modifier
+                                                                .size(10.dp)
+                                                                .background(chartColors.getOrElse(index) { Color.Gray }, CircleShape),
                                                     )
                                                     Spacer(modifier = Modifier.width(8.dp))
                                                     Text(
                                                         text = pair.first,
                                                         style = MaterialTheme.typography.bodySmall,
-                                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                                                     )
                                                 }
                                                 Text(
                                                     text = CurrencyFormatter.format(pair.second, currencyCode),
                                                     style = MaterialTheme.typography.bodySmall,
                                                     fontWeight = FontWeight.Bold,
-                                                    color = MaterialTheme.colorScheme.onSurface
+                                                    color = MaterialTheme.colorScheme.onSurface,
                                                 )
                                             }
                                         }
@@ -191,14 +198,14 @@ fun AnalyticsScreen(
                             modifier = Modifier.fillMaxWidth(),
                             shape = MaterialTheme.shapes.extraLarge,
                             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
                         ) {
                             Column(modifier = Modifier.padding(16.dp)) {
                                 Text(
                                     text = stringResource(R.string.portfolio_distribution),
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onSurface
+                                    color = MaterialTheme.colorScheme.onSurface,
                                 )
                                 Spacer(modifier = Modifier.height(16.dp))
                                 Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -218,7 +225,7 @@ fun AnalyticsScreen(
                             text = stringResource(R.string.financial_insights),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
+                            color = MaterialTheme.colorScheme.onSurface,
                         )
                     }
                     items(state.insights) { insight ->
@@ -233,38 +240,41 @@ fun AnalyticsScreen(
 @Composable
 fun TimeFilterRow(
     selectedFilter: TimeFilter,
-    onFilterSelected: (TimeFilter) -> Unit
+    onFilterSelected: (TimeFilter) -> Unit,
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         TimeFilter.values().forEach { filter ->
             val isSelected = selectedFilter == filter
-            val label = when (filter) {
-                TimeFilter.THIS_MONTH -> stringResource(R.string.time_this_month)
-                TimeFilter.LAST_3_MONTHS -> stringResource(R.string.time_3_months)
-                TimeFilter.LAST_6_MONTHS -> stringResource(R.string.time_6_months)
-                TimeFilter.ALL_TIME -> stringResource(R.string.time_all_time)
-            }
+            val label =
+                when (filter) {
+                    TimeFilter.THIS_MONTH -> stringResource(R.string.time_this_month)
+                    TimeFilter.LAST_3_MONTHS -> stringResource(R.string.time_3_months)
+                    TimeFilter.LAST_6_MONTHS -> stringResource(R.string.time_6_months)
+                    TimeFilter.ALL_TIME -> stringResource(R.string.time_all_time)
+                }
 
             FilterChip(
                 selected = isSelected,
                 onClick = { onFilterSelected(filter) },
                 label = { Text(label) },
-                colors = FilterChipDefaults.filterChipColors(
-                    selectedContainerColor = MaterialTheme.colorScheme.primary,
-                    selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    labelColor = MaterialTheme.colorScheme.onSurfaceVariant
-                ),
-                border = FilterChipDefaults.filterChipBorder(
-                    enabled = true,
-                    selected = isSelected,
-                    borderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f),
-                    selectedBorderColor = Color.Transparent
-                ),
-                shape = RoundedCornerShape(50)
+                colors =
+                    FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = MaterialTheme.colorScheme.primary,
+                        selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        labelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    ),
+                border =
+                    FilterChipDefaults.filterChipBorder(
+                        enabled = true,
+                        selected = isSelected,
+                        borderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f),
+                        selectedBorderColor = Color.Transparent,
+                    ),
+                shape = RoundedCornerShape(50),
             )
         }
     }
@@ -273,12 +283,12 @@ fun TimeFilterRow(
 @Composable
 fun KPIGrid(
     state: AnalyticsState,
-    currencyCode: String
+    currencyCode: String,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             KPICard(
                 title = stringResource(R.string.income),
@@ -287,10 +297,10 @@ fun KPIGrid(
                     Icon(
                         Icons.AutoMirrored.Rounded.TrendingUp,
                         contentDescription = "Income",
-                        tint = MaterialTheme.colorScheme.secondary
+                        tint = MaterialTheme.colorScheme.secondary,
                     )
                 },
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
             )
             KPICard(
                 title = stringResource(R.string.expenses),
@@ -299,29 +309,29 @@ fun KPIGrid(
                     Icon(
                         Icons.AutoMirrored.Rounded.TrendingDown,
                         contentDescription = "Expenses",
-                        tint = MaterialTheme.colorScheme.primary
+                        tint = MaterialTheme.colorScheme.primary,
                     )
                 },
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
             )
         }
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             KPICard(
                 title = stringResource(R.string.net_savings),
                 value = CurrencyFormatter.format(state.netSavings, currencyCode),
                 icon = null,
                 modifier = Modifier.weight(1f),
-                textColor = if (state.netSavings >= 0) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.primary
+                textColor = if (state.netSavings >= 0) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.primary,
             )
             KPICard(
                 title = stringResource(R.string.savings_rate),
                 value = "${String.format("%.1f", state.savingsRate)}%",
                 icon = null,
                 modifier = Modifier.weight(1f),
-                textColor = if (state.savingsRate >= 20.0) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.onSurface
+                textColor = if (state.savingsRate >= 20.0) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.onSurface,
             )
         }
     }
@@ -333,28 +343,29 @@ fun KPICard(
     value: String,
     icon: @Composable (() -> Unit)?,
     modifier: Modifier = Modifier,
-    textColor: Color = MaterialTheme.colorScheme.onSurface
+    textColor: Color = MaterialTheme.colorScheme.onSurface,
 ) {
     Card(
         modifier = modifier,
         shape = MaterialTheme.shapes.extraLarge, // 20dp premium corners
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
     ) {
         Column(
-            modifier = Modifier
-                .padding(16.dp)
-                .fillMaxWidth()
+            modifier =
+                Modifier
+                    .padding(16.dp)
+                    .fillMaxWidth(),
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
                     text = title,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 icon?.invoke()
             }
@@ -363,7 +374,7 @@ fun KPICard(
                 text = value,
                 style = MaterialTheme.typography.titleLarge.copy(fontSize = 20.sp),
                 fontWeight = FontWeight.Bold,
-                color = textColor
+                color = textColor,
             )
         }
     }
@@ -372,34 +383,35 @@ fun KPICard(
 @Composable
 fun AssetAllocationRow(
     alloc: AssetAllocation,
-    currencyCode: String
+    currencyCode: String,
 ) {
     val profit = alloc.currentValue - alloc.investedAmount
     val profitPct = if (alloc.investedAmount > 0) (profit / alloc.investedAmount) * 100 else 0.0
-    val profitText = if (profit >= 0) {
-        "+${String.format("%.1f", profitPct)}%"
-    } else {
-        "${String.format("%.1f", profitPct)}%"
-    }
+    val profitText =
+        if (profit >= 0) {
+            "+${String.format("%.1f", profitPct)}%"
+        } else {
+            "${String.format("%.1f", profitPct)}%"
+        }
     val profitColor = if (profit >= 0) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.primary
 
     Column(modifier = Modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             Column {
                 Text(
                     text = alloc.type,
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
                 Text(
                     text = "Invested: ${CurrencyFormatter.format(alloc.investedAmount, currencyCode)}",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
             Column(horizontalAlignment = Alignment.End) {
@@ -407,60 +419,65 @@ fun AssetAllocationRow(
                     text = CurrencyFormatter.format(alloc.currentValue, currencyCode),
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
                 Text(
                     text = profitText,
                     style = MaterialTheme.typography.bodySmall,
                     fontWeight = FontWeight.Bold,
-                    color = profitColor
+                    color = profitColor,
                 )
             }
         }
         Spacer(modifier = Modifier.height(8.dp))
         LinearProgressIndicator(
             progress = { alloc.sharePercentage },
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(6.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .height(6.dp),
             color = MaterialTheme.colorScheme.primary,
             trackColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f),
-            strokeCap = StrokeCap.Round
+            strokeCap = StrokeCap.Round,
         )
     }
 }
 
 @Composable
 fun InsightCard(insight: FinancialInsight) {
-    val (bgColor, contentColor) = when (insight.type) {
-        InsightType.SUCCESS -> Pair(
-            MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.15f),
-            MaterialTheme.colorScheme.secondary
-        )
-        InsightType.WARNING -> Pair(
-            MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.15f),
-            MaterialTheme.colorScheme.error
-        )
-        InsightType.INFO -> Pair(
-            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.15f),
-            MaterialTheme.colorScheme.primary
-        )
-    }
+    val (bgColor, contentColor) =
+        when (insight.type) {
+            InsightType.SUCCESS ->
+                Pair(
+                    MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.15f),
+                    MaterialTheme.colorScheme.secondary,
+                )
+            InsightType.WARNING ->
+                Pair(
+                    MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.15f),
+                    MaterialTheme.colorScheme.error,
+                )
+            InsightType.INFO ->
+                Pair(
+                    MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.15f),
+                    MaterialTheme.colorScheme.primary,
+                )
+        }
 
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.extraLarge,
-        colors = CardDefaults.cardColors(containerColor = bgColor)
+        colors = CardDefaults.cardColors(containerColor = bgColor),
     ) {
         Row(
             modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.Top
+            verticalAlignment = Alignment.Top,
         ) {
             Icon(
                 Icons.Rounded.Info,
                 contentDescription = "Insight",
                 tint = contentColor,
-                modifier = Modifier.size(24.dp)
+                modifier = Modifier.size(24.dp),
             )
             Spacer(modifier = Modifier.width(12.dp))
             Column {
@@ -468,13 +485,13 @@ fun InsightCard(insight: FinancialInsight) {
                     text = insight.title,
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Bold,
-                    color = contentColor
+                    color = contentColor,
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = insight.description,
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
             }
         }

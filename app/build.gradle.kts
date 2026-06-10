@@ -1,5 +1,5 @@
-import java.util.Properties
 import java.io.FileInputStream
+import java.util.Properties
 
 plugins {
     alias(libs.plugins.android.application)
@@ -25,7 +25,10 @@ android {
         applicationId = "prasad.vennam.moneypilot"
         minSdk = 24
         targetSdk = 37
-        versionCode = libs.versions.versionCode.get().toInt()
+        versionCode =
+            libs.versions.versionCode
+                .get()
+                .toInt()
         versionName = libs.versions.versionName.get()
 
         val googleClientId = localProperties.getProperty("GOOGLE_CLIENT_ID", "\"\"")
@@ -132,4 +135,5 @@ dependencies {
     "ksp"(libs.androidx.room.compiler)
     "ksp"(libs.moshi.kotlin.codegen)
     implementation(libs.androidx.work.runtime)
+    implementation(libs.litert.lm.android)
 }

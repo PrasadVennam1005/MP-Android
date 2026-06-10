@@ -44,7 +44,7 @@ fun KPISection(
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             KPICard(
                 title = stringResource(R.string.todays_expense),
@@ -53,7 +53,7 @@ fun KPISection(
                 containerColor = MaterialTheme.colorScheme.errorContainer,
                 contentColor = MaterialTheme.colorScheme.onErrorContainer,
                 currencyCode = currencyCode,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
             )
             KPICard(
                 title = stringResource(R.string.savings),
@@ -62,12 +62,12 @@ fun KPISection(
                 containerColor = MaterialTheme.colorScheme.primaryContainer,
                 contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
                 currencyCode = currencyCode,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
             )
         }
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             KPICard(
                 title = stringResource(R.string.monthly_income),
@@ -76,7 +76,7 @@ fun KPISection(
                 containerColor = MaterialTheme.colorScheme.secondaryContainer,
                 contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
                 currencyCode = currencyCode,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
             )
             KPICard(
                 title = stringResource(R.string.monthly_expense),
@@ -85,12 +85,12 @@ fun KPISection(
                 containerColor = MaterialTheme.colorScheme.tertiaryContainer,
                 contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
                 currencyCode = currencyCode,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
             )
         }
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             KPICard(
                 title = stringResource(R.string.investments),
@@ -99,7 +99,7 @@ fun KPISection(
                 containerColor = MaterialTheme.colorScheme.primaryContainer,
                 contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
                 currencyCode = currencyCode,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
             )
             KPICard(
                 title = stringResource(R.string.profit_loss),
@@ -108,7 +108,7 @@ fun KPISection(
                 containerColor = MaterialTheme.colorScheme.tertiaryContainer,
                 contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
                 currencyCode = currencyCode,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
             )
         }
     }
@@ -127,25 +127,25 @@ fun KPICard(
     Card(
         modifier = modifier,
         colors = CardDefaults.cardColors(containerColor = containerColor),
-        shape = MaterialTheme.shapes.large
+        shape = MaterialTheme.shapes.large,
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Icon(
                 icon,
                 contentDescription = null,
                 tint = contentColor.copy(alpha = 0.7f),
-                modifier = Modifier.size(20.dp)
+                modifier = Modifier.size(20.dp),
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
                 title,
                 style = MaterialTheme.typography.labelMedium,
-                color = contentColor.copy(alpha = 0.7f)
+                color = contentColor.copy(alpha = 0.7f),
             )
             Text(
                 CurrencyFormatter.format(amount, currencyCode),
                 style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                color = contentColor
+                color = contentColor,
             )
         }
     }

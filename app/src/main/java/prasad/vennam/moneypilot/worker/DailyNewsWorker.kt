@@ -36,17 +36,21 @@ import java.util.concurrent.TimeUnit
 
 class DailyNewsWorker(
     context: Context,
-    params: WorkerParameters
+    params: WorkerParameters,
 ) : CoroutineWorker(context, params) {
-
     @EntryPoint
     @InstallIn(SingletonComponent::class)
     interface WorkerEntryPoint {
         fun notificationDao(): NotificationDao
+
         fun userPreferences(): UserPreferences
     }
 
-    data class FeedItem(val title: String, val message: String, val url: String)
+    data class FeedItem(
+        val title: String,
+        val message: String,
+        val url: String,
+    )
 
     override suspend fun doWork(): Result {
         Log.d("DailyNewsWorker", "doWork: Daily news worker started")
@@ -59,21 +63,23 @@ class DailyNewsWorker(
         val currencyCode = userPreferences.currency.first()
         Log.d("DailyNewsWorker", "doWork: User preferred currency is $currencyCode")
 
-        val rssUrl = when (currencyCode) {
-            "INR" -> "https://economictimes.indiatimes.com/wealth/rssfeeds/8375556.cms" // India Wealth / Personal Finance (Economic Times)
-            "GBP" -> "https://uk.finance.yahoo.com/news/rssindex" // UK Personal Finance (Yahoo Finance)
-            else -> "https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=21324812" // Global/US CNBC Personal Finance
-        }
-
-        val xmlContent = try {
-            withContext(Dispatchers.IO) {
-                URL(rssUrl).readText()
+        val rssUrl =
+            when (currencyCode) {
+                "INR" -> "https://economictimes.indiatimes.com/wealth/rssfeeds/8375556.cms" // India Wealth / Personal Finance (Economic Times)
+                "GBP" -> "https://uk.finance.yahoo.com/news/rssindex" // UK Personal Finance (Yahoo Finance)
+                else -> "https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=21324812" // Global/US CNBC Personal Finance
             }
-        } catch (e: Exception) {
-            Log.e("DailyNewsWorker", "Failed to fetch RSS feed from $rssUrl", e)
-            schedule(appContext)
-            return Result.retry()
-        }
+
+        val xmlContent =
+            try {
+                withContext(Dispatchers.IO) {
+                    URL(rssUrl).readText()
+                }
+            } catch (e: Exception) {
+                Log.e("DailyNewsWorker", "Failed to fetch RSS feed from $rssUrl", e)
+                schedule(appContext)
+                return Result.retry()
+            }
 
         val feedItems = parseRssFeed(xmlContent)
         if (feedItems.isEmpty()) {
@@ -86,23 +92,25 @@ class DailyNewsWorker(
         val existingTitles = existing.map { it.title }.toSet()
         val newItems = feedItems.filter { it.title !in existingTitles }
 
-        val selectedItem = if (newItems.isNotEmpty()) {
-            newItems.first()
-        } else {
-            Log.d("DailyNewsWorker", "No new articles found. Skipping notification.")
-            schedule(appContext)
-            return Result.success()
-        }
+        val selectedItem =
+            if (newItems.isNotEmpty()) {
+                newItems.first()
+            } else {
+                Log.d("DailyNewsWorker", "No new articles found. Skipping notification.")
+                schedule(appContext)
+                return Result.success()
+            }
 
         try {
-            val newNotification = Notification(
-                title = selectedItem.title,
-                message = selectedItem.message,
-                category = "Alerts",
-                timestamp = System.currentTimeMillis(),
-                isRead = false,
-                url = selectedItem.url
-            )
+            val newNotification =
+                Notification(
+                    title = selectedItem.title,
+                    message = selectedItem.message,
+                    category = "Alerts",
+                    timestamp = System.currentTimeMillis(),
+                    isRead = false,
+                    url = selectedItem.url,
+                )
             notificationDao.insertNotification(newNotification)
             sendSystemNotification(appContext, selectedItem.title, selectedItem.message)
         } catch (e: Exception) {
@@ -161,41 +169,50 @@ class DailyNewsWorker(
         return items
     }
 
-    private fun sendSystemNotification(context: Context, title: String, message: String) {
+    private fun sendSystemNotification(
+        context: Context,
+        title: String,
+        message: String,
+    ) {
         val channelId = "financial_news_channel"
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
-                channelId,
-                "Financial News & Insights",
-                NotificationManager.IMPORTANCE_DEFAULT
-            ).apply {
-                description = "Daily personal finance news and money management tips."
-            }
+            val channel =
+                NotificationChannel(
+                    channelId,
+                    "Financial News & Insights",
+                    NotificationManager.IMPORTANCE_DEFAULT,
+                ).apply {
+                    description = "Daily personal finance news and money management tips."
+                }
             notificationManager.createNotificationChannel(channel)
         }
 
-        val intent = Intent(context, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-            putExtra("navigate_to_notifications", true)
-        }
+        val intent =
+            Intent(context, MainActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                putExtra("navigate_to_notifications", true)
+            }
 
-        val pendingIntent = PendingIntent.getActivity(
-            context,
-            0,
-            intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
+        val pendingIntent =
+            PendingIntent.getActivity(
+                context,
+                0,
+                intent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+            )
 
-        val builder = NotificationCompat.Builder(context, channelId)
-            .setSmallIcon(prasad.vennam.moneypilot.R.mipmap.ic_launcher)
-            .setContentTitle(title)
-            .setContentText(message)
-            .setStyle(NotificationCompat.BigTextStyle().bigText(message))
-            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
-            .setContentIntent(pendingIntent)
-            .setAutoCancel(true)
+        val builder =
+            NotificationCompat
+                .Builder(context, channelId)
+                .setSmallIcon(prasad.vennam.moneypilot.R.mipmap.ic_launcher)
+                .setContentTitle(title)
+                .setContentText(message)
+                .setStyle(NotificationCompat.BigTextStyle().bigText(message))
+                .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+                .setContentIntent(pendingIntent)
+                .setAutoCancel(true)
 
         notificationManager.notify(1005, builder.build())
     }
@@ -209,12 +226,13 @@ class DailyNewsWorker(
             var nextTargetTime: Long = 0
 
             for (hour in targets) {
-                val targetCal = Calendar.getInstance().apply {
-                    set(Calendar.HOUR_OF_DAY, hour)
-                    set(Calendar.MINUTE, 0)
-                    set(Calendar.SECOND, 0)
-                    set(Calendar.MILLISECOND, 0)
-                }
+                val targetCal =
+                    Calendar.getInstance().apply {
+                        set(Calendar.HOUR_OF_DAY, hour)
+                        set(Calendar.MINUTE, 0)
+                        set(Calendar.SECOND, 0)
+                        set(Calendar.MILLISECOND, 0)
+                    }
                 if (targetCal.timeInMillis > now) {
                     nextTargetTime = targetCal.timeInMillis
                     break
@@ -222,32 +240,34 @@ class DailyNewsWorker(
             }
 
             if (nextTargetTime == 0L) {
-                val tomorrowCal = Calendar.getInstance().apply {
-                    add(Calendar.DAY_OF_YEAR, 1)
-                    set(Calendar.HOUR_OF_DAY, 9)
-                    set(Calendar.MINUTE, 0)
-                    set(Calendar.SECOND, 0)
-                    set(Calendar.MILLISECOND, 0)
-                }
+                val tomorrowCal =
+                    Calendar.getInstance().apply {
+                        add(Calendar.DAY_OF_YEAR, 1)
+                        set(Calendar.HOUR_OF_DAY, 9)
+                        set(Calendar.MINUTE, 0)
+                        set(Calendar.SECOND, 0)
+                        set(Calendar.MILLISECOND, 0)
+                    }
                 nextTargetTime = tomorrowCal.timeInMillis
             }
 
             val initialDelay = nextTargetTime - now
             Log.d("DailyNewsWorker", "Scheduling next news fetch in ${initialDelay / 1000 / 60} minutes")
 
-            val newsWorkRequest = OneTimeWorkRequestBuilder<DailyNewsWorker>()
-                .setInitialDelay(initialDelay, TimeUnit.MILLISECONDS)
-                .setConstraints(
-                    Constraints.Builder()
-                        .setRequiredNetworkType(NetworkType.CONNECTED)
-                        .build()
-                )
-                .build()
+            val newsWorkRequest =
+                OneTimeWorkRequestBuilder<DailyNewsWorker>()
+                    .setInitialDelay(initialDelay, TimeUnit.MILLISECONDS)
+                    .setConstraints(
+                        Constraints
+                            .Builder()
+                            .setRequiredNetworkType(NetworkType.CONNECTED)
+                            .build(),
+                    ).build()
 
             WorkManager.getInstance(context).enqueueUniqueWork(
                 "daily_news_notification_work",
                 ExistingWorkPolicy.REPLACE,
-                newsWorkRequest
+                newsWorkRequest,
             )
         }
     }

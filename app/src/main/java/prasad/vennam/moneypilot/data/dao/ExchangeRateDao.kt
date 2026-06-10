@@ -14,7 +14,7 @@ interface ExchangeRateDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertRates(rates: List<ExchangeRate>)
-    
+
     @Query("SELECT rateAgainstUSD FROM exchange_rates WHERE currencyCode = :code")
     suspend fun getRate(code: String): Double?
 }

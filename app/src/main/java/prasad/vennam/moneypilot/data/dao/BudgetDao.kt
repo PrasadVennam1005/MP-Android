@@ -22,5 +22,8 @@ interface BudgetDao {
     suspend fun deleteBudget(budget: Budget)
 
     @Query("SELECT * FROM budgets WHERE categoryId = :categoryId AND period = :period")
-    suspend fun getBudget(categoryId: Long, period: String): Budget?
+    suspend fun getBudget(
+        categoryId: Long,
+        period: String,
+    ): Budget?
 }

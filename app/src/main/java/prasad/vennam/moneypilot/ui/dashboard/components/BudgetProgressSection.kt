@@ -16,19 +16,16 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import prasad.vennam.moneypilot.R
 import prasad.vennam.moneypilot.ui.viewmodel.BudgetProgress
-import prasad.vennam.moneypilot.util.inRupees
 import prasad.vennam.moneypilot.util.CurrencyFormatter
 import prasad.vennam.moneypilot.util.LocalCurrencyCode
 
 @Composable
 fun BudgetProgressSection(
     budgetProgresses: List<BudgetProgress>,
-    unknownString: String
+    unknownString: String,
 ) {
     val currencyCode = LocalCurrencyCode.current
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -40,34 +37,39 @@ fun BudgetProgressSection(
 
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
-                )
+                colors =
+                    CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                    ),
             ) {
                 Column(modifier = Modifier.padding(12.dp)) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
+                        horizontalArrangement = Arrangement.SpaceBetween,
                     ) {
                         Text(
                             category?.name ?: unknownString,
                             style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.Bold,
                         )
                         Text(
-                            "${CurrencyFormatter.format(spent, currencyCode)} / ${CurrencyFormatter.format(budgetProgress.limit, currencyCode)}",
-                            style = MaterialTheme.typography.labelMedium
+                            "${CurrencyFormatter.format(
+                                spent,
+                                currencyCode,
+                            )} / ${CurrencyFormatter.format(budgetProgress.limit, currencyCode)}",
+                            style = MaterialTheme.typography.labelMedium,
                         )
                     }
                     Spacer(modifier = Modifier.height(8.dp))
                     LinearProgressIndicator(
                         progress = { progress },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(8.dp)
-                            .clip(CircleShape),
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .height(8.dp)
+                                .clip(CircleShape),
                         color = if (progress > 0.9f) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
-                        trackColor = MaterialTheme.colorScheme.surfaceVariant
+                        trackColor = MaterialTheme.colorScheme.surfaceVariant,
                     )
                 }
             }

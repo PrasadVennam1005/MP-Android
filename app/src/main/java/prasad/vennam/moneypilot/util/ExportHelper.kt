@@ -12,12 +12,11 @@ import java.util.Date
 import java.util.Locale
 
 object ExportHelper {
-
     fun exportToCsv(
         transactions: List<Transaction>,
         categories: List<Category>,
         outputStream: OutputStream,
-        currencyCode: String
+        currencyCode: String,
     ) {
         val writer = outputStream.bufferedWriter()
         writer.write("Date,Type,Category,Payment Mode,Amount,Note\n")
@@ -30,13 +29,16 @@ object ExportHelper {
 
             // Escape notes containing double quotes, commas or newlines
             val escapedNote = transaction.note.replace("\"", "\"\"")
-            val formattedNote = if (escapedNote.contains(",") || escapedNote.contains("\n") || escapedNote.contains("\"")) {
-                "\"$escapedNote\""
-            } else {
-                escapedNote
-            }
+            val formattedNote =
+                if (escapedNote.contains(",") || escapedNote.contains("\n") || escapedNote.contains("\"")) {
+                    "\"$escapedNote\""
+                } else {
+                    escapedNote
+                }
 
-            writer.write("$dateStr,${transaction.type.name},$categoryName,${transaction.paymentMode},${transaction.amount.inRupees},$formattedNote\n")
+            writer.write(
+                "$dateStr,${transaction.type.name},$categoryName,${transaction.paymentMode},${transaction.amount.inRupees},$formattedNote\n",
+            )
         }
         writer.flush()
     }
@@ -45,7 +47,7 @@ object ExportHelper {
         transactions: List<Transaction>,
         categories: List<Category>,
         outputStream: OutputStream,
-        currencyCode: String
+        currencyCode: String,
     ) {
         val document = PdfDocument()
         val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
@@ -55,36 +57,40 @@ object ExportHelper {
         var page = document.startPage(pageInfo)
         var canvas: Canvas = page.canvas
 
-        val textPaint = Paint().apply {
-            color = Color.DKGRAY
-            textSize = 10f
-            isAntiAlias = true
-        }
+        val textPaint =
+            Paint().apply {
+                color = Color.DKGRAY
+                textSize = 10f
+                isAntiAlias = true
+            }
 
-        val headerPaint = Paint().apply {
-            color = Color.BLACK
-            textSize = 11f
-            isFakeBoldText = true
-            isAntiAlias = true
-        }
+        val headerPaint =
+            Paint().apply {
+                color = Color.BLACK
+                textSize = 11f
+                isFakeBoldText = true
+                isAntiAlias = true
+            }
 
-        val titlePaint = Paint().apply {
-            color = Color.rgb(63, 81, 181) // Deep Blue primary color
-            textSize = 18f
-            isFakeBoldText = true
-            isAntiAlias = true
-        }
+        val titlePaint =
+            Paint().apply {
+                color = Color.rgb(63, 81, 181) // Deep Blue primary color
+                textSize = 18f
+                isFakeBoldText = true
+                isAntiAlias = true
+            }
 
         // Draw Cover / Page Title
         canvas.drawText("MoneyPilot Transaction Report", 36f, 50f, titlePaint)
         canvas.drawText("Generated on: ${SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())}", 36f, 70f, textPaint)
 
         // Draw Line under title
-        val linePaint = Paint().apply {
-            color = Color.LTGRAY
-            strokeWidth = 1f
-            isAntiAlias = true
-        }
+        val linePaint =
+            Paint().apply {
+                color = Color.LTGRAY
+                strokeWidth = 1f
+                isAntiAlias = true
+            }
         canvas.drawLine(36f, 85f, 559f, 85f, linePaint)
 
         // Draw Table Header
@@ -122,14 +128,16 @@ object ExportHelper {
             val amountStr = CurrencyFormatter.format(transaction.amount.inRupees, currencyCode)
 
             // Adjust amount color based on transaction type (Green for Income, Red for Expense)
-            val amountPaint = Paint(textPaint).apply {
-                color = if (transaction.type.name == "INCOME") {
-                    Color.rgb(46, 125, 50) // Premium Green
-                } else {
-                    Color.rgb(198, 40, 40) // Premium Red
+            val amountPaint =
+                Paint(textPaint).apply {
+                    color =
+                        if (transaction.type.name == "INCOME") {
+                            Color.rgb(46, 125, 50) // Premium Green
+                        } else {
+                            Color.rgb(198, 40, 40) // Premium Red
+                        }
+                    isFakeBoldText = true
                 }
-                isFakeBoldText = true
-            }
 
             canvas.drawText(dateStr, 36f, y, textPaint)
             canvas.drawText(transaction.type.name, 120f, y, textPaint)
@@ -139,17 +147,18 @@ object ExportHelper {
 
             // Truncate note if too long
             val maxNoteWidth = 100f
-            val noteText = textPaint.let {
-                var temp = transaction.note
-                if (it.measureText(temp) > maxNoteWidth) {
-                    while (temp.isNotEmpty() && it.measureText("$temp...") > maxNoteWidth) {
-                        temp = temp.dropLast(1)
+            val noteText =
+                textPaint.let {
+                    var temp = transaction.note
+                    if (it.measureText(temp) > maxNoteWidth) {
+                        while (temp.isNotEmpty() && it.measureText("$temp...") > maxNoteWidth) {
+                            temp = temp.dropLast(1)
+                        }
+                        "$temp..."
+                    } else {
+                        temp
                     }
-                    "$temp..."
-                } else {
-                    temp
                 }
-            }
             canvas.drawText(noteText, 450f, y, textPaint)
 
             y += 20f

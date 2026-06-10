@@ -32,40 +32,39 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
+import prasad.vennam.moneypilot.R
 import prasad.vennam.moneypilot.data.entity.Category
 import prasad.vennam.moneypilot.data.entity.Transaction
 import prasad.vennam.moneypilot.data.entity.TransactionType
 import prasad.vennam.moneypilot.ui.viewmodel.TransactionViewModel
-import prasad.vennam.moneypilot.util.inPaisa
 import prasad.vennam.moneypilot.util.AnalyticsHelper
+import prasad.vennam.moneypilot.util.LocalCurrencyCode
 import prasad.vennam.moneypilot.util.ParsedReceipt
 import prasad.vennam.moneypilot.util.PermissionGate
 import prasad.vennam.moneypilot.util.ReceiptParser
-import prasad.vennam.moneypilot.util.LocalCurrencyCode
+import prasad.vennam.moneypilot.util.inPaisa
 import java.util.Currency
 import java.util.concurrent.Executors
-import prasad.vennam.moneypilot.R
-import androidx.compose.ui.res.stringResource
 
 @Composable
 fun ReceiptScannerScreen(
     onNavigateBack: () -> Unit,
     transactionViewModel: TransactionViewModel,
-    analyticsHelper: AnalyticsHelper
+    analyticsHelper: AnalyticsHelper,
 ) {
     PermissionGate(
         permission = Manifest.permission.CAMERA,
-        rationale = "Camera access is required to scan receipts and automatically extract expense details."
+        rationale = "Camera access is required to scan receipts and automatically extract expense details.",
     ) {
         ReceiptScannerContent(onNavigateBack, transactionViewModel, analyticsHelper)
     }
@@ -76,7 +75,7 @@ fun ReceiptScannerScreen(
 fun ReceiptScannerContent(
     onNavigateBack: () -> Unit,
     transactionViewModel: TransactionViewModel,
-    analyticsHelper: AnalyticsHelper
+    analyticsHelper: AnalyticsHelper,
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -87,64 +86,79 @@ fun ReceiptScannerContent(
     var detectedData by remember { mutableStateOf<ParsedReceipt?>(null) }
     var showResultsSheet by remember { mutableStateOf(false) }
     var showSuccessDialog by remember { mutableStateOf(false) }
-    
+
     val previewView = remember { PreviewView(context) }
 
     // Gallery Picker Launcher
-    val galleryLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
-    ) { uri: Uri? ->
-        uri?.let {
-            val inputImage = InputImage.fromFilePath(context, it)
-            recognizer.process(inputImage)
-                .addOnSuccessListener { visionText ->
-                    val result = ReceiptParser.parse(visionText)
-                    
-                    analyticsHelper.logEvent("scanner_gallery_upload", mapOf(
-                        "success" to (result.amount != null),
-                        "merchant_found" to (result.merchant != null)
-                    ))
+    val galleryLauncher =
+        rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.GetContent(),
+        ) { uri: Uri? ->
+            uri?.let {
+                val inputImage = InputImage.fromFilePath(context, it)
+                recognizer
+                    .process(inputImage)
+                    .addOnSuccessListener { visionText ->
+                        val result = ReceiptParser.parse(visionText)
 
-                    if (result.amount != null) {
-                        detectedData = result
-                        isScanning = false
-                        showResultsSheet = true
-                    } else {
-                        Toast.makeText(context,
-                            context.run { getString(R.string.could_not_detect_amount_in_this_image_please_try_another) }, Toast.LENGTH_LONG).show()
+                        analyticsHelper.logEvent(
+                            "scanner_gallery_upload",
+                            mapOf(
+                                "success" to (result.amount != null),
+                                "merchant_found" to (result.merchant != null),
+                            ),
+                        )
+
+                        if (result.amount != null) {
+                            detectedData = result
+                            isScanning = false
+                            showResultsSheet = true
+                        } else {
+                            Toast
+                                .makeText(
+                                    context,
+                                    context.run { getString(R.string.could_not_detect_amount_in_this_image_please_try_another) },
+                                    Toast.LENGTH_LONG,
+                                ).show()
+                        }
                     }
-                }
+            }
         }
-    }
 
     LaunchedEffect(isScanning) {
         if (isScanning) {
             val cameraProviderFuture = ProcessCameraProvider.getInstance(context)
             cameraProviderFuture.addListener({
                 val cameraProvider = cameraProviderFuture.get()
-                val preview = Preview.Builder().build().also {
-                    it.surfaceProvider = previewView.surfaceProvider
-                }
+                val preview =
+                    Preview.Builder().build().also {
+                        it.surfaceProvider = previewView.surfaceProvider
+                    }
 
-                val imageAnalysis = ImageAnalysis.Builder()
-                    .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
-                    .build()
-                    .also {
-                        it.setAnalyzer(cameraExecutor) { imageProxy ->
-                            processImageProxy(imageProxy, recognizer) { result ->
-                                if (result.amount != null && isScanning) {
-                                    analyticsHelper.logEvent("scanner_live_scan_success", mapOf(
-                                        "merchant_found" to (result.merchant != null)
-                                    ))
-                                    
-                                    detectedData = result
-                                    isScanning = false
-                                    showResultsSheet = true
+                val imageAnalysis =
+                    ImageAnalysis
+                        .Builder()
+                        .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+                        .build()
+                        .also {
+                            it.setAnalyzer(cameraExecutor) { imageProxy ->
+                                processImageProxy(imageProxy, recognizer) { result ->
+                                    if (result.amount != null && isScanning) {
+                                        analyticsHelper.logEvent(
+                                            "scanner_live_scan_success",
+                                            mapOf(
+                                                "merchant_found" to (result.merchant != null),
+                                            ),
+                                        )
+
+                                        detectedData = result
+                                        isScanning = false
+                                        showResultsSheet = true
+                                    }
+                                    imageProxy.close()
                                 }
-                                imageProxy.close()
                             }
                         }
-                    }
 
                 try {
                     cameraProvider.unbindAll()
@@ -152,7 +166,7 @@ fun ReceiptScannerContent(
                         lifecycleOwner,
                         CameraSelector.DEFAULT_BACK_CAMERA,
                         preview,
-                        imageAnalysis
+                        imageAnalysis,
                     )
                 } catch (e: Exception) {
                     // Ignore use case binding failures
@@ -165,7 +179,12 @@ fun ReceiptScannerContent(
         containerColor = Color.Black,
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.scan_receipt), style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)) },
+                title = {
+                    Text(
+                        stringResource(R.string.scan_receipt),
+                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.back), tint = Color.White)
@@ -176,19 +195,23 @@ fun ReceiptScannerContent(
                         Icon(Icons.Rounded.Collections, contentDescription = stringResource(R.string.gallery), tint = Color.White)
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.Black.copy(alpha = 0.5f),
-                    titleContentColor = Color.White
-                )
+                colors =
+                    TopAppBarDefaults.topAppBarColors(
+                        containerColor = Color.Black.copy(alpha = 0.5f),
+                        titleContentColor = Color.White,
+                    ),
             )
-        }
+        },
     ) { innerPadding ->
-        Box(modifier = Modifier
-            .fillMaxSize()
-            .padding(innerPadding)) {
+        Box(
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding),
+        ) {
             AndroidView(
                 factory = { previewView },
-                modifier = Modifier.fillMaxSize()
+                modifier = Modifier.fillMaxSize(),
             )
 
             // Perfectly centered 3/4 screen overlay
@@ -197,11 +220,12 @@ fun ReceiptScannerContent(
             if (isScanning) {
                 Text(
                     stringResource(R.string.position_receipt_within_the_frame),
-                    modifier = Modifier
-                        .align(Alignment.Center)
-                        .padding(top = 350.dp),
+                    modifier =
+                        Modifier
+                            .align(Alignment.Center)
+                            .padding(top = 350.dp),
                     color = Color.White,
-                    style = MaterialTheme.typography.bodyMedium
+                    style = MaterialTheme.typography.bodyMedium,
                 )
             }
         }
@@ -220,7 +244,7 @@ fun ReceiptScannerContent(
                 transactionViewModel.saveTransaction(transaction)
                 showResultsSheet = false
                 showSuccessDialog = true
-            }
+            },
         )
     }
 
@@ -236,7 +260,7 @@ fun ReceiptScannerContent(
                         isScanning = true
                         detectedData = null
                     },
-                    shape = MaterialTheme.shapes.large
+                    shape = MaterialTheme.shapes.large,
                 ) { Text(stringResource(R.string.scan_another)) }
             },
             dismissButton = {
@@ -244,7 +268,7 @@ fun ReceiptScannerContent(
                     showSuccessDialog = false
                     onNavigateBack()
                 }) { Text(stringResource(R.string.go_to_dashboard)) }
-            }
+            },
         )
     }
 }
@@ -255,7 +279,7 @@ fun ReceiptResultsBottomSheet(
     detectedData: ParsedReceipt,
     categories: List<Category>,
     onDismiss: () -> Unit,
-    onSave: (Transaction) -> Unit
+    onSave: (Transaction) -> Unit,
 ) {
     val currencyCode = LocalCurrencyCode.current
     val currencySymbol = remember(currencyCode) { Currency.getInstance(currencyCode).symbol }
@@ -268,41 +292,50 @@ fun ReceiptResultsBottomSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         dragHandle = null,
-        containerColor = MaterialTheme.colorScheme.surface
+        containerColor = MaterialTheme.colorScheme.surface,
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 32.dp)
-                .verticalScroll(rememberScrollState())
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 32.dp)
+                    .verticalScroll(rememberScrollState()),
         ) {
             // Header
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 24.dp, vertical = 20.dp),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp, vertical = 20.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(stringResource(R.string.confirm_details), style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold))
+                Text(
+                    stringResource(R.string.confirm_details),
+                    style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
+                )
                 IconButton(
-                    onClick = onDismiss, 
-                    modifier = Modifier
-                        .size(32.dp)
-                        .background(
-                            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                            CircleShape
-                        )
+                    onClick = onDismiss,
+                    modifier =
+                        Modifier
+                            .size(32.dp)
+                            .background(
+                                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                                CircleShape,
+                            ),
                 ) {
                     Icon(Icons.Rounded.Close, null, modifier = Modifier.size(18.dp))
                 }
             }
 
-            HorizontalDivider(modifier = Modifier.padding(bottom = 24.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+            HorizontalDivider(
+                modifier = Modifier.padding(bottom = 24.dp),
+                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+            )
 
             Column(
                 modifier = Modifier.padding(horizontal = 24.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
                 OutlinedTextField(
                     value = merchant,
@@ -310,17 +343,24 @@ fun ReceiptResultsBottomSheet(
                     label = { Text(stringResource(R.string.merchant)) },
                     leadingIcon = { Icon(Icons.Rounded.Store, null, tint = MaterialTheme.colorScheme.primary) },
                     modifier = Modifier.fillMaxWidth(),
-                    shape = MaterialTheme.shapes.large
+                    shape = MaterialTheme.shapes.large,
                 )
 
                 OutlinedTextField(
                     value = amount,
                     onValueChange = { if (it.isEmpty() || it.toDoubleOrNull() != null) amount = it },
                     label = { Text(stringResource(R.string.amount_1)) },
-                    leadingIcon = { Text(currencySymbol, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 12.dp)) },
+                    leadingIcon = {
+                        Text(
+                            currencySymbol,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(start = 12.dp),
+                        )
+                    },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     modifier = Modifier.fillMaxWidth(),
-                    shape = MaterialTheme.shapes.large
+                    shape = MaterialTheme.shapes.large,
                 )
 
                 // Category Picker
@@ -333,26 +373,38 @@ fun ReceiptResultsBottomSheet(
                         leadingIcon = { Icon(Icons.Rounded.Category, null, tint = MaterialTheme.colorScheme.primary) },
                         modifier = Modifier.fillMaxWidth(),
                         shape = MaterialTheme.shapes.large,
-                        trailingIcon = { IconButton(onClick = { showCategoryMenu = true }) { Icon(Icons.Rounded.ArrowDropDown, contentDescription = stringResource(R.string.select_category)) } }
+                        trailingIcon = {
+                            IconButton(onClick = {
+                                showCategoryMenu = true
+                            }) { Icon(Icons.Rounded.ArrowDropDown, contentDescription = stringResource(R.string.select_category)) }
+                        },
                     )
-                    Box(modifier = Modifier
-                        .matchParentSize()
-                        .clickable { showCategoryMenu = true })
+                    Box(
+                        modifier =
+                            Modifier
+                                .matchParentSize()
+                                .clickable { showCategoryMenu = true },
+                    )
                     DropdownMenu(
-                        expanded = showCategoryMenu, 
+                        expanded = showCategoryMenu,
                         onDismissRequest = { showCategoryMenu = false },
-                        modifier = Modifier.fillMaxWidth(0.8f)
+                        modifier = Modifier.fillMaxWidth(0.8f),
                     ) {
                         categories.filter { it.isExpense }.forEach { category ->
                             DropdownMenuItem(
                                 text = { Text(category.name) },
-                                leadingIcon = { 
-                                    Icon(Icons.AutoMirrored.Rounded.Label, null, tint = Color(category.color), modifier = Modifier.size(20.dp))
+                                leadingIcon = {
+                                    Icon(
+                                        Icons.AutoMirrored.Rounded.Label,
+                                        null,
+                                        tint = Color(category.color),
+                                        modifier = Modifier.size(20.dp),
+                                    )
                                 },
                                 onClick = {
                                     selectedCategoryId = category.id
                                     showCategoryMenu = false
-                                }
+                                },
                             )
                         }
                     }
@@ -362,19 +414,22 @@ fun ReceiptResultsBottomSheet(
 
                 Button(
                     onClick = {
-                        onSave(Transaction(
-                            amount = (amount.toDoubleOrNull() ?: 0.0).inPaisa,
-                            timestamp = timestamp,
-                            categoryId = selectedCategoryId,
-                            note = merchant,
-                            type = TransactionType.EXPENSE
-                        ))
+                        onSave(
+                            Transaction(
+                                amount = (amount.toDoubleOrNull() ?: 0.0).inPaisa,
+                                timestamp = timestamp,
+                                categoryId = selectedCategoryId,
+                                note = merchant,
+                                type = TransactionType.EXPENSE,
+                            ),
+                        )
                     },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(60.dp),
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .height(60.dp),
                     shape = MaterialTheme.shapes.large,
-                    enabled = amount.isNotBlank() && selectedCategoryId != null
+                    enabled = amount.isNotBlank() && selectedCategoryId != null,
                 ) {
                     Icon(Icons.Rounded.Check, null)
                     Spacer(modifier = Modifier.width(8.dp))
@@ -389,17 +444,17 @@ fun ReceiptResultsBottomSheet(
 private fun processImageProxy(
     imageProxy: ImageProxy,
     recognizer: com.google.mlkit.vision.text.TextRecognizer,
-    onResult: (ParsedReceipt) -> Unit
+    onResult: (ParsedReceipt) -> Unit,
 ) {
     val mediaImage = imageProxy.image
     if (mediaImage != null) {
         val image = InputImage.fromMediaImage(mediaImage, imageProxy.imageInfo.rotationDegrees)
-        recognizer.process(image)
+        recognizer
+            .process(image)
             .addOnSuccessListener { visionText ->
                 val result = ReceiptParser.parse(visionText)
                 onResult(result)
-            }
-            .addOnFailureListener {
+            }.addOnFailureListener {
                 onResult(ParsedReceipt())
             }
     }
@@ -410,38 +465,42 @@ fun ScannerOverlay(modifier: Modifier = Modifier) {
     Canvas(modifier = modifier) {
         val strokeWidth = 3.dp.toPx()
         val cornerRadius = 24.dp.toPx()
-        
+
         // Perfectly centered 3/4 screen overlay
         val overlayWidth = size.width * 0.85f
         val overlayHeight = size.height * 0.65f
         val left = (size.width - overlayWidth) / 2
         val top = (size.height - overlayHeight) / 2
-        
+
         drawRect(
             color = Color.Black.copy(alpha = 0.6f),
-            size = size
+            size = size,
         )
-        
+
         drawRoundRect(
             color = Color.Transparent,
             topLeft = Offset(left, top),
             size = Size(overlayWidth, overlayHeight),
             cornerRadius = CornerRadius(cornerRadius),
-            blendMode = BlendMode.Clear
+            blendMode = BlendMode.Clear,
         )
-        
+
         drawRoundRect(
             color = Color.White,
             topLeft = Offset(left, top),
             size = Size(overlayWidth, overlayHeight),
             cornerRadius = CornerRadius(cornerRadius),
-            style = Stroke(width = strokeWidth)
+            style = Stroke(width = strokeWidth),
         )
     }
 }
 
 @Composable
-fun InfoRow(label: String, value: String, icon: ImageVector) {
+fun InfoRow(
+    label: String,
+    value: String,
+    icon: ImageVector,
+) {
     Column {
         Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 4.dp)) {

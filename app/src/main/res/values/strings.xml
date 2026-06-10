@@ -79,6 +79,12 @@
     <string name="autocalculate_quantity_from_invested_date">Auto-calculate quantity from invested date price</string>
     <string name="eg_15">e.g. 1.5</string>
     <string name="asset_type">Asset Type</string>
+    <string name="asset_stock">Stock</string>
+    <string name="asset_mutual_fund">Mutual Fund</string>
+    <string name="asset_crypto">Crypto</string>
+    <string name="asset_real_estate">Real Estate</string>
+    <string name="asset_gold">Gold</string>
+    <string name="asset_fd">FD</string>
     <string name="eg_bitcoin_apple_stocks">e.g. Bitcoin, Apple Stocks</string>
     <string name="investment_name">Investment Name</string>
     <string name="total_portfolio_value">TOTAL PORTFOLIO VALUE</string>
@@ -87,6 +93,29 @@
     <string name="clear">Clear</string>
     <string name="add_investment">Add Investment</string>
     <string name="refresh_prices">Refresh prices</string>
+    <string name="edit_investment">Edit Investment</string>
+    <string name="principal_invested">Principal Invested</string>
+    <string name="purchase_price">Purchase Price</string>
+    <string name="invested_label">Invested</string>
+    <string name="start_date">Start Date</string>
+    <string name="purchase_date">Purchase Date</string>
+    <string name="invested_date">Invested Date</string>
+    <string name="search_fund_scheme">Search Fund / Scheme Code</string>
+    <string name="search_symbol">Search Symbol</string>
+    <string name="eg_crypto_symbol">e.g. BTC-USD</string>
+    <string name="eg_mutual_fund_symbol">e.g. HDFC Top 100</string>
+    <string name="tap_to_see_options">Tap to see options</string>
+    <string name="eg_stock_symbol">e.g. RELIANCE.NS</string>
+    <string name="units">Units</string>
+    <string name="quantity">Quantity</string>
+    <string name="interest_rate_percent">Interest Rate (% Annual)</string>
+    <string name="appreciation_rate_percent">Appreciation Rate (% Year)</string>
+    <string name="fetching_price_on">Fetching price on %1$s…</string>
+    <string name="quantity_filled_price">Quantity filled · price on %1$s was %2$s</string>
+    <string name="undo">Undo</string>
+    <string name="investment_deleted">Investment deleted</string>
+    <string name="budget_deleted">Budget deleted</string>
+    <string name="transaction_deleted">Transaction deleted</string>
     <string name="no_budgets_set_yet">No budgets set yet</string>
     <string name="set_budget">Set Budget</string>
     <string name="monthly_budget_amount">Monthly Budget Amount</string>
@@ -158,8 +187,66 @@
     <string name="syncing_data">Syncing data to Google Sheets...</string>
     <string name="sign_in_to_sync">Sign in to sync your data</string>
     <string name="restricted_guest">This feature is restricted for Guest users.</string>
+    <string name="financial_goal">Financial Goal</string>
+    <string name="savings_target_subtitle">%1$s (Target: %2$d%% savings)</string>
+    <string name="light_mode">Light Mode</string>
+    <string name="dark_mode">Dark Mode</string>
+    <string name="choose_theme">Choose Theme</string>
+    <string name="export_description">Select the format to export your transaction report.</string>
+    <string name="csv">CSV</string>
+    <string name="pdf">PDF</string>
+    <string name="backup_sync_required">Backup &amp; Sync Required</string>
+    <string name="sync_required_desc">To access %1$s, please sign in with Google.</string>
+    <string name="sync_benefits_desc">All your current transactions and data will be automatically synced and secured in your personal Google Sheets backup.</string>
+    <string name="user_fallback">User</string>
+    <string name="base_currency">Base Currency</string>
+    <string name="usd_exchange_rate_format">1 USD = %1$s%2$.2f</string>
+    <string name="data_exported_csv">Data exported successfully as CSV!</string>
+    <string name="data_exported_pdf">Data exported successfully as PDF!</string>
+    <string name="export_failed">Export failed: %1$s</string>
 
     <string name="manage_categories">Manage Categories</string>
+
+    <string name="my_loans">My Loans</string>
+    <string name="add_loan">Add Loan</string>
+    <string name="no_loans_tracked_yet">No loans tracked yet.</string>
+    <string name="add_loan_to_monitor">Add a loan to monitor progress.</string>
+    <string name="delete_loan">Delete Loan</string>
+    <string name="delete_loan_confirm">Are you sure you want to delete \'%1$s\'? This will permanently erase the loan history.</string>
+    <string name="percent_paid">%1$d%% Paid</string>
+    <string name="edit_details">Edit Details</string>
+    <string name="interest_rate_pa">Interest: %1$s%% p.a.</string>
+    <string name="tenure_months_format">Tenure: %1$d Months</string>
+    <string name="reminders_on">Reminders On</string>
+    <string name="reminders_off">Reminders Off</string>
+    <string name="paid_amount_format">Paid: %1$s %2$s</string>
+    <string name="total_amount_format">Total: %1$s %2$s</string>
+    <string name="monthly_emi">MONTHLY EMI</string>
+    <string name="outstanding_label">OUTSTANDING</string>
+    <string name="next_emi_date_format">Next: %1$s (Day %2$d)</string>
+    <string name="add_new_loan">Add New Loan</string>
+    <string name="edit_loan">Edit Loan</string>
+    <string name="lender_bank_name">Lender / Bank Name</string>
+    <string name="lender_bank_placeholder">e.g. HDFC Bank, SBI</string>
+    <string name="loan_reference_name">Loan Reference Name</string>
+    <string name="loan_reference_placeholder">e.g. Home Loan, Car Loan</string>
+    <string name="total_loan_amount">Total Loan Amount</string>
+    <string name="outstanding_amount">Outstanding Amount</string>
+    <string name="interest_rate_pa_label">Interest Rate (% p.a.)</string>
+    <string name="interest_rate_placeholder">e.g. 8.5</string>
+    <string name="tenure_months">Tenure (Months)</string>
+    <string name="tenure_placeholder">e.g. 36</string>
+    <string name="emi_due_day_label">EMI Due Day of Month (1 - 28)</string>
+    <string name="emi_due_day_placeholder">e.g. 5</string>
+    <string name="payment_reminders">Payment Reminders</string>
+    <string name="payment_reminders_desc">Get alerts 2 days before the due date</string>
+    <string name="save_changes">Save Changes</string>
+    <string name="outstanding_error_desc">Outstanding amount cannot exceed total loan amount</string>
+    <string name="total_error_desc">Total loan amount must be greater than 0</string>
+    <string name="emi_error_desc">Monthly EMI must be greater than 0</string>
+    <string name="interest_error_desc">Interest rate cannot be negative</string>
+    <string name="tenure_error_desc">Tenure must be greater than 0</string>
+    <string name="due_day_error_desc">EMI due day must be between 1 and 28</string>
 
     <string name="expenses">Expenses</string>
     <string name="history">History</string>
@@ -187,4 +274,65 @@
     <string name="asset_allocation">Asset Allocation</string>
     <string name="financial_insights">Financial Insights</string>
     <string name="portfolio_distribution">Portfolio Distribution</string>
+    <string name="loans">Loans</string>
+    <string name="ai_insights_subtitle">Tap to see your financial insights</string>
+
+    <!-- AI Insights & Chat Screen -->
+    <string name="smart_insights">Smart Insights</string>
+    <string name="financial_health_summary">Financial Health Summary</string>
+    <string name="auto_generated_local_records">Auto-generated from your local records</string>
+    <string name="savings_progress">Savings Progress</string>
+    <string name="savings_target_20">Target: 20%</string>
+    <string name="not_enough_data_title">Not Enough Data Yet</string>
+    <string name="not_enough_data_desc">To generate smart financial recommendations and health stats, please log your transactions, investments, or loans.</string>
+    <string name="talk_to_copilot_btn">Talk to Copilot AI to Log</string>
+    <string name="ai_smart_tip">AI Smart Tip</string>
+    <string name="analyzing_data_llm">Analyzing data with local LLM...</string>
+    <string name="tap_to_download_model">Tap here to configure or download the AI model.</string>
+    <string name="limit_exceeded">Limit Exceeded</string>
+    <string name="budget_overrun_recommendation">Review category budgets and set strict caps in the reports tab.</string>
+
+    <string name="moneypilot_copilot">MoneyPilot Copilot</string>
+    <string name="review_action_placeholder">Review the action above...</string>
+    <string name="ask_ai_placeholder">Ask anything or say \'add ₹500 Food\'...</string>
+    <string name="ai_download_required_title">AI Model Download Required</string>
+    <string name="ai_download_required_desc">To parse your commands and run queries privately, MoneyPilot needs to download a compact 1.5GB AI model directly onto your device. No financial data ever leaves your phone.</string>
+    <string name="download_model_btn">Download Local Model (1.5 GB)</string>
+    <string name="downloading_model_title">Downloading AI Model...</string>
+    <string name="downloading_progress_desc">Downloading model assets... %1$d%% complete.</string>
+    <string name="initializing_llm_title">Initializing LLM Engine...</string>
+    
+    <string name="status_offline">Offline</string>
+    <string name="status_initializing">Initializing...</string>
+    <string name="status_ready">Ready &amp; Secure</string>
+    <string name="status_error">Error</string>
+    <string name="status_processing">Processing...</string>
+    <string name="status_downloading">Downloading...</string>
+    <string name="status_pending_confirm">Pending confirmation</string>
+    
+    <string name="meet_moneypilot_copilot">Meet MoneyPilot Copilot</string>
+    <string name="copilot_welcome_desc">Your secure, fully on-device financial assistant. Speak naturally to log transactions, track investments, or record loans.</string>
+    <string name="tap_quick_action_start">TAP A QUICK ACTION TO START</string>
+    
+    <string name="wealth_assets">Wealth &amp; Assets</string>
+    <string name="borrowings_loans">Borrowings &amp; Loans</string>
+    
+    <string name="log_expense">Log Expense</string>
+    <string name="log_income">Log Income</string>
+    <string name="log_investment">Log Investment</string>
+    <string name="log_loan">Log Loan</string>
+    
+    <string name="detail_asset_name">Asset Name</string>
+    <string name="detail_asset_type">Asset Type</string>
+    <string name="detail_invested">Invested</string>
+    <string name="detail_current_value">Current Value</string>
+    <string name="detail_loan_name">Loan Name</string>
+    <string name="detail_principal">Principal</string>
+    <string name="detail_emi_amount">EMI Amount</string>
+    <string name="detail_first_emi_due">First EMI Due</string>
+    
+    <string name="dismiss">Dismiss</string>
+    <string name="confirm">Confirm</string>
+    <string name="detail_note">Note</string>
+    <string name="detail_date">Date</string>
 </resources>

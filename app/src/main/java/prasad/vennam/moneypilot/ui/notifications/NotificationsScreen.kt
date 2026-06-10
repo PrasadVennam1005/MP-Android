@@ -1,7 +1,7 @@
 package prasad.vennam.moneypilot.ui.notifications
 
-import android.widget.Toast
 import android.content.Intent
+import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeOut
@@ -12,7 +12,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.ui.draw.clip
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.*
@@ -20,14 +19,13 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import prasad.vennam.moneypilot.data.entity.Notification
 import prasad.vennam.moneypilot.ui.viewmodel.NotificationViewModel
@@ -38,7 +36,7 @@ import java.util.*
 @Composable
 fun NotificationsScreen(
     onNavigateBack: () -> Unit,
-    viewModel: NotificationViewModel = hiltViewModel()
+    viewModel: NotificationViewModel = hiltViewModel(),
 ) {
     val notifications by viewModel.notifications.collectAsState()
     val context = LocalContext.current
@@ -46,13 +44,14 @@ fun NotificationsScreen(
     var selectedCategory by remember { mutableStateOf("All") }
     val categories = listOf("All", "Alerts", "Sync", "Budget", "System")
 
-    val filteredNotifications = remember(notifications, selectedCategory) {
-        if (selectedCategory == "All") {
-            notifications
-        } else {
-            notifications.filter { it.category.equals(selectedCategory, ignoreCase = true) }
+    val filteredNotifications =
+        remember(notifications, selectedCategory) {
+            if (selectedCategory == "All") {
+                notifications
+            } else {
+                notifications.filter { it.category.equals(selectedCategory, ignoreCase = true) }
+            }
         }
-    }
 
     var showClearAllConfirmation by remember { mutableStateOf(false) }
 
@@ -62,7 +61,7 @@ fun NotificationsScreen(
                 title = {
                     Text(
                         text = "Notifications",
-                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
+                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
                     )
                 },
                 navigationIcon = {
@@ -77,17 +76,19 @@ fun NotificationsScreen(
                         }
                     }
                 },
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background
-                )
+                colors =
+                    TopAppBarDefaults.centerAlignedTopAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.background,
+                    ),
             )
-        }
+        },
     ) { innerPadding ->
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .background(MaterialTheme.colorScheme.background)
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+                    .background(MaterialTheme.colorScheme.background),
         ) {
             // Horizontal Categories Scroll
             ScrollableTabRow(
@@ -96,11 +97,18 @@ fun NotificationsScreen(
                 divider = {},
                 indicator = {},
                 containerColor = Color.Transparent,
-                modifier = Modifier.padding(vertical = 8.dp)
+                modifier = Modifier.padding(vertical = 8.dp),
             ) {
                 categories.forEach { category ->
                     val isSelected = selectedCategory == category
-                    val count = if (category == "All") notifications.size else notifications.count { it.category.equals(category, ignoreCase = true) }
+                    val count =
+                        if (category ==
+                            "All"
+                        ) {
+                            notifications.size
+                        } else {
+                            notifications.count { it.category.equals(category, ignoreCase = true) }
+                        }
 
                     FilterChip(
                         selected = isSelected,
@@ -108,13 +116,13 @@ fun NotificationsScreen(
                         label = {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
                             ) {
                                 Text(category)
                                 if (count > 0) {
                                     Badge(
                                         containerColor = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.primaryContainer,
-                                        contentColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.onPrimaryContainer
+                                        contentColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.onPrimaryContainer,
                                     ) {
                                         Text(count.toString())
                                     }
@@ -123,13 +131,14 @@ fun NotificationsScreen(
                         },
                         modifier = Modifier.padding(horizontal = 4.dp),
                         shape = RoundedCornerShape(12.dp),
-                        colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
-                            selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
-                            labelColor = MaterialTheme.colorScheme.onSurfaceVariant
-                        ),
-                        border = null
+                        colors =
+                            FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                                selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                                labelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            ),
+                        border = null,
                     )
                 }
             }
@@ -140,18 +149,18 @@ fun NotificationsScreen(
                 LazyColumn(
                     contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
-                    modifier = Modifier.fillMaxSize()
+                    modifier = Modifier.fillMaxSize(),
                 ) {
                     items(
                         items = filteredNotifications,
-                        key = { it.id }
+                        key = { it.id },
                     ) { item ->
                         SwipeToDismissNotification(
                             item = item,
                             onDismiss = {
                                 viewModel.deleteNotification(item.id)
                                 Toast.makeText(context, "Notification deleted", Toast.LENGTH_SHORT).show()
-                            }
+                            },
                         )
                     }
                 }
@@ -171,7 +180,7 @@ fun NotificationsScreen(
                         showClearAllConfirmation = false
                         Toast.makeText(context, "All notifications cleared", Toast.LENGTH_SHORT).show()
                     },
-                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
                 ) {
                     Text("Clear All", fontWeight = FontWeight.Bold)
                 }
@@ -183,7 +192,7 @@ fun NotificationsScreen(
             },
             shape = RoundedCornerShape(20.dp),
             containerColor = MaterialTheme.colorScheme.surface,
-            tonalElevation = 6.dp
+            tonalElevation = 6.dp,
         )
     }
 }
@@ -192,7 +201,7 @@ fun NotificationsScreen(
 @Composable
 fun SwipeToDismissNotification(
     item: Notification,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
 ) {
     var isRemoved by remember { mutableStateOf(false) }
 
@@ -204,90 +213,96 @@ fun SwipeToDismissNotification(
 
     AnimatedVisibility(
         visible = !isRemoved,
-        exit = shrinkVertically(animationSpec = tween(500)) + fadeOut(animationSpec = tween(500))
+        exit = shrinkVertically(animationSpec = tween(500)) + fadeOut(animationSpec = tween(500)),
     ) {
-        val dismissState = rememberSwipeToDismissBoxState(
-            confirmValueChange = { dismissValue ->
-                if (dismissValue == SwipeToDismissBoxValue.EndToStart || dismissValue == SwipeToDismissBoxValue.StartToEnd) {
-                    isRemoved = true
-                    true
-                } else {
-                    false
-                }
-            }
-        )
+        val dismissState =
+            rememberSwipeToDismissBoxState(
+                confirmValueChange = { dismissValue ->
+                    if (dismissValue == SwipeToDismissBoxValue.EndToStart || dismissValue == SwipeToDismissBoxValue.StartToEnd) {
+                        isRemoved = true
+                        true
+                    } else {
+                        false
+                    }
+                },
+            )
 
         SwipeToDismissBox(
             state = dismissState,
             backgroundContent = {
-                val color = when (dismissState.dismissDirection) {
-                    SwipeToDismissBoxValue.StartToEnd -> MaterialTheme.colorScheme.errorContainer
-                    SwipeToDismissBoxValue.EndToStart -> MaterialTheme.colorScheme.errorContainer
-                    else -> Color.Transparent
-                }
-                val alignment = when (dismissState.dismissDirection) {
-                    SwipeToDismissBoxValue.StartToEnd -> Alignment.CenterStart
-                    SwipeToDismissBoxValue.EndToStart -> Alignment.CenterEnd
-                    else -> Alignment.Center
-                }
+                val color =
+                    when (dismissState.dismissDirection) {
+                        SwipeToDismissBoxValue.StartToEnd -> MaterialTheme.colorScheme.errorContainer
+                        SwipeToDismissBoxValue.EndToStart -> MaterialTheme.colorScheme.errorContainer
+                        else -> Color.Transparent
+                    }
+                val alignment =
+                    when (dismissState.dismissDirection) {
+                        SwipeToDismissBoxValue.StartToEnd -> Alignment.CenterStart
+                        SwipeToDismissBoxValue.EndToStart -> Alignment.CenterEnd
+                        else -> Alignment.Center
+                    }
                 Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .clip(MaterialTheme.shapes.extraLarge)
-                        .background(color)
-                        .padding(horizontal = 24.dp),
-                    contentAlignment = alignment
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .clip(MaterialTheme.shapes.extraLarge)
+                            .background(color)
+                            .padding(horizontal = 24.dp),
+                    contentAlignment = alignment,
                 ) {
                     if (dismissState.dismissDirection != SwipeToDismissBoxValue.Settled) {
                         Icon(
                             imageVector = Icons.Rounded.Delete,
                             contentDescription = "Delete",
-                            tint = MaterialTheme.colorScheme.onErrorContainer
+                            tint = MaterialTheme.colorScheme.onErrorContainer,
                         )
                     }
                 }
             },
             content = {
                 NotificationItemCard(item)
-            }
+            },
         )
     }
 }
 
 @Composable
 fun NotificationItemCard(notification: Notification) {
-    val categoryDetails = remember(notification.category) {
-        when (notification.category.lowercase(Locale.ROOT)) {
-            "alerts" -> Triple(Icons.Rounded.Warning, Color(0xFFFF9800), "Alerts")
-            "sync" -> Triple(Icons.Rounded.CloudDone, Color(0xFF2196F3), "Sync")
-            "budget" -> Triple(Icons.Rounded.TrendingDown, Color(0xFF4CAF50), "Budget")
-            else -> Triple(Icons.Rounded.Info, Color(0xFF9C27B0), "System")
+    val categoryDetails =
+        remember(notification.category) {
+            when (notification.category.lowercase(Locale.ROOT)) {
+                "alerts" -> Triple(Icons.Rounded.Warning, Color(0xFFFF9800), "Alerts")
+                "sync" -> Triple(Icons.Rounded.CloudDone, Color(0xFF2196F3), "Sync")
+                "budget" -> Triple(Icons.Rounded.TrendingDown, Color(0xFF4CAF50), "Budget")
+                else -> Triple(Icons.Rounded.Info, Color(0xFF9C27B0), "System")
+            }
         }
-    }
 
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.extraLarge,
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.5.dp)
+        colors =
+            CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surface,
+            ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.5.dp),
     ) {
         Row(
             modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.Top
+            verticalAlignment = Alignment.Top,
         ) {
             Surface(
                 modifier = Modifier.size(40.dp),
                 shape = CircleShape,
-                color = categoryDetails.second.copy(alpha = 0.15f)
+                color = categoryDetails.second.copy(alpha = 0.15f),
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
                         imageVector = categoryDetails.first,
                         contentDescription = categoryDetails.third,
                         tint = categoryDetails.second,
-                        modifier = Modifier.size(20.dp)
+                        modifier = Modifier.size(20.dp),
                     )
                 }
             }
@@ -298,27 +313,27 @@ fun NotificationItemCard(notification: Notification) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
                         text = notification.title,
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                         color = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1f),
                     )
                     Spacer(modifier = Modifier.width(16.dp))
                     Text(
                         text = formatTime(notification.timestamp),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                        maxLines = 1
+                        maxLines = 1,
                     )
                 }
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = notification.message,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 if (!notification.url.isNullOrBlank()) {
                     Spacer(modifier = Modifier.height(12.dp))
@@ -332,23 +347,24 @@ fun NotificationItemCard(notification: Notification) {
                                 Toast.makeText(context, "Could not open link", Toast.LENGTH_SHORT).show()
                             }
                         },
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primaryContainer,
-                            contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                        ),
+                        colors =
+                            ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                            ),
                         shape = MaterialTheme.shapes.medium,
                         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp),
-                        modifier = Modifier.height(36.dp)
+                        modifier = Modifier.height(36.dp),
                     ) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
                         ) {
                             Text("Read Article", style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold))
                             Icon(
                                 imageVector = Icons.Rounded.OpenInNew,
                                 contentDescription = null,
-                                modifier = Modifier.size(14.dp)
+                                modifier = Modifier.size(14.dp),
                             )
                         }
                     }
@@ -361,45 +377,49 @@ fun NotificationItemCard(notification: Notification) {
 @Composable
 fun EmptyNotificationsState(category: String) {
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(32.dp),
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .padding(32.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+        verticalArrangement = Arrangement.Center,
     ) {
         Box(
-            modifier = Modifier
-                .size(100.dp)
-                .background(
-                    brush = Brush.linearGradient(
-                        colors = listOf(
-                            MaterialTheme.colorScheme.primaryContainer,
-                            MaterialTheme.colorScheme.surfaceVariant
-                        )
+            modifier =
+                Modifier
+                    .size(100.dp)
+                    .background(
+                        brush =
+                            Brush.linearGradient(
+                                colors =
+                                    listOf(
+                                        MaterialTheme.colorScheme.primaryContainer,
+                                        MaterialTheme.colorScheme.surfaceVariant,
+                                    ),
+                            ),
+                        shape = CircleShape,
                     ),
-                    shape = CircleShape
-                ),
-            contentAlignment = Alignment.Center
+            contentAlignment = Alignment.Center,
         ) {
             Icon(
                 imageVector = Icons.Rounded.NotificationsNone,
                 contentDescription = null,
                 modifier = Modifier.size(52.dp),
-                tint = MaterialTheme.colorScheme.primary
+                tint = MaterialTheme.colorScheme.primary,
             )
         }
         Spacer(modifier = Modifier.height(24.dp))
         Text(
             text = if (category == "All") "All Caught Up! ✨" else "No $category Notifications",
             style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-            color = MaterialTheme.colorScheme.onSurface
+            color = MaterialTheme.colorScheme.onSurface,
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
             text = "When alerts, budget targets, or backups trigger, you'll see them listed here.",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center
+            textAlign = TextAlign.Center,
         )
     }
 }

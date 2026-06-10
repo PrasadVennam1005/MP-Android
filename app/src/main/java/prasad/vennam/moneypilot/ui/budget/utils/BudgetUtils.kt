@@ -27,11 +27,11 @@ import prasad.vennam.moneypilot.data.entity.Category
 data class BudgetItemState(
     val budget: Budget,
     val category: Category?,
-    val spent: Double
+    val spent: Double,
 )
 
-fun getCategoryIcon(name: String?): ImageVector {
-    return when (name) {
+fun getCategoryIcon(name: String?): ImageVector =
+    when (name) {
         "restaurant" -> Icons.Rounded.Restaurant
         "directions_car" -> Icons.Rounded.DirectionsCar
         "shopping_cart" -> Icons.Rounded.ShoppingCart
@@ -52,4 +52,3 @@ fun getCategoryIcon(name: String?): ImageVector {
         "history" -> Icons.Rounded.History
         else -> Icons.Rounded.Category
     }
-}

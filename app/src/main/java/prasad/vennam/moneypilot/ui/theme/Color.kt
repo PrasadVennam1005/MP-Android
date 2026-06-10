@@ -19,6 +19,9 @@ val OnWarningLight = Color(0xFFFFFFFF)
 val ErrorLight = Color(0xFFEF4444)
 val OnErrorLight = Color(0xFFFFFFFF)
 
+val TertiaryLight = Color(0xFF8B5CF6)
+val OnTertiaryLight = Color(0xFFFFFFFF)
+
 val BackgroundLight = Color(0xFFF8FAFC)
 val OnBackgroundLight = Color(0xFF0F172A)
 val SurfaceLight = Color(0xFFFFFFFF)
@@ -40,3 +43,6 @@ val SecondaryDark = Color(0xFF34D399)
 val OnSecondaryDark = Color(0xFF064E3B)
 val SecondaryContainerDark = Color(0xFF065F46)
 val OnSecondaryContainerDark = Color(0xFFD1FAE5)
+
+val TertiaryDark = Color(0xFFA78BFA)
+val OnTertiaryDark = Color(0xFF1E3A8A)

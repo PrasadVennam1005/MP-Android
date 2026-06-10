@@ -14,13 +14,13 @@ import prasad.vennam.moneypilot.data.repository.MoneyPilotRepository
 
 class GoogleSheetsSyncWorker(
     context: Context,
-    params: WorkerParameters
+    params: WorkerParameters,
 ) : CoroutineWorker(context, params) {
-
     @EntryPoint
     @InstallIn(SingletonComponent::class)
     interface WorkerEntryPoint {
         fun repository(): MoneyPilotRepository
+
         fun userPreferences(): UserPreferences
     }
 
@@ -45,15 +45,17 @@ class GoogleSheetsSyncWorker(
         }
 
         Log.d("GoogleSheetsSyncWorker", "doWork: Performing 2-way sheet sync for ${userData.email}")
-        val syncResult = GoogleSheetsSyncHelper.performTwoWaySync(
-            context = appContext,
-            email = userData.email,
-            repository = repository,
-            spreadsheetId = spreadsheetId,
-            onSpreadsheetIdFound = { id ->
-                userPreferences.saveSpreadsheetId(id)
-            }
-        )
+        val syncResult =
+            GoogleSheetsSyncHelper.performTwoWaySync(
+                context = appContext,
+                email = userData.email,
+                repository = repository,
+                spreadsheetId = spreadsheetId,
+                isRestore = false,
+                onSpreadsheetIdFound = { id ->
+                    userPreferences.saveSpreadsheetId(id)
+                },
+            )
 
         return when (syncResult) {
             is SyncResult.Success -> {

@@ -18,10 +18,11 @@ import prasad.vennam.moneypilot.data.MoneyPilotDatabase
 import prasad.vennam.moneypilot.data.UserPreferences
 import prasad.vennam.moneypilot.data.dao.BudgetDao
 import prasad.vennam.moneypilot.data.dao.CategoryDao
-import prasad.vennam.moneypilot.data.dao.InvestmentDao
 import prasad.vennam.moneypilot.data.dao.ExchangeRateDao
-import prasad.vennam.moneypilot.data.dao.TransactionDao
+import prasad.vennam.moneypilot.data.dao.InvestmentDao
+import prasad.vennam.moneypilot.data.dao.LoanDao
 import prasad.vennam.moneypilot.data.dao.NotificationDao
+import prasad.vennam.moneypilot.data.dao.TransactionDao
 import prasad.vennam.moneypilot.data.entity.Category
 import prasad.vennam.moneypilot.data.repository.MoneyPilotRepository
 import javax.inject.Provider
@@ -30,38 +31,38 @@ import javax.inject.Singleton
 @Module
 @InstallIn(SingletonComponent::class)
 object DatabaseModule {
-
     @Provides
     @Singleton
     fun provideDatabase(
         @ApplicationContext context: Context,
-        categoryDaoProvider: Provider<CategoryDao>
-    ): MoneyPilotDatabase {
-        return Room.databaseBuilder(
-            context,
-            MoneyPilotDatabase::class.java,
-            "money_pilot_database"
-        )
-            .addCallback(object : RoomDatabase.Callback() {
-                override fun onOpen(db: SupportSQLiteDatabase) {
-                    super.onOpen(db)
-                    val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-                    scope.launch {
-                        val categoryDao = categoryDaoProvider.get()
-                        // Only seed if empty
-                        if (categoryDao.getAllCategories().first().isEmpty()) {
-                            categoryDao.insertCategories(Category.DEFAULT_CATEGORIES)
+        categoryDaoProvider: Provider<CategoryDao>,
+    ): MoneyPilotDatabase =
+        Room
+            .databaseBuilder(
+                context,
+                MoneyPilotDatabase::class.java,
+                "money_pilot_database",
+            ).addCallback(
+                object : RoomDatabase.Callback() {
+                    override fun onOpen(db: SupportSQLiteDatabase) {
+                        super.onOpen(db)
+                        val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+                        scope.launch {
+                            val categoryDao = categoryDaoProvider.get()
+                            // Only seed if empty
+                            if (categoryDao.getAllCategories().first().isEmpty()) {
+                                categoryDao.insertCategories(Category.DEFAULT_CATEGORIES)
+                            }
                         }
                     }
-                }
-            })
-            .addMigrations(
+                },
+            ).addMigrations(
                 MoneyPilotDatabase.MIGRATION_1_2,
                 MoneyPilotDatabase.MIGRATION_2_3,
-                MoneyPilotDatabase.MIGRATION_3_4
-            )
-            .build()
-    }
+                MoneyPilotDatabase.MIGRATION_3_4,
+                MoneyPilotDatabase.MIGRATION_4_5,
+                MoneyPilotDatabase.MIGRATION_5_6,
+            ).build()
 
     @Provides
     fun provideNotificationDao(database: MoneyPilotDatabase): NotificationDao = database.notificationDao()
@@ -77,6 +78,10 @@ object DatabaseModule {
 
     @Provides
     @Singleton
+    fun provideLoanDao(database: MoneyPilotDatabase): LoanDao = database.loanDao()
+
+    @Provides
+    @Singleton
     fun provideInvestmentDao(database: MoneyPilotDatabase): InvestmentDao = database.investmentDao()
 
     @Provides
@@ -85,9 +90,9 @@ object DatabaseModule {
 
     @Provides
     @Singleton
-    fun provideUserPreferences(@ApplicationContext context: Context): UserPreferences {
-        return UserPreferences(context)
-    }
+    fun provideUserPreferences(
+        @ApplicationContext context: Context,
+    ): UserPreferences = UserPreferences(context)
 
     @Provides
     @Singleton
@@ -96,8 +101,7 @@ object DatabaseModule {
         transactionDao: TransactionDao,
         budgetDao: BudgetDao,
         investmentDao: InvestmentDao,
-        database: MoneyPilotDatabase
-    ): MoneyPilotRepository {
-        return MoneyPilotRepository(categoryDao, transactionDao, budgetDao, investmentDao, database)
-    }
+        loanDao: LoanDao,
+        database: MoneyPilotDatabase,
+    ): MoneyPilotRepository = MoneyPilotRepository(categoryDao, transactionDao, budgetDao, investmentDao, loanDao, database)
 }

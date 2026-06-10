@@ -12,6 +12,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -51,8 +52,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -69,36 +73,32 @@ import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import prasad.vennam.moneypilot.R
 import prasad.vennam.moneypilot.data.UserPreferences
 import prasad.vennam.moneypilot.ui.viewmodel.MainViewModel
 import prasad.vennam.moneypilot.util.AnalyticsHelper
-import prasad.vennam.moneypilot.R
-import androidx.compose.ui.res.stringResource
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.painterResource
-
 
 @Composable
 fun AuthScreen(
     mainViewModel: MainViewModel,
     analyticsHelper: AnalyticsHelper,
     skipSplash: Boolean = false,
-    onAuthSuccess: () -> Unit
+    onAuthSuccess: () -> Unit,
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val uriHandler = LocalUriHandler.current
     val credentialManager = remember { CredentialManager.create(context) }
-    
+
     val isLoggedIn by mainViewModel.isLoggedIn.collectAsState()
     var isLoading by remember { mutableStateOf(false) }
     var isSplash by remember { mutableStateOf(!skipSplash) }
+    var loginError by remember { mutableStateOf<String?>(null) }
 
     val transitionProgress by animateFloatAsState(
         targetValue = if (isSplash) 0f else 1f,
         animationSpec = tween(durationMillis = 800, easing = FastOutSlowInEasing),
-        label = "SplashToLoginTransition"
+        label = "SplashToLoginTransition",
     )
 
     val initialScale = remember { Animatable(if (skipSplash) 1f else 0f) }
@@ -109,25 +109,27 @@ fun AuthScreen(
             launch {
                 initialScale.animateTo(
                     1f,
-                    animationSpec = spring(
-                        dampingRatio = Spring.DampingRatioMediumBouncy,
-                        stiffness = Spring.StiffnessLow
-                    )
+                    animationSpec =
+                        spring(
+                            dampingRatio = Spring.DampingRatioMediumBouncy,
+                            stiffness = Spring.StiffnessLow,
+                        ),
                 )
             }
             launch {
                 initialAlpha.animateTo(1f, animationSpec = tween(1000))
             }
-            
+
             delay(2500)
-            
-            if (isLoggedIn) {
+
+            // Read the current StateFlow value directly to avoid stale Compose snapshot
+            if (mainViewModel.isLoggedIn.value) {
                 onAuthSuccess()
             } else {
                 isSplash = false
             }
         } else {
-             if (isLoggedIn) onAuthSuccess()
+            if (mainViewModel.isLoggedIn.value) onAuthSuccess()
         }
     }
 
@@ -137,43 +139,48 @@ fun AuthScreen(
     val logoSpacer = lerp(32.dp, 24.dp, transitionProgress)
 
     Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(
-                brush = Brush.verticalGradient(
-                    colors = listOf(
-                        MaterialTheme.colorScheme.background,
-                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f - (0.1f * transitionProgress)),
-                        MaterialTheme.colorScheme.background
-                    )
-                )
-            ),
-        contentAlignment = Alignment.Center
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .background(
+                    brush =
+                        Brush.verticalGradient(
+                            colors =
+                                listOf(
+                                    MaterialTheme.colorScheme.background,
+                                    MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f - (0.1f * transitionProgress)),
+                                    MaterialTheme.colorScheme.background,
+                                ),
+                        ),
+                ),
+        contentAlignment = Alignment.Center,
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(24.dp)
-                .animateContentSize(animationSpec = tween(800, easing = FastOutSlowInEasing)),
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(24.dp)
+                    .animateContentSize(animationSpec = tween(800, easing = FastOutSlowInEasing)),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+            verticalArrangement = Arrangement.Center,
         ) {
             // Shared Logo
             Surface(
-                modifier = Modifier
-                    .size(logoSurfaceSize)
-                    .scale(initialScale.value)
-                    .alpha(initialAlpha.value),
+                modifier =
+                    Modifier
+                        .size(logoSurfaceSize)
+                        .scale(initialScale.value)
+                        .alpha(initialAlpha.value),
                 shape = CircleShape,
                 color = MaterialTheme.colorScheme.primary,
-                tonalElevation = lerp(8.dp, 4.dp, transitionProgress)
+                tonalElevation = lerp(8.dp, 4.dp, transitionProgress),
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
                         imageVector = Icons.Rounded.AirplanemodeActive,
                         contentDescription = null,
                         modifier = Modifier.size(logoIconSize),
-                        tint = MaterialTheme.colorScheme.onPrimary
+                        tint = MaterialTheme.colorScheme.onPrimary,
                     )
                 }
             }
@@ -186,28 +193,30 @@ fun AuthScreen(
                 androidx.compose.animation.AnimatedVisibility(
                     visible = isSplash,
                     enter = fadeIn(),
-                    exit = fadeOut(tween(400)) + slideOutVertically(tween(800, easing = FastOutSlowInEasing)) { it / 2 }
+                    exit = fadeOut(tween(400)) + slideOutVertically(tween(800, easing = FastOutSlowInEasing)) { it / 2 },
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
                             text = stringResource(R.string.moneypilot),
-                            style = MaterialTheme.typography.displaySmall.copy(
-                                fontWeight = FontWeight.Bold,
-                                letterSpacing = 2.sp
-                            ),
+                            style =
+                                MaterialTheme.typography.displaySmall.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    letterSpacing = 2.sp,
+                                ),
                             color = MaterialTheme.colorScheme.onBackground,
-                            modifier = Modifier.alpha(initialAlpha.value)
+                            modifier = Modifier.alpha(initialAlpha.value),
                         )
                         Spacer(modifier = Modifier.height(12.dp))
                         Text(
                             text = stringResource(R.string.track_save_grow),
-                            style = MaterialTheme.typography.bodyLarge.copy(
-                                fontWeight = FontWeight.Medium,
-                                letterSpacing = 4.sp,
-                                fontSize = 18.sp
-                            ),
+                            style =
+                                MaterialTheme.typography.bodyLarge.copy(
+                                    fontWeight = FontWeight.Medium,
+                                    letterSpacing = 4.sp,
+                                    fontSize = 18.sp,
+                                ),
                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
-                            modifier = Modifier.alpha(initialAlpha.value)
+                            modifier = Modifier.alpha(initialAlpha.value),
                         )
                     }
                 }
@@ -216,51 +225,53 @@ fun AuthScreen(
                 androidx.compose.animation.AnimatedVisibility(
                     visible = !isSplash,
                     enter = fadeIn(tween(400, delayMillis = 400)) + slideInVertically(tween(800, easing = FastOutSlowInEasing)) { it / 4 },
-                    exit = fadeOut()
+                    exit = fadeOut(),
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
                             text = stringResource(R.string.welcome_to_moneypilot),
-                            style = MaterialTheme.typography.headlineMedium.copy(
-                                fontWeight = FontWeight.Bold,
-                                letterSpacing = 0.5.sp
-                            ),
-                            color = MaterialTheme.colorScheme.onBackground
+                            style =
+                                MaterialTheme.typography.headlineMedium.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    letterSpacing = 0.5.sp,
+                                ),
+                            color = MaterialTheme.colorScheme.onBackground,
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
                             text = stringResource(R.string.your_journey_to_financial_freedom),
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = TextAlign.Center
+                            textAlign = TextAlign.Center,
                         )
 
                         Spacer(modifier = Modifier.height(48.dp))
 
                         // Illustration Placeholder
                         Surface(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(200.dp),
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .height(200.dp),
                             shape = RoundedCornerShape(24.dp),
-                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
                         ) {
                             Column(
                                 horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.Center
+                                verticalArrangement = Arrangement.Center,
                             ) {
                                 Icon(
                                     imageVector = Icons.Rounded.AccountBalance,
                                     contentDescription = null,
                                     modifier = Modifier.size(100.dp),
-                                    tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+                                    tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
                                 )
                                 Spacer(modifier = Modifier.height(16.dp))
                                 Text(
                                     stringResource(R.string.track_expenses_set_budgets_manage),
                                     style = MaterialTheme.typography.labelLarge,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.padding(16.dp)
+                                    modifier = Modifier.padding(16.dp),
                                 )
                             }
                         }
@@ -276,31 +287,37 @@ fun AuthScreen(
                                     scope.launch {
                                         isLoading = true
                                         try {
-                                            val googleIdOption = GetGoogleIdOption.Builder()
-                                                .setFilterByAuthorizedAccounts(false)
-                                                .setServerClientId(prasad.vennam.moneypilot.BuildConfig.GOOGLE_CLIENT_ID)
-                                                .setAutoSelectEnabled(true)
-                                                .build()
+                                            val googleIdOption =
+                                                GetGoogleIdOption
+                                                    .Builder()
+                                                    .setFilterByAuthorizedAccounts(false)
+                                                    .setServerClientId(prasad.vennam.moneypilot.BuildConfig.GOOGLE_CLIENT_ID)
+                                                    .setAutoSelectEnabled(true)
+                                                    .build()
 
-                                            val request = GetCredentialRequest.Builder()
-                                                .addCredentialOption(googleIdOption)
-                                                .build()
+                                            val request =
+                                                GetCredentialRequest
+                                                    .Builder()
+                                                    .addCredentialOption(googleIdOption)
+                                                    .build()
 
-                                            val result = credentialManager.getCredential(
-                                                request = request,
-                                                context = context
-                                            )
+                                            val result =
+                                                credentialManager.getCredential(
+                                                    request = request,
+                                                    context = context,
+                                                )
 
                                             val credential = result.credential
-                                            val googleIdTokenCredential = try {
-                                                if (credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
-                                                    GoogleIdTokenCredential.createFrom(credential.data)
-                                                } else {
+                                            val googleIdTokenCredential =
+                                                try {
+                                                    if (credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
+                                                        GoogleIdTokenCredential.createFrom(credential.data)
+                                                    } else {
+                                                        null
+                                                    }
+                                                } catch (e: Exception) {
                                                     null
                                                 }
-                                            } catch (e: Exception) {
-                                                null
-                                            }
 
                                             if (googleIdTokenCredential != null) {
                                                 analyticsHelper.logEvent("login", mapOf("method" to "google"))
@@ -308,49 +325,54 @@ fun AuthScreen(
                                                     UserPreferences.UserData(
                                                         name = googleIdTokenCredential.displayName ?: "User",
                                                         email = googleIdTokenCredential.id,
-                                                        photoUrl = googleIdTokenCredential.profilePictureUri?.toString()
-                                                    )
+                                                        photoUrl = googleIdTokenCredential.profilePictureUri?.toString(),
+                                                    ),
                                                 ) {
                                                     onAuthSuccess()
                                                 }
                                             }
                                         } catch (e: GetCredentialException) {
                                             Log.e("AuthScreen", "Login failed: ${e.message}")
+                                            loginError = "Sign-in cancelled or unavailable. Please try again."
                                         } catch (e: Exception) {
                                             Log.e("AuthScreen", "Error: ${e.message}")
+                                            loginError = "Something went wrong. Please try again."
                                         } finally {
                                             isLoading = false
                                         }
                                     }
                                 },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(56.dp),
+                                modifier =
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .height(56.dp),
                                 shape = MaterialTheme.shapes.large,
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = Color.White,
-                                    contentColor = Color(0xFF1F1F1F)
-                                ),
+                                colors =
+                                    ButtonDefaults.buttonColors(
+                                        containerColor = Color.White,
+                                        contentColor = Color(0xFF1F1F1F),
+                                    ),
                                 border = BorderStroke(1.dp, Color(0xFFDADCE0)),
-                                elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp)
+                                elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp),
                             ) {
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.Center
+                                    horizontalArrangement = Arrangement.Center,
                                 ) {
                                     Icon(
                                         painter = painterResource(id = R.drawable.ic_google_logo),
                                         contentDescription = "Google Logo",
                                         tint = Color.Unspecified,
-                                        modifier = Modifier.size(22.dp)
+                                        modifier = Modifier.size(22.dp),
                                     )
                                     Spacer(modifier = Modifier.width(12.dp))
                                     Text(
                                         stringResource(R.string.continue_with_google),
-                                        style = MaterialTheme.typography.titleMedium.copy(
-                                            fontWeight = FontWeight.SemiBold,
-                                            color = Color(0xFF1F1F1F)
-                                        )
+                                        style =
+                                            MaterialTheme.typography.titleMedium.copy(
+                                                fontWeight = FontWeight.SemiBold,
+                                                color = Color(0xFF1F1F1F),
+                                            ),
                                     )
                                 }
                             }
@@ -364,72 +386,112 @@ fun AuthScreen(
                                             UserPreferences.UserData(
                                                 name = "Guest Pilot",
                                                 email = "guest@moneypilot.app",
-                                                photoUrl = null
-                                            )
+                                                photoUrl = null,
+                                            ),
                                         ) {
                                             onAuthSuccess()
                                         }
                                     }
                                 },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(56.dp),
+                                modifier =
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .height(56.dp),
                                 shape = MaterialTheme.shapes.large,
-                                border = ButtonDefaults.outlinedButtonBorder(enabled = true).copy(
-                                    brush = Brush.linearGradient(
-                                        listOf(
-                                            MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
-                                            MaterialTheme.colorScheme.primary
-                                        )
-                                    )
-                                )
+                                border =
+                                    ButtonDefaults.outlinedButtonBorder(enabled = true).copy(
+                                        brush =
+                                            Brush.linearGradient(
+                                                listOf(
+                                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
+                                                    MaterialTheme.colorScheme.primary,
+                                                ),
+                                            ),
+                                    ),
                             ) {
                                 Text(
                                     stringResource(R.string.continue_as_guest),
-                                    style = MaterialTheme.typography.titleMedium.copy(
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = MaterialTheme.colorScheme.primary
-                                    )
+                                    style =
+                                        MaterialTheme.typography.titleMedium.copy(
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = MaterialTheme.colorScheme.primary,
+                                        ),
                                 )
                             }
+                        }
+
+                        // Login error message
+                        loginError?.let { error ->
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Text(
+                                text = error,
+                                style = MaterialTheme.typography.bodyMedium.copy(
+                                    color = MaterialTheme.colorScheme.error,
+                                    textAlign = TextAlign.Center,
+                                ),
+                                modifier = Modifier.fillMaxWidth(),
+                            )
                         }
 
                         Spacer(modifier = Modifier.height(24.dp))
 
                         // Privacy Policy Text
-                        val annotatedText = buildAnnotatedString {
-                            append("By continuing, you agree to our ")
-                            pushStringAnnotation(tag = "terms", annotation = "https://prasadvennam1005.github.io/MP-Android/terms.html")
-                            withStyle(style = SpanStyle(color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.SemiBold, textDecoration = TextDecoration.Underline)) {
-                                append("Terms of Service")
+                        val annotatedText =
+                            buildAnnotatedString {
+                                append("By continuing, you agree to our ")
+                                pushStringAnnotation(tag = "terms", annotation = "https://prasadvennam1005.github.io/MP-Android/terms.html")
+                                withStyle(
+                                    style =
+                                        SpanStyle(
+                                            color = MaterialTheme.colorScheme.primary,
+                                            fontWeight = FontWeight.SemiBold,
+                                            textDecoration = TextDecoration.Underline,
+                                        ),
+                                ) {
+                                    append("Terms of Service")
+                                }
+                                pop()
+                                append(" and ")
+                                pushStringAnnotation(
+                                    tag = "privacy",
+                                    annotation = "https://prasadvennam1005.github.io/MP-Android/privacy.html",
+                                )
+                                withStyle(
+                                    style =
+                                        SpanStyle(
+                                            color = MaterialTheme.colorScheme.primary,
+                                            fontWeight = FontWeight.SemiBold,
+                                            textDecoration = TextDecoration.Underline,
+                                        ),
+                                ) {
+                                    append("Privacy Policy")
+                                }
+                                pop()
+                                append(".")
                             }
-                            pop()
-                            append(" and ")
-                            pushStringAnnotation(tag = "privacy", annotation = "https://prasadvennam1005.github.io/MP-Android/privacy.html")
-                            withStyle(style = SpanStyle(color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.SemiBold, textDecoration = TextDecoration.Underline)) {
-                                append("Privacy Policy")
-                            }
-                            pop()
-                            append(".")
-                        }
 
                         ClickableText(
                             text = annotatedText,
-                            style = MaterialTheme.typography.labelMedium.copy(
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                                textAlign = TextAlign.Center
-                            ),
+                            style =
+                                MaterialTheme.typography.labelMedium.copy(
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                                    textAlign = TextAlign.Center,
+                                ),
                             onClick = { offset ->
-                                annotatedText.getStringAnnotations(tag = "terms", start = offset, end = offset)
-                                    .firstOrNull()?.let { annotation ->
+                                annotatedText
+                                    .getStringAnnotations(tag = "terms", start = offset, end = offset)
+                                    .firstOrNull()
+                                    ?.let { annotation ->
                                         uriHandler.openUri(annotation.item)
                                     }
-                                annotatedText.getStringAnnotations(tag = "privacy", start = offset, end = offset)
-                                    .firstOrNull()?.let { annotation ->
+                                annotatedText
+                                    .getStringAnnotations(tag = "privacy", start = offset, end = offset)
+                                    .firstOrNull()
+                                    ?.let { annotation ->
                                         uriHandler.openUri(annotation.item)
                                     }
                             },
-                            modifier = Modifier.padding(horizontal = 32.dp)
+                            modifier = Modifier.padding(horizontal = 32.dp),
                         )
                     }
                 }

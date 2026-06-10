@@ -7,5 +7,5 @@ import androidx.room.PrimaryKey
 data class ExchangeRate(
     @PrimaryKey val currencyCode: String,
     val rateAgainstUSD: Double,
-    val lastUpdated: Long
+    val lastUpdated: Long,
 )

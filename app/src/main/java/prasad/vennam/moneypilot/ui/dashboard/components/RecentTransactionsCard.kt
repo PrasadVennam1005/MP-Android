@@ -19,6 +19,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLocale
@@ -30,51 +31,76 @@ import prasad.vennam.moneypilot.R
 import prasad.vennam.moneypilot.data.entity.Category
 import prasad.vennam.moneypilot.data.entity.Transaction
 import prasad.vennam.moneypilot.data.entity.TransactionType
-import prasad.vennam.moneypilot.util.inRupees
 import prasad.vennam.moneypilot.util.CurrencyFormatter
 import prasad.vennam.moneypilot.util.LocalCurrencyCode
+import prasad.vennam.moneypilot.util.inRupees
 import java.text.SimpleDateFormat
 import java.util.Date
 
 @Composable
-fun RecentTransactionsCard(transactions: List<Transaction>, categories: List<Category>) {
+fun RecentTransactionsCard(
+    transactions: List<Transaction>,
+    categories: List<Category>,
+) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.extraLarge,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
             transactions.forEach {
                 TransactionItem(
                     it,
-                    categories.find { c -> c.id == it.categoryId })
+                    categories.find { c -> c.id == it.categoryId },
+                )
             }
         }
     }
 }
 
 @Composable
-fun TransactionItem(transaction: Transaction, category: Category?) {
+fun TransactionItem(
+    transaction: Transaction,
+    category: Category?,
+) {
     val currencyCode = LocalCurrencyCode.current
-    val dateFormatter = SimpleDateFormat("dd MMM, hh:mm a", LocalLocale.current.platformLocale)
+    val locale = LocalLocale.current
+    val dateFormatter = remember(locale) {
+        SimpleDateFormat("dd MMM, hh:mm a", locale.platformLocale)
+    }
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         Surface(
             modifier = Modifier.size(40.dp),
             shape = CircleShape,
-            color = if (transaction.type == TransactionType.INCOME) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.errorContainer
+            color =
+                if (transaction.type ==
+                    TransactionType.INCOME
+                ) {
+                    MaterialTheme.colorScheme.primaryContainer
+                } else {
+                    MaterialTheme.colorScheme.errorContainer
+                },
         ) {
             Box(contentAlignment = Alignment.Center) {
                 Icon(
                     imageVector = if (transaction.type == TransactionType.INCOME) Icons.Rounded.Add else Icons.Rounded.Remove,
                     contentDescription = stringResource(R.string.add),
-                    tint = if (transaction.type == TransactionType.INCOME) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onErrorContainer,
-                    modifier = Modifier.size(20.dp)
+                    tint =
+                        if (transaction.type ==
+                            TransactionType.INCOME
+                        ) {
+                            MaterialTheme.colorScheme.onPrimaryContainer
+                        } else {
+                            MaterialTheme.colorScheme.onErrorContainer
+                        },
+                    modifier = Modifier.size(20.dp),
                 )
             }
         }
@@ -85,21 +111,22 @@ fun TransactionItem(transaction: Transaction, category: Category?) {
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Bold,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis,
             )
             Text(
                 text = dateFormatter.format(Date(transaction.timestamp)),
                 style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
         Text(
-            text = buildString {
-                append(if (transaction.type == TransactionType.INCOME) "+" else "-")
-                append(CurrencyFormatter.format(transaction.amount.inRupees, transaction.currencyCode))
-            },
+            text =
+                buildString {
+                    append(if (transaction.type == TransactionType.INCOME) "+" else "-")
+                    append(CurrencyFormatter.format(transaction.amount.inRupees, transaction.currencyCode))
+                },
             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-            color = if (transaction.type == TransactionType.INCOME) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+            color = if (transaction.type == TransactionType.INCOME) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
         )
     }
 }
