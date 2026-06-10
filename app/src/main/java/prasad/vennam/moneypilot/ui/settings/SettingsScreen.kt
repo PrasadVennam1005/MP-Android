@@ -475,7 +475,7 @@ fun SettingsScreen(
                 ) {
                     Icon(Icons.Rounded.DeleteForever, contentDescription = null, tint = MaterialTheme.colorScheme.error)
                     Spacer(modifier = Modifier.width(12.dp))
-                    Text(stringResource(R.string.delete_account), style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold))
+                    Text(stringResource(if (isGuest) R.string.reset_guest_data else R.string.delete_account), style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold))
                 }
             }
         }
@@ -602,14 +602,14 @@ fun SettingsScreen(
             onDismissRequest = { if (!isDeletingAccount) showDeleteAccountConfirmation = false },
             title = {
                 Text(
-                    text = stringResource(R.string.delete_account_confirm_title),
+                    text = stringResource(if (isGuest) R.string.reset_guest_confirm_title else R.string.delete_account_confirm_title),
                     style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
                 )
             },
             text = {
                 Column {
                     Text(
-                        text = stringResource(R.string.delete_account_confirm_message),
+                        text = stringResource(if (isGuest) R.string.reset_guest_confirm_message else R.string.delete_account_confirm_message),
                         style = MaterialTheme.typography.bodyMedium
                     )
                     if (isDeletingAccount) {
@@ -623,7 +623,7 @@ fun SettingsScreen(
                                 color = MaterialTheme.colorScheme.error
                             )
                             Text(
-                                text = stringResource(R.string.delete_account_deleting),
+                                text = stringResource(if (isGuest) R.string.resetting_guest_data else R.string.delete_account_deleting),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -642,7 +642,7 @@ fun SettingsScreen(
                                 isDeletingAccount = false
                                 showDeleteAccountConfirmation = false
                                 if (success) {
-                                    Toast.makeText(context, context.getString(R.string.delete_account_success), Toast.LENGTH_LONG).show()
+                                    Toast.makeText(context, context.getString(if (isGuest) R.string.reset_guest_success else R.string.delete_account_success), Toast.LENGTH_LONG).show()
                                 } else {
                                     Toast.makeText(context, context.getString(R.string.delete_account_failed), Toast.LENGTH_LONG).show()
                                 }
@@ -654,7 +654,7 @@ fun SettingsScreen(
                         contentColor = MaterialTheme.colorScheme.error
                     )
                 ) {
-                    Text(stringResource(R.string.delete), fontWeight = FontWeight.Bold)
+                    Text(stringResource(if (isGuest) R.string.reset else R.string.delete), fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {

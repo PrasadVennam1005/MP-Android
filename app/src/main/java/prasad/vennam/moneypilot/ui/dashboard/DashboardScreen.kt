@@ -107,6 +107,15 @@ fun DashboardScreen(
         }
     }
 
+    LaunchedEffect(userData) {
+        val uData = userData
+        if (uData != null && uData.email != "guest@moneypilot.app" && spreadsheetId == null) {
+            mainViewModel.checkAndPerformRestore(context)
+        }
+    }
+
+
+
     val triggerGoogleLogin = {
         scope.launch {
             try {

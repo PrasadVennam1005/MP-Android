@@ -343,4 +343,10 @@
     <string name="delete_account_deleting">Deleting account and wiping data...</string>
     <string name="delete_account_success">Account successfully deleted.</string>
     <string name="delete_account_failed">Failed to delete account completely. Local data was cleared.</string>
+
+    <string name="reset_guest_data">Reset Guest Data</string>
+    <string name="reset_guest_confirm_title">Reset Guest Session?</string>
+    <string name="reset_guest_confirm_message">Are you sure you want to reset your Guest session? This action is permanent and will completely clear your local transactions, budgets, investments, categories, and settings. This cannot be undone.</string>
+    <string name="resetting_guest_data">Resetting guest session and data...</string>
+    <string name="reset_guest_success">Guest session reset successfully.</string>
 </resources>

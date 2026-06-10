@@ -26,10 +26,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.ClickableText
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.AccountBalance
 import androidx.compose.material.icons.rounded.AirplanemodeActive
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -244,37 +242,6 @@ fun AuthScreen(
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = TextAlign.Center,
                         )
-
-                        Spacer(modifier = Modifier.height(48.dp))
-
-                        // Illustration Placeholder
-                        Surface(
-                            modifier =
-                                Modifier
-                                    .fillMaxWidth()
-                                    .height(200.dp),
-                            shape = RoundedCornerShape(24.dp),
-                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
-                        ) {
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.Center,
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Rounded.AccountBalance,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(100.dp),
-                                    tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
-                                )
-                                Spacer(modifier = Modifier.height(16.dp))
-                                Text(
-                                    stringResource(R.string.track_expenses_set_budgets_manage),
-                                    style = MaterialTheme.typography.labelLarge,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.padding(16.dp),
-                                )
-                            }
-                        }
 
                         Spacer(modifier = Modifier.height(48.dp))
 
