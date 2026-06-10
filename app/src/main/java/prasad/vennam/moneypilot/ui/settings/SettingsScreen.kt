@@ -59,6 +59,7 @@ fun SettingsScreen(
     onLogout: () -> Unit,
     onNavigateToCategories: () -> Unit,
     onNavigateToNotifications: () -> Unit,
+    onAccountDeleted: () -> Unit,
 ) {
     val userData by mainViewModel.userData.collectAsState()
     val isSynced by mainViewModel.isSynced.collectAsState()
@@ -82,6 +83,8 @@ fun SettingsScreen(
     val currencySheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     var showThemeDialog by remember { mutableStateOf(false) }
+    var showDeleteAccountConfirmation by remember { mutableStateOf(false) }
+    var isDeletingAccount by remember { mutableStateOf(false) }
     val currentThemeMode by mainViewModel.themeMode.collectAsState()
     val themeSubtitle =
         when (currentThemeMode) {
@@ -450,6 +453,31 @@ fun SettingsScreen(
                     Text(stringResource(R.string.logout), style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold))
                 }
             }
+
+            // Delete Account Button
+            item {
+                Spacer(modifier = Modifier.height(16.dp))
+                OutlinedButton(
+                    onClick = {
+                        showDeleteAccountConfirmation = true
+                    },
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 24.dp)
+                            .height(56.dp),
+                    colors =
+                        ButtonDefaults.outlinedButtonColors(
+                            contentColor = MaterialTheme.colorScheme.error,
+                        ),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.5f)),
+                    shape = MaterialTheme.shapes.large,
+                ) {
+                    Icon(Icons.Rounded.DeleteForever, contentDescription = null, tint = MaterialTheme.colorScheme.error)
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(stringResource(R.string.delete_account), style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold))
+                }
+            }
         }
     }
 
@@ -566,6 +594,80 @@ fun SettingsScreen(
             shape = RoundedCornerShape(20.dp),
                containerColor = MaterialTheme.colorScheme.surface,
             tonalElevation = 6.dp
+        )
+    }
+
+    if (showDeleteAccountConfirmation) {
+        AlertDialog(
+            onDismissRequest = { if (!isDeletingAccount) showDeleteAccountConfirmation = false },
+            title = {
+                Text(
+                    text = stringResource(R.string.delete_account_confirm_title),
+                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
+                )
+            },
+            text = {
+                Column {
+                    Text(
+                        text = stringResource(R.string.delete_account_confirm_message),
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    if (isDeletingAccount) {
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(24.dp),
+                                color = MaterialTheme.colorScheme.error
+                            )
+                            Text(
+                                text = stringResource(R.string.delete_account_deleting),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = !isDeletingAccount,
+                    onClick = {
+                        isDeletingAccount = true
+                        mainViewModel.deleteAccount(
+                            context = context,
+                            onComplete = { success ->
+                                isDeletingAccount = false
+                                showDeleteAccountConfirmation = false
+                                if (success) {
+                                    Toast.makeText(context, context.getString(R.string.delete_account_success), Toast.LENGTH_LONG).show()
+                                } else {
+                                    Toast.makeText(context, context.getString(R.string.delete_account_failed), Toast.LENGTH_LONG).show()
+                                }
+                                onAccountDeleted()
+                            }
+                        )
+                    },
+                    colors = ButtonDefaults.textButtonColors(
+                        contentColor = MaterialTheme.colorScheme.error
+                    )
+                ) {
+                    Text(stringResource(R.string.delete), fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    enabled = !isDeletingAccount,
+                    onClick = { showDeleteAccountConfirmation = false }
+                ) {
+                    Text(stringResource(R.string.cancel))
+                }
+            },
+            shape = RoundedCornerShape(20.dp),
+            containerColor = MaterialTheme.colorScheme.surface,
+            tonalElevation = 6.dp,
         )
     }
 }

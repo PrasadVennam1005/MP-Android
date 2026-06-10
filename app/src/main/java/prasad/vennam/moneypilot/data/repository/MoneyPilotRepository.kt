@@ -94,4 +94,11 @@ class MoneyPilotRepository(
             loans.forEach { loanDao.insertLoan(it) }
         }
     }
+
+    suspend fun clearAllData() {
+        database.withTransaction {
+            database.clearAllTables()
+        }
+    }
 }
+

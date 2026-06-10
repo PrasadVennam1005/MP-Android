@@ -36,7 +36,6 @@ import androidx.compose.material.icons.rounded.School
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.SearchOff
 import androidx.compose.material.icons.rounded.ShoppingCart
-import androidx.compose.material.icons.rounded.TrendingUp
 import androidx.compose.material.icons.rounded.Work
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card

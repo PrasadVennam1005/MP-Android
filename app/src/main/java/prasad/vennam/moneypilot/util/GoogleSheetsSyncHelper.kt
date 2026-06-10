@@ -437,7 +437,75 @@ object GoogleSheetsSyncHelper {
             if (!response.isSuccessful) throw Exception("Failed to upload values")
         }
     }
+
+    suspend fun deleteSpreadsheetFile(
+        context: Context,
+        email: String,
+        spreadsheetId: String,
+    ): Boolean =
+        withContext(Dispatchers.IO) {
+            try {
+                val account = android.accounts.Account(email, "com.google")
+                val scopeString = "oauth2:https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.metadata.readonly"
+                val token = GoogleAuthUtil.getToken(context, account, scopeString)
+
+                // 1. Attempt to delete spreadsheet file using Drive API
+                val deleteReq =
+                    Request
+                        .Builder()
+                        .url("https://www.googleapis.com/drive/v3/files/$spreadsheetId")
+                        .delete()
+                        .addHeader("Authorization", "Bearer $token")
+                        .build()
+
+                client.newCall(deleteReq).execute().use { response ->
+                    if (response.isSuccessful) {
+                        Log.d("GoogleSheetsSyncHelper", "Spreadsheet deleted successfully via Drive API")
+                        return@withContext true
+                    } else {
+                        Log.w(
+                            "GoogleSheetsSyncHelper",
+                            "Drive API delete returned status ${response.code}. Attempting fallback to clear contents."
+                        )
+                    }
+                }
+
+                // 2. Fallback: Clear all values in the spreadsheet using Sheets API batchClear
+                val clearBody =
+                    """
+                    {
+                      "ranges": [
+                        "Transactions!A1:Z10000",
+                        "Categories!A1:Z10000",
+                        "Budgets!A1:Z10000",
+                        "Investments!A1:Z10000"
+                      ]
+                    }
+                    """.trimIndent()
+                val clearRequest =
+                    Request
+                        .Builder()
+                        .url("https://sheets.googleapis.com/v4/spreadsheets/$spreadsheetId/values:batchClear")
+                        .post(clearBody.toRequestBody(mediaType))
+                        .addHeader("Authorization", "Bearer $token")
+                        .build()
+
+                client.newCall(clearRequest).execute().use { response ->
+                    if (response.isSuccessful) {
+                        Log.d("GoogleSheetsSyncHelper", "Spreadsheet data wiped successfully via Sheets API (fallback)")
+                        return@withContext true
+                    } else {
+                        Log.e("GoogleSheetsSyncHelper", "Wiping spreadsheet data also failed: code ${response.code}")
+                    }
+                }
+                false
+            } catch (e: Exception) {
+                Log.e("GoogleSheetsSyncHelper", "Exception during spreadsheet deletion/clearing", e)
+                false
+            }
+        }
 }
+
 
 data class DriveFilesResponse(
     val files: List<DriveFile>?,

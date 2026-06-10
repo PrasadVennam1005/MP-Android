@@ -81,6 +81,15 @@ fun ReceiptScannerContent(
     val lifecycleOwner = LocalLifecycleOwner.current
     val cameraExecutor = remember { Executors.newSingleThreadExecutor() }
     val recognizer = remember { TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS) }
+    var cameraProvider by remember { mutableStateOf<ProcessCameraProvider?>(null) }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            cameraProvider?.unbindAll()
+            cameraExecutor.shutdown()
+            recognizer.close()
+        }
+    }
 
     var isScanning by remember { mutableStateOf(true) }
     var detectedData by remember { mutableStateOf<ParsedReceipt?>(null) }
@@ -129,7 +138,8 @@ fun ReceiptScannerContent(
         if (isScanning) {
             val cameraProviderFuture = ProcessCameraProvider.getInstance(context)
             cameraProviderFuture.addListener({
-                val cameraProvider = cameraProviderFuture.get()
+                val provider = cameraProviderFuture.get()
+                cameraProvider = provider
                 val preview =
                     Preview.Builder().build().also {
                         it.surfaceProvider = previewView.surfaceProvider
@@ -155,14 +165,13 @@ fun ReceiptScannerContent(
                                         isScanning = false
                                         showResultsSheet = true
                                     }
-                                    imageProxy.close()
                                 }
                             }
                         }
 
                 try {
-                    cameraProvider.unbindAll()
-                    cameraProvider.bindToLifecycle(
+                    provider.unbindAll()
+                    provider.bindToLifecycle(
                         lifecycleOwner,
                         CameraSelector.DEFAULT_BACK_CAMERA,
                         preview,
@@ -172,6 +181,8 @@ fun ReceiptScannerContent(
                     // Ignore use case binding failures
                 }
             }, ContextCompat.getMainExecutor(context))
+        } else {
+            cameraProvider?.unbindAll()
         }
     }
 
@@ -289,6 +300,10 @@ fun ReceiptResultsBottomSheet(
     var timestamp by remember { mutableStateOf(detectedData.date ?: System.currentTimeMillis()) }
     var showCategoryMenu by remember { mutableStateOf(false) }
 
+    val amountVal = amount.toDoubleOrNull()
+    val isAmountError = amount.isNotEmpty() && (amountVal == null || amountVal <= 0.0)
+    val isFormValid = amount.isNotBlank() && !isAmountError && selectedCategoryId != null
+
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         dragHandle = null,
@@ -337,6 +352,7 @@ fun ReceiptResultsBottomSheet(
                 modifier = Modifier.padding(horizontal = 24.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
+                // Merchant
                 OutlinedTextField(
                     value = merchant,
                     onValueChange = { merchant = it },
@@ -346,6 +362,7 @@ fun ReceiptResultsBottomSheet(
                     shape = MaterialTheme.shapes.large,
                 )
 
+                // Amount
                 OutlinedTextField(
                     value = amount,
                     onValueChange = { if (it.isEmpty() || it.toDoubleOrNull() != null) amount = it },
@@ -358,6 +375,10 @@ fun ReceiptResultsBottomSheet(
                             modifier = Modifier.padding(start = 12.dp),
                         )
                     },
+                    isError = isAmountError,
+                    supportingText = if (isAmountError) {
+                        { Text(stringResource(R.string.amount_error_desc)) }
+                    } else null,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     modifier = Modifier.fillMaxWidth(),
                     shape = MaterialTheme.shapes.large,
@@ -366,7 +387,7 @@ fun ReceiptResultsBottomSheet(
                 // Category Picker
                 Box(modifier = Modifier.fillMaxWidth()) {
                     OutlinedTextField(
-                        value = categories.find { it.id == selectedCategoryId }?.name ?: "Select Category",
+                        value = categories.find { it.id == selectedCategoryId }?.name ?: stringResource(R.string.select_category),
                         onValueChange = {},
                         readOnly = true,
                         label = { Text(stringResource(R.string.category)) },
@@ -414,22 +435,24 @@ fun ReceiptResultsBottomSheet(
 
                 Button(
                     onClick = {
-                        onSave(
-                            Transaction(
-                                amount = (amount.toDoubleOrNull() ?: 0.0).inPaisa,
-                                timestamp = timestamp,
-                                categoryId = selectedCategoryId,
-                                note = merchant,
-                                type = TransactionType.EXPENSE,
-                            ),
-                        )
+                        if (isFormValid) {
+                            onSave(
+                                Transaction(
+                                    amount = (amount.toDoubleOrNull() ?: 0.0).inPaisa,
+                                    timestamp = timestamp,
+                                    categoryId = selectedCategoryId,
+                                    note = merchant,
+                                    type = TransactionType.EXPENSE,
+                                ),
+                            )
+                        }
                     },
                     modifier =
                         Modifier
                             .fillMaxWidth()
                             .height(60.dp),
                     shape = MaterialTheme.shapes.large,
-                    enabled = amount.isNotBlank() && selectedCategoryId != null,
+                    enabled = isFormValid,
                 ) {
                     Icon(Icons.Rounded.Check, null)
                     Spacer(modifier = Modifier.width(8.dp))
@@ -451,12 +474,17 @@ private fun processImageProxy(
         val image = InputImage.fromMediaImage(mediaImage, imageProxy.imageInfo.rotationDegrees)
         recognizer
             .process(image)
+            .addOnCompleteListener {
+                imageProxy.close()
+            }
             .addOnSuccessListener { visionText ->
                 val result = ReceiptParser.parse(visionText)
                 onResult(result)
             }.addOnFailureListener {
                 onResult(ParsedReceipt())
             }
+    } else {
+        imageProxy.close()
     }
 }
 

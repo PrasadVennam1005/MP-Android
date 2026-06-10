@@ -247,6 +247,7 @@
     <string name="interest_error_desc">Interest rate cannot be negative</string>
     <string name="tenure_error_desc">Tenure must be greater than 0</string>
     <string name="due_day_error_desc">EMI due day must be between 1 and 28</string>
+    <string name="amount_error_desc">Amount must be greater than 0</string>
 
     <string name="expenses">Expenses</string>
     <string name="history">History</string>
@@ -335,4 +336,11 @@
     <string name="confirm">Confirm</string>
     <string name="detail_note">Note</string>
     <string name="detail_date">Date</string>
+
+    <string name="delete_account">Delete Account</string>
+    <string name="delete_account_confirm_title">Delete Account?</string>
+    <string name="delete_account_confirm_message">Are you sure you want to delete your account? This action is permanent and will completely delete your local database, your Google Sheets backup spreadsheet, and all user preferences. This cannot be undone.</string>
+    <string name="delete_account_deleting">Deleting account and wiping data...</string>
+    <string name="delete_account_success">Account successfully deleted.</string>
+    <string name="delete_account_failed">Failed to delete account completely. Local data was cleared.</string>
 </resources>

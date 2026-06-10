@@ -218,4 +218,11 @@ class UserPreferences
                 preferences[hasSeededNotificationsKey] = seeded
             }
         }
+
+        suspend fun clearAll() {
+            context.dataStore.edit { preferences ->
+                preferences.clear()
+            }
+        }
     }
+

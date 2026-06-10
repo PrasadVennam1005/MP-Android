@@ -426,6 +426,10 @@ fun MoneyPilotApp(
                                     onNavigateToNotifications = {
                                         backStack.add(Destination.Notifications)
                                     },
+                                    onAccountDeleted = {
+                                        backStack.clear()
+                                        backStack.add(Destination.Auth(skipSplash = false))
+                                    },
                                 )
                             }
 

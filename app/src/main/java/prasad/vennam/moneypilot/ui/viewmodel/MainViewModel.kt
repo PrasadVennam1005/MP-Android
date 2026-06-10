@@ -225,4 +225,52 @@ class MainViewModel
                 userPreferences.setThemeMode(mode)
             }
         }
+
+        fun deleteAccount(
+            context: Context,
+            onComplete: (Boolean) -> Unit,
+        ) {
+            viewModelScope.launch {
+                val email = userData.value?.email
+                val currentSpreadsheetId = spreadsheetId.value
+                val isGuest = email == "guest@moneypilot.app"
+
+                var deleteSheetSuccess = true
+
+                // 1. Cancel active sync WorkManager
+                try {
+                    prasad.vennam.moneypilot.util.WorkManagerSyncScheduler.cancelSync(context)
+                } catch (e: Exception) {
+                    Log.e("MainViewModel", "Failed to cancel sync", e)
+                }
+
+                // 2. Delete or clear Google Sheet backup spreadsheet
+                if (!isGuest && email != null && currentSpreadsheetId != null) {
+                    deleteSheetSuccess = GoogleSheetsSyncHelper.deleteSpreadsheetFile(
+                        context = context,
+                        email = email,
+                        spreadsheetId = currentSpreadsheetId
+                    )
+                }
+
+                // 3. Clear all local database tables
+                try {
+                    repository.clearAllData()
+                } catch (e: Exception) {
+                    Log.e("MainViewModel", "Failed to clear database", e)
+                }
+
+                // 4. Clear all user preferences in DataStore
+                try {
+                    userPreferences.clearAll()
+                } catch (e: Exception) {
+                    Log.e("MainViewModel", "Failed to clear user preferences", e)
+                }
+
+                resetRestoreCheck()
+                onComplete(deleteSheetSuccess)
+            }
+        }
     }
+
+
