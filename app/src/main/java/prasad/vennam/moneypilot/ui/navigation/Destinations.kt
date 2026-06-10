@@ -55,4 +55,7 @@ sealed interface Destination : NavKey {
 
     @Serializable
     data object Notifications : Destination
+
+    @Serializable
+    data object FAQ : Destination
 }

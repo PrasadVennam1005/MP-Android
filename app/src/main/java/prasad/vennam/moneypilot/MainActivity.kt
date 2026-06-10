@@ -41,6 +41,7 @@ import prasad.vennam.moneypilot.ui.investments.InvestmentScreen
 import prasad.vennam.moneypilot.ui.loans.LoanScreen
 import prasad.vennam.moneypilot.ui.navigation.Destination
 import prasad.vennam.moneypilot.ui.scanner.ReceiptScannerScreen
+import prasad.vennam.moneypilot.ui.faq.FaqScreen
 import prasad.vennam.moneypilot.ui.settings.SettingsScreen
 import prasad.vennam.moneypilot.ui.theme.MoneyPilotTheme
 import prasad.vennam.moneypilot.ui.transactions.AddEditTransactionScreen
@@ -426,6 +427,9 @@ fun MoneyPilotApp(
                                     onNavigateToNotifications = {
                                         backStack.add(Destination.Notifications)
                                     },
+                                    onNavigateToFAQ = {
+                                        backStack.add(Destination.FAQ)
+                                    },
                                     onAccountDeleted = {
                                         backStack.clear()
                                         backStack.add(Destination.Auth(skipSplash = false))
@@ -453,6 +457,13 @@ fun MoneyPilotApp(
                         is Destination.Notifications ->
                             NavEntry(key) {
                                 prasad.vennam.moneypilot.ui.notifications.NotificationsScreen(
+                                    onNavigateBack = { backStack.removeLastOrNull() },
+                                )
+                            }
+
+                        is Destination.FAQ ->
+                            NavEntry(key) {
+                                FaqScreen(
                                     onNavigateBack = { backStack.removeLastOrNull() },
                                 )
                             }

@@ -15,6 +15,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.rounded.Logout
+import androidx.compose.material.icons.automirrored.rounded.HelpOutline
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -25,6 +26,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -59,6 +61,7 @@ fun SettingsScreen(
     onLogout: () -> Unit,
     onNavigateToCategories: () -> Unit,
     onNavigateToNotifications: () -> Unit,
+    onNavigateToFAQ: () -> Unit,
     onAccountDeleted: () -> Unit,
 ) {
     val userData by mainViewModel.userData.collectAsState()
@@ -74,6 +77,7 @@ fun SettingsScreen(
     val scope = rememberCoroutineScope()
     val isGuest = remember(userData) { userData?.email == "guest@moneypilot.app" }
     val context = LocalContext.current
+    val uriHandler = LocalUriHandler.current
     var isSyncing by remember { mutableStateOf(false) }
 
     var showLoginRequiredDialog by remember { mutableStateOf(false) }
@@ -419,6 +423,28 @@ fun SettingsScreen(
             // Support & Info
             item {
                 SettingsGroup(title = stringResource(R.string.support)) {
+                    SettingsItem(
+                        icon = Icons.AutoMirrored.Rounded.HelpOutline,
+                        title = "Help & FAQ",
+                        subtitle = "Browse answers or contact us",
+                        onClick = { onNavigateToFAQ() },
+                    )
+                    SettingsItem(
+                        icon = Icons.Rounded.Gavel,
+                        title = "Terms of Service",
+                        subtitle = "View our terms and conditions",
+                        onClick = {
+                            uriHandler.openUri("https://prasadvennam1005.github.io/MP-Android/terms.html")
+                        },
+                    )
+                    SettingsItem(
+                        icon = Icons.Rounded.PrivacyTip,
+                        title = "Privacy Policy",
+                        subtitle = "How we handle your data",
+                        onClick = {
+                            uriHandler.openUri("https://prasadvennam1005.github.io/MP-Android/privacy.html")
+                        },
+                    )
                     SettingsItem(
                         icon = Icons.Rounded.Info,
                         title = stringResource(R.string.about),
