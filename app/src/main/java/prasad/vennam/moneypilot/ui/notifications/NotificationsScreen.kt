@@ -1,12 +1,12 @@
 package prasad.vennam.moneypilot.ui.notifications
 
-import android.content.Intent
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -14,6 +14,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.automirrored.rounded.TrendingDown
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -23,10 +24,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import prasad.vennam.moneypilot.R
 import prasad.vennam.moneypilot.data.entity.Notification
 import prasad.vennam.moneypilot.ui.viewmodel.NotificationViewModel
 import java.text.SimpleDateFormat
@@ -36,6 +39,7 @@ import java.util.*
 @Composable
 fun NotificationsScreen(
     onNavigateBack: () -> Unit,
+    onNavigateToWeb: (url: String, title: String) -> Unit,
     viewModel: NotificationViewModel = hiltViewModel(),
 ) {
     val notifications by viewModel.notifications.collectAsState()
@@ -60,19 +64,23 @@ fun NotificationsScreen(
             CenterAlignedTopAppBar(
                 title = {
                     Text(
-                        text = "Notifications",
+                        text = stringResource(R.string.notifications),
                         style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
                     )
                 },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 },
                 actions = {
                     if (notifications.isNotEmpty()) {
                         IconButton(onClick = { showClearAllConfirmation = true }) {
-                            Icon(Icons.Rounded.DeleteSweep, contentDescription = "Clear All", tint = MaterialTheme.colorScheme.error)
+                            Icon(
+                                imageVector = Icons.Rounded.DeleteSweep,
+                                contentDescription = stringResource(R.string.clear_all),
+                                tint = MaterialTheme.colorScheme.error,
+                            )
                         }
                     }
                 },
@@ -159,8 +167,17 @@ fun NotificationsScreen(
                             item = item,
                             onDismiss = {
                                 viewModel.deleteNotification(item.id)
-                                Toast.makeText(context, "Notification deleted", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, context.getString(R.string.notification_deleted), Toast.LENGTH_SHORT).show()
                             },
+                            onBookmark = {
+                                if (!item.url.isNullOrBlank()) {
+                                    viewModel.bookmarkNotificationUrl(item.title, item.url)
+                                    Toast.makeText(context, context.getString(R.string.saved_offline), Toast.LENGTH_SHORT).show()
+                                } else {
+                                    Toast.makeText(context, context.getString(R.string.no_link_to_bookmark), Toast.LENGTH_SHORT).show()
+                                }
+                            },
+                            onNavigateToWeb = onNavigateToWeb,
                         )
                     }
                 }
@@ -171,23 +188,23 @@ fun NotificationsScreen(
     if (showClearAllConfirmation) {
         AlertDialog(
             onDismissRequest = { showClearAllConfirmation = false },
-            title = { Text("Clear All Notifications?", fontWeight = FontWeight.Bold) },
-            text = { Text("This will permanently delete all notifications in all categories.") },
+            title = { Text(stringResource(R.string.clear_all_notifications_title), fontWeight = FontWeight.Bold) },
+            text = { Text(stringResource(R.string.clear_all_notifications_desc)) },
             confirmButton = {
                 TextButton(
                     onClick = {
                         viewModel.clearAll()
                         showClearAllConfirmation = false
-                        Toast.makeText(context, "All notifications cleared", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, context.getString(R.string.all_notifications_cleared), Toast.LENGTH_SHORT).show()
                     },
                     colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
                 ) {
-                    Text("Clear All", fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.clear_all), fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showClearAllConfirmation = false }) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.cancel))
                 }
             },
             shape = RoundedCornerShape(20.dp),
@@ -202,6 +219,8 @@ fun NotificationsScreen(
 fun SwipeToDismissNotification(
     item: Notification,
     onDismiss: () -> Unit,
+    onBookmark: () -> Unit,
+    onNavigateToWeb: (url: String, title: String) -> Unit,
 ) {
     var isRemoved by remember { mutableStateOf(false) }
 
@@ -218,11 +237,16 @@ fun SwipeToDismissNotification(
         val dismissState =
             rememberSwipeToDismissBoxState(
                 confirmValueChange = { dismissValue ->
-                    if (dismissValue == SwipeToDismissBoxValue.EndToStart || dismissValue == SwipeToDismissBoxValue.StartToEnd) {
-                        isRemoved = true
-                        true
-                    } else {
-                        false
+                    when (dismissValue) {
+                        SwipeToDismissBoxValue.EndToStart -> {
+                            isRemoved = true
+                            true
+                        }
+                        SwipeToDismissBoxValue.StartToEnd -> {
+                            onBookmark()
+                            false
+                        }
+                        else -> false
                     }
                 },
             )
@@ -232,7 +256,13 @@ fun SwipeToDismissNotification(
             backgroundContent = {
                 val color =
                     when (dismissState.dismissDirection) {
-                        SwipeToDismissBoxValue.StartToEnd -> MaterialTheme.colorScheme.errorContainer
+                        SwipeToDismissBoxValue.StartToEnd -> {
+                            if (!item.url.isNullOrBlank()) {
+                                MaterialTheme.colorScheme.primaryContainer
+                            } else {
+                                MaterialTheme.colorScheme.surfaceVariant
+                            }
+                        }
                         SwipeToDismissBoxValue.EndToStart -> MaterialTheme.colorScheme.errorContainer
                         else -> Color.Transparent
                     }
@@ -252,35 +282,62 @@ fun SwipeToDismissNotification(
                     contentAlignment = alignment,
                 ) {
                     if (dismissState.dismissDirection != SwipeToDismissBoxValue.Settled) {
-                        Icon(
-                            imageVector = Icons.Rounded.Delete,
-                            contentDescription = "Delete",
-                            tint = MaterialTheme.colorScheme.onErrorContainer,
-                        )
+                        when (dismissState.dismissDirection) {
+                            SwipeToDismissBoxValue.StartToEnd -> {
+                                Icon(
+                                    imageVector = if (!item.url.isNullOrBlank()) Icons.Rounded.Bookmark else Icons.Rounded.Block,
+                                    contentDescription = if (!item.url.isNullOrBlank()) "Bookmark" else "No Link",
+                                    tint = if (!item.url.isNullOrBlank()) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                            SwipeToDismissBoxValue.EndToStart -> {
+                                Icon(
+                                    imageVector = Icons.Rounded.Delete,
+                                    contentDescription = "Delete",
+                                    tint = MaterialTheme.colorScheme.onErrorContainer,
+                                )
+                            }
+                            else -> {}
+                        }
                     }
                 }
             },
             content = {
-                NotificationItemCard(item)
+                NotificationItemCard(
+                    notification = item,
+                    onNavigateToWeb = onNavigateToWeb,
+                )
             },
         )
     }
 }
 
 @Composable
-fun NotificationItemCard(notification: Notification) {
+fun NotificationItemCard(
+    notification: Notification,
+    onNavigateToWeb: (url: String, title: String) -> Unit,
+) {
     val categoryDetails =
         remember(notification.category) {
             when (notification.category.lowercase(Locale.ROOT)) {
                 "alerts" -> Triple(Icons.Rounded.Warning, Color(0xFFFF9800), "Alerts")
                 "sync" -> Triple(Icons.Rounded.CloudDone, Color(0xFF2196F3), "Sync")
-                "budget" -> Triple(Icons.Rounded.TrendingDown, Color(0xFF4CAF50), "Budget")
+                "budget" -> Triple(Icons.AutoMirrored.Rounded.TrendingDown, Color(0xFF4CAF50), "Budget")
                 else -> Triple(Icons.Rounded.Info, Color(0xFF9C27B0), "System")
             }
         }
 
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .then(
+                    if (!notification.url.isNullOrBlank()) {
+                        Modifier.clickable { onNavigateToWeb(notification.url, notification.title) }
+                    } else {
+                        Modifier
+                    },
+                ),
         shape = MaterialTheme.shapes.extraLarge,
         colors =
             CardDefaults.cardColors(
@@ -337,15 +394,9 @@ fun NotificationItemCard(notification: Notification) {
                 )
                 if (!notification.url.isNullOrBlank()) {
                     Spacer(modifier = Modifier.height(12.dp))
-                    val context = LocalContext.current
                     Button(
                         onClick = {
-                            try {
-                                val intent = Intent(Intent.ACTION_VIEW, android.net.Uri.parse(notification.url))
-                                context.startActivity(intent)
-                            } catch (e: Exception) {
-                                Toast.makeText(context, "Could not open link", Toast.LENGTH_SHORT).show()
-                            }
+                            onNavigateToWeb(notification.url, notification.title)
                         },
                         colors =
                             ButtonDefaults.buttonColors(
@@ -360,9 +411,12 @@ fun NotificationItemCard(notification: Notification) {
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(4.dp),
                         ) {
-                            Text("Read Article", style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold))
+                            Text(
+                                stringResource(R.string.read_article),
+                                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                            )
                             Icon(
-                                imageVector = Icons.Rounded.OpenInNew,
+                                imageVector = Icons.Rounded.ArrowForward,
                                 contentDescription = null,
                                 modifier = Modifier.size(14.dp),
                             )

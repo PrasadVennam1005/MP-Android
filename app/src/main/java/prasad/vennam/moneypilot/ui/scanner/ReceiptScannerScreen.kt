@@ -242,10 +242,11 @@ fun ReceiptScannerContent(
         }
     }
 
-    if (showResultsSheet && detectedData != null) {
+    val currentDetectedData = detectedData
+    if (showResultsSheet && currentDetectedData != null) {
         val categories by transactionViewModel.allCategories.collectAsState()
         ReceiptResultsBottomSheet(
-            detectedData = detectedData!!,
+            detectedData = currentDetectedData,
             categories = categories,
             onDismiss = {
                 showResultsSheet = false
@@ -376,9 +377,12 @@ fun ReceiptResultsBottomSheet(
                         )
                     },
                     isError = isAmountError,
-                    supportingText = if (isAmountError) {
-                        { Text(stringResource(R.string.amount_error_desc)) }
-                    } else null,
+                    supportingText =
+                        if (isAmountError) {
+                            { Text(stringResource(R.string.amount_error_desc)) }
+                        } else {
+                            null
+                        },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     modifier = Modifier.fillMaxWidth(),
                     shape = MaterialTheme.shapes.large,
@@ -476,8 +480,7 @@ private fun processImageProxy(
             .process(image)
             .addOnCompleteListener {
                 imageProxy.close()
-            }
-            .addOnSuccessListener { visionText ->
+            }.addOnSuccessListener { visionText ->
                 val result = ReceiptParser.parse(visionText)
                 onResult(result)
             }.addOnFailureListener {

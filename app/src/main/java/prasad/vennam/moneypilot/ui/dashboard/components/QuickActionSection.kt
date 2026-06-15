@@ -13,9 +13,12 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material.icons.rounded.AccountBalanceWallet
 import androidx.compose.material.icons.rounded.AddCircleOutline
+import androidx.compose.material.icons.rounded.Article
+import androidx.compose.material.icons.rounded.Calculate
 import androidx.compose.material.icons.rounded.Camera
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.RemoveCircleOutline
+import androidx.compose.material.icons.rounded.Shield
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -44,6 +47,9 @@ fun QuickActionSection(
     onAddInvestment: () -> Unit,
     onAddLoan: () -> Unit,
     onScanReceipt: () -> Unit,
+    onNavigateToEmergencyFund: () -> Unit,
+    onNavigateToNews: () -> Unit,
+    onNavigateToSandbox: () -> Unit,
     isGuest: Boolean,
 ) {
     Column {
@@ -99,7 +105,27 @@ fun QuickActionSection(
                 Modifier.weight(1f),
                 isGuest,
             )
-            Spacer(modifier = Modifier.weight(3f))
+            QuickActionButton(
+                stringResource(R.string.emergency_fund),
+                Icons.Rounded.Shield,
+                Color(0xFF067F68),
+                onNavigateToEmergencyFund,
+                Modifier.weight(1f),
+            )
+            QuickActionButton(
+                stringResource(R.string.news),
+                Icons.Rounded.Article,
+                Color(0xFFF57C00),
+                onNavigateToNews,
+                Modifier.weight(1f),
+            )
+            QuickActionButton(
+                stringResource(R.string.sandbox),
+                Icons.Rounded.Calculate,
+                Color(0xFF8E24AA),
+                onNavigateToSandbox,
+                Modifier.weight(1f),
+            )
         }
     }
 }

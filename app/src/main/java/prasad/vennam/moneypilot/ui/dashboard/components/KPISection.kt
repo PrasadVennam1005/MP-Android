@@ -28,19 +28,43 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import prasad.vennam.moneypilot.R
+import prasad.vennam.moneypilot.data.entity.TimeFrame
 import prasad.vennam.moneypilot.util.CurrencyFormatter
 import prasad.vennam.moneypilot.util.LocalCurrencyCode
 
 @Composable
 fun KPISection(
     today: Double,
-    monthlyExp: Double,
-    monthlyInc: Double,
+    periodExp: Double,
+    periodInc: Double,
     savings: Double,
     investment: Double,
     currentInvestmentValue: Double,
+    timeFrame: TimeFrame,
 ) {
     val currencyCode = LocalCurrencyCode.current
+
+    val incomeTitle =
+        when (timeFrame) {
+            TimeFrame.MONTHLY -> stringResource(R.string.monthly_income)
+            TimeFrame.QUARTERLY -> stringResource(R.string.quarterly_income)
+            TimeFrame.YEARLY -> stringResource(R.string.yearly_income)
+        }
+
+    val expenseTitle =
+        when (timeFrame) {
+            TimeFrame.MONTHLY -> stringResource(R.string.monthly_expense)
+            TimeFrame.QUARTERLY -> stringResource(R.string.quarterly_expense)
+            TimeFrame.YEARLY -> stringResource(R.string.yearly_expense)
+        }
+
+    val savingsTitle =
+        when (timeFrame) {
+            TimeFrame.MONTHLY -> stringResource(R.string.savings)
+            TimeFrame.QUARTERLY -> stringResource(R.string.quarterly_savings)
+            TimeFrame.YEARLY -> stringResource(R.string.yearly_savings)
+        }
+
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -56,7 +80,7 @@ fun KPISection(
                 modifier = Modifier.weight(1f),
             )
             KPICard(
-                title = stringResource(R.string.savings),
+                title = savingsTitle,
                 amount = savings,
                 icon = Icons.Rounded.AccountBalance,
                 containerColor = MaterialTheme.colorScheme.primaryContainer,
@@ -70,8 +94,8 @@ fun KPISection(
             horizontalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             KPICard(
-                title = stringResource(R.string.monthly_income),
-                amount = monthlyInc,
+                title = incomeTitle,
+                amount = periodInc,
                 icon = Icons.Rounded.ArrowUpward,
                 containerColor = MaterialTheme.colorScheme.secondaryContainer,
                 contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
@@ -79,8 +103,8 @@ fun KPISection(
                 modifier = Modifier.weight(1f),
             )
             KPICard(
-                title = stringResource(R.string.monthly_expense),
-                amount = monthlyExp,
+                title = expenseTitle,
+                amount = periodExp,
                 icon = Icons.Rounded.ArrowDownward,
                 containerColor = MaterialTheme.colorScheme.tertiaryContainer,
                 contentColor = MaterialTheme.colorScheme.onTertiaryContainer,

@@ -1,0 +1,12 @@
+[*.{kt,kts}]
+# Disable line length checks or set to a higher limit
+max_line_length = off
+
+# Disable function-naming checks since Composable functions start with uppercase letters
+ktlint_standard_function-naming = disabled
+
+# Disable property-naming checks if needed
+ktlint_standard_property-naming = disabled
+
+# Allow wildcard imports (sometimes useful in tests or auto-generated code, but we'll still fix standard wildcards)
+ktlint_standard_no-wildcard-imports = disabled

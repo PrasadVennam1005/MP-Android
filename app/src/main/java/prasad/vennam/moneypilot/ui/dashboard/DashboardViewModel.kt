@@ -3,20 +3,30 @@ package prasad.vennam.moneypilot.ui.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import prasad.vennam.moneypilot.data.UserPreferences
 import prasad.vennam.moneypilot.data.entity.Budget
 import prasad.vennam.moneypilot.data.entity.Category
+import prasad.vennam.moneypilot.data.entity.EmergencyFund
 import prasad.vennam.moneypilot.data.entity.Investment
 import prasad.vennam.moneypilot.data.entity.Loan
+import prasad.vennam.moneypilot.data.entity.LoanPayment
+import prasad.vennam.moneypilot.data.entity.PendingTransaction
+import prasad.vennam.moneypilot.data.entity.TimeFrame
 import prasad.vennam.moneypilot.data.entity.Transaction
 import prasad.vennam.moneypilot.data.entity.TransactionType
 import prasad.vennam.moneypilot.data.repository.ExchangeRateRepository
 import prasad.vennam.moneypilot.data.repository.MoneyPilotRepository
+import prasad.vennam.moneypilot.domain.usecase.*
+import prasad.vennam.moneypilot.util.LoanIntelligenceUtil
 import prasad.vennam.moneypilot.util.inRupees
 import java.util.Calendar
 import javax.inject.Inject
@@ -32,8 +42,8 @@ data class BudgetProgress(
 data class DashboardState(
     val isLoading: Boolean = true,
     val todayExpense: Double = 0.0,
-    val monthlyExpense: Double = 0.0,
-    val monthlyIncome: Double = 0.0,
+    val periodExpense: Double = 0.0,
+    val periodIncome: Double = 0.0,
     val savings: Double = 0.0,
     val totalInvestment: Double = 0.0,
     val currentInvestmentValue: Double = 0.0,
@@ -42,6 +52,9 @@ data class DashboardState(
     val budgetProgresses: List<BudgetProgress> = emptyList(),
     val categories: List<Category> = emptyList(),
     val loans: List<Loan> = emptyList(),
+    val emergencyFund: EmergencyFund? = null,
+    val selectedTimeFrame: TimeFrame = TimeFrame.MONTHLY,
+    val pendingTransactions: List<PendingTransaction> = emptyList(),
 )
 
 private data class DashboardData(
@@ -50,31 +63,65 @@ private data class DashboardData(
     val budgets: List<Budget>,
     val investments: List<Investment>,
     val loans: List<Loan>,
+    val emergencyFund: EmergencyFund?,
+    val pendingTransactions: List<PendingTransaction>,
 )
 
 @HiltViewModel
 class DashboardViewModel
     @Inject
     constructor(
-        private val repository: MoneyPilotRepository,
         private val exchangeRateRepo: ExchangeRateRepository,
         private val userPreferences: UserPreferences,
+        private val repository: MoneyPilotRepository,
+        private val addLoanUseCase: AddLoanUseCase,
+        private val updateLoanUseCase: UpdateLoanUseCase,
+        private val deleteLoanUseCase: DeleteLoanUseCase,
+        private val getTransactionsUseCase: GetTransactionsUseCase,
+        private val getCategoriesUseCase: GetCategoriesUseCase,
+        private val getBudgetsUseCase: GetBudgetsUseCase,
+        private val getInvestmentsUseCase: GetInvestmentsUseCase,
+        private val getLoansUseCase: GetLoansUseCase,
+        private val getEmergencyFundUseCase: GetEmergencyFundUseCase,
+        private val getPendingTransactionsUseCase: GetPendingTransactionsUseCase,
+        private val approvePendingTransactionUseCase: ApprovePendingTransactionUseCase,
+        private val dismissPendingTransactionUseCase: DismissPendingTransactionUseCase,
     ) : ViewModel() {
+        private val _selectedTimeFrame = MutableStateFlow(TimeFrame.MONTHLY)
+        val selectedTimeFrame: StateFlow<TimeFrame> = _selectedTimeFrame.asStateFlow()
+
+        fun setTimeFrame(timeFrame: TimeFrame) {
+            _selectedTimeFrame.value = timeFrame
+        }
+
         private val dataFlow =
             combine(
-                repository.allTransactions,
-                repository.allCategories,
-                repository.allBudgets,
-                repository.allInvestments,
-                repository.allLoans,
-            ) { t, c, b, i, l -> DashboardData(t, c, b, i, l) }
+                getTransactionsUseCase(),
+                getCategoriesUseCase(),
+                getBudgetsUseCase(),
+                getInvestmentsUseCase(),
+                getLoansUseCase(),
+                getEmergencyFundUseCase(),
+                getPendingTransactionsUseCase(),
+            ) { array ->
+                DashboardData(
+                    transactions = array[0] as List<Transaction>,
+                    categories = array[1] as List<Category>,
+                    budgets = array[2] as List<Budget>,
+                    investments = array[3] as List<Investment>,
+                    loans = array[4] as List<Loan>,
+                    emergencyFund = array[5] as EmergencyFund?,
+                    pendingTransactions = array[6] as List<PendingTransaction>,
+                )
+            }
 
         val uiState: StateFlow<DashboardState> =
             combine(
                 dataFlow,
                 exchangeRateRepo.allRates,
                 userPreferences.currency,
-            ) { data, allRates, currentCurrencyCode ->
+                _selectedTimeFrame,
+            ) { data, allRates, currentCurrencyCode, timeFrame ->
 
                 fun convertAmount(
                     amountInMinor: Long,
@@ -97,10 +144,26 @@ class DashboardViewModel
                 val currentYear = calendar.get(Calendar.YEAR)
                 val today = calendar.get(Calendar.DAY_OF_YEAR)
 
-                val monthlyTransactions =
+                // Filter transactions based on selected TimeFrame
+                val filteredTransactions =
                     transactions.filter {
                         val transCal = Calendar.getInstance().apply { timeInMillis = it.timestamp }
-                        transCal.get(Calendar.MONTH) == currentMonth && transCal.get(Calendar.YEAR) == currentYear
+                        val transYear = transCal.get(Calendar.YEAR)
+                        val transMonth = transCal.get(Calendar.MONTH)
+
+                        if (transYear != currentYear) {
+                            false
+                        } else {
+                            when (timeFrame) {
+                                TimeFrame.MONTHLY -> transMonth == currentMonth
+                                TimeFrame.QUARTERLY -> {
+                                    val currentQuarter = currentMonth / 3
+                                    val transQuarter = transMonth / 3
+                                    transQuarter == currentQuarter
+                                }
+                                TimeFrame.YEARLY -> true
+                            }
+                        }
                     }
 
                 val todayExpense =
@@ -112,27 +175,27 @@ class DashboardViewModel
                                 transCal.get(Calendar.YEAR) == currentYear
                         }.sumOf { convertAmount(it.amount, it.currencyCode) }
 
-                val monthlyExpense =
-                    monthlyTransactions.filter { it.type == TransactionType.EXPENSE }.sumOf {
+                val periodExpense =
+                    filteredTransactions.filter { it.type == TransactionType.EXPENSE }.sumOf {
                         convertAmount(
                             it.amount,
                             it.currencyCode,
                         )
                     }
-                val monthlyIncome =
-                    monthlyTransactions.filter { it.type == TransactionType.INCOME }.sumOf {
+                val periodIncome =
+                    filteredTransactions.filter { it.type == TransactionType.INCOME }.sumOf {
                         convertAmount(
                             it.amount,
                             it.currencyCode,
                         )
                     }
-                val savings = monthlyIncome - monthlyExpense
+                val savings = periodIncome - periodExpense
 
                 val totalInvestment = investments.sumOf { convertAmount(it.investedAmount, it.currencyCode) }
                 val currentInvestmentValue = investments.sumOf { convertAmount(it.currentValue, it.currencyCode) }
 
                 val spendingByCategory =
-                    monthlyTransactions
+                    filteredTransactions
                         .filter { it.type == TransactionType.EXPENSE }
                         .groupBy { it.categoryId }
                         .mapKeys { (catId, _) -> categories.find { it.id == catId } }
@@ -146,9 +209,9 @@ class DashboardViewModel
                                 .filter {
                                     val transCal = Calendar.getInstance().apply { timeInMillis = it.timestamp }
                                     it.categoryId == budget.categoryId &&
-                                            it.type == TransactionType.EXPENSE &&
-                                            transCal.get(Calendar.MONTH) == currentMonth &&
-                                            transCal.get(Calendar.YEAR) == currentYear
+                                        it.type == TransactionType.EXPENSE &&
+                                        transCal.get(Calendar.MONTH) == currentMonth &&
+                                        transCal.get(Calendar.YEAR) == currentYear
                                 }.sumOf { convertAmount(it.amount, it.currencyCode) }
 
                         val budgetConverted = convertAmount(budget.amount, budget.currencyCode)
@@ -159,8 +222,8 @@ class DashboardViewModel
                 DashboardState(
                     isLoading = false,
                     todayExpense = todayExpense,
-                    monthlyExpense = monthlyExpense,
-                    monthlyIncome = monthlyIncome,
+                    periodExpense = periodExpense,
+                    periodIncome = periodIncome,
                     savings = savings,
                     totalInvestment = totalInvestment,
                     currentInvestmentValue = currentInvestmentValue,
@@ -169,12 +232,16 @@ class DashboardViewModel
                     budgetProgresses = budgetProgresses,
                     categories = categories,
                     loans = data.loans,
+                    emergencyFund = data.emergencyFund,
+                    selectedTimeFrame = timeFrame,
+                    pendingTransactions = data.pendingTransactions,
                 )
-            }.stateIn(
-                scope = viewModelScope,
-                started = SharingStarted.WhileSubscribed(5000),
-                initialValue = DashboardState(isLoading = true),
-            )
+            }.flowOn(Dispatchers.Default)
+                .stateIn(
+                    scope = viewModelScope,
+                    started = SharingStarted.WhileSubscribed(5000),
+                    initialValue = DashboardState(isLoading = true),
+                )
 
         fun addLoan(
             name: String,
@@ -189,18 +256,21 @@ class DashboardViewModel
             isNotificationEnabled: Boolean = true,
         ) {
             viewModelScope.launch {
-                repository.insertLoan(
+                addLoanUseCase(
                     Loan(
                         name = name,
                         totalAmount = total,
                         outstandingAmount = outstanding,
                         emiAmount = emi,
-                        nextEmiDate = Calendar.getInstance().apply {
-                            set(Calendar.DAY_OF_MONTH, dueDayOfMonth.coerceIn(1, 28))
-                            if (get(Calendar.DAY_OF_MONTH) >= dueDayOfMonth) {
-                                add(Calendar.MONTH, 1)
-                            }
-                        }.timeInMillis,
+                        nextEmiDate =
+                            Calendar
+                                .getInstance()
+                                .apply {
+                                    set(Calendar.DAY_OF_MONTH, dueDayOfMonth.coerceIn(1, 28))
+                                    if (get(Calendar.DAY_OF_MONTH) >= dueDayOfMonth) {
+                                        add(Calendar.MONTH, 1)
+                                    }
+                                }.timeInMillis,
                         currencyCode = currencyCode,
                         lenderName = lenderName,
                         interestRate = interestRate,
@@ -214,13 +284,57 @@ class DashboardViewModel
 
         fun updateLoan(loan: Loan) {
             viewModelScope.launch {
-                repository.updateLoan(loan)
+                updateLoanUseCase(loan)
             }
         }
 
         fun deleteLoan(loan: Loan) {
             viewModelScope.launch {
-                repository.deleteLoan(loan)
+                deleteLoanUseCase(loan)
+            }
+        }
+
+        fun recordLoanPayment(
+            loanId: Long,
+            amount: Long,
+            isExtra: Boolean = false,
+            note: String = "",
+        ) {
+            viewModelScope.launch {
+                val payment =
+                    LoanPayment(
+                        loanId = loanId,
+                        amount = amount,
+                        date = System.currentTimeMillis(),
+                        isExtraPayment = isExtra,
+                        note = note,
+                    )
+                repository.insertLoanPayment(payment)
+            }
+        }
+
+        fun getLoanPayments(loanId: Long): kotlinx.coroutines.flow.Flow<List<LoanPayment>> = repository.getPaymentsForLoan(loanId)
+
+        fun estimatePayoff(loan: Loan): Long =
+            LoanIntelligenceUtil.predictPayoffDate(
+                loan.outstandingAmount,
+                loan.interestRate,
+                loan.emiAmount,
+            )
+
+        fun approveTransaction(
+            pending: PendingTransaction,
+            categoryId: Long?,
+            note: String = "",
+        ) {
+            viewModelScope.launch {
+                approvePendingTransactionUseCase(pending, categoryId, note)
+            }
+        }
+
+        fun dismissTransaction(pending: PendingTransaction) {
+            viewModelScope.launch {
+                dismissPendingTransactionUseCase(pending)
             }
         }
     }

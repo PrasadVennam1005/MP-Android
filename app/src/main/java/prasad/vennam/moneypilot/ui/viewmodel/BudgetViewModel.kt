@@ -3,39 +3,49 @@ package prasad.vennam.moneypilot.ui.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import prasad.vennam.moneypilot.data.UserPreferences
 import prasad.vennam.moneypilot.data.entity.Budget
 import prasad.vennam.moneypilot.data.entity.TransactionType
 import prasad.vennam.moneypilot.data.repository.ExchangeRateRepository
-import prasad.vennam.moneypilot.data.repository.MoneyPilotRepository
+import prasad.vennam.moneypilot.domain.usecase.DeleteBudgetUseCase
+import prasad.vennam.moneypilot.domain.usecase.GetBudgetsUseCase
+import prasad.vennam.moneypilot.domain.usecase.GetCategoriesUseCase
+import prasad.vennam.moneypilot.domain.usecase.GetTransactionsUseCase
+import prasad.vennam.moneypilot.domain.usecase.SaveBudgetUseCase
 import javax.inject.Inject
 
 @HiltViewModel
 class BudgetViewModel
     @Inject
     constructor(
-        private val repository: MoneyPilotRepository,
+        private val getBudgetsUseCase: GetBudgetsUseCase,
+        private val getCategoriesUseCase: GetCategoriesUseCase,
+        private val getTransactionsUseCase: GetTransactionsUseCase,
         private val exchangeRateRepo: ExchangeRateRepository,
         private val userPreferences: UserPreferences,
+        private val saveBudgetUseCase: SaveBudgetUseCase,
+        private val deleteBudgetUseCase: DeleteBudgetUseCase,
     ) : ViewModel() {
         val allBudgets: StateFlow<List<Budget>> =
-            repository.allBudgets
+            getBudgetsUseCase()
                 .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
         val allCategories =
-            repository.allCategories
+            getCategoriesUseCase()
                 .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
         val budgetProgresses: StateFlow<List<BudgetProgress>> =
             combine(
-                repository.allBudgets,
-                repository.allCategories,
-                repository.allTransactions,
+                getBudgetsUseCase(),
+                getCategoriesUseCase(),
+                getTransactionsUseCase(),
                 exchangeRateRepo.allRates,
                 userPreferences.currency,
             ) {
@@ -81,17 +91,13 @@ class BudgetViewModel
                     prasad.vennam.moneypilot.ui.viewmodel
                         .BudgetProgress(budget, category, spent, budgetConverted, progress)
                 }
-            }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+            }.flowOn(Dispatchers.Default)
+                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
         fun saveBudget(budget: Budget) {
             viewModelScope.launch {
                 try {
-                    userPreferences.setSynced(false)
-                    if (budget.id == 0L) {
-                        repository.insertBudget(budget)
-                    } else {
-                        repository.updateBudget(budget)
-                    }
+                    saveBudgetUseCase(budget)
                 } catch (e: Exception) {
                     android.util.Log.e("BudgetViewModel", "Error saving budget", e)
                 }
@@ -101,8 +107,7 @@ class BudgetViewModel
         fun deleteBudget(budget: Budget) {
             viewModelScope.launch {
                 try {
-                    userPreferences.setSynced(false)
-                    repository.deleteBudget(budget)
+                    deleteBudgetUseCase(budget)
                 } catch (e: Exception) {
                     android.util.Log.e("BudgetViewModel", "Error deleting budget", e)
                 }

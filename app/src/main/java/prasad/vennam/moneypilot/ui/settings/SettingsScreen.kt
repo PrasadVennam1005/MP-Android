@@ -8,14 +8,13 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.ui.res.painterResource
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.HelpOutline
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.rounded.Logout
-import androidx.compose.material.icons.automirrored.rounded.HelpOutline
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -27,20 +26,24 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.credentials.CredentialManager
 import androidx.credentials.GetCredentialRequest
 import androidx.credentials.exceptions.GetCredentialException
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import coil.compose.AsyncImage
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import prasad.vennam.moneypilot.data.UserPreferences
 import prasad.vennam.moneypilot.R
-import androidx.compose.ui.res.stringResource
+import prasad.vennam.moneypilot.data.UserPreferences
 import prasad.vennam.moneypilot.ui.viewmodel.BudgetViewModel
 import prasad.vennam.moneypilot.ui.viewmodel.InvestmentViewModel
 import prasad.vennam.moneypilot.ui.viewmodel.MainViewModel
@@ -62,6 +65,8 @@ fun SettingsScreen(
     onNavigateToCategories: () -> Unit,
     onNavigateToNotifications: () -> Unit,
     onNavigateToFAQ: () -> Unit,
+    onNavigateToTerms: () -> Unit,
+    onNavigateToPrivacy: () -> Unit,
     onAccountDeleted: () -> Unit,
 ) {
     val userData by mainViewModel.userData.collectAsState()
@@ -79,6 +84,24 @@ fun SettingsScreen(
     val context = LocalContext.current
     val uriHandler = LocalUriHandler.current
     var isSyncing by remember { mutableStateOf(false) }
+
+    var isNotificationTrackingEnabled by remember {
+        mutableStateOf(isNotificationServiceEnabled(context))
+    }
+
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer =
+            LifecycleEventObserver { _, event ->
+                if (event == Lifecycle.Event.ON_RESUME) {
+                    isNotificationTrackingEnabled = isNotificationServiceEnabled(context)
+                }
+            }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
 
     var showLoginRequiredDialog by remember { mutableStateOf(false) }
     var showLogoutWarning by remember { mutableStateOf(false) }
@@ -289,7 +312,7 @@ fun SettingsScreen(
             stringResource(
                 R.string.usd_exchange_rate_format,
                 currentCurrency.symbol,
-                rateAgainstUSD
+                rateAgainstUSD,
             )
         }
 
@@ -314,7 +337,12 @@ fun SettingsScreen(
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text(stringResource(R.string.settings), style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)) },
+                title = {
+                    Text(
+                        stringResource(R.string.settings),
+                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                    )
+                },
                 colors =
                     TopAppBarDefaults.topAppBarColors(
                         containerColor = MaterialTheme.colorScheme.background,
@@ -358,11 +386,12 @@ fun SettingsScreen(
                     SettingsItem(
                         icon = Icons.Rounded.Flag,
                         title = stringResource(R.string.financial_goal),
-                        subtitle = stringResource(
-                            R.string.savings_target_subtitle,
-                            currentGoal,
-                            currentTarget
-                        ),
+                        subtitle =
+                            stringResource(
+                                R.string.savings_target_subtitle,
+                                currentGoal,
+                                currentTarget,
+                            ),
                         onClick = {
                             mainViewModel.resetOnboarding()
                         },
@@ -404,6 +433,17 @@ fun SettingsScreen(
                         },
                     )
 
+                    SettingsSwitchItem(
+                        icon = Icons.Rounded.Sms,
+                        title = "Auto-Track SMS & Notifications",
+                        subtitle = "Parse debit/credit SMS to auto-add expenses",
+                        checked = isNotificationTrackingEnabled,
+                        onCheckedChange = {
+                            val intent = android.content.Intent(android.provider.Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)
+                            context.startActivity(intent)
+                        },
+                    )
+
                     SettingsItem(
                         icon = Icons.Rounded.FileDownload,
                         title = stringResource(R.string.export_data),
@@ -433,17 +473,13 @@ fun SettingsScreen(
                         icon = Icons.Rounded.Gavel,
                         title = "Terms of Service",
                         subtitle = "View our terms and conditions",
-                        onClick = {
-                            uriHandler.openUri("https://prasadvennam1005.github.io/MP-Android/terms.html")
-                        },
+                        onClick = { onNavigateToTerms() },
                     )
                     SettingsItem(
                         icon = Icons.Rounded.PrivacyTip,
                         title = "Privacy Policy",
                         subtitle = "How we handle your data",
-                        onClick = {
-                            uriHandler.openUri("https://prasadvennam1005.github.io/MP-Android/privacy.html")
-                        },
+                        onClick = { onNavigateToPrivacy() },
                     )
                     SettingsItem(
                         icon = Icons.Rounded.Info,
@@ -501,7 +537,10 @@ fun SettingsScreen(
                 ) {
                     Icon(Icons.Rounded.DeleteForever, contentDescription = null, tint = MaterialTheme.colorScheme.error)
                     Spacer(modifier = Modifier.width(12.dp))
-                    Text(stringResource(if (isGuest) R.string.reset_guest_data else R.string.delete_account), style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold))
+                    Text(
+                        stringResource(if (isGuest) R.string.reset_guest_data else R.string.delete_account),
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                    )
                 }
             }
         }
@@ -518,7 +557,12 @@ fun SettingsScreen(
     if (showExportFormatDialog) {
         AlertDialog(
             onDismissRequest = { showExportFormatDialog = false },
-            title = { Text(stringResource(R.string.export_data), style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)) },
+            title = {
+                Text(
+                    stringResource(R.string.export_data),
+                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                )
+            },
             text = { Text(stringResource(R.string.export_description)) },
             confirmButton = {
                 Row(
@@ -555,7 +599,12 @@ fun SettingsScreen(
     if (showThemeDialog) {
         AlertDialog(
             onDismissRequest = { showThemeDialog = false },
-            title = { Text(stringResource(R.string.choose_theme), style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)) },
+            title = {
+                Text(
+                    stringResource(R.string.choose_theme),
+                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                )
+            },
             text = {
                 Column(
                     modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
@@ -563,9 +612,21 @@ fun SettingsScreen(
                 ) {
                     val modes =
                         listOf(
-                            Triple(prasad.vennam.moneypilot.data.UserPreferences.ThemeMode.SYSTEM, stringResource(R.string.system_default), Icons.Rounded.SettingsSuggest),
-                            Triple(prasad.vennam.moneypilot.data.UserPreferences.ThemeMode.LIGHT, stringResource(R.string.light_mode), Icons.Rounded.LightMode),
-                            Triple(prasad.vennam.moneypilot.data.UserPreferences.ThemeMode.DARK, stringResource(R.string.dark_mode), Icons.Rounded.DarkMode),
+                            Triple(
+                                prasad.vennam.moneypilot.data.UserPreferences.ThemeMode.SYSTEM,
+                                stringResource(R.string.system_default),
+                                Icons.Rounded.SettingsSuggest,
+                            ),
+                            Triple(
+                                prasad.vennam.moneypilot.data.UserPreferences.ThemeMode.LIGHT,
+                                stringResource(R.string.light_mode),
+                                Icons.Rounded.LightMode,
+                            ),
+                            Triple(
+                                prasad.vennam.moneypilot.data.UserPreferences.ThemeMode.DARK,
+                                stringResource(R.string.dark_mode),
+                                Icons.Rounded.DarkMode,
+                            ),
                         )
                     modes.forEach { (mode, name, icon) ->
                         val isSelected = currentThemeMode == mode
@@ -618,8 +679,8 @@ fun SettingsScreen(
                 }
             },
             shape = RoundedCornerShape(20.dp),
-               containerColor = MaterialTheme.colorScheme.surface,
-            tonalElevation = 6.dp
+            containerColor = MaterialTheme.colorScheme.surface,
+            tonalElevation = 6.dp,
         )
     }
 
@@ -629,29 +690,32 @@ fun SettingsScreen(
             title = {
                 Text(
                     text = stringResource(if (isGuest) R.string.reset_guest_confirm_title else R.string.delete_account_confirm_title),
-                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
+                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
                 )
             },
             text = {
                 Column {
                     Text(
-                        text = stringResource(if (isGuest) R.string.reset_guest_confirm_message else R.string.delete_account_confirm_message),
-                        style = MaterialTheme.typography.bodyMedium
+                        text =
+                            stringResource(
+                                if (isGuest) R.string.reset_guest_confirm_message else R.string.delete_account_confirm_message,
+                            ),
+                        style = MaterialTheme.typography.bodyMedium,
                     )
                     if (isDeletingAccount) {
                         Spacer(modifier = Modifier.height(16.dp))
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
                         ) {
                             CircularProgressIndicator(
                                 modifier = Modifier.size(24.dp),
-                                color = MaterialTheme.colorScheme.error
+                                color = MaterialTheme.colorScheme.error,
                             )
                             Text(
                                 text = stringResource(if (isGuest) R.string.resetting_guest_data else R.string.delete_account_deleting),
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
                     }
@@ -668,17 +732,25 @@ fun SettingsScreen(
                                 isDeletingAccount = false
                                 showDeleteAccountConfirmation = false
                                 if (success) {
-                                    Toast.makeText(context, context.getString(if (isGuest) R.string.reset_guest_success else R.string.delete_account_success), Toast.LENGTH_LONG).show()
+                                    Toast
+                                        .makeText(
+                                            context,
+                                            context.getString(
+                                                if (isGuest) R.string.reset_guest_success else R.string.delete_account_success,
+                                            ),
+                                            Toast.LENGTH_LONG,
+                                        ).show()
                                 } else {
                                     Toast.makeText(context, context.getString(R.string.delete_account_failed), Toast.LENGTH_LONG).show()
                                 }
                                 onAccountDeleted()
-                            }
+                            },
                         )
                     },
-                    colors = ButtonDefaults.textButtonColors(
-                        contentColor = MaterialTheme.colorScheme.error
-                    )
+                    colors =
+                        ButtonDefaults.textButtonColors(
+                            contentColor = MaterialTheme.colorScheme.error,
+                        ),
                 ) {
                     Text(stringResource(if (isGuest) R.string.reset else R.string.delete), fontWeight = FontWeight.Bold)
                 }
@@ -686,7 +758,7 @@ fun SettingsScreen(
             dismissButton = {
                 TextButton(
                     enabled = !isDeletingAccount,
-                    onClick = { showDeleteAccountConfirmation = false }
+                    onClick = { showDeleteAccountConfirmation = false },
                 ) {
                     Text(stringResource(R.string.cancel))
                 }
@@ -873,10 +945,11 @@ fun LoginRequiredDialog(
                     Spacer(modifier = Modifier.width(12.dp))
                     Text(
                         stringResource(R.string.continue_with_google),
-                        style = MaterialTheme.typography.titleMedium.copy(
-                            fontWeight = FontWeight.SemiBold,
-                            color = Color(0xFF1F1F1F),
-                        )
+                        style =
+                            MaterialTheme.typography.titleMedium.copy(
+                                fontWeight = FontWeight.SemiBold,
+                                color = Color(0xFF1F1F1F),
+                            ),
                     )
                 }
             }
@@ -956,4 +1029,75 @@ fun SectionDivider() {
         modifier = Modifier.padding(horizontal = 24.dp),
         color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
     )
+}
+
+@Composable
+fun SettingsSwitchItem(
+    icon: ImageVector,
+    title: String,
+    subtitle: String? = null,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+) {
+    Surface(
+        onClick = { onCheckedChange(!checked) },
+        color = Color.Transparent,
+    ) {
+        Row(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp, vertical = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Surface(
+                modifier = Modifier.size(40.dp),
+                shape = MaterialTheme.shapes.medium,
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.width(16.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold),
+                )
+                if (subtitle != null) {
+                    Text(
+                        text = subtitle,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+
+            Switch(
+                checked = checked,
+                onCheckedChange = onCheckedChange,
+                colors =
+                    SwitchDefaults.colors(
+                        checkedThumbColor = MaterialTheme.colorScheme.onSecondary,
+                        checkedTrackColor = MaterialTheme.colorScheme.secondary,
+                    ),
+            )
+        }
+    }
+}
+
+fun isNotificationServiceEnabled(context: android.content.Context): Boolean {
+    val cn = android.content.ComponentName(context, "prasad.vennam.moneypilot.service.TransactionNotificationListener")
+    val flat =
+        android.provider.Settings.Secure
+            .getString(context.contentResolver, "enabled_notification_listeners")
+    return flat != null && flat.contains(cn.flattenToString())
 }

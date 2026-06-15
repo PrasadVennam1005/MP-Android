@@ -8,20 +8,27 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import prasad.vennam.moneypilot.data.dao.NotificationDao
 import prasad.vennam.moneypilot.data.entity.Notification
+import prasad.vennam.moneypilot.domain.usecase.AddBookmarkUseCase
+import prasad.vennam.moneypilot.domain.usecase.ClearAllNotificationsUseCase
+import prasad.vennam.moneypilot.domain.usecase.DeleteNotificationUseCase
+import prasad.vennam.moneypilot.domain.usecase.GetNotificationsUseCase
+import prasad.vennam.moneypilot.domain.usecase.InsertNotificationsUseCase
 import javax.inject.Inject
 
 @HiltViewModel
 class NotificationViewModel
     @Inject
     constructor(
-        private val notificationDao: NotificationDao,
         private val userPreferences: prasad.vennam.moneypilot.data.UserPreferences,
+        private val getNotificationsUseCase: GetNotificationsUseCase,
+        private val insertNotificationsUseCase: InsertNotificationsUseCase,
+        private val deleteNotificationUseCase: DeleteNotificationUseCase,
+        private val clearAllNotificationsUseCase: ClearAllNotificationsUseCase,
+        private val addBookmarkUseCase: AddBookmarkUseCase,
     ) : ViewModel() {
         val notifications: StateFlow<List<Notification>> =
-            notificationDao
-                .getAllNotifications()
+            getNotificationsUseCase()
                 .stateIn(
                     scope = viewModelScope,
                     started = SharingStarted.WhileSubscribed(5000),
@@ -36,7 +43,7 @@ class NotificationViewModel
             viewModelScope.launch {
                 val hasSeeded = userPreferences.hasSeededNotifications.first()
                 if (!hasSeeded) {
-                    if (notificationDao.getAllNotifications().first().isEmpty()) {
+                    if (getNotificationsUseCase().first().isEmpty()) {
                         val defaultNotifications =
                             listOf(
                                 Notification(
@@ -64,7 +71,7 @@ class NotificationViewModel
                                     timestamp = System.currentTimeMillis() - 3600000 * 48, // 48 hours ago
                                 ),
                             )
-                        notificationDao.insertNotifications(defaultNotifications)
+                        insertNotificationsUseCase(defaultNotifications)
                     }
                     userPreferences.setNotificationsSeeded(true)
                 }
@@ -73,13 +80,23 @@ class NotificationViewModel
 
         fun deleteNotification(id: Long) {
             viewModelScope.launch {
-                notificationDao.deleteNotification(id)
+                deleteNotificationUseCase(id)
             }
         }
 
         fun clearAll() {
             viewModelScope.launch {
-                notificationDao.clearAllNotifications()
+                clearAllNotificationsUseCase()
+            }
+        }
+
+        fun bookmarkNotificationUrl(
+            title: String,
+            url: String,
+        ) {
+            viewModelScope.launch {
+                val currency = userPreferences.currency.first()
+                addBookmarkUseCase(title, url, currency)
             }
         }
     }

@@ -17,26 +17,14 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.TrendingUp
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Category
 import androidx.compose.material.icons.rounded.Delete
-import androidx.compose.material.icons.rounded.DirectionsCar
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.FilterList
-import androidx.compose.material.icons.rounded.Flight
 import androidx.compose.material.icons.rounded.History
-import androidx.compose.material.icons.rounded.Home
-import androidx.compose.material.icons.rounded.MedicalServices
-import androidx.compose.material.icons.rounded.Movie
-import androidx.compose.material.icons.rounded.Payments
-import androidx.compose.material.icons.rounded.Receipt
-import androidx.compose.material.icons.rounded.Restaurant
-import androidx.compose.material.icons.rounded.School
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.SearchOff
-import androidx.compose.material.icons.rounded.ShoppingCart
-import androidx.compose.material.icons.rounded.Work
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -65,11 +53,10 @@ import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.rememberCoroutineScope
-import kotlinx.coroutines.launch
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -80,16 +67,17 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.launch
 import prasad.vennam.moneypilot.R
 import prasad.vennam.moneypilot.data.UserPreferences
 import prasad.vennam.moneypilot.data.entity.Category
 import prasad.vennam.moneypilot.data.entity.Transaction
 import prasad.vennam.moneypilot.data.entity.TransactionType
+import prasad.vennam.moneypilot.ui.budget.utils.getCategoryIcon
 import prasad.vennam.moneypilot.ui.components.ProfileIconButton
 import prasad.vennam.moneypilot.ui.dashboard.SyncState
 import prasad.vennam.moneypilot.ui.dashboard.SyncStatusIndicator
 import prasad.vennam.moneypilot.ui.viewmodel.TransactionViewModel
-import prasad.vennam.moneypilot.ui.budget.utils.getCategoryIcon
 import prasad.vennam.moneypilot.util.CurrencyFormatter
 import prasad.vennam.moneypilot.util.LocalCurrencyCode
 import prasad.vennam.moneypilot.util.inRupees
@@ -228,11 +216,12 @@ fun HistoryScreen(
                                 val transactionCopy = itemState.transaction
                                 viewModel.deleteTransaction(itemState.transaction)
                                 scope.launch {
-                                    val result = snackbarHostState.showSnackbar(
-                                        message = deletedMessage,
-                                        actionLabel = undoLabel,
-                                        duration = SnackbarDuration.Short,
-                                    )
+                                    val result =
+                                        snackbarHostState.showSnackbar(
+                                            message = deletedMessage,
+                                            actionLabel = undoLabel,
+                                            duration = SnackbarDuration.Short,
+                                        )
                                     if (result == SnackbarResult.ActionPerformed) {
                                         viewModel.saveTransaction(transactionCopy)
                                     }
@@ -440,7 +429,7 @@ fun FintechTransactionCard(
             }
 
             Column(horizontalAlignment = Alignment.End) {
-                val formattedAmount = CurrencyFormatter.format(transaction.amount.inRupees, transaction.currencyCode)
+                val formattedAmount = CurrencyFormatter.format(transaction.amount.inRupees, currencyCode)
                 val sign = if (transaction.type == TransactionType.INCOME) "+" else "-"
                 Text(
                     text = "$sign$formattedAmount",

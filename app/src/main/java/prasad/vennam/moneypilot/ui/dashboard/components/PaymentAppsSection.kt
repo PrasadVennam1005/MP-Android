@@ -28,12 +28,13 @@ data class PaymentApp(
 @Composable
 fun PaymentAppsSection(currencyCode: String) {
     val context = LocalContext.current
-    
-    val paymentApps = remember(currencyCode) {
-        getPaymentAppsForCurrency(currencyCode).filter { app ->
-            isAppInstalled(context, app.packageName)
+
+    val paymentApps =
+        remember(currencyCode) {
+            getPaymentAppsForCurrency(currencyCode).filter { app ->
+                isAppInstalled(context, app.packageName)
+            }
         }
-    }
 
     if (paymentApps.isEmpty()) return
 
@@ -59,39 +60,43 @@ fun PaymentAppItem(
     onClick: () -> Unit,
 ) {
     val context = LocalContext.current
-    val appIcon = remember(app.packageName) {
-        try {
-            context.packageManager.getApplicationIcon(app.packageName)
-        } catch (e: Exception) {
-            null
+    val appIcon =
+        remember(app.packageName) {
+            try {
+                context.packageManager.getApplicationIcon(app.packageName)
+            } catch (e: Exception) {
+                null
+            }
         }
-    }
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier
-            .width(72.dp)
-            .clickable { onClick() },
+        modifier =
+            Modifier
+                .width(72.dp)
+                .clickable { onClick() },
     ) {
         Surface(
-            modifier = Modifier
-                .size(56.dp)
-                .clip(CircleShape),
+            modifier =
+                Modifier
+                    .size(56.dp)
+                    .clip(CircleShape),
             color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
             shape = CircleShape,
-            tonalElevation = 1.dp
+            tonalElevation = 1.dp,
         ) {
             Box(
                 contentAlignment = Alignment.Center,
-                modifier = Modifier.fillMaxSize()
+                modifier = Modifier.fillMaxSize(),
             ) {
                 if (appIcon != null) {
                     Image(
                         painter = rememberAsyncImagePainter(model = appIcon),
                         contentDescription = "${app.name} icon",
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(12.dp)
+                        modifier =
+                            Modifier
+                                .fillMaxSize()
+                                .padding(12.dp),
                     )
                 } else {
                     Text(
@@ -108,7 +113,7 @@ fun PaymentAppItem(
             style = MaterialTheme.typography.labelSmall,
             textAlign = TextAlign.Center,
             maxLines = 1,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
 }
@@ -230,10 +235,17 @@ fun getPaymentAppsForCurrency(currency: String): List<PaymentApp> =
             )
     }
 
-fun isAppInstalled(context: Context, packageName: String): Boolean {
-    return try {
+fun isAppInstalled(
+    context: Context,
+    packageName: String,
+): Boolean =
+    try {
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-            context.packageManager.getPackageInfo(packageName, android.content.pm.PackageManager.PackageInfoFlags.of(0))
+            context.packageManager.getPackageInfo(
+                packageName,
+                android.content.pm.PackageManager.PackageInfoFlags
+                    .of(0),
+            )
         } else {
             @Suppress("DEPRECATION")
             context.packageManager.getPackageInfo(packageName, 0)
@@ -244,7 +256,6 @@ fun isAppInstalled(context: Context, packageName: String): Boolean {
     } catch (e: Exception) {
         false
     }
-}
 
 fun openApp(
     context: Context,

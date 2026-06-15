@@ -58,4 +58,25 @@ sealed interface Destination : NavKey {
 
     @Serializable
     data object FAQ : Destination
+
+    @Serializable
+    data object EmergencyFund : Destination
+
+    @Serializable
+    data object TermsOfService : Destination
+
+    @Serializable
+    data object PrivacyPolicy : Destination
+
+    @Serializable
+    data object FinancialNews : Destination
+
+    @Serializable
+    data class NewsWebFrame(
+        val url: String,
+        val title: String,
+    ) : Destination
+
+    @Serializable
+    data object FinancialSandbox : Destination
 }

@@ -1,14 +1,16 @@
 package prasad.vennam.moneypilot.ui.budget
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material3.*
-import androidx.compose.material3.TabRowDefaults.SecondaryIndicator
-import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -16,10 +18,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.launch
 import prasad.vennam.moneypilot.R
 import prasad.vennam.moneypilot.data.UserPreferences
 import prasad.vennam.moneypilot.data.entity.Budget
 import prasad.vennam.moneypilot.ui.budget.components.BudgetFormBottomSheet
+import prasad.vennam.moneypilot.ui.budget.components.BudgetHeaderSection
+import prasad.vennam.moneypilot.ui.budget.components.EmptyBudgetState
+import prasad.vennam.moneypilot.ui.budget.components.PremiumBudgetCard
 import prasad.vennam.moneypilot.ui.components.ProfileIconButton
 import prasad.vennam.moneypilot.ui.dashboard.SyncState
 import prasad.vennam.moneypilot.ui.dashboard.SyncStatusIndicator
@@ -27,15 +33,7 @@ import prasad.vennam.moneypilot.ui.viewmodel.AnalyticsViewModel
 import prasad.vennam.moneypilot.ui.viewmodel.BudgetViewModel
 import prasad.vennam.moneypilot.ui.viewmodel.TransactionViewModel
 import prasad.vennam.moneypilot.util.inPaisa
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import prasad.vennam.moneypilot.ui.budget.components.BudgetHeaderSection
-import prasad.vennam.moneypilot.ui.budget.components.EmptyBudgetState
-import prasad.vennam.moneypilot.ui.budget.components.PremiumBudgetCard
 import java.util.Calendar
-import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -111,16 +109,10 @@ fun ReportsTabScreen(
                     .padding(innerPadding)
                     .fillMaxSize(),
         ) {
-            TabRow(
+            SecondaryTabRow(
                 selectedTabIndex = selectedTab,
                 containerColor = MaterialTheme.colorScheme.background,
                 contentColor = MaterialTheme.colorScheme.primary,
-                indicator = { tabPositions ->
-                    SecondaryIndicator(
-                        modifier = Modifier.tabIndicatorOffset(tabPositions[selectedTab]),
-                        color = MaterialTheme.colorScheme.primary,
-                    )
-                },
             ) {
                 Tab(
                     selected = selectedTab == 0,
@@ -149,16 +141,17 @@ fun ReportsTabScreen(
                             val budgetCopy = budget
                             budgetViewModel.deleteBudget(budget)
                             scope.launch {
-                                val result = snackbarHostState.showSnackbar(
-                                    message = deletedMessage,
-                                    actionLabel = undoLabel,
-                                    duration = SnackbarDuration.Short,
-                                )
+                                val result =
+                                    snackbarHostState.showSnackbar(
+                                        message = deletedMessage,
+                                        actionLabel = undoLabel,
+                                        duration = SnackbarDuration.Short,
+                                    )
                                 if (result == SnackbarResult.ActionPerformed) {
                                     budgetViewModel.saveBudget(budgetCopy)
                                 }
                             }
-                        }
+                        },
                     )
                 }
                 1 -> {

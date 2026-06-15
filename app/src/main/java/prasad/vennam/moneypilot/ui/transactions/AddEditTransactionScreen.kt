@@ -17,25 +17,13 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material.icons.automirrored.rounded.TrendingUp
 import androidx.compose.material.icons.rounded.CalendarToday
 import androidx.compose.material.icons.rounded.Category
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.ChevronRight
-import androidx.compose.material.icons.rounded.DirectionsCar
 import androidx.compose.material.icons.rounded.EditNote
-import androidx.compose.material.icons.rounded.Flight
-import androidx.compose.material.icons.rounded.Home
-import androidx.compose.material.icons.rounded.MedicalServices
-import androidx.compose.material.icons.rounded.Movie
 import androidx.compose.material.icons.rounded.Payments
-import androidx.compose.material.icons.rounded.Receipt
-import androidx.compose.material.icons.rounded.Restaurant
-import androidx.compose.material.icons.rounded.School
-import androidx.compose.material.icons.rounded.ShoppingCart
 import androidx.compose.material.icons.rounded.Subtitles
-import androidx.compose.material.icons.rounded.TrendingUp
-import androidx.compose.material.icons.rounded.Work
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -65,7 +53,6 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -74,15 +61,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.res.stringResource
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import prasad.vennam.moneypilot.R
 import prasad.vennam.moneypilot.data.entity.Transaction
 import prasad.vennam.moneypilot.data.entity.TransactionType
-import prasad.vennam.moneypilot.ui.viewmodel.TransactionViewModel
 import prasad.vennam.moneypilot.ui.budget.utils.getCategoryIcon
+import prasad.vennam.moneypilot.ui.viewmodel.TransactionViewModel
 import prasad.vennam.moneypilot.util.AnalyticsHelper
 import prasad.vennam.moneypilot.util.LocalCurrencyCode
 import java.text.SimpleDateFormat
@@ -97,13 +85,7 @@ fun AddEditTransactionScreen(
     analyticsHelper: AnalyticsHelper,
     onNavigateBack: () -> Unit,
 ) {
-    var amount by remember { mutableStateOf("") }
-    var note by remember { mutableStateOf("") }
-    var type by remember { mutableStateOf(initialType) }
-    var categoryId by remember { mutableStateOf<Long?>(null) }
-    var subCategory by remember { mutableStateOf("") }
-    var paymentMode by remember { mutableStateOf("Cash") }
-    var timestamp by remember { mutableStateOf(System.currentTimeMillis()) }
+    val formState by viewModel.formState.collectAsStateWithLifecycle()
 
     val currencyCode = LocalCurrencyCode.current
 
@@ -111,10 +93,10 @@ fun AddEditTransactionScreen(
     var showCategoryMenu by remember { mutableStateOf(false) }
     var showPaymentMenu by remember { mutableStateOf(false) }
 
-    val categories by viewModel.allCategories.collectAsState()
+    val categories by viewModel.allCategories.collectAsStateWithLifecycle()
     val filteredCategories =
-        remember(categories, type) {
-            categories.filter { it.isExpense == (type == TransactionType.EXPENSE) }
+        remember(categories, formState.type) {
+            categories.filter { it.isExpense == (formState.type == TransactionType.EXPENSE) }
         }
 
     val locale = androidx.compose.ui.platform.LocalLocale.current.platformLocale
@@ -122,16 +104,10 @@ fun AddEditTransactionScreen(
 
     LaunchedEffect(transactionId) {
         if (transactionId != null && transactionId != 0L) {
-            val transaction = viewModel.getTransactionById(transactionId)
-            transaction?.let {
-                amount = (it.amount / 100.0).let { value -> if (value % 1 == 0.0) value.toLong().toString() else value.toString() }
-                note = it.note
-                type = it.type
-                categoryId = it.categoryId
-                subCategory = it.subCategory
-                paymentMode = it.paymentMode
-                timestamp = it.timestamp
-            }
+            viewModel.loadTransactionForEdit(transactionId)
+        } else {
+            viewModel.resetFormState()
+            viewModel.updateType(initialType)
         }
     }
 
@@ -141,7 +117,12 @@ fun AddEditTransactionScreen(
                 title = {
                     Text(
                         if (transactionId == null) {
-                            stringResource(R.string.add_transaction_type, type.name.lowercase().replaceFirstChar { it.uppercase() })
+                            stringResource(
+                                R.string.add_transaction_type,
+                                formState.type.name
+                                    .lowercase()
+                                    .replaceFirstChar { it.uppercase() },
+                            )
                         } else {
                             stringResource(R.string.edit_entry)
                         },
@@ -170,28 +151,52 @@ fun AddEditTransactionScreen(
         ) {
             // Type Toggle
             PremiumToggle(
-                selectedType = type,
+                selectedType = formState.type,
                 onTypeSelected = {
-                    type = it
-                    categoryId = null // Reset category when type changes
+                    viewModel.updateType(it)
                 },
             )
 
+            val amountVal = formState.amount.toDoubleOrNull()
+            val isAmountError = formState.amount.isNotEmpty() && (amountVal == null || amountVal <= 0.0 || amountVal > 100000000.0)
+
             // Amount Field
             PremiumAmountField(
-                value = amount,
+                value = formState.amount,
                 onValueChange = { input ->
-                if (input.isEmpty() || (input.toDoubleOrNull() != null && input.toDouble() >= 0)) {
-                    amount = input
-                }
-            },
-            color = if (type == TransactionType.INCOME) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
+                    if (input.isEmpty() || input.matches(Regex("^\\d*\\.?\\d{0,2}$"))) {
+                        viewModel.updateAmount(input)
+                    }
+                },
+                color =
+                    if (formState.type ==
+                        TransactionType.INCOME
+                    ) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.error
+                    },
+                isError = isAmountError,
+                supportingText =
+                    if (isAmountError) {
+                        {
+                            val text =
+                                when {
+                                    amountVal == null -> "Invalid format"
+                                    amountVal <= 0.0 -> stringResource(R.string.amount_error_desc)
+                                    else -> "Amount cannot exceed 100,000,000"
+                                }
+                            Text(text)
+                        }
+                    } else {
+                        null
+                    },
             )
 
             // Date Picker Field
             PremiumReadOnlyField(
                 label = "Date",
-                value = dateFormatter.format(Date(timestamp)),
+                value = dateFormatter.format(Date(formState.timestamp)),
                 icon = Icons.Rounded.CalendarToday,
                 onClick = { showDatePicker = true },
             )
@@ -199,7 +204,7 @@ fun AddEditTransactionScreen(
             // Category Field
             PremiumReadOnlyField(
                 label = "Category",
-                value = categories.find { it.id == categoryId }?.name ?: stringResource(R.string.select_category),
+                value = categories.find { it.id == formState.categoryId }?.name ?: stringResource(R.string.select_category),
                 icon = Icons.Rounded.Category,
                 onClick = { showCategoryMenu = true },
             )
@@ -207,15 +212,15 @@ fun AddEditTransactionScreen(
             // Sub-Category Field (Optional)
             PremiumTextField(
                 label = "Sub Category",
-                value = subCategory,
-                onValueChange = { subCategory = it },
+                value = formState.subCategory,
+                onValueChange = { viewModel.updateSubCategory(it) },
                 icon = Icons.Rounded.Subtitles,
             )
 
             // Payment Mode Field
             PremiumReadOnlyField(
                 label = "Payment Mode",
-                value = paymentMode,
+                value = formState.paymentMode,
                 icon = Icons.Rounded.Payments,
                 onClick = { showPaymentMenu = true },
             )
@@ -223,8 +228,8 @@ fun AddEditTransactionScreen(
             // Notes Field
             PremiumTextField(
                 label = "Notes",
-                value = note,
-                onValueChange = { note = it },
+                value = formState.note,
+                onValueChange = { viewModel.updateNote(it) },
                 icon = Icons.Rounded.EditNote,
                 singleLine = false,
             )
@@ -234,18 +239,18 @@ fun AddEditTransactionScreen(
             // Save Button
             Button(
                 onClick = {
-                    val amountValue = amount.toDoubleOrNull() ?: return@Button
+                    val amountValue = formState.amount.toDoubleOrNull() ?: return@Button
                     if (amountValue <= 0) return@Button
 
-                    val categoryName = categories.find { it.id == categoryId }?.name ?: "unknown"
+                    val categoryName = categories.find { it.id == formState.categoryId }?.name ?: "unknown"
 
                     // Analytics: Track successful add/edit only after validation passes
                     analyticsHelper.logEvent(
                         "transaction_added",
                         mapOf(
-                            "type" to type.name,
+                            "type" to formState.type.name,
                             "category" to categoryName,
-                            "payment_mode" to paymentMode,
+                            "payment_mode" to formState.paymentMode,
                             "is_edit" to (transactionId != null),
                         ),
                     )
@@ -254,12 +259,12 @@ fun AddEditTransactionScreen(
                         Transaction(
                             id = transactionId ?: 0L,
                             amount = (amountValue * 100).toLong(),
-                            note = note,
-                            timestamp = timestamp,
-                            type = type,
-                            categoryId = categoryId,
-                            subCategory = subCategory,
-                            paymentMode = paymentMode,
+                            note = formState.note,
+                            timestamp = formState.timestamp,
+                            type = formState.type,
+                            categoryId = formState.categoryId,
+                            subCategory = formState.subCategory,
+                            paymentMode = formState.paymentMode,
                             currencyCode = currencyCode,
                         )
                     viewModel.saveTransaction(transaction)
@@ -269,7 +274,7 @@ fun AddEditTransactionScreen(
                     Modifier
                         .fillMaxWidth()
                         .height(64.dp),
-                enabled = (amount.toDoubleOrNull() ?: 0.0) > 0 && categoryId != null,
+                enabled = formState.amount.isNotBlank() && !isAmountError && formState.categoryId != null,
                 shape = MaterialTheme.shapes.extraLarge,
                 elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp),
             ) {
@@ -282,12 +287,12 @@ fun AddEditTransactionScreen(
 
     // Modals
     if (showDatePicker) {
-        val datePickerState = rememberDatePickerState(initialSelectedDateMillis = timestamp)
+        val datePickerState = rememberDatePickerState(initialSelectedDateMillis = formState.timestamp)
         DatePickerDialog(
             onDismissRequest = { showDatePicker = false },
             confirmButton = {
                 TextButton(onClick = {
-                    datePickerState.selectedDateMillis?.let { timestamp = it }
+                    datePickerState.selectedDateMillis?.let { viewModel.updateTimestamp(it) }
                     showDatePicker = false
                 }) { Text(stringResource(R.string.ok)) }
             },
@@ -315,7 +320,7 @@ fun AddEditTransactionScreen(
                         text = { Text(category.name) },
                         leadingIcon = { CategoryIcon(category) },
                         onClick = {
-                            categoryId = category.id
+                            viewModel.updateCategory(category.id)
                             showCategoryMenu = false
                         },
                         modifier = Modifier.padding(horizontal = 8.dp),
@@ -340,7 +345,7 @@ fun AddEditTransactionScreen(
                     DropdownMenuItem(
                         text = { Text(mode) },
                         onClick = {
-                            paymentMode = mode
+                            viewModel.updatePaymentMode(mode)
                             showPaymentMenu = false
                         },
                     )
@@ -384,26 +389,31 @@ fun PremiumAmountField(
     value: String,
     onValueChange: (String) -> Unit,
     color: Color,
+    isError: Boolean = false,
+    supportingText: @Composable (() -> Unit)? = null,
 ) {
+    val displayColor = if (isError) MaterialTheme.colorScheme.error else color
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = color.copy(alpha = 0.05f)),
+        colors = CardDefaults.cardColors(containerColor = displayColor.copy(alpha = 0.05f)),
         shape = MaterialTheme.shapes.extraLarge,
-        border = androidx.compose.foundation.BorderStroke(1.dp, color.copy(alpha = 0.2f)),
+        border = androidx.compose.foundation.BorderStroke(1.dp, displayColor.copy(alpha = 0.2f)),
     ) {
-        Column(modifier = Modifier.padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text("Amount", style = MaterialTheme.typography.labelMedium, color = color.copy(alpha = 0.6f))
+        Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            Text("Amount", style = MaterialTheme.typography.labelMedium, color = displayColor.copy(alpha = 0.6f))
             TextField(
                 value = value,
                 onValueChange = onValueChange,
-                placeholder = { Text("0.00", color = color.copy(alpha = 0.3f)) },
+                placeholder = { Text("0.00", color = displayColor.copy(alpha = 0.3f)) },
                 textStyle =
                     MaterialTheme.typography.displayMedium.copy(
                         fontWeight = FontWeight.Bold,
-                        color = color,
+                        color = displayColor,
                         textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                     ),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                isError = isError,
+                supportingText = supportingText,
                 colors =
                     TextFieldDefaults.colors(
                         focusedContainerColor = Color.Transparent,
@@ -417,7 +427,7 @@ fun PremiumAmountField(
                         java.util.Currency
                             .getInstance(LocalCurrencyCode.current)
                             .symbol,
-                        style = MaterialTheme.typography.displayMedium.copy(color = color),
+                        style = MaterialTheme.typography.displayMedium.copy(color = displayColor),
                     )
                 },
             )

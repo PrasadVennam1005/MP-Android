@@ -56,10 +56,11 @@ fun BudgetHeaderSection(
                     tint = MaterialTheme.colorScheme.primary,
                 )
                 Spacer(modifier = Modifier.width(12.dp))
-                val monthName = remember(month) {
-                    val symbols = java.text.DateFormatSymbols.getInstance(java.util.Locale.getDefault())
-                    symbols.months.getOrNull(month) ?: ""
-                }
+                val monthName =
+                    remember(month) {
+                        val symbols = java.text.DateFormatSymbols.getInstance(java.util.Locale.getDefault())
+                        symbols.months.getOrNull(month) ?: ""
+                    }
                 Column {
                     Text(
                         stringResource(R.string.budget_overview),

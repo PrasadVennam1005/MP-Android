@@ -17,4 +17,5 @@ data class Loan(
     val tenureMonths: Int = 12,
     val dueDayOfMonth: Int = 1,
     val isNotificationEnabled: Boolean = true,
+    val startDate: Long = System.currentTimeMillis(),
 )

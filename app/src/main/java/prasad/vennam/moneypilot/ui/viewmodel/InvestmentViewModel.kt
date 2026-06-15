@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -16,7 +17,10 @@ import kotlinx.coroutines.launch
 import prasad.vennam.moneypilot.data.UserPreferences
 import prasad.vennam.moneypilot.data.entity.Investment
 import prasad.vennam.moneypilot.data.repository.ExchangeRateRepository
-import prasad.vennam.moneypilot.data.repository.MoneyPilotRepository
+import prasad.vennam.moneypilot.domain.usecase.DeleteInvestmentUseCase
+import prasad.vennam.moneypilot.domain.usecase.GetInvestmentsUseCase
+import prasad.vennam.moneypilot.domain.usecase.SaveInvestmentUseCase
+import prasad.vennam.moneypilot.domain.usecase.UpdateInvestmentUseCase
 import prasad.vennam.moneypilot.util.FinancePriceFetcher
 import prasad.vennam.moneypilot.util.inPaisa
 import prasad.vennam.moneypilot.util.inRupees
@@ -45,17 +49,20 @@ sealed class AutoFillState {
 class InvestmentViewModel
     @Inject
     constructor(
-        private val repository: MoneyPilotRepository,
+        private val getInvestmentsUseCase: GetInvestmentsUseCase,
+        private val updateInvestmentUseCase: UpdateInvestmentUseCase,
         private val exchangeRateRepo: ExchangeRateRepository,
         private val userPreferences: UserPreferences,
+        private val saveInvestmentUseCase: SaveInvestmentUseCase,
+        private val deleteInvestmentUseCase: DeleteInvestmentUseCase,
     ) : ViewModel() {
         val allInvestments: StateFlow<List<Investment>> =
-            repository.allInvestments
+            getInvestmentsUseCase()
                 .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
         val investmentSummary: StateFlow<InvestmentSummary> =
             combine(
-                repository.allInvestments,
+                getInvestmentsUseCase(),
                 exchangeRateRepo.allRates,
                 userPreferences.currency,
             ) { investments, rates, currentCurrency ->
@@ -96,7 +103,7 @@ class InvestmentViewModel
         init {
             viewModelScope.launch {
                 // Wait for the first Room database emission
-                repository.allInvestments.first()
+                getInvestmentsUseCase().first()
                 refreshAllPrices()
             }
         }
@@ -187,81 +194,116 @@ class InvestmentViewModel
                 _isRefreshing.value = true
                 android.util.Log.i("InvestmentViewModel", "refreshAllPrices: starting refresh")
                 try {
-                    val investments = repository.allInvestments.first()
+                    val investments = getInvestmentsUseCase().first()
                     android.util.Log.i("InvestmentViewModel", "refreshAllPrices: fetched ${investments.size} investments from DB")
                     val rates = exchangeRateRepo.allRates.first()
-                    var updatedAny = false
-                    for (investment in investments) {
-                        android.util.Log.d("InvestmentViewModel", "refreshAllPrices: processing ${investment.name} (symbol: ${investment.symbol}, type: ${investment.type})")
-                        val updatedValue =
-                            when (investment.type) {
-                                "Stock", "Crypto", "Gold" -> {
-                                    val sym = investment.symbol
-                                    val qty = investment.quantity ?: 0.0
-                                    if (!sym.isNullOrBlank() && qty > 0.0) {
-                                        val priceInfo = FinancePriceFetcher.fetchYahooPrice(sym)
-                                        if (priceInfo != null) {
-                                            val rateFrom = rates[priceInfo.currency] ?: 1.0
-                                            val rateTo = rates[investment.currencyCode] ?: 1.0
-                                            val priceInUSD = priceInfo.price / rateFrom
-                                            val convertedPrice = priceInUSD * rateTo
-                                            android.util.Log.i("InvestmentViewModel", "refreshAllPrices: parsed ${priceInfo.price} ${priceInfo.currency} for $sym, converted to $convertedPrice ${investment.currencyCode}")
-                                            convertedPrice * qty
-                                        } else {
-                                            android.util.Log.e("InvestmentViewModel", "refreshAllPrices: failed to fetch Yahoo price for symbol $sym")
-                                            null
-                                        }
-                                    } else {
-                                        null
-                                    }
-                                }
-                                "Mutual Fund" -> {
-                                    val sym = investment.symbol
-                                    val qty = investment.quantity ?: 0.0
-                                    if (!sym.isNullOrBlank() && qty > 0.0) {
-                                        val priceInAssetCurrency = if (sym.all { it.isDigit() }) {
-                                            val nav = FinancePriceFetcher.fetchAmfiNav(sym)
-                                            if (nav != null) nav to "INR" else null
-                                        } else {
-                                            val priceInfo = FinancePriceFetcher.fetchYahooPrice(sym)
-                                            if (priceInfo != null) priceInfo.price to priceInfo.currency else null
-                                        }
-                                        if (priceInAssetCurrency != null) {
-                                            val (price, assetCurrency) = priceInAssetCurrency
-                                            val rateFrom = rates[assetCurrency] ?: 1.0
-                                            val rateTo = rates[investment.currencyCode] ?: 1.0
-                                            val priceInUSD = price / rateFrom
-                                            val convertedPrice = priceInUSD * rateTo
-                                            android.util.Log.i("InvestmentViewModel", "refreshAllPrices: parsed Mutual Fund NAV $price $assetCurrency for $sym, converted to $convertedPrice ${investment.currencyCode}")
-                                            convertedPrice * qty
-                                        } else {
-                                            android.util.Log.e("InvestmentViewModel", "refreshAllPrices: failed to fetch AMFI/Yahoo NAV for symbol $sym")
-                                            null
-                                        }
-                                    } else {
-                                        null
-                                    }
-                                }
-                                "FD", "Real Estate" -> {
-                                    val rate = investment.interestRate ?: 0.0
-                                    val start = investment.startDate ?: 0L
-                                    if (rate > 0.0 && start > 0L) {
-                                        FinancePriceFetcher.calculateCompoundedValue(
-                                            investedAmount = investment.investedAmount.inRupees,
-                                            annualRate = rate,
-                                            startDate = start,
+
+                    // Fetch updates in parallel
+                    val updates =
+                        kotlinx.coroutines
+                            .coroutineScope {
+                                investments.map { investment ->
+                                    async {
+                                        android.util.Log.d(
+                                            "InvestmentViewModel",
+                                            "refreshAllPrices: processing ${investment.name} (symbol: ${investment.symbol}, type: ${investment.type})",
                                         )
-                                    } else {
-                                        null
+                                        val updatedValue =
+                                            when (investment.type) {
+                                                "Stock", "Crypto", "Gold" -> {
+                                                    val sym = investment.symbol
+                                                    val qty = investment.quantity ?: 0.0
+                                                    if (!sym.isNullOrBlank() && qty > 0.0) {
+                                                        val priceInfo = FinancePriceFetcher.fetchYahooPrice(sym)
+                                                        if (priceInfo != null) {
+                                                            val rateFrom = rates[priceInfo.currency] ?: 1.0
+                                                            val rateTo = rates[investment.currencyCode] ?: 1.0
+                                                            val priceInUSD = priceInfo.price / rateFrom
+                                                            val convertedPrice = priceInUSD * rateTo
+                                                            android.util.Log.i(
+                                                                "InvestmentViewModel",
+                                                                "refreshAllPrices: parsed ${priceInfo.price} ${priceInfo.currency} for $sym, converted to $convertedPrice ${investment.currencyCode}",
+                                                            )
+                                                            convertedPrice * qty
+                                                        } else {
+                                                            android.util.Log.e(
+                                                                "InvestmentViewModel",
+                                                                "refreshAllPrices: failed to fetch Yahoo price for symbol $sym",
+                                                            )
+                                                            null
+                                                        }
+                                                    } else {
+                                                        null
+                                                    }
+                                                }
+                                                "Mutual Fund" -> {
+                                                    val sym = investment.symbol
+                                                    val qty = investment.quantity ?: 0.0
+                                                    if (!sym.isNullOrBlank() && qty > 0.0) {
+                                                        val priceInAssetCurrency =
+                                                            if (sym.all { it.isDigit() }) {
+                                                                val nav = FinancePriceFetcher.fetchAmfiNav(sym)
+                                                                if (nav != null) nav to "INR" else null
+                                                            } else {
+                                                                val priceInfo = FinancePriceFetcher.fetchYahooPrice(sym)
+                                                                if (priceInfo != null) priceInfo.price to priceInfo.currency else null
+                                                            }
+                                                        if (priceInAssetCurrency != null) {
+                                                            val (price, assetCurrency) = priceInAssetCurrency
+                                                            val rateFrom = rates[assetCurrency] ?: 1.0
+                                                            val rateTo = rates[investment.currencyCode] ?: 1.0
+                                                            val priceInUSD = price / rateFrom
+                                                            val convertedPrice = priceInUSD * rateTo
+                                                            android.util.Log.i(
+                                                                "InvestmentViewModel",
+                                                                "refreshAllPrices: parsed Mutual Fund NAV $price $assetCurrency for $sym, converted to $convertedPrice ${investment.currencyCode}",
+                                                            )
+                                                            convertedPrice * qty
+                                                        } else {
+                                                            android.util.Log.e(
+                                                                "InvestmentViewModel",
+                                                                "refreshAllPrices: failed to fetch AMFI/Yahoo NAV for symbol $sym",
+                                                            )
+                                                            null
+                                                        }
+                                                    } else {
+                                                        null
+                                                    }
+                                                }
+                                                "FD", "Real Estate" -> {
+                                                    val rate = investment.interestRate ?: 0.0
+                                                    val start = investment.startDate ?: 0L
+                                                    if (rate > 0.0 && start > 0L) {
+                                                        FinancePriceFetcher.calculateCompoundedValue(
+                                                            investedAmount = investment.investedAmount.inRupees,
+                                                            annualRate = rate,
+                                                            startDate = start,
+                                                        )
+                                                    } else {
+                                                        null
+                                                    }
+                                                }
+                                                else -> null
+                                            }
+                                        if (updatedValue != null && updatedValue.inPaisa != investment.currentValue) {
+                                            investment.copy(currentValue = updatedValue.inPaisa)
+                                        } else {
+                                            null
+                                        }
                                     }
                                 }
-                                else -> null
-                            }
-                        if (updatedValue != null && updatedValue.inPaisa != investment.currentValue) {
-                            android.util.Log.i("InvestmentViewModel", "refreshAllPrices: updating currentValue for ${investment.name} from ${investment.currentValue} to ${updatedValue.inPaisa}")
-                            repository.updateInvestment(investment.copy(currentValue = updatedValue.inPaisa))
-                            updatedAny = true
+                            }.mapNotNull { it.await() }
+
+                    var updatedAny = false
+                    if (updates.isNotEmpty()) {
+                        updates.forEach { updatedInvestment ->
+                            android.util.Log.i(
+                                "InvestmentViewModel",
+                                "refreshAllPrices: updating currentValue for ${updatedInvestment.name} from DB value to ${updatedInvestment.currentValue}",
+                            )
+                            updateInvestmentUseCase(updatedInvestment)
                         }
+                        updatedAny = true
                     }
                     if (updatedAny) {
                         userPreferences.setSynced(false)
@@ -281,12 +323,7 @@ class InvestmentViewModel
         fun saveInvestment(investment: Investment) {
             viewModelScope.launch {
                 try {
-                    userPreferences.setSynced(false)
-                    if (investment.id == 0L) {
-                        repository.insertInvestment(investment)
-                    } else {
-                        repository.updateInvestment(investment)
-                    }
+                    saveInvestmentUseCase(investment)
                 } catch (e: Exception) {
                     android.util.Log.e("InvestmentViewModel", "Error saving investment", e)
                 }
@@ -296,8 +333,7 @@ class InvestmentViewModel
         fun deleteInvestment(investment: Investment) {
             viewModelScope.launch {
                 try {
-                    userPreferences.setSynced(false)
-                    repository.deleteInvestment(investment)
+                    deleteInvestmentUseCase(investment)
                 } catch (e: Exception) {
                     android.util.Log.e("InvestmentViewModel", "Error deleting investment", e)
                 }

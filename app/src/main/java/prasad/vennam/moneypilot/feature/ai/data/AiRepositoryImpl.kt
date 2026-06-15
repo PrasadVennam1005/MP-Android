@@ -90,7 +90,7 @@ class AiRepositoryImpl
 
         init {
             Log.d(TAG, "AiRepositoryImpl created. isEmulator=$isEmulator, modelFile=$modelFileName")
-            
+
             // Listen to local model generation responses
             llmService.partialResponses
                 .onEach { response ->
@@ -260,13 +260,22 @@ class AiRepositoryImpl
 
         private suspend fun buildSystemMessage(userPrompt: String): String {
             val promptLower = userPrompt.lowercase()
-            
+
             // If the prompt is simple logs, skip loading full DB contexts to save tokens
-            val isLoggingOnly = (promptLower.contains("add") || promptLower.contains("log") || 
-                                 promptLower.contains("spent") || promptLower.contains("earned")) && 
-                                !(promptLower.contains("how") || promptLower.contains("show") || 
-                                  promptLower.contains("list") || promptLower.contains("summary") || 
-                                  promptLower.contains("status"))
+            val isLoggingOnly =
+                (
+                    promptLower.contains("add") ||
+                        promptLower.contains("log") ||
+                        promptLower.contains("spent") ||
+                        promptLower.contains("earned")
+                ) &&
+                    !(
+                        promptLower.contains("how") ||
+                            promptLower.contains("show") ||
+                            promptLower.contains("list") ||
+                            promptLower.contains("summary") ||
+                            promptLower.contains("status")
+                    )
 
             val transactions = if (isLoggingOnly) emptyList() else moneyPilotRepository.allTransactions.first().take(3)
             val budgets = if (isLoggingOnly) emptyList() else moneyPilotRepository.allBudgets.first().take(3)
@@ -293,7 +302,7 @@ class AiRepositoryImpl
 
             return buildString {
                 append("You are MoneyPilot AI. Help user track finances. Be extremely concise (1-2 sentences).\n\n")
-                
+
                 append("[ADDING DATA]\n")
                 append("To log data, output a review request and exactly ONE action tag (no placeholders, use whole units):\n")
                 append("- [ACTION:ADD_EXPENSE|amount=X|category=Y|note=Z|date=today]\n")
@@ -303,7 +312,9 @@ class AiRepositoryImpl
                 append("Expense categories: $expenseCategories\n")
                 append("Income categories: $incomeCategories\n")
                 append("Investment types: Stock, Mutual Fund, Crypto, FD, Gold, SIP\n")
-                append("Example: 'add 500 food Swiggy' -> 'Please confirm to log \u20b9500 food expense from Swiggy: [ACTION:ADD_EXPENSE|amount=500|category=Food|note=Swiggy|date=today]'\n\n")
+                append(
+                    "Example: 'add 500 food Swiggy' -> 'Please confirm to log \u20b9500 food expense from Swiggy: [ACTION:ADD_EXPENSE|amount=500|category=Food|note=Swiggy|date=today]'\n\n",
+                )
 
                 if (transactions.isNotEmpty() || budgets.isNotEmpty() || investments.isNotEmpty() || loans.isNotEmpty()) {
                     append("[FINANCIAL DATA]\n")
@@ -500,26 +511,28 @@ class AiRepositoryImpl
             return null
         }
 
-        override suspend fun generateShortAdvice(summary: String): String = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
-            if (_state.value !is LlmState.Ready) {
-                return@withContext ""
+        override suspend fun generateShortAdvice(summary: String): String =
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+                if (_state.value !is LlmState.Ready) {
+                    return@withContext ""
+                }
+                try {
+                    // Keep the prompt extremely simple and compact to prevent exceeding the context window
+                    val contextPrompt =
+                        "<start_of_turn>user\n" +
+                            "You are MoneyPilot AI, a financial advisor. Write exactly one short, encouraging advice sentence (max 15 words) based on the user's financial stats:\n" +
+                            "$summary\n" +
+                            "Keep it direct and action-oriented. Do not include tags or markup.<end_of_turn>\n" +
+                            "<start_of_turn>model\n"
+
+                    val response = llmService.generateResponse(contextPrompt).trim()
+                    Log.d(TAG, "AI Advice generated: $response")
+                    response
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to generate short advice: ${e.message}", e)
+                    ""
+                }
             }
-            try {
-                // Keep the prompt extremely simple and compact to prevent exceeding the context window
-                val contextPrompt = "<start_of_turn>user\n" +
-                        "You are MoneyPilot AI, a financial advisor. Write exactly one short, encouraging advice sentence (max 15 words) based on the user's financial stats:\n" +
-                        "$summary\n" +
-                        "Keep it direct and action-oriented. Do not include tags or markup.<end_of_turn>\n" +
-                        "<start_of_turn>model\n"
-                
-                val response = llmService.generateResponse(contextPrompt).trim()
-                Log.d(TAG, "AI Advice generated: $response")
-                response
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to generate short advice: ${e.message}", e)
-                ""
-            }
-        }
 
         override fun cleanup() {
             llmService.close()

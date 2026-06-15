@@ -25,16 +25,16 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import prasad.vennam.moneypilot.R
 import prasad.vennam.moneypilot.feature.ai.model.AiAction
 import prasad.vennam.moneypilot.feature.ai.model.Author
 import prasad.vennam.moneypilot.feature.ai.model.ChatMessage
 import prasad.vennam.moneypilot.feature.ai.model.LlmState
-import androidx.compose.ui.res.stringResource
-import prasad.vennam.moneypilot.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -460,30 +460,31 @@ fun ChatBubble(message: ChatMessage) {
             )
         }
 
-    val bubbleModifier = Modifier
-        .widthIn(max = 280.dp)
-        .clip(bubbleShape)
-        .then(
-            if (isUser) {
-                Modifier.background(
-                    Brush.linearGradient(
-                        colors = listOf(
-                            MaterialTheme.colorScheme.primary,
-                            MaterialTheme.colorScheme.secondary,
+    val bubbleModifier =
+        Modifier
+            .widthIn(max = 280.dp)
+            .clip(bubbleShape)
+            .then(
+                if (isUser) {
+                    Modifier.background(
+                        Brush.linearGradient(
+                            colors =
+                                listOf(
+                                    MaterialTheme.colorScheme.primary,
+                                    MaterialTheme.colorScheme.secondary,
+                                ),
                         ),
-                    ),
-                )
-            } else {
-                Modifier
-                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f))
-                    .border(
-                        width = 1.dp,
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f),
-                        shape = bubbleShape
                     )
-            }
-        )
-        .padding(horizontal = 16.dp, vertical = 12.dp)
+                } else {
+                    Modifier
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f))
+                        .border(
+                            width = 1.dp,
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f),
+                            shape = bubbleShape,
+                        )
+                },
+            ).padding(horizontal = 16.dp, vertical = 12.dp)
 
     Row(
         modifier =
@@ -772,15 +773,18 @@ fun ActionConfirmationCard(
                 containerColor = MaterialTheme.colorScheme.surface,
             ),
         shape = RoundedCornerShape(16.dp),
-        border = BorderStroke(
-            width = 1.dp,
-            brush = Brush.linearGradient(
-                colors = listOf(
-                    MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
-                    MaterialTheme.colorScheme.tertiary.copy(alpha = 0.6f)
-                )
-            )
-        ),
+        border =
+            BorderStroke(
+                width = 1.dp,
+                brush =
+                    Brush.linearGradient(
+                        colors =
+                            listOf(
+                                MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
+                                MaterialTheme.colorScheme.tertiary.copy(alpha = 0.6f),
+                            ),
+                    ),
+            ),
         elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
     ) {
         val (icon, titleRes, color) =
@@ -865,6 +869,12 @@ fun ActionConfirmationCard(
                         DetailRow(stringResource(R.string.detail_loan_name), action.name)
                         DetailRow(stringResource(R.string.detail_principal), "₹${action.totalAmount}")
                         DetailRow(stringResource(R.string.detail_emi_amount), "₹${action.emiAmount}")
+                        if (action.interestRate > 0) {
+                            DetailRow("Interest", "${action.interestRate}% p.a.")
+                        }
+                        if (action.tenureMonths > 0) {
+                            DetailRow("Tenure", "${action.tenureMonths} months")
+                        }
                         DetailRow(stringResource(R.string.detail_first_emi_due), "In ${action.nextEmiDays} days")
                     }
                 }

@@ -10,8 +10,9 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import prasad.vennam.moneypilot.data.UserPreferences
 import prasad.vennam.moneypilot.data.entity.Category
-import prasad.vennam.moneypilot.data.repository.MoneyPilotRepository
-import prasad.vennam.moneypilot.util.GoogleSheetsSyncHelper
+import prasad.vennam.moneypilot.domain.usecase.BackupSyncManager
+import prasad.vennam.moneypilot.domain.usecase.ClearAllDataUseCase
+import prasad.vennam.moneypilot.domain.usecase.RestoreBackupUseCase
 import prasad.vennam.moneypilot.util.SyncResult
 import javax.inject.Inject
 
@@ -37,9 +38,12 @@ sealed interface RestoreState {
 class MainViewModel
     @Inject
     constructor(
-        private val repository: MoneyPilotRepository,
+        private val backupSyncManager: BackupSyncManager,
+        private val restoreBackupUseCase: RestoreBackupUseCase,
+        private val clearAllDataUseCase: ClearAllDataUseCase,
         private val userPreferences: UserPreferences,
         private val exchangeRateRepo: prasad.vennam.moneypilot.data.repository.ExchangeRateRepository,
+        private val checkLoanRemindersUseCase: prasad.vennam.moneypilot.domain.usecase.CheckLoanRemindersUseCase,
     ) : ViewModel() {
         init {
             viewModelScope.launch {
@@ -86,8 +90,6 @@ class MainViewModel
         val themeMode: StateFlow<Int> =
             userPreferences.themeMode
                 .stateIn(viewModelScope, SharingStarted.Eagerly, 0)
-
-
 
         private val _restoreState = MutableStateFlow<RestoreState>(RestoreState.Idle)
         val restoreState: StateFlow<RestoreState> = _restoreState.asStateFlow()
@@ -145,10 +147,9 @@ class MainViewModel
                 viewModelScope.launch {
                     Log.d("MoneyPilotRestore", "Launching restore scope coroutine...")
                     val result =
-                        GoogleSheetsSyncHelper.performTwoWaySync(
+                        backupSyncManager.performTwoWaySync(
                             context = context,
                             email = email,
-                            repository = repository,
                             spreadsheetId = currentSpreadsheetId,
                             isRestore = true,
                             onSpreadsheetIdFound = { id ->
@@ -191,7 +192,7 @@ class MainViewModel
         fun logout(onLogoutSuccess: () -> Unit) {
             viewModelScope.launch {
                 userPreferences.clearUserData()
-                repository.restoreBackup(Category.DEFAULT_CATEGORIES, emptyList(), emptyList(), emptyList())
+                restoreBackupUseCase(Category.DEFAULT_CATEGORIES, emptyList(), emptyList(), emptyList())
                 userPreferences.setSynced(true)
                 resetRestoreCheck()
                 onLogoutSuccess()
@@ -239,23 +240,25 @@ class MainViewModel
 
                 // 1. Cancel active sync WorkManager
                 try {
-                    prasad.vennam.moneypilot.util.WorkManagerSyncScheduler.cancelSync(context)
+                    prasad.vennam.moneypilot.util.WorkManagerSyncScheduler
+                        .cancelSync(context)
                 } catch (e: Exception) {
                     Log.e("MainViewModel", "Failed to cancel sync", e)
                 }
 
                 // 2. Delete or clear Google Sheet backup spreadsheet
                 if (!isGuest && email != null && currentSpreadsheetId != null) {
-                    deleteSheetSuccess = GoogleSheetsSyncHelper.deleteSpreadsheetFile(
-                        context = context,
-                        email = email,
-                        spreadsheetId = currentSpreadsheetId
-                    )
+                    deleteSheetSuccess =
+                        backupSyncManager.deleteSpreadsheetFile(
+                            context = context,
+                            email = email,
+                            spreadsheetId = currentSpreadsheetId,
+                        )
                 }
 
                 // 3. Clear all local database tables
                 try {
-                    repository.clearAllData()
+                    clearAllDataUseCase()
                 } catch (e: Exception) {
                     Log.e("MainViewModel", "Failed to clear database", e)
                 }
@@ -271,6 +274,10 @@ class MainViewModel
                 onComplete(deleteSheetSuccess)
             }
         }
+
+        fun checkLoanReminders() {
+            viewModelScope.launch {
+                checkLoanRemindersUseCase()
+            }
+        }
     }
-
-

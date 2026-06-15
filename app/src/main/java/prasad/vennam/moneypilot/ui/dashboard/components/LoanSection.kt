@@ -9,6 +9,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import prasad.vennam.moneypilot.data.entity.Loan
+import prasad.vennam.moneypilot.util.CurrencyFormatter
 import prasad.vennam.moneypilot.util.inRupees
 import java.text.SimpleDateFormat
 import java.util.*
@@ -76,7 +77,7 @@ fun LoanCard(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     Text(
-                        text = "${loan.emiAmount.inRupees} $currencyCode",
+                        text = CurrencyFormatter.format(loan.emiAmount.inRupees, currencyCode),
                         style = MaterialTheme.typography.bodyLarge,
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.primary,
@@ -95,7 +96,7 @@ fun LoanCard(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     Text(
-                        text = "${loan.outstandingAmount.inRupees} $currencyCode",
+                        text = CurrencyFormatter.format(loan.outstandingAmount.inRupees, currencyCode),
                         style = MaterialTheme.typography.bodyLarge,
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.error,

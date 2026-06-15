@@ -45,6 +45,7 @@ import prasad.vennam.moneypilot.data.entity.Loan
 import prasad.vennam.moneypilot.ui.dashboard.SyncState
 import prasad.vennam.moneypilot.ui.dashboard.components.DashboardTopBar
 import prasad.vennam.moneypilot.ui.viewmodel.DashboardViewModel
+import prasad.vennam.moneypilot.util.CurrencyFormatter
 import prasad.vennam.moneypilot.util.LocalCurrencyCode
 import prasad.vennam.moneypilot.util.inRupees
 import java.text.SimpleDateFormat
@@ -60,10 +61,12 @@ fun LoanScreen(
     syncState: SyncState?,
     onProfileClick: () -> Unit,
 ) {
+    val currencyCode = LocalCurrencyCode.current
     val state by viewModel.uiState.collectAsState()
     var selectedLoan by remember { mutableStateOf<Loan?>(null) }
     var showAddLoanSheet by remember { mutableStateOf(false) }
     var loanToDelete by remember { mutableStateOf<Loan?>(null) }
+    var loanToPay by remember { mutableStateOf<Loan?>(null) }
 
     Scaffold(
         topBar = {
@@ -90,10 +93,11 @@ fun LoanScreen(
         },
     ) { padding ->
         Column(
-            modifier = Modifier
-                .padding(padding)
-                .padding(horizontal = 20.dp, vertical = 16.dp)
-                .fillMaxSize()
+            modifier =
+                Modifier
+                    .padding(padding)
+                    .padding(horizontal = 20.dp, vertical = 16.dp)
+                    .fillMaxSize(),
         ) {
             Text(
                 text = stringResource(R.string.my_loans),
@@ -108,62 +112,78 @@ fun LoanScreen(
                         Text(
                             text = stringResource(R.string.no_loans_tracked_yet),
                             style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
                             text = stringResource(R.string.add_loan_to_monitor),
                             style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                         )
                     }
                 }
             } else {
                 LazyColumn(
                     verticalArrangement = Arrangement.spacedBy(12.dp),
-                    contentPadding = PaddingValues(bottom = 80.dp)
+                    contentPadding = PaddingValues(bottom = 80.dp),
                 ) {
                     items(state.loans) { loan ->
                         FullWidthLoanCard(
                             loan = loan,
-                            currencyCode = loan.currencyCode,
+                            currencyCode = currencyCode,
                             onEditClick = {
                                 selectedLoan = loan
                                 showAddLoanSheet = true
                             },
                             onDeleteClick = {
                                 loanToDelete = loan
-                            }
+                            },
+                            onPayClick = {
+                                loanToPay = loan
+                            },
+                            payoffDate = viewModel.estimatePayoff(loan),
                         )
                     }
                 }
             }
         }
+
+        if (loanToPay != null) {
+            RecordPaymentDialog(
+                loan = loanToPay!!,
+                onDismiss = { loanToPay = null },
+                onConfirm = { amount, isExtra, note ->
+                    viewModel.recordLoanPayment(loanToPay!!.id, amount, isExtra, note)
+                    loanToPay = null
+                },
+            )
+        }
     }
 
-    if (loanToDelete != null) {
+    val currentLoanToDelete = loanToDelete
+    if (currentLoanToDelete != null) {
         AlertDialog(
             onDismissRequest = { loanToDelete = null },
             title = {
                 Text(
                     text = stringResource(R.string.delete_loan),
                     style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
                 )
             },
             text = {
                 Text(
-                    text = stringResource(R.string.delete_loan_confirm, loanToDelete!!.name),
-                    style = MaterialTheme.typography.bodyMedium
+                    text = stringResource(R.string.delete_loan_confirm, currentLoanToDelete.name),
+                    style = MaterialTheme.typography.bodyMedium,
                 )
             },
             confirmButton = {
                 Button(
                     onClick = {
-                        viewModel.deleteLoan(loanToDelete!!)
+                        viewModel.deleteLoan(currentLoanToDelete)
                         loanToDelete = null
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
                 ) {
                     Text(stringResource(R.string.delete), fontWeight = FontWeight.Bold)
                 }
@@ -172,7 +192,7 @@ fun LoanScreen(
                 TextButton(onClick = { loanToDelete = null }) {
                     Text(stringResource(R.string.cancel), fontWeight = FontWeight.SemiBold)
                 }
-            }
+            },
         )
     }
 
@@ -192,29 +212,31 @@ fun LoanScreen(
                         interestRate = interestRate,
                         tenureMonths = tenureMonths,
                         dueDayOfMonth = dueDayOfMonth,
-                        isNotificationEnabled = isNotificationEnabled
+                        isNotificationEnabled = isNotificationEnabled,
                     )
                 } else {
-                    viewModel.updateLoan(
-                        selectedLoan!!.copy(
-                            name = name,
-                            totalAmount = total,
-                            outstandingAmount = outstanding,
-                            emiAmount = emi,
-                            lenderName = lenderName,
-                            interestRate = interestRate,
-                            tenureMonths = tenureMonths,
-                            dueDayOfMonth = dueDayOfMonth,
-                            isNotificationEnabled = isNotificationEnabled
+                    selectedLoan?.let { loan ->
+                        viewModel.updateLoan(
+                            loan.copy(
+                                name = name,
+                                totalAmount = total,
+                                outstandingAmount = outstanding,
+                                emiAmount = emi,
+                                lenderName = lenderName,
+                                interestRate = interestRate,
+                                tenureMonths = tenureMonths,
+                                dueDayOfMonth = dueDayOfMonth,
+                                isNotificationEnabled = isNotificationEnabled,
+                            ),
                         )
-                    )
+                    }
                 }
                 showAddLoanSheet = false
             },
             onDelete = {
                 selectedLoan?.let { viewModel.deleteLoan(it) }
                 showAddLoanSheet = false
-            }
+            },
         )
     }
 }
@@ -226,29 +248,34 @@ fun FullWidthLoanCard(
     currencyCode: String,
     onEditClick: () -> Unit,
     onDeleteClick: () -> Unit,
+    onPayClick: () -> Unit,
+    payoffDate: Long,
 ) {
     val dateFormatter = remember { SimpleDateFormat("dd MMM yyyy", Locale.getDefault()) }
-    val progress = if (loan.totalAmount > 0) {
-        (1f - (loan.outstandingAmount.toFloat() / loan.totalAmount.toFloat())).coerceIn(0f, 1f)
-    } else {
-        0f
-    }
+    val progress =
+        if (loan.totalAmount > 0) {
+            (1f - (loan.outstandingAmount.toFloat() / loan.totalAmount.toFloat())).coerceIn(0f, 1f)
+        } else {
+            0f
+        }
     val percentPaid = (progress * 100).toInt()
     var menuExpanded by remember { mutableStateOf(false) }
 
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp)
-            .clickable(onClick = onEditClick),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
-        ),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(vertical = 6.dp)
+                .clickable(onClick = onEditClick),
+        shape = RoundedCornerShape(20.dp),
+        colors =
+            CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f),
+            ),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.15f)),
     ) {
         Column(
-            modifier = Modifier.padding(20.dp)
+            modifier = Modifier.padding(20.dp),
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -258,53 +285,51 @@ fun FullWidthLoanCard(
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = loan.name,
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
                         color = MaterialTheme.colorScheme.onSurface,
                     )
                     if (loan.lenderName.isNotBlank()) {
                         Text(
                             text = loan.lenderName,
                             style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            fontWeight = FontWeight.Medium
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                            fontWeight = FontWeight.Medium,
                         )
                     }
                 }
 
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     Surface(
-                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.8f),
+                        color = MaterialTheme.colorScheme.primary,
                         shape = RoundedCornerShape(8.dp),
                     ) {
                         Text(
                             text = stringResource(R.string.percent_paid, percentPaid),
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                            color = MaterialTheme.colorScheme.onPrimary,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                         )
                     }
 
                     Box {
                         IconButton(
                             onClick = { menuExpanded = true },
-                            modifier = Modifier.size(32.dp)
+                            modifier = Modifier.size(32.dp),
                         ) {
                             Icon(
                                 imageVector = Icons.Rounded.MoreVert,
                                 contentDescription = stringResource(R.string.edit_details),
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.size(20.dp)
+                                modifier = Modifier.size(20.dp),
                             )
                         }
 
                         DropdownMenu(
                             expanded = menuExpanded,
-                            onDismissRequest = { menuExpanded = false }
+                            onDismissRequest = { menuExpanded = false },
                         ) {
                             DropdownMenuItem(
                                 text = { Text(stringResource(R.string.edit_details)) },
@@ -316,9 +341,9 @@ fun FullWidthLoanCard(
                                     Icon(
                                         imageVector = Icons.Rounded.Edit,
                                         contentDescription = null,
-                                        modifier = Modifier.size(18.dp)
+                                        modifier = Modifier.size(18.dp),
                                     )
-                                }
+                                },
                             )
                             DropdownMenuItem(
                                 text = { Text(stringResource(R.string.delete_loan), color = MaterialTheme.colorScheme.error) },
@@ -331,9 +356,9 @@ fun FullWidthLoanCard(
                                         imageVector = Icons.Rounded.Delete,
                                         contentDescription = null,
                                         tint = MaterialTheme.colorScheme.error,
-                                        modifier = Modifier.size(18.dp)
+                                        modifier = Modifier.size(18.dp),
                                     )
-                                }
+                                },
                             )
                         }
                     }
@@ -346,35 +371,45 @@ fun FullWidthLoanCard(
             FlowRow(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
             ) {
                 if (loan.interestRate > 0.0) {
                     SuggestionChip(
                         onClick = {},
-                        label = { Text(stringResource(R.string.interest_rate_pa, loan.interestRate.toString())) },
-                        colors = SuggestionChipDefaults.suggestionChipColors(
-                            labelColor = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                        label = { Text(stringResource(R.string.interest_rate_pa, loan.interestRate.toString().removeSuffix(".0"))) },
+                        colors =
+                            SuggestionChipDefaults.suggestionChipColors(
+                                labelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            ),
                     )
                 }
                 if (loan.tenureMonths > 0) {
                     SuggestionChip(
                         onClick = {},
                         label = { Text(stringResource(R.string.tenure_months_format, loan.tenureMonths)) },
-                        colors = SuggestionChipDefaults.suggestionChipColors(
-                            labelColor = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                        colors =
+                            SuggestionChipDefaults.suggestionChipColors(
+                                labelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            ),
                     )
                 }
                 val reminderIcon = if (loan.isNotificationEnabled) Icons.Rounded.NotificationsActive else Icons.Rounded.NotificationsOff
-                val reminderText = if (loan.isNotificationEnabled) stringResource(R.string.reminders_on) else stringResource(R.string.reminders_off)
+                val reminderText =
+                    if (loan.isNotificationEnabled) {
+                        stringResource(
+                            R.string.reminders_on,
+                        )
+                    } else {
+                        stringResource(R.string.reminders_off)
+                    }
                 SuggestionChip(
                     onClick = {},
                     label = { Text(reminderText) },
                     icon = { Icon(reminderIcon, null, modifier = Modifier.size(14.dp)) },
-                    colors = SuggestionChipDefaults.suggestionChipColors(
-                        labelColor = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    colors =
+                        SuggestionChipDefaults.suggestionChipColors(
+                            labelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        ),
                 )
             }
 
@@ -384,51 +419,50 @@ fun FullWidthLoanCard(
             Column(modifier = Modifier.fillMaxWidth()) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
+                    horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
                     Text(
-                        text = stringResource(R.string.paid_amount_format, (loan.totalAmount - loan.outstandingAmount).inRupees, currencyCode),
+                        text = "Paid: " + CurrencyFormatter.format((loan.totalAmount - loan.outstandingAmount).inRupees, currencyCode),
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
                     )
                     Text(
-                        text = stringResource(R.string.total_amount_format, loan.totalAmount.inRupees, currencyCode),
+                        text = "Total: " + CurrencyFormatter.format(loan.totalAmount.inRupees, currencyCode),
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
                     )
                 }
                 Spacer(modifier = Modifier.height(6.dp))
                 LinearProgressIndicator(
                     progress = { progress },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(8.dp)
-                        .clip(CircleShape),
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .height(8.dp)
+                            .clip(CircleShape),
                     color = MaterialTheme.colorScheme.primary,
                     trackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
                 )
             }
 
             Spacer(modifier = Modifier.height(20.dp))
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
             Spacer(modifier = Modifier.height(16.dp))
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.SpaceBetween,
             ) {
                 Column {
                     Text(
                         text = stringResource(R.string.monthly_emi),
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
                         color = MaterialTheme.colorScheme.primary,
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "${loan.emiAmount.inRupees} $currencyCode",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
+                        text = CurrencyFormatter.format(loan.emiAmount.inRupees, currencyCode),
+                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.ExtraBold),
                         color = MaterialTheme.colorScheme.onSurface,
                     )
                 }
@@ -436,51 +470,134 @@ fun FullWidthLoanCard(
                 Column(horizontalAlignment = Alignment.End) {
                     Text(
                         text = stringResource(R.string.outstanding_label),
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
                         color = MaterialTheme.colorScheme.error,
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "${loan.outstandingAmount.inRupees} $currencyCode",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
+                        text = CurrencyFormatter.format(loan.outstandingAmount.inRupees, currencyCode),
+                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.ExtraBold),
                         color = MaterialTheme.colorScheme.error,
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(16.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 Surface(
-                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                    shape = RoundedCornerShape(6.dp)
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                    shape = RoundedCornerShape(8.dp),
                 ) {
                     Row(
-                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Icon(
                             Icons.Rounded.CalendarMonth,
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(12.dp)
+                            modifier = Modifier.size(14.dp),
                         )
-                        Spacer(modifier = Modifier.width(4.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = stringResource(R.string.next_emi_date_format, dateFormatter.format(Date(loan.nextEmiDate)), loan.dueDayOfMonth),
-                            style = MaterialTheme.typography.labelSmall,
+                            text =
+                                stringResource(
+                                    R.string.next_emi_date_format,
+                                    dateFormatter.format(Date(loan.nextEmiDate)),
+                                    loan.dueDayOfMonth,
+                                ),
+                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Medium),
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                 }
+
+                Text(
+                    text = stringResource(R.string.est_payoff_date, dateFormatter.format(Date(payoffDate))),
+                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            Button(
+                onClick = onPayClick,
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .height(48.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors =
+                    ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary,
+                    ),
+            ) {
+                Icon(Icons.Rounded.Check, null, modifier = Modifier.size(18.dp))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = stringResource(R.string.record_payment),
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                )
             }
         }
     }
+}
+
+@Composable
+fun RecordPaymentDialog(
+    loan: Loan,
+    onDismiss: () -> Unit,
+    onConfirm: (Long, Boolean, String) -> Unit,
+) {
+    var amount by remember { mutableStateOf(loan.emiAmount.inRupees.toString()) }
+    var isExtra by remember { mutableStateOf(false) }
+    var note by remember { mutableStateOf("") }
+    val currencyCode = LocalCurrencyCode.current
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.record_payment)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                OutlinedTextField(
+                    value = amount,
+                    onValueChange = { amount = it },
+                    label = { Text(stringResource(R.string.amount)) },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(checked = isExtra, onCheckedChange = { isExtra = it })
+                    Text(stringResource(R.string.extra_payment_top_up))
+                }
+                OutlinedTextField(
+                    value = note,
+                    onValueChange = { note = it },
+                    label = { Text(stringResource(R.string.payment_notes_optional)) },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+        },
+        confirmButton = {
+            Button(onClick = {
+                val amt = amount.toDoubleOrNull() ?: 0.0
+                onConfirm((amt * 100).toLong(), isExtra, note)
+            }) {
+                Text(stringResource(R.string.confirm_payment))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.cancel))
+            }
+        },
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -494,17 +611,29 @@ fun LoanFormBottomSheet(
     var name by remember { mutableStateOf(initialLoan?.name ?: "") }
     var total by remember {
         mutableStateOf(
-            initialLoan?.totalAmount?.inRupees?.toString()?.removeSuffix(".0") ?: ""
+            initialLoan
+                ?.totalAmount
+                ?.inRupees
+                ?.toString()
+                ?.removeSuffix(".0") ?: "",
         )
     }
     var outstanding by remember {
         mutableStateOf(
-            initialLoan?.outstandingAmount?.inRupees?.toString()?.removeSuffix(".0") ?: ""
+            initialLoan
+                ?.outstandingAmount
+                ?.inRupees
+                ?.toString()
+                ?.removeSuffix(".0") ?: "",
         )
     }
     var emi by remember {
         mutableStateOf(
-            initialLoan?.emiAmount?.inRupees?.toString()?.removeSuffix(".0") ?: ""
+            initialLoan
+                ?.emiAmount
+                ?.inRupees
+                ?.toString()
+                ?.removeSuffix(".0") ?: "",
         )
     }
     var lenderName by remember { mutableStateOf(initialLoan?.lenderName ?: "") }
@@ -524,20 +653,151 @@ fun LoanFormBottomSheet(
     val tenureMonthsVal = tenureMonths.toIntOrNull()
     val dueDayVal = dueDayOfMonth.toIntOrNull()
 
-    val isTotalError = total.isNotEmpty() && (totalVal == null || totalVal <= 0.0)
-    val isOutstandingError = outstanding.isNotEmpty() && (outstandingVal == null || outstandingVal < 0.0 || (totalVal != null && outstandingVal > totalVal))
-    val isEmiError = emi.isNotEmpty() && (emiVal == null || emiVal <= 0.0)
-    val isInterestError = interestRate.isNotEmpty() && (interestRateVal == null || interestRateVal < 0.0)
-    val isTenureError = tenureMonths.isNotEmpty() && (tenureMonthsVal == null || tenureMonthsVal <= 0)
+    val isTotalError = total.isNotEmpty() && (totalVal == null || totalVal <= 0.0 || totalVal > 100000000.0)
+    val isEmiError = emi.isNotEmpty() && (emiVal == null || emiVal <= 0.0 || emiVal > 100000000.0)
+    val isInterestError = interestRate.isNotEmpty() && (interestRateVal == null || interestRateVal < 0.0 || interestRateVal > 100.0)
+    val isTenureError = tenureMonths.isNotEmpty() && (tenureMonthsVal == null || tenureMonthsVal <= 0 || tenureMonthsVal > 1200)
     val isDueDayError = dueDayOfMonth.isNotEmpty() && (dueDayVal == null || dueDayVal !in 1..28)
 
-    val isFormValid = name.isNotBlank() &&
-            total.isNotBlank() && !isTotalError &&
-            outstanding.isNotBlank() && !isOutstandingError &&
-            emi.isNotBlank() && !isEmiError &&
-            !isInterestError &&
-            !isTenureError &&
-            dueDayOfMonth.isNotBlank() && !isDueDayError
+    // Check how many of the 4 key fields are validly entered
+    val isTotalValid = total.isNotBlank() && !isTotalError
+    val isEmiValid = emi.isNotBlank() && !isEmiError
+    val isInterestValid = interestRate.isNotBlank() && !isInterestError
+    val isTenureValid = tenureMonths.isNotBlank() && !isTenureError
+
+    val validCount = listOf(isTotalValid, isEmiValid, isInterestValid, isTenureValid).count { it }
+
+    val calcTotal =
+        remember(total, emi, interestRate, tenureMonths, isEmiError, isInterestError, isTenureError) {
+            if (total.isBlank() &&
+                emi.isNotBlank() &&
+                interestRate.isNotBlank() &&
+                tenureMonths.isNotBlank() &&
+                !isEmiError &&
+                !isInterestError &&
+                !isTenureError
+            ) {
+                val e = emi.toDoubleOrNull()
+                val r = interestRate.toDoubleOrNull()
+                val n = tenureMonths.toIntOrNull()
+                if (e != null && r != null && n != null && e > 0.0 && r >= 0.0 && n > 0) {
+                    prasad.vennam.moneypilot.util.LoanIntelligenceUtil
+                        .calculatePrincipal(e, r, n)
+                } else {
+                    null
+                }
+            } else {
+                null
+            }
+        }
+
+    val calcEmi =
+        remember(total, emi, interestRate, tenureMonths, isTotalError, isInterestError, isTenureError) {
+            if (emi.isBlank() &&
+                total.isNotBlank() &&
+                interestRate.isNotBlank() &&
+                tenureMonths.isNotBlank() &&
+                !isTotalError &&
+                !isInterestError &&
+                !isTenureError
+            ) {
+                val p = total.toDoubleOrNull()
+                val r = interestRate.toDoubleOrNull()
+                val n = tenureMonths.toIntOrNull()
+                if (p != null && r != null && n != null && p > 0.0 && r >= 0.0 && n > 0) {
+                    prasad.vennam.moneypilot.util.LoanIntelligenceUtil
+                        .calculateEmi(p, r, n)
+                } else {
+                    null
+                }
+            } else {
+                null
+            }
+        }
+
+    val calcInterestRate =
+        remember(total, emi, interestRate, tenureMonths, isTotalError, isEmiError, isTenureError) {
+            if (interestRate.isBlank() &&
+                total.isNotBlank() &&
+                emi.isNotBlank() &&
+                tenureMonths.isNotBlank() &&
+                !isTotalError &&
+                !isEmiError &&
+                !isTenureError
+            ) {
+                val p = total.toDoubleOrNull()
+                val e = emi.toDoubleOrNull()
+                val n = tenureMonths.toIntOrNull()
+                if (p != null && e != null && n != null && p > 0.0 && e > 0.0 && n > 0) {
+                    prasad.vennam.moneypilot.util.LoanIntelligenceUtil
+                        .calculateInterestRate(p, e, n)
+                } else {
+                    null
+                }
+            } else {
+                null
+            }
+        }
+
+    val calcTenureMonths =
+        remember(total, emi, interestRate, tenureMonths, isTotalError, isEmiError, isInterestError) {
+            if (tenureMonths.isBlank() &&
+                total.isNotBlank() &&
+                emi.isNotBlank() &&
+                interestRate.isNotBlank() &&
+                !isTotalError &&
+                !isEmiError &&
+                !isInterestError
+            ) {
+                val p = total.toDoubleOrNull()
+                val e = emi.toDoubleOrNull()
+                val r = interestRate.toDoubleOrNull()
+                if (p != null && e != null && r != null && p > 0.0 && e > 0.0 && r >= 0.0) {
+                    prasad.vennam.moneypilot.util.LoanIntelligenceUtil
+                        .calculateTenure(p, e, r)
+                } else {
+                    null
+                }
+            } else {
+                null
+            }
+        }
+
+    val totalValFinal = totalVal ?: calcTotal
+    val emiValFinal = emiVal ?: calcEmi
+    val interestRateValFinal = interestRateVal ?: calcInterestRate
+    val tenureMonthsValFinal = tenureMonthsVal ?: calcTenureMonths
+
+    val hasValidTotal = isTotalValid || calcTotal != null
+    val hasValidEmi = isEmiValid || calcEmi != null
+    val hasValidInterest = isInterestValid || calcInterestRate != null
+    val hasValidTenure = isTenureValid || calcTenureMonths != null
+
+    val isOutstandingError =
+        outstanding.isNotEmpty() &&
+            (
+                outstandingVal == null ||
+                    outstandingVal < 0.0 ||
+                    (totalValFinal != null && outstandingVal > totalValFinal) ||
+                    outstandingVal > 100000000.0
+            )
+    val hasValidOutstanding = outstanding.isBlank() || !isOutstandingError
+    val dueDaySupportingText: @Composable (() -> Unit)? =
+        if (isDueDayError) {
+            { Text(stringResource(R.string.due_day_error_desc)) }
+        } else {
+            null
+        }
+
+    val isFormValid =
+        name.isNotBlank() &&
+            hasValidTotal &&
+            hasValidEmi &&
+            hasValidInterest &&
+            hasValidTenure &&
+            hasValidOutstanding &&
+            dueDayOfMonth.isNotBlank() &&
+            !isDueDayError
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -546,18 +806,20 @@ fun LoanFormBottomSheet(
         dragHandle = null,
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .navigationBarsPadding()
-                .imePadding()
-                .padding(bottom = 32.dp)
-                .verticalScroll(rememberScrollState()),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .navigationBarsPadding()
+                    .imePadding()
+                    .padding(bottom = 32.dp)
+                    .verticalScroll(rememberScrollState()),
         ) {
             // Header with Close Icon
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 24.dp, vertical = 20.dp),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp, vertical = 20.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -567,12 +829,13 @@ fun LoanFormBottomSheet(
                 )
                 IconButton(
                     onClick = onDismiss,
-                    modifier = Modifier
-                        .size(32.dp)
-                        .background(
-                            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                            CircleShape,
-                        ),
+                    modifier =
+                        Modifier
+                            .size(32.dp)
+                            .background(
+                                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                                CircleShape,
+                            ),
                 ) {
                     Icon(
                         Icons.Rounded.Close,
@@ -646,10 +909,28 @@ fun LoanFormBottomSheet(
                             color = MaterialTheme.colorScheme.primary,
                         )
                     },
+                    placeholder = {
+                        Text(
+                            if (calcTotal != null) String.format(Locale.US, "%.2f", calcTotal) else "0.00",
+                        )
+                    },
                     isError = isTotalError,
-                    supportingText = if (isTotalError) {
-                        { Text(stringResource(R.string.total_error_desc)) }
-                    } else null,
+                    supportingText = {
+                        if (isTotalError) {
+                            val text =
+                                when {
+                                    totalVal == null -> "Invalid format"
+                                    totalVal <= 0.0 -> stringResource(R.string.total_error_desc)
+                                    else -> "Total cannot exceed 100,000,000"
+                                }
+                            Text(text)
+                        } else if (calcTotal != null) {
+                            Text(
+                                text = "(Auto-calculated: ${CurrencyFormatter.format(calcTotal, currencyCode)})",
+                                color = MaterialTheme.colorScheme.primary,
+                            )
+                        }
+                    },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     shape = MaterialTheme.shapes.large,
                     modifier = Modifier.fillMaxWidth(),
@@ -659,7 +940,7 @@ fun LoanFormBottomSheet(
                 OutlinedTextField(
                     value = outstanding,
                     onValueChange = {
-                        if (it.isEmpty() || it.toDoubleOrNull() != null) outstanding = it
+                        if (it.isEmpty() || it.matches(Regex("^\\d*\\.?\\d{0,2}$"))) outstanding = it
                     },
                     label = { Text(stringResource(R.string.outstanding_amount)) },
                     leadingIcon = {
@@ -676,10 +957,27 @@ fun LoanFormBottomSheet(
                             color = MaterialTheme.colorScheme.primary,
                         )
                     },
+                    placeholder = {
+                        Text(
+                            if (totalValFinal != null) String.format(Locale.US, "%.2f", totalValFinal) else "0.00",
+                        )
+                    },
                     isError = isOutstandingError,
-                    supportingText = if (isOutstandingError) {
-                        { Text(stringResource(R.string.outstanding_error_desc)) }
-                    } else null,
+                    supportingText = {
+                        if (isOutstandingError) {
+                            val text =
+                                when {
+                                    outstandingVal == null -> "Invalid format"
+                                    outstandingVal < 0.0 -> "Outstanding cannot be negative"
+                                    totalValFinal != null && outstandingVal > totalValFinal ->
+                                        stringResource(
+                                            R.string.outstanding_error_desc,
+                                        )
+                                    else -> "Outstanding cannot exceed 100,000,000"
+                                }
+                            Text(text)
+                        }
+                    },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     shape = MaterialTheme.shapes.large,
                     modifier = Modifier.fillMaxWidth(),
@@ -689,7 +987,7 @@ fun LoanFormBottomSheet(
                 OutlinedTextField(
                     value = emi,
                     onValueChange = {
-                        if (it.isEmpty() || it.toDoubleOrNull() != null) emi = it
+                        if (it.isEmpty() || it.matches(Regex("^\\d*\\.?\\d{0,2}$"))) emi = it
                     },
                     label = { Text(stringResource(R.string.monthly_emi)) },
                     leadingIcon = {
@@ -706,10 +1004,28 @@ fun LoanFormBottomSheet(
                             color = MaterialTheme.colorScheme.primary,
                         )
                     },
+                    placeholder = {
+                        Text(
+                            if (calcEmi != null) String.format(Locale.US, "%.2f", calcEmi) else "0.00",
+                        )
+                    },
                     isError = isEmiError,
-                    supportingText = if (isEmiError) {
-                        { Text(stringResource(R.string.emi_error_desc)) }
-                    } else null,
+                    supportingText = {
+                        if (isEmiError) {
+                            val text =
+                                when {
+                                    emiVal == null -> "Invalid format"
+                                    emiVal <= 0.0 -> stringResource(R.string.emi_error_desc)
+                                    else -> "EMI cannot exceed 100,000,000"
+                                }
+                            Text(text)
+                        } else if (calcEmi != null) {
+                            Text(
+                                text = "(Auto-calculated: ${CurrencyFormatter.format(calcEmi, currencyCode)})",
+                                color = MaterialTheme.colorScheme.primary,
+                            )
+                        }
+                    },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     shape = MaterialTheme.shapes.large,
                     modifier = Modifier.fillMaxWidth(),
@@ -718,12 +1034,12 @@ fun LoanFormBottomSheet(
                 // Row for Interest Rate and Tenure
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
                     OutlinedTextField(
                         value = interestRate,
                         onValueChange = {
-                            if (it.isEmpty() || it.toDoubleOrNull() != null) interestRate = it
+                            if (it.isEmpty() || it.matches(Regex("^\\d*\\.?\\d{0,2}$"))) interestRate = it
                         },
                         label = { Text(stringResource(R.string.interest_rate_pa_label)) },
                         leadingIcon = {
@@ -733,11 +1049,34 @@ fun LoanFormBottomSheet(
                                 tint = MaterialTheme.colorScheme.primary,
                             )
                         },
-                        placeholder = { Text(stringResource(R.string.interest_rate_placeholder)) },
+                        placeholder = {
+                            Text(
+                                if (calcInterestRate !=
+                                    null
+                                ) {
+                                    String.format(Locale.US, "%.2f", calcInterestRate)
+                                } else {
+                                    stringResource(R.string.interest_rate_placeholder)
+                                },
+                            )
+                        },
                         isError = isInterestError,
-                        supportingText = if (isInterestError) {
-                            { Text(stringResource(R.string.interest_error_desc)) }
-                        } else null,
+                        supportingText = {
+                            if (isInterestError) {
+                                val text =
+                                    when {
+                                        interestRateVal == null -> "Invalid format"
+                                        interestRateVal < 0.0 -> stringResource(R.string.interest_error_desc)
+                                        else -> "Interest rate cannot exceed 100%"
+                                    }
+                                Text(text)
+                            } else if (calcInterestRate != null) {
+                                Text(
+                                    text = "(Auto-calculated: ${String.format(Locale.US, "%.2f", calcInterestRate)}%)",
+                                    color = MaterialTheme.colorScheme.primary,
+                                )
+                            }
+                        },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         shape = MaterialTheme.shapes.large,
                         modifier = Modifier.weight(1f),
@@ -746,7 +1085,7 @@ fun LoanFormBottomSheet(
                     OutlinedTextField(
                         value = tenureMonths,
                         onValueChange = {
-                            if (it.isEmpty() || it.toIntOrNull() != null) tenureMonths = it
+                            if (it.isEmpty() || (it.toIntOrNull() != null && it.toInt() <= 1200)) tenureMonths = it
                         },
                         label = { Text(stringResource(R.string.tenure_months)) },
                         leadingIcon = {
@@ -756,11 +1095,28 @@ fun LoanFormBottomSheet(
                                 tint = MaterialTheme.colorScheme.primary,
                             )
                         },
-                        placeholder = { Text(stringResource(R.string.tenure_placeholder)) },
+                        placeholder = {
+                            Text(
+                                if (calcTenureMonths != null) calcTenureMonths.toString() else stringResource(R.string.tenure_placeholder),
+                            )
+                        },
                         isError = isTenureError,
-                        supportingText = if (isTenureError) {
-                            { Text(stringResource(R.string.tenure_error_desc)) }
-                        } else null,
+                        supportingText = {
+                            if (isTenureError) {
+                                val text =
+                                    when {
+                                        tenureMonthsVal == null -> "Invalid format"
+                                        tenureMonthsVal <= 0 -> stringResource(R.string.tenure_error_desc)
+                                        else -> "Tenure cannot exceed 1200 months"
+                                    }
+                                Text(text)
+                            } else if (calcTenureMonths != null) {
+                                Text(
+                                    text = "(Auto-calculated: $calcTenureMonths months)",
+                                    color = MaterialTheme.colorScheme.primary,
+                                )
+                            }
+                        },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         shape = MaterialTheme.shapes.large,
                         modifier = Modifier.weight(1f),
@@ -786,9 +1142,7 @@ fun LoanFormBottomSheet(
                     },
                     placeholder = { Text(stringResource(R.string.emi_due_day_placeholder)) },
                     isError = isDueDayError,
-                    supportingText = if (isDueDayError) {
-                        { Text(stringResource(R.string.due_day_error_desc)) }
-                    } else null,
+                    supportingText = dueDaySupportingText,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     shape = MaterialTheme.shapes.large,
                     modifier = Modifier.fillMaxWidth(),
@@ -796,30 +1150,31 @@ fun LoanFormBottomSheet(
 
                 // Reminders Toggle Row
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(MaterialTheme.shapes.medium)
-                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f))
-                        .padding(16.dp),
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .clip(MaterialTheme.shapes.medium)
+                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f))
+                            .padding(16.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = stringResource(R.string.payment_reminders),
                             style = MaterialTheme.typography.bodyLarge,
                             fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
+                            color = MaterialTheme.colorScheme.onSurface,
                         )
                         Text(
                             text = stringResource(R.string.payment_reminders_desc),
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                     Switch(
                         checked = isNotificationEnabled,
-                        onCheckedChange = { isNotificationEnabled = it }
+                        onCheckedChange = { isNotificationEnabled = it },
                     )
                 }
 
@@ -829,11 +1184,11 @@ fun LoanFormBottomSheet(
                 Button(
                     onClick = {
                         if (isFormValid) {
-                            val totalValParsed = total.toDoubleOrNull() ?: 0.0
-                            val outstandingValParsed = outstanding.toDoubleOrNull() ?: 0.0
-                            val emiValParsed = emi.toDoubleOrNull() ?: 0.0
-                            val rateVal = interestRate.toDoubleOrNull() ?: 0.0
-                            val tenureVal = tenureMonths.toIntOrNull() ?: 12
+                            val totalValParsed = totalValFinal ?: 0.0
+                            val outstandingValParsed = outstandingValFinal ?: totalValFinal ?: 0.0
+                            val emiValParsed = emiValFinal ?: 0.0
+                            val rateVal = interestRateValFinal ?: 0.0
+                            val tenureVal = tenureMonthsValFinal ?: 12
                             val dueDayVal = dueDayOfMonth.toIntOrNull() ?: 1
 
                             onConfirm(
@@ -845,35 +1200,38 @@ fun LoanFormBottomSheet(
                                 rateVal,
                                 tenureVal,
                                 dueDayVal,
-                                isNotificationEnabled
+                                isNotificationEnabled,
                             )
                         }
                     },
                     enabled = isFormValid,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(60.dp),
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .height(60.dp),
                     shape = MaterialTheme.shapes.large,
                 ) {
                     Icon(Icons.Rounded.Check, null)
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         text = if (initialLoan == null) stringResource(R.string.add_loan) else stringResource(R.string.save_changes),
-                        style = MaterialTheme.typography.titleMedium
+                        style = MaterialTheme.typography.titleMedium,
                     )
                 }
 
                 if (initialLoan != null) {
                     OutlinedButton(
                         onClick = onDelete,
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = MaterialTheme.colorScheme.error
-                        ),
+                        colors =
+                            ButtonDefaults.outlinedButtonColors(
+                                contentColor = MaterialTheme.colorScheme.error,
+                            ),
                         border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.5f)),
                         shape = MaterialTheme.shapes.large,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(60.dp)
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .height(60.dp),
                     ) {
                         Icon(Icons.Rounded.Delete, null)
                         Spacer(modifier = Modifier.width(8.dp))

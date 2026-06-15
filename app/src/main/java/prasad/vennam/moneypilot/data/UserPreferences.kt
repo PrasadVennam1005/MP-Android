@@ -62,7 +62,6 @@ class UserPreferences
                 .intPreferencesKey("theme_mode")
         private val hasSeededNotificationsKey = booleanPreferencesKey("has_seeded_notifications")
 
-
         val isLoggedIn: Flow<Boolean> =
             context.dataStore.data
                 .map { preferences ->
@@ -225,4 +224,3 @@ class UserPreferences
             }
         }
     }
-

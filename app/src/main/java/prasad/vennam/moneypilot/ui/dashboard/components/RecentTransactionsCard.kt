@@ -66,9 +66,10 @@ fun TransactionItem(
 ) {
     val currencyCode = LocalCurrencyCode.current
     val locale = LocalLocale.current
-    val dateFormatter = remember(locale) {
-        SimpleDateFormat("dd MMM, hh:mm a", locale.platformLocale)
-    }
+    val dateFormatter =
+        remember(locale) {
+            SimpleDateFormat("dd MMM, hh:mm a", locale.platformLocale)
+        }
     Row(
         modifier =
             Modifier
@@ -123,7 +124,7 @@ fun TransactionItem(
             text =
                 buildString {
                     append(if (transaction.type == TransactionType.INCOME) "+" else "-")
-                    append(CurrencyFormatter.format(transaction.amount.inRupees, transaction.currencyCode))
+                    append(CurrencyFormatter.format(transaction.amount.inRupees, currencyCode))
                 },
             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
             color = if (transaction.type == TransactionType.INCOME) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,

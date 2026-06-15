@@ -116,11 +116,15 @@ object AiActionParser {
         val name = params["name"] ?: params["lender"] ?: "Loan"
         val total = parseAmount(params["amount"] ?: params["total"] ?: params["principal"] ?: "0")
         val emi = parseAmount(params["emi"] ?: params["emi_amount"] ?: params["monthly_emi"] ?: "0")
+        val rate = params["interest"]?.replace("%", "")?.toDoubleOrNull() ?: params["rate"]?.replace("%", "")?.toDoubleOrNull() ?: 0.0
+        val tenure = params["tenure"]?.toIntOrNull() ?: params["months"]?.toIntOrNull() ?: 12
         val nextEmiDays = (params["next_emi_days"] ?: params["days"] ?: "30").toIntOrNull() ?: 30
         return AiAction.AddLoan(
             name = name.trim(),
             totalAmount = total,
             emiAmount = emi,
+            interestRate = rate,
+            tenureMonths = tenure,
             nextEmiDays = nextEmiDays,
         )
     }

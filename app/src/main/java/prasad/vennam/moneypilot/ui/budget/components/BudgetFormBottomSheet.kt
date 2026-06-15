@@ -76,6 +76,9 @@ fun BudgetFormBottomSheet(
     val currencyCode = LocalCurrencyCode.current
     val currencySymbol = remember(currencyCode) { Currency.getInstance(currencyCode).symbol }
 
+    val amountVal = amount.toDoubleOrNull()
+    val isAmountError = amount.isNotEmpty() && (amountVal == null || amountVal <= 0.0 || amountVal > 100000000.0)
+
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     ModalBottomSheet(
@@ -186,7 +189,7 @@ fun BudgetFormBottomSheet(
                 OutlinedTextField(
                     value = amount,
                     onValueChange = {
-                        if (it.isEmpty() || (it.toDoubleOrNull() != null && it.toDouble() >= 0.0)) amount = it
+                        if (it.isEmpty() || it.matches(Regex("^\\d*\\.?\\d{0,2}$"))) amount = it
                     },
                     label = { Text(stringResource(R.string.monthly_budget_amount)) },
                     leadingIcon = {
@@ -203,6 +206,21 @@ fun BudgetFormBottomSheet(
                             color = MaterialTheme.colorScheme.primary,
                         )
                     },
+                    isError = isAmountError,
+                    supportingText =
+                        if (isAmountError) {
+                            {
+                                val text =
+                                    when {
+                                        amountVal == null -> "Invalid format"
+                                        amountVal <= 0.0 -> stringResource(R.string.budget_limit_error_desc)
+                                        else -> "Amount cannot exceed 100,000,000"
+                                    }
+                                Text(text)
+                            }
+                        } else {
+                            null
+                        },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     shape = MaterialTheme.shapes.large,
                     modifier = Modifier.fillMaxWidth(),
@@ -213,9 +231,11 @@ fun BudgetFormBottomSheet(
                 // Save Button
                 Button(
                     onClick = {
-                        onSave(selectedCategoryId!!, amount.toDoubleOrNull() ?: 0.0)
+                        selectedCategoryId?.let { id ->
+                            onSave(id, amount.toDoubleOrNull() ?: 0.0)
+                        }
                     },
-                    enabled = selectedCategoryId != null && (amount.toDoubleOrNull() ?: 0.0) > 0.0,
+                    enabled = selectedCategoryId != null && amount.isNotBlank() && !isAmountError,
                     modifier =
                         Modifier
                             .fillMaxWidth()

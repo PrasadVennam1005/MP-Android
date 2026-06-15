@@ -5,15 +5,24 @@ import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.ArrowDropDown
+import androidx.compose.material.icons.rounded.ArrowDropUp
 import androidx.compose.material.icons.rounded.AutoAwesome
+import androidx.compose.material.icons.rounded.Category
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.ChevronRight
+import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.Shield
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -29,19 +38,25 @@ import androidx.compose.ui.unit.dp
 import androidx.credentials.CredentialManager
 import androidx.credentials.GetCredentialRequest
 import androidx.credentials.exceptions.GetCredentialException
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import kotlinx.coroutines.launch
 import prasad.vennam.moneypilot.R
+import prasad.vennam.moneypilot.data.entity.Category
+import prasad.vennam.moneypilot.data.entity.PendingTransaction
+import prasad.vennam.moneypilot.data.entity.TimeFrame
 import prasad.vennam.moneypilot.data.entity.TransactionType
+import prasad.vennam.moneypilot.ui.budget.utils.getCategoryIcon
 import prasad.vennam.moneypilot.ui.dashboard.components.*
 import prasad.vennam.moneypilot.ui.settings.LoginRequiredDialog
 import prasad.vennam.moneypilot.ui.viewmodel.*
 import prasad.vennam.moneypilot.util.AnalyticsHelper
+import prasad.vennam.moneypilot.util.CurrencyFormatter
 import prasad.vennam.moneypilot.util.GoogleSheetsSyncHelper
+import java.util.Calendar
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -62,6 +77,9 @@ fun DashboardScreen(
     onNavigateToLoans: () -> Unit,
     onNavigateToInsights: () -> Unit,
     onNavigateToAiChat: () -> Unit,
+    onNavigateToEmergencyFund: () -> Unit,
+    onNavigateToNews: () -> Unit,
+    onNavigateToSandbox: () -> Unit,
 ) {
     val dashboardState by dashboardViewModel.uiState.collectAsState()
     val userData by mainViewModel.userData.collectAsState()
@@ -114,65 +132,66 @@ fun DashboardScreen(
         }
     }
 
-
-
-    val triggerGoogleLogin = {
-        scope.launch {
-            try {
-                val googleIdOption =
-                    GetGoogleIdOption
-                        .Builder()
-                        .setFilterByAuthorizedAccounts(false)
-                        .setServerClientId(prasad.vennam.moneypilot.BuildConfig.GOOGLE_CLIENT_ID)
-                        .setAutoSelectEnabled(true)
-                        .build()
-
-                val request =
-                    GetCredentialRequest
-                        .Builder()
-                        .addCredentialOption(googleIdOption)
-                        .build()
-
-                val result =
-                    credentialManager.getCredential(
-                        request = request,
-                        context = context,
-                    )
-
-                val credential = result.credential
-                val googleIdTokenCredential =
+    val triggerGoogleLogin =
+        remember(context) {
+            {
+                scope.launch {
                     try {
-                        if (credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
-                            GoogleIdTokenCredential.createFrom(credential.data)
-                        } else {
-                            null
-                        }
-                    } catch (e: Exception) {
-                        null
-                    }
+                        val googleIdOption =
+                            GetGoogleIdOption
+                                .Builder()
+                                .setFilterByAuthorizedAccounts(false)
+                                .setServerClientId(prasad.vennam.moneypilot.BuildConfig.GOOGLE_CLIENT_ID)
+                                .setAutoSelectEnabled(true)
+                                .build()
 
-                if (googleIdTokenCredential != null) {
-                    analyticsHelper.logEvent("login", mapOf("method" to "google"))
-                    mainViewModel.saveUserData(
-                        prasad.vennam.moneypilot.data.UserPreferences.UserData(
-                            name = googleIdTokenCredential.displayName ?: "User",
-                            email = googleIdTokenCredential.id,
-                            photoUrl = googleIdTokenCredential.profilePictureUri?.toString(),
-                        ),
-                    ) {
-                        mainViewModel.checkAndPerformRestore(context)
-                        showLoginRequiredDialog = false
+                        val request =
+                            GetCredentialRequest
+                                .Builder()
+                                .addCredentialOption(googleIdOption)
+                                .build()
+
+                        val result =
+                            credentialManager.getCredential(
+                                request = request,
+                                context = context,
+                            )
+
+                        val credential = result.credential
+                        val googleIdTokenCredential =
+                            try {
+                                if (credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
+                                    GoogleIdTokenCredential.createFrom(credential.data)
+                                } else {
+                                    null
+                                }
+                            } catch (e: Exception) {
+                                null
+                            }
+
+                        if (googleIdTokenCredential != null) {
+                            analyticsHelper.logEvent("login", mapOf("method" to "google"))
+                            mainViewModel.saveUserData(
+                                prasad.vennam.moneypilot.data.UserPreferences.UserData(
+                                    name = googleIdTokenCredential.displayName ?: "User",
+                                    email = googleIdTokenCredential.id,
+                                    photoUrl = googleIdTokenCredential.profilePictureUri?.toString(),
+                                ),
+                            ) {
+                                mainViewModel.checkAndPerformRestore(context)
+                                showLoginRequiredDialog = false
+                            }
+                        }
+                    } catch (e: GetCredentialException) {
+                        Log.e("DashboardScreen", "Login failed: ${e.message}")
+                        Toast.makeText(context, "Login failed: ${e.message}", Toast.LENGTH_LONG).show()
+                    } catch (e: Exception) {
+                        Log.e("DashboardScreen", "Error: ${e.message}")
+                        Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_LONG).show()
                     }
                 }
-            } catch (e: GetCredentialException) {
-                Log.e("DashboardScreen", "Login failed: ${e.message}")
-                Toast.makeText(context, "Login failed: ${e.message}", Toast.LENGTH_LONG).show()
-            } catch (e: Exception) {
-                Log.e("DashboardScreen", "Error: ${e.message}")
-                Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_LONG).show()
             }
         }
-    }
 
     val workManager = remember { WorkManager.getInstance(context) }
     val workInfos by workManager.getWorkInfosForUniqueWorkFlow(GoogleSheetsSyncHelper.SYNC_WORK_NAME).collectAsState(initial = emptyList())
@@ -197,6 +216,14 @@ fun DashboardScreen(
         }
 
     var showBreakdownSheet by remember { mutableStateOf(false) }
+    var showPendingReviewSheet by remember { mutableStateOf(false) }
+
+    LaunchedEffect(dashboardState.pendingTransactions) {
+        if (dashboardState.pendingTransactions.isEmpty()) {
+            showPendingReviewSheet = false
+        }
+    }
+
     val unknownString = stringResource(R.string.unknown)
 
     // Financial Health: Track budget alerts
@@ -215,19 +242,63 @@ fun DashboardScreen(
         }
     }
 
-    val chartColors =
-        listOf(
-            MaterialTheme.colorScheme.primary,
-            MaterialTheme.colorScheme.secondary,
-            MaterialTheme.colorScheme.tertiary,
-            MaterialTheme.colorScheme.error,
-            MaterialTheme.colorScheme.primaryContainer,
-            MaterialTheme.colorScheme.secondaryContainer,
-            MaterialTheme.colorScheme.tertiaryContainer,
-            MaterialTheme.colorScheme.outline,
-            MaterialTheme.colorScheme.scrim,
-            MaterialTheme.colorScheme.inversePrimary,
+    val pendingPulseTransition = rememberInfiniteTransition(label = "pending_pulse")
+    val pendingPulseAlpha by pendingPulseTransition.animateFloat(
+        initialValue = 0.7f,
+        targetValue = 1f,
+        animationSpec =
+            infiniteRepeatable(
+                animation = tween(1200, easing = LinearEasing),
+                repeatMode = RepeatMode.Reverse,
+            ),
+        label = "pulse_alpha",
+    )
+    val bannerBrush =
+        Brush.linearGradient(
+            colors =
+                listOf(
+                    MaterialTheme.colorScheme.tertiary,
+                    MaterialTheme.colorScheme.primary,
+                ),
         )
+
+    val primary = MaterialTheme.colorScheme.primary
+    val secondary = MaterialTheme.colorScheme.secondary
+    val tertiary = MaterialTheme.colorScheme.tertiary
+    val error = MaterialTheme.colorScheme.error
+    val primaryContainer = MaterialTheme.colorScheme.primaryContainer
+    val secondaryContainer = MaterialTheme.colorScheme.secondaryContainer
+    val tertiaryContainer = MaterialTheme.colorScheme.tertiaryContainer
+    val outline = MaterialTheme.colorScheme.outline
+    val scrim = MaterialTheme.colorScheme.scrim
+    val inversePrimary = MaterialTheme.colorScheme.inversePrimary
+
+    val chartColors =
+        remember(
+            primary,
+            secondary,
+            tertiary,
+            error,
+            primaryContainer,
+            secondaryContainer,
+            tertiaryContainer,
+            outline,
+            scrim,
+            inversePrimary,
+        ) {
+            listOf(
+                primary,
+                secondary,
+                tertiary,
+                error,
+                primaryContainer,
+                secondaryContainer,
+                tertiaryContainer,
+                outline,
+                scrim,
+                inversePrimary,
+            )
+        }
 
     Box(modifier = Modifier.fillMaxSize()) {
         Scaffold(
@@ -273,13 +344,81 @@ fun DashboardScreen(
                     verticalArrangement = Arrangement.spacedBy(24.dp),
                 ) {
                     item {
+                        TimeFrameSelector(
+                            selectedTimeFrame = dashboardState.selectedTimeFrame,
+                            onTimeFrameSelected = { dashboardViewModel.setTimeFrame(it) },
+                        )
+                    }
+
+                    if (dashboardState.pendingTransactions.isNotEmpty()) {
+                        item {
+                            val count = dashboardState.pendingTransactions.size
+                            Card(
+                                modifier =
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .clickable { showPendingReviewSheet = true }
+                                        .graphicsLayer {
+                                            alpha = pendingPulseAlpha
+                                        },
+                                shape = RoundedCornerShape(16.dp),
+                                colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+                            ) {
+                                Row(
+                                    modifier =
+                                        Modifier
+                                            .background(bannerBrush)
+                                            .padding(horizontal = 20.dp, vertical = 14.dp)
+                                            .fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Rounded.AutoAwesome,
+                                        contentDescription = null,
+                                        tint = Color.White,
+                                        modifier = Modifier.size(24.dp),
+                                    )
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = "Auto-detected Transactions",
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color.White,
+                                        )
+                                        Text(
+                                            text =
+                                                if (count ==
+                                                    1
+                                                ) {
+                                                    "1 pending transaction to review"
+                                                } else {
+                                                    "$count pending transactions to review"
+                                                },
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = Color.White.copy(alpha = 0.85f),
+                                        )
+                                    }
+                                    Icon(
+                                        imageVector = Icons.Rounded.ChevronRight,
+                                        contentDescription = "Review",
+                                        tint = Color.White,
+                                        modifier = Modifier.size(24.dp),
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    item {
                         KPISection(
                             today = dashboardState.todayExpense,
-                            monthlyExp = dashboardState.monthlyExpense,
-                            monthlyInc = dashboardState.monthlyIncome,
+                            periodExp = dashboardState.periodExpense,
+                            periodInc = dashboardState.periodIncome,
                             savings = dashboardState.savings,
                             investment = dashboardState.totalInvestment,
                             currentInvestmentValue = dashboardState.currentInvestmentValue,
+                            timeFrame = dashboardState.selectedTimeFrame,
                         )
                     }
 
@@ -290,12 +429,23 @@ fun DashboardScreen(
                             onAddInvestment = onNavigateToAddInvestment,
                             onAddLoan = onNavigateToLoans,
                             onScanReceipt = onNavigateToScanner,
+                            onNavigateToEmergencyFund = onNavigateToEmergencyFund,
+                            onNavigateToNews = onNavigateToNews,
+                            onNavigateToSandbox = onNavigateToSandbox,
                             isGuest = isGuest,
                         )
                     }
 
                     item {
                         SmartInsightsCard(onClick = onNavigateToInsights)
+                    }
+
+                    item {
+                        DashboardEmergencyFundCard(
+                            emergencyFund = dashboardState.emergencyFund,
+                            currencyCode = currencyCode,
+                            onClick = onNavigateToEmergencyFund,
+                        )
                     }
 
                     item {
@@ -363,6 +513,21 @@ fun DashboardScreen(
             colors = chartColors,
             unknownString = stringResource(R.string.other),
             onDismiss = { showBreakdownSheet = false },
+        )
+    }
+
+    if (showPendingReviewSheet) {
+        PendingReviewBottomSheet(
+            pendingTransactions = dashboardState.pendingTransactions,
+            categories = dashboardState.categories,
+            currencyCode = currencyCode,
+            onApprove = { pending, categoryId, note ->
+                dashboardViewModel.approveTransaction(pending, categoryId, note)
+            },
+            onDismiss = { pending ->
+                dashboardViewModel.dismissTransaction(pending)
+            },
+            onDismissRequest = { showPendingReviewSheet = false },
         )
     }
 
@@ -482,4 +647,634 @@ fun FloatingAiBot(
             )
         }
     }
+}
+
+@Composable
+fun DashboardEmergencyFundCard(
+    emergencyFund: prasad.vennam.moneypilot.data.entity.EmergencyFund?,
+    currencyCode: String,
+    onClick: () -> Unit,
+) {
+    val isConfigured = emergencyFund != null && emergencyFund.monthlyExpenses > 0.0
+
+    Card(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clickable { onClick() },
+        shape = RoundedCornerShape(24.dp),
+        colors =
+            CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surface,
+            ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+    ) {
+        if (!isConfigured) {
+            Row(
+                modifier = Modifier.padding(20.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(
+                    modifier =
+                        Modifier
+                            .size(44.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.secondaryContainer),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Shield,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                    )
+                }
+                Spacer(modifier = Modifier.width(16.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Build a Safety Net",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    Text(
+                        text = "Set up your Emergency Fund to prepare for unforeseen expenses.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Icon(
+                    imageVector = Icons.Rounded.ChevronRight,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(20.dp),
+                )
+            }
+        } else {
+            val monthly = emergencyFund.monthlyExpenses
+            val months = emergencyFund.targetMonths
+            val saved = emergencyFund.currentSaved
+
+            val targetGoal = remember(monthly, months) { monthly * months }
+            val progress =
+                remember(saved, targetGoal) {
+                    if (targetGoal > 0.0) (saved / targetGoal).toFloat().coerceIn(0f, 1f) else 0f
+                }
+            val percent = remember(progress) { (progress * 100).toInt() }
+            val savedFormatted =
+                remember(saved, currencyCode) {
+                    CurrencyFormatter.format(saved, currencyCode)
+                }
+            val targetGoalFormatted =
+                remember(targetGoal, currencyCode) {
+                    CurrencyFormatter.format(targetGoal, currencyCode)
+                }
+
+            Column(modifier = Modifier.padding(20.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Rounded.Shield,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.secondary,
+                            modifier = Modifier.size(20.dp),
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Emergency Safety Net",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                        )
+                    }
+                    Text(
+                        text = "$percent%",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.secondary,
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                LinearProgressIndicator(
+                    progress = { progress },
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .height(8.dp)
+                            .clip(RoundedCornerShape(4.dp)),
+                    color = MaterialTheme.colorScheme.secondary,
+                    trackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f),
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = "Saved: $savedFormatted",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    Text(
+                        text = "Goal: $targetGoalFormatted",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun TimeFrameSelector(
+    selectedTimeFrame: TimeFrame,
+    onTimeFrameSelected: (TimeFrame) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f), shape = CircleShape)
+                .padding(4.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        TimeFrame.entries.forEach { timeFrame ->
+            val isSelected = timeFrame == selectedTimeFrame
+            val label =
+                when (timeFrame) {
+                    TimeFrame.MONTHLY -> "Monthly"
+                    TimeFrame.QUARTERLY -> "Quarterly"
+                    TimeFrame.YEARLY -> "Yearly"
+                }
+
+            val backgroundColor by animateColorAsState(
+                targetValue = if (isSelected) MaterialTheme.colorScheme.secondary else Color.Transparent,
+                animationSpec = tween(durationMillis = 200, easing = FastOutSlowInEasing),
+                label = "chip_bg",
+            )
+            val textColor by animateColorAsState(
+                targetValue = if (isSelected) MaterialTheme.colorScheme.onSecondary else MaterialTheme.colorScheme.onSurfaceVariant,
+                animationSpec = tween(durationMillis = 200, easing = FastOutSlowInEasing),
+                label = "chip_text",
+            )
+
+            Box(
+                modifier =
+                    Modifier
+                        .weight(1f)
+                        .clip(CircleShape)
+                        .background(backgroundColor)
+                        .clickable { onTimeFrameSelected(timeFrame) }
+                        .padding(vertical = 10.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = textColor,
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun PendingReviewBottomSheet(
+    pendingTransactions: List<PendingTransaction>,
+    categories: List<Category>,
+    currencyCode: String,
+    onApprove: (PendingTransaction, Long?, String) -> Unit,
+    onDismiss: (PendingTransaction) -> Unit,
+    onDismissRequest: () -> Unit,
+) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    val selectedCategoryMap = remember { mutableStateMapOf<Long, Category?>() }
+    val noteTextMap = remember { mutableStateMapOf<Long, String>() }
+    val expandedRawMessageMap = remember { mutableStateMapOf<Long, Boolean>() }
+
+    ModalBottomSheet(
+        onDismissRequest = onDismissRequest,
+        sheetState = sheetState,
+        dragHandle = { BottomSheetDefaults.DragHandle() },
+        containerColor = MaterialTheme.colorScheme.surface,
+    ) {
+        Column(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .navigationBarsPadding()
+                    .padding(horizontal = 20.dp)
+                    .padding(bottom = 24.dp),
+        ) {
+            Text(
+                text = "Review Auto-Detected Transactions",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.padding(bottom = 8.dp),
+            )
+
+            Text(
+                text = "Verify the merchant name, category, and details extracted from your notifications before adding them to your financial record.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(bottom = 16.dp),
+            )
+
+            LazyColumn(
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+                modifier = Modifier.weight(1f, fill = false),
+            ) {
+                items(pendingTransactions, key = { it.id }) { pending ->
+                    LaunchedEffect(pending.id) {
+                        if (!selectedCategoryMap.containsKey(pending.id)) {
+                            selectedCategoryMap[pending.id] = autoMatchCategory(pending.merchant, pending.type, categories)
+                        }
+                        if (!noteTextMap.containsKey(pending.id)) {
+                            noteTextMap[pending.id] = pending.merchant
+                        }
+                    }
+
+                    val chosenCategory = selectedCategoryMap[pending.id]
+                    val currentNote = noteTextMap[pending.id] ?: ""
+                    val isRawExpanded = expandedRawMessageMap[pending.id] ?: false
+
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp),
+                        colors =
+                            CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                            ),
+                        border =
+                            androidx.compose.foundation.BorderStroke(
+                                1.dp,
+                                MaterialTheme.colorScheme.outlineVariant,
+                            ),
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                val dateStr =
+                                    remember(pending.timestamp) {
+                                        val cal = Calendar.getInstance().apply { timeInMillis = pending.timestamp }
+                                        android.text.format.DateFormat
+                                            .format("dd MMM, hh:mm a", cal)
+                                            .toString()
+                                    }
+                                Text(
+                                    text = dateStr,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+
+                                val amountFormatted =
+                                    remember(pending.amount, currencyCode) {
+                                        CurrencyFormatter.format(pending.amount, currencyCode)
+                                    }
+                                val amountColor =
+                                    if (pending.type == "EXPENSE") {
+                                        MaterialTheme.colorScheme.error
+                                    } else {
+                                        MaterialTheme.colorScheme.primary
+                                    }
+                                Text(
+                                    text = amountFormatted,
+                                    style = MaterialTheme.typography.titleLarge,
+                                    fontWeight = FontWeight.Bold,
+                                    color = amountColor,
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.height(12.dp))
+
+                            OutlinedTextField(
+                                value = currentNote,
+                                onValueChange = { noteTextMap[pending.id] = it },
+                                label = { Text("Merchant / Note") },
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(12.dp),
+                                textStyle = MaterialTheme.typography.bodyMedium,
+                            )
+
+                            Spacer(modifier = Modifier.height(12.dp))
+
+                            CategorySelectorDropdown(
+                                selectedCategory = chosenCategory,
+                                categories = categories.filter { it.isExpense == (pending.type == "EXPENSE") },
+                                onCategorySelected = { selectedCategoryMap[pending.id] = it },
+                            )
+
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            if (pending.bankAccount.isNotEmpty()) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.padding(vertical = 4.dp),
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Rounded.Shield,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.secondary,
+                                        modifier = Modifier.size(16.dp),
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        text = "Source: ${pending.bankAccount}",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        fontWeight = FontWeight.Medium,
+                                    )
+                                }
+                            }
+
+                            Row(
+                                modifier =
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .clickable { expandedRawMessageMap[pending.id] = !isRawExpanded }
+                                        .padding(vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Text(
+                                    text = "Show raw notification text",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    fontWeight = FontWeight.Bold,
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Icon(
+                                    imageVector = if (isRawExpanded) Icons.Rounded.ArrowDropUp else Icons.Rounded.ArrowDropDown,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(16.dp),
+                                )
+                            }
+
+                            if (isRawExpanded) {
+                                Text(
+                                    text = pending.rawMessage,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier =
+                                        Modifier
+                                            .background(
+                                                color = MaterialTheme.colorScheme.surfaceVariant,
+                                                shape = RoundedCornerShape(8.dp),
+                                            ).padding(8.dp)
+                                            .fillMaxWidth(),
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.height(16.dp))
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            ) {
+                                OutlinedButton(
+                                    onClick = { onDismiss(pending) },
+                                    modifier = Modifier.weight(1f),
+                                    colors =
+                                        ButtonDefaults.outlinedButtonColors(
+                                            contentColor = MaterialTheme.colorScheme.error,
+                                        ),
+                                    border =
+                                        androidx.compose.foundation.BorderStroke(
+                                            1.dp,
+                                            MaterialTheme.colorScheme.error.copy(alpha = 0.5f),
+                                        ),
+                                    shape = RoundedCornerShape(12.dp),
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Rounded.Delete,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(18.dp),
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text("Dismiss")
+                                }
+
+                                Button(
+                                    onClick = { onApprove(pending, chosenCategory?.id, currentNote) },
+                                    modifier = Modifier.weight(1.5f),
+                                    shape = RoundedCornerShape(12.dp),
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Rounded.Check,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(18.dp),
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text("Approve")
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun CategorySelectorDropdown(
+    selectedCategory: Category?,
+    categories: List<Category>,
+    onCategorySelected: (Category) -> Unit,
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    Box(modifier = Modifier.fillMaxWidth()) {
+        OutlinedTextField(
+            value = selectedCategory?.name ?: "Select Category",
+            onValueChange = {},
+            readOnly = true,
+            label = { Text("Category") },
+            leadingIcon = {
+                Icon(
+                    imageVector =
+                        if (selectedCategory != null) {
+                            getCategoryIcon(selectedCategory.iconName)
+                        } else {
+                            Icons.Rounded.Category
+                        },
+                    contentDescription = null,
+                    tint =
+                        if (selectedCategory != null) {
+                            Color(selectedCategory.color)
+                        } else {
+                            MaterialTheme.colorScheme.primary
+                        },
+                    modifier = Modifier.size(24.dp),
+                )
+            },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+        )
+        Box(
+            modifier =
+                Modifier
+                    .matchParentSize()
+                    .clickable { expanded = true },
+        )
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+            modifier = Modifier.fillMaxWidth(0.8f),
+        ) {
+            categories.forEach { category ->
+                DropdownMenuItem(
+                    text = { Text(category.name) },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = getCategoryIcon(category.iconName),
+                            contentDescription = null,
+                            tint = Color(category.color),
+                            modifier = Modifier.size(20.dp),
+                        )
+                    },
+                    onClick = {
+                        onCategorySelected(category)
+                        expanded = false
+                    },
+                )
+            }
+        }
+    }
+}
+
+fun autoMatchCategory(
+    merchant: String,
+    type: String,
+    categories: List<Category>,
+): Category? {
+    val nameLower = merchant.lowercase()
+    val isExpense = type == "EXPENSE"
+
+    val targetCategoryName =
+        if (isExpense) {
+            when {
+                nameLower.contains("uber") ||
+                    nameLower.contains("ola") ||
+                    nameLower.contains("lyft") ||
+                    nameLower.contains("taxi") ||
+                    nameLower.contains("metro") ||
+                    nameLower.contains("rail") ||
+                    nameLower.contains("train") ||
+                    nameLower.contains("fuel") ||
+                    nameLower.contains("petrol") ||
+                    nameLower.contains("diesel") ||
+                    nameLower.contains("gas station") -> "Transport"
+
+                nameLower.contains("starbucks") ||
+                    nameLower.contains("swiggy") ||
+                    nameLower.contains("zomato") ||
+                    nameLower.contains("ubereats") ||
+                    nameLower.contains("food") ||
+                    nameLower.contains("restaurant") ||
+                    nameLower.contains("cafe") ||
+                    nameLower.contains("dining") ||
+                    nameLower.contains("pizza") ||
+                    nameLower.contains("mcdonald") ||
+                    nameLower.contains("burger") -> "Food"
+
+                nameLower.contains("netflix") ||
+                    nameLower.contains("spotify") ||
+                    nameLower.contains("youtube") ||
+                    nameLower.contains("disney") ||
+                    nameLower.contains("prime video") ||
+                    nameLower.contains("movie") ||
+                    nameLower.contains("cinema") ||
+                    nameLower.contains("game") ||
+                    nameLower.contains("steam") ||
+                    nameLower.contains("epic") ||
+                    nameLower.contains("entertainment") -> "Entertainment"
+
+                nameLower.contains("amazon") ||
+                    nameLower.contains("flipkart") ||
+                    nameLower.contains("myntra") ||
+                    nameLower.contains("shopping") ||
+                    nameLower.contains("store") ||
+                    nameLower.contains("supermarket") ||
+                    nameLower.contains("grocery") ||
+                    nameLower.contains("walmart") ||
+                    nameLower.contains("target") -> "Shopping"
+
+                nameLower.contains("hospital") ||
+                    nameLower.contains("clinic") ||
+                    nameLower.contains("medical") ||
+                    nameLower.contains("pharmacy") ||
+                    nameLower.contains("doctor") ||
+                    nameLower.contains("dentist") ||
+                    nameLower.contains("health") ||
+                    nameLower.contains("medicine") -> "Health"
+
+                nameLower.contains("electricity") || nameLower.contains("water bill") || nameLower.contains("power") -> "Utilities"
+
+                nameLower.contains("airtel") ||
+                    nameLower.contains("jio") ||
+                    nameLower.contains("bill") ||
+                    nameLower.contains("recharge") ||
+                    nameLower.contains("internet") ||
+                    nameLower.contains("wifi") ||
+                    nameLower.contains("mobile") -> "Bills"
+
+                nameLower.contains("rent") || nameLower.contains("housing") || nameLower.contains("apartment") -> "Housing"
+
+                nameLower.contains("school") ||
+                    nameLower.contains("college") ||
+                    nameLower.contains("university") ||
+                    nameLower.contains("course") ||
+                    nameLower.contains("udemy") ||
+                    nameLower.contains("education") -> "Education"
+
+                nameLower.contains("flight") ||
+                    nameLower.contains("hotel") ||
+                    nameLower.contains("travel") ||
+                    nameLower.contains("trip") ||
+                    nameLower.contains("booking") ||
+                    nameLower.contains("airbnb") -> "Travel"
+
+                nameLower.contains("insurance") || nameLower.contains("lic") -> "Insurance"
+
+                else -> "Food"
+            }
+        } else {
+            when {
+                nameLower.contains("salary") || nameLower.contains("payroll") || nameLower.contains("wage") -> "Salary"
+                nameLower.contains("freelance") || nameLower.contains("gigs") || nameLower.contains("consulting") -> "Freelance"
+                nameLower.contains("interest") ||
+                    nameLower.contains("dividend") ||
+                    nameLower.contains("mutual fund") ||
+                    nameLower.contains("stock") ||
+                    nameLower.contains("crypto") ||
+                    nameLower.contains("investment") -> "Investments"
+                nameLower.contains("rental") || nameLower.contains("tenant") -> "Rental"
+                nameLower.contains("gift") || nameLower.contains("present") -> "Gifts"
+                nameLower.contains("refund") || nameLower.contains("cashback") || nameLower.contains("reward") -> "Refund"
+                else -> "Salary"
+            }
+        }
+
+    return categories.find { it.name.equals(targetCategoryName, ignoreCase = true) && it.isExpense == isExpense }
+        ?: categories.find { it.isExpense == isExpense }
 }

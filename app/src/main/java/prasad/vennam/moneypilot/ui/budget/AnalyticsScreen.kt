@@ -246,7 +246,7 @@ fun TimeFilterRow(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        TimeFilter.values().forEach { filter ->
+        TimeFilter.entries.forEach { filter ->
             val isSelected = selectedFilter == filter
             val label =
                 when (filter) {

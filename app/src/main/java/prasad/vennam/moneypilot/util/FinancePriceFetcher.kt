@@ -129,20 +129,22 @@ object FinancePriceFetcher {
                         .build()
                 client.newCall(req).execute().use { resp ->
                     if (!resp.isSuccessful) return@withContext null
-                    val meta = moshi
-                        .adapter(YahooChartResponse::class.java)
-                        .fromJson(resp.body.string())
-                        ?.chart
-                        ?.result
-                        ?.firstOrNull()
-                        ?.meta ?: return@withContext null
-                    
+                    val meta =
+                        moshi
+                            .adapter(YahooChartResponse::class.java)
+                            .fromJson(resp.body.string())
+                            ?.chart
+                            ?.result
+                            ?.firstOrNull()
+                            ?.meta ?: return@withContext null
+
                     val rawCurrency = meta.currency ?: "USD"
-                    val (normalizedCurrency, normalizedPrice) = if (rawCurrency.equals("GBp", ignoreCase = true)) {
-                        "GBP" to meta.regularMarketPrice / 100.0
-                    } else {
-                        rawCurrency.uppercase() to meta.regularMarketPrice
-                    }
+                    val (normalizedCurrency, normalizedPrice) =
+                        if (rawCurrency.equals("GBp", ignoreCase = true)) {
+                            "GBP" to meta.regularMarketPrice / 100.0
+                        } else {
+                            rawCurrency.uppercase() to meta.regularMarketPrice
+                        }
                     YahooPriceInfo(normalizedPrice, normalizedCurrency)
                 }
             }.onFailure {

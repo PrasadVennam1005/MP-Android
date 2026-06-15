@@ -160,10 +160,11 @@ class LlmService(
     @OptIn(kotlinx.coroutines.DelicateCoroutinesApi::class)
     fun generateResponseStreaming(prompt: String) {
         Log.d(TAG, "generateResponseStreaming called. Prompt length: ${prompt.length}")
-        val eng = engine ?: run {
-            Log.e(TAG, "Cannot generate response: LLM is not initialized (engine is null)")
-            throw IllegalStateException("LLM not initialized")
-        }
+        val eng =
+            engine ?: run {
+                Log.e(TAG, "Cannot generate response: LLM is not initialized (engine is null)")
+                throw IllegalStateException("LLM not initialized")
+            }
         try {
             conversation?.close()
         } catch (e: Exception) {

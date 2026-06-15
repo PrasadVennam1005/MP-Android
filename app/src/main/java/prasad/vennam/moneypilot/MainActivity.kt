@@ -13,7 +13,7 @@ import androidx.compose.material.icons.rounded.Dashboard
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
+import androidx.compose.material3.adaptive.currentWindowAdaptiveInfoV2
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffoldDefaults
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteType
@@ -25,11 +25,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.ui.NavDisplay
 import dagger.hilt.android.AndroidEntryPoint
+import prasad.vennam.moneypilot.data.UserPreferences
 import prasad.vennam.moneypilot.data.entity.TransactionType
 import prasad.vennam.moneypilot.feature.ai.presentation.AiChatScreen
 import prasad.vennam.moneypilot.ui.ai.InsightsScreen
@@ -37,11 +38,14 @@ import prasad.vennam.moneypilot.ui.budget.ReportsTabScreen
 import prasad.vennam.moneypilot.ui.categories.CategoryListScreen
 import prasad.vennam.moneypilot.ui.dashboard.DashboardScreen
 import prasad.vennam.moneypilot.ui.dashboard.SyncState
+import prasad.vennam.moneypilot.ui.emergencyfund.EmergencyFundScreen
+import prasad.vennam.moneypilot.ui.faq.FaqScreen
 import prasad.vennam.moneypilot.ui.investments.InvestmentScreen
+import prasad.vennam.moneypilot.ui.legal.LegalContent
+import prasad.vennam.moneypilot.ui.legal.LegalScreen
 import prasad.vennam.moneypilot.ui.loans.LoanScreen
 import prasad.vennam.moneypilot.ui.navigation.Destination
 import prasad.vennam.moneypilot.ui.scanner.ReceiptScannerScreen
-import prasad.vennam.moneypilot.ui.faq.FaqScreen
 import prasad.vennam.moneypilot.ui.settings.SettingsScreen
 import prasad.vennam.moneypilot.ui.theme.MoneyPilotTheme
 import prasad.vennam.moneypilot.ui.transactions.AddEditTransactionScreen
@@ -55,9 +59,6 @@ import prasad.vennam.moneypilot.ui.viewmodel.TransactionViewModel
 import prasad.vennam.moneypilot.util.AnalyticsHelper
 import prasad.vennam.moneypilot.util.LocalCurrencyCode
 import javax.inject.Inject
-import androidx.lifecycle.lifecycleScope
-import kotlinx.coroutines.launch
-import prasad.vennam.moneypilot.worker.LoanNotificationScheduler
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -65,10 +66,7 @@ class MainActivity : ComponentActivity() {
     lateinit var analyticsHelper: AnalyticsHelper
 
     @Inject
-    lateinit var loanDao: prasad.vennam.moneypilot.data.dao.LoanDao
-
-    @Inject
-    lateinit var notificationDao: prasad.vennam.moneypilot.data.dao.NotificationDao
+    lateinit var userPreferences: UserPreferences
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -93,17 +91,11 @@ class MainActivity : ComponentActivity() {
             )
         }
 
-        // Check and trigger loan EMI reminder alerts on startup
-        lifecycleScope.launch {
-            LoanNotificationScheduler.checkAndTriggerLoanReminders(
-                applicationContext,
-                loanDao,
-                notificationDao
-            )
-        }
-
         setContent {
             val mainViewModel: MainViewModel = hiltViewModel()
+            LaunchedEffect(Unit) {
+                mainViewModel.checkLoanReminders()
+            }
             val themeMode by mainViewModel.themeMode.collectAsState()
             val darkTheme =
                 when (themeMode) {
@@ -112,7 +104,7 @@ class MainActivity : ComponentActivity() {
                     else -> androidx.compose.foundation.isSystemInDarkTheme()
                 }
             MoneyPilotTheme(darkTheme = darkTheme) {
-                MoneyPilotApp(analyticsHelper, mainViewModel)
+                MoneyPilotApp(analyticsHelper, mainViewModel, userPreferences)
             }
         }
     }
@@ -122,6 +114,7 @@ class MainActivity : ComponentActivity() {
 fun MoneyPilotApp(
     analyticsHelper: AnalyticsHelper,
     mainViewModel: MainViewModel = hiltViewModel(),
+    userPreferences: UserPreferences,
 ) {
     val backStack = rememberNavBackStack(Destination.Auth() as Destination)
 
@@ -180,7 +173,7 @@ fun MoneyPilotApp(
         NavigationSuiteScaffold(
             layoutType =
                 if (showNavigation) {
-                    NavigationSuiteScaffoldDefaults.calculateFromAdaptiveInfo(currentWindowAdaptiveInfo())
+                    NavigationSuiteScaffoldDefaults.calculateFromAdaptiveInfo(currentWindowAdaptiveInfoV2())
                 } else {
                     NavigationSuiteType.None
                 },
@@ -311,6 +304,15 @@ fun MoneyPilotApp(
                                     onNavigateToAiChat = {
                                         backStack.add(Destination.AiChat)
                                     },
+                                    onNavigateToEmergencyFund = {
+                                        backStack.add(Destination.EmergencyFund)
+                                    },
+                                    onNavigateToNews = {
+                                        backStack.add(Destination.FinancialNews)
+                                    },
+                                    onNavigateToSandbox = {
+                                        backStack.add(Destination.FinancialSandbox)
+                                    },
                                     analyticsHelper = analyticsHelper,
                                 )
                             }
@@ -430,6 +432,12 @@ fun MoneyPilotApp(
                                     onNavigateToFAQ = {
                                         backStack.add(Destination.FAQ)
                                     },
+                                    onNavigateToTerms = {
+                                        backStack.add(Destination.TermsOfService)
+                                    },
+                                    onNavigateToPrivacy = {
+                                        backStack.add(Destination.PrivacyPolicy)
+                                    },
                                     onAccountDeleted = {
                                         backStack.clear()
                                         backStack.add(Destination.Auth(skipSplash = false))
@@ -458,6 +466,9 @@ fun MoneyPilotApp(
                             NavEntry(key) {
                                 prasad.vennam.moneypilot.ui.notifications.NotificationsScreen(
                                     onNavigateBack = { backStack.removeLastOrNull() },
+                                    onNavigateToWeb = { url, title ->
+                                        backStack.add(Destination.NewsWebFrame(url = url, title = title))
+                                    },
                                 )
                             }
 
@@ -465,6 +476,58 @@ fun MoneyPilotApp(
                             NavEntry(key) {
                                 FaqScreen(
                                     onNavigateBack = { backStack.removeLastOrNull() },
+                                )
+                            }
+
+                        is Destination.EmergencyFund ->
+                            NavEntry(key) {
+                                EmergencyFundScreen(
+                                    userPreferences = userPreferences,
+                                    onNavigateBack = { backStack.removeLastOrNull() },
+                                )
+                            }
+
+                        is Destination.TermsOfService ->
+                            NavEntry(key) {
+                                LegalScreen(
+                                    title = "Terms of Service",
+                                    content = LegalContent.TERMS_OF_SERVICE,
+                                    onBack = { backStack.removeLastOrNull() },
+                                )
+                            }
+
+                        is Destination.PrivacyPolicy ->
+                            NavEntry(key) {
+                                LegalScreen(
+                                    title = "Privacy Policy",
+                                    content = LegalContent.PRIVACY_POLICY,
+                                    onBack = { backStack.removeLastOrNull() },
+                                )
+                            }
+
+                        is Destination.FinancialNews ->
+                            NavEntry(key) {
+                                prasad.vennam.moneypilot.ui.news.NewsScreen(
+                                    onBack = { backStack.removeLastOrNull() },
+                                    onNavigateToWeb = { url, title ->
+                                        backStack.add(Destination.NewsWebFrame(url = url, title = title))
+                                    },
+                                )
+                            }
+
+                        is Destination.NewsWebFrame ->
+                            NavEntry(key) {
+                                prasad.vennam.moneypilot.ui.news.NewsWebViewScreen(
+                                    url = key.url,
+                                    title = key.title,
+                                    onBack = { backStack.removeLastOrNull() },
+                                )
+                            }
+
+                        is Destination.FinancialSandbox ->
+                            NavEntry(key) {
+                                prasad.vennam.moneypilot.ui.sandbox.FinancialSandboxScreen(
+                                    onBack = { backStack.removeLastOrNull() },
                                 )
                             }
 

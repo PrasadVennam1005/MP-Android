@@ -8,7 +8,9 @@ import android.content.Intent
 import android.os.Build
 import android.util.Log
 import androidx.core.app.NotificationCompat
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withContext
 import prasad.vennam.moneypilot.MainActivity
 import prasad.vennam.moneypilot.data.dao.LoanDao
 import prasad.vennam.moneypilot.data.dao.NotificationDao
@@ -28,7 +30,7 @@ object LoanNotificationScheduler {
         context: Context,
         loanDao: LoanDao,
         notificationDao: NotificationDao,
-    ) {
+    ) = withContext(Dispatchers.IO) {
         try {
             Log.d(TAG, "Running loan notification reminder check...")
             val loans = loanDao.getAllLoans().first()
@@ -53,14 +55,15 @@ object LoanNotificationScheduler {
                         Log.d(TAG, "EMI reminder triggered for loan: ${loan.name}")
 
                         // 1. Save to database notifications
-                        val dbNotification = Notification(
-                            title = title,
-                            message = message,
-                            category = "Alerts",
-                            timestamp = System.currentTimeMillis(),
-                            isRead = false,
-                            url = null
-                        )
+                        val dbNotification =
+                            Notification(
+                                title = title,
+                                message = message,
+                                category = "Alerts",
+                                timestamp = System.currentTimeMillis(),
+                                isRead = false,
+                                url = null,
+                            )
                         notificationDao.insertNotification(dbNotification)
 
                         // 2. Post Android system notification
@@ -82,36 +85,41 @@ object LoanNotificationScheduler {
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
-                CHANNEL_ID,
-                "Loan EMI Reminders",
-                NotificationManager.IMPORTANCE_HIGH
-            ).apply {
-                description = "Reminders for upcoming loan monthly installments."
-            }
+            val channel =
+                NotificationChannel(
+                    CHANNEL_ID,
+                    "Loan EMI Reminders",
+                    NotificationManager.IMPORTANCE_HIGH,
+                ).apply {
+                    description = "Reminders for upcoming loan monthly installments."
+                }
             notificationManager.createNotificationChannel(channel)
         }
 
-        val intent = Intent(context, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-            putExtra("navigate_to_notifications", true)
-        }
+        val intent =
+            Intent(context, MainActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                putExtra("navigate_to_notifications", true)
+            }
 
-        val pendingIntent = PendingIntent.getActivity(
-            context,
-            notificationId,
-            intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
+        val pendingIntent =
+            PendingIntent.getActivity(
+                context,
+                notificationId,
+                intent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+            )
 
-        val builder = NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(prasad.vennam.moneypilot.R.mipmap.ic_launcher)
-            .setContentTitle(title)
-            .setContentText(message)
-            .setStyle(NotificationCompat.BigTextStyle().bigText(message))
-            .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .setContentIntent(pendingIntent)
-            .setAutoCancel(true)
+        val builder =
+            NotificationCompat
+                .Builder(context, CHANNEL_ID)
+                .setSmallIcon(prasad.vennam.moneypilot.R.mipmap.ic_launcher)
+                .setContentTitle(title)
+                .setContentText(message)
+                .setStyle(NotificationCompat.BigTextStyle().bigText(message))
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setContentIntent(pendingIntent)
+                .setAutoCancel(true)
 
         notificationManager.notify(notificationId, builder.build())
     }

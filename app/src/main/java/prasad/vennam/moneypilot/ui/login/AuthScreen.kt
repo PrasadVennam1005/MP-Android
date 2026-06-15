@@ -392,10 +392,11 @@ fun AuthScreen(
                             Spacer(modifier = Modifier.height(12.dp))
                             Text(
                                 text = error,
-                                style = MaterialTheme.typography.bodyMedium.copy(
-                                    color = MaterialTheme.colorScheme.error,
-                                    textAlign = TextAlign.Center,
-                                ),
+                                style =
+                                    MaterialTheme.typography.bodyMedium.copy(
+                                        color = MaterialTheme.colorScheme.error,
+                                        textAlign = TextAlign.Center,
+                                    ),
                                 modifier = Modifier.fillMaxWidth(),
                             )
                         }

@@ -13,7 +13,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -31,7 +30,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -54,108 +52,114 @@ private data class FaqItem(
 
 // ─── FAQ data ────────────────────────────────────────────────────────────────
 
-private val faqCategories = listOf(
-    FaqCategory(
-        title = "Getting Started",
-        icon = Icons.Rounded.Rocket,
-        items = listOf(
-            FaqItem(
-                "What is MoneyPilot?",
-                "MoneyPilot is your personal finance co-pilot. It lets you track expenses and income, set budgets, monitor investments, and get AI-powered insights — all synced securely to your private Google Sheet."
-            ),
-            FaqItem(
-                "Do I need a Google account?",
-                "You can use MoneyPilot as a Guest with full offline access to core features. Signing in with your Google account unlocks cloud sync, so your data is backed up to your own Google Drive."
-            ),
-            FaqItem(
-                "How do I add my first transaction?",
-                "Tap the ＋ button on the Dashboard or Expenses tab. Fill in the amount, category, note, and date — then tap Save. Your balance updates instantly."
-            ),
-        )
-    ),
-    FaqCategory(
-        title = "Sync & Cloud",
-        icon = Icons.Rounded.CloudSync,
-        items = listOf(
-            FaqItem(
-                "How does Google Sheets sync work?",
-                "When you sign in with Google, MoneyPilot creates a private spreadsheet called \"MoneyPilot Sync\" in your Google Drive. Your transactions are pushed to that sheet. You can view, filter, and even edit them right in Google Sheets."
-            ),
-            FaqItem(
-                "Why hasn't sync started yet?",
-                "Sync runs automatically after sign-in, but can take a minute on first launch. You can also trigger it manually from Settings → Cloud Sync → Sync Now."
-            ),
-            FaqItem(
-                "Is my data private?",
-                "Absolutely. Your data lives only on your device and in your own Google Drive. MoneyPilot never stores your financial data on any third-party server."
-            ),
-        )
-    ),
-    FaqCategory(
-        title = "Budgets & Goals",
-        icon = Icons.Rounded.TrackChanges,
-        items = listOf(
-            FaqItem(
-                "How do I create a budget?",
-                "Go to Settings → Financial Goal. Set your monthly savings target and income goal. MoneyPilot will track your progress on the Dashboard and Reports tabs."
-            ),
-            FaqItem(
-                "Can I set budgets per category?",
-                "Yes! Open the Budget section in the Expenses tab and tap a category to set a monthly limit. You'll get a visual indicator when you're close to the limit."
-            ),
-            FaqItem(
-                "What happens when I exceed a budget?",
-                "You'll see a red warning indicator on that category. If notifications are enabled, MoneyPilot will also send you a push notification."
-            ),
-        )
-    ),
-    FaqCategory(
-        title = "Investments",
-        icon = Icons.AutoMirrored.Rounded.ShowChart,
-        items = listOf(
-            FaqItem(
-                "What investments can I track?",
-                "MoneyPilot supports stocks, ETFs, mutual funds, crypto, gold, real estate, and custom assets. Enter your holdings and we'll fetch live prices to show your portfolio value."
-            ),
-            FaqItem(
-                "How often are prices updated?",
-                "Prices refresh automatically when you open the Investments tab. You can also pull-to-refresh for the latest data."
-            ),
-        )
-    ),
-    FaqCategory(
-        title = "Account & Data",
-        icon = Icons.Rounded.ManageAccounts,
-        items = listOf(
-            FaqItem(
-                "How do I delete my account?",
-                "Go to Settings → scroll to the bottom → Delete Account. This removes all your local data. Your Google Drive spreadsheet is not deleted and stays in your Drive."
-            ),
-            FaqItem(
-                "Can I export my data?",
-                "Yes! Settings → Export Data lets you download a CSV of all transactions, which you can open in any spreadsheet app."
-            ),
-            FaqItem(
-                "How do I change the currency?",
-                "Go to Settings → Currency and select your preferred currency. All amounts will display in that currency using live exchange rates."
-            ),
-        )
-    ),
-)
+private val faqCategories =
+    listOf(
+        FaqCategory(
+            title = "Getting Started",
+            icon = Icons.Rounded.Rocket,
+            items =
+                listOf(
+                    FaqItem(
+                        "What is MoneyPilot?",
+                        "MoneyPilot is your personal finance co-pilot. It lets you track expenses and income, set budgets, monitor investments, and get AI-powered insights — all synced securely to your private Google Sheet.",
+                    ),
+                    FaqItem(
+                        "Do I need a Google account?",
+                        "You can use MoneyPilot as a Guest with full offline access to core features. Signing in with your Google account unlocks cloud sync, so your data is backed up to your own Google Drive.",
+                    ),
+                    FaqItem(
+                        "How do I add my first transaction?",
+                        "Tap the ＋ button on the Dashboard or Expenses tab. Fill in the amount, category, note, and date — then tap Save. Your balance updates instantly.",
+                    ),
+                ),
+        ),
+        FaqCategory(
+            title = "Sync & Cloud",
+            icon = Icons.Rounded.CloudSync,
+            items =
+                listOf(
+                    FaqItem(
+                        "How does Google Sheets sync work?",
+                        "When you sign in with Google, MoneyPilot creates a private spreadsheet called \"MoneyPilot Sync\" in your Google Drive. Your transactions are pushed to that sheet. You can view, filter, and even edit them right in Google Sheets.",
+                    ),
+                    FaqItem(
+                        "Why hasn't sync started yet?",
+                        "Sync runs automatically after sign-in, but can take a minute on first launch. You can also trigger it manually from Settings → Cloud Sync → Sync Now.",
+                    ),
+                    FaqItem(
+                        "Is my data private?",
+                        "Absolutely. Your data lives only on your device and in your own Google Drive. MoneyPilot never stores your financial data on any third-party server.",
+                    ),
+                ),
+        ),
+        FaqCategory(
+            title = "Budgets & Goals",
+            icon = Icons.Rounded.TrackChanges,
+            items =
+                listOf(
+                    FaqItem(
+                        "How do I create a budget?",
+                        "Go to Settings → Financial Goal. Set your monthly savings target and income goal. MoneyPilot will track your progress on the Dashboard and Reports tabs.",
+                    ),
+                    FaqItem(
+                        "Can I set budgets per category?",
+                        "Yes! Open the Budget section in the Expenses tab and tap a category to set a monthly limit. You'll get a visual indicator when you're close to the limit.",
+                    ),
+                    FaqItem(
+                        "What happens when I exceed a budget?",
+                        "You'll see a red warning indicator on that category. If notifications are enabled, MoneyPilot will also send you a push notification.",
+                    ),
+                ),
+        ),
+        FaqCategory(
+            title = "Investments",
+            icon = Icons.AutoMirrored.Rounded.ShowChart,
+            items =
+                listOf(
+                    FaqItem(
+                        "What investments can I track?",
+                        "MoneyPilot supports stocks, ETFs, mutual funds, crypto, gold, real estate, and custom assets. Enter your holdings and we'll fetch live prices to show your portfolio value.",
+                    ),
+                    FaqItem(
+                        "How often are prices updated?",
+                        "Prices refresh automatically when you open the Investments tab. You can also pull-to-refresh for the latest data.",
+                    ),
+                ),
+        ),
+        FaqCategory(
+            title = "Account & Data",
+            icon = Icons.Rounded.ManageAccounts,
+            items =
+                listOf(
+                    FaqItem(
+                        "How do I delete my account?",
+                        "Go to Settings → scroll to the bottom → Delete Account. This removes all your local data. Your Google Drive spreadsheet is not deleted and stays in your Drive.",
+                    ),
+                    FaqItem(
+                        "Can I export my data?",
+                        "Yes! Settings → Export Data lets you download a CSV of all transactions, which you can open in any spreadsheet app.",
+                    ),
+                    FaqItem(
+                        "How do I change the currency?",
+                        "Go to Settings → Currency and select your preferred currency. All amounts will display in that currency using live exchange rates.",
+                    ),
+                ),
+        ),
+    )
 
 // ─── Screen ──────────────────────────────────────────────────────────────────
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FaqScreen(onNavigateBack: () -> Unit) {
-
     val context = LocalContext.current
     var showContactSheet by remember { mutableStateOf(false) }
 
     // Track which FAQ item is expanded: category index -> item index
-    val expandedStates = remember {
-        mutableStateMapOf<String, Boolean>()
-    }
+    val expandedStates =
+        remember {
+            mutableStateMapOf<String, Boolean>()
+        }
 
     Scaffold(
         topBar = {
@@ -171,9 +175,10 @@ fun FaqScreen(onNavigateBack: () -> Unit) {
                         Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Back")
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                ),
+                colors =
+                    TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.surface,
+                    ),
             )
         },
         floatingActionButton = {
@@ -191,13 +196,13 @@ fun FaqScreen(onNavigateBack: () -> Unit) {
     ) { innerPadding ->
 
         LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding),
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding),
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 100.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
-
             // Hero header
             item {
                 FaqHeroCard()
@@ -221,12 +226,13 @@ fun FaqScreen(onNavigateBack: () -> Unit) {
         ContactBottomSheet(
             onDismiss = { showContactSheet = false },
             onSendEmail = { subject, body ->
-                val intent = Intent(Intent.ACTION_SENDTO).apply {
-                    data = Uri.parse("mailto:")
-                    putExtra(Intent.EXTRA_EMAIL, arrayOf("support@moneypilotapp.com"))
-                    putExtra(Intent.EXTRA_SUBJECT, subject)
-                    putExtra(Intent.EXTRA_TEXT, body)
-                }
+                val intent =
+                    Intent(Intent.ACTION_SENDTO).apply {
+                        data = Uri.parse("mailto:")
+                        putExtra(Intent.EXTRA_EMAIL, arrayOf("support@moneypilotapp.com"))
+                        putExtra(Intent.EXTRA_SUBJECT, subject)
+                        putExtra(Intent.EXTRA_TEXT, body)
+                    }
                 context.startActivity(Intent.createChooser(intent, "Send Email"))
                 showContactSheet = false
             },
@@ -239,26 +245,28 @@ fun FaqScreen(onNavigateBack: () -> Unit) {
 @Composable
 private fun FaqHeroCard() {
     Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp))
-            .background(
-                Brush.linearGradient(
-                    colors = listOf(
-                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f),
-                        MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f),
-                    )
-                )
-            )
-            .padding(24.dp),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(20.dp))
+                .background(
+                    Brush.linearGradient(
+                        colors =
+                            listOf(
+                                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f),
+                                MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f),
+                            ),
+                    ),
+                ).padding(24.dp),
         contentAlignment = Alignment.Center,
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Box(
-                modifier = Modifier
-                    .size(64.dp)
-                    .clip(RoundedCornerShape(18.dp))
-                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)),
+                modifier =
+                    Modifier
+                        .size(64.dp)
+                        .clip(RoundedCornerShape(18.dp))
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
@@ -308,10 +316,11 @@ private fun FaqCategorySection(
             Spacer(Modifier.width(8.dp))
             Text(
                 category.title,
-                style = MaterialTheme.typography.labelLarge.copy(
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = androidx.compose.ui.unit.TextUnit.Unspecified,
-                ),
+                style =
+                    MaterialTheme.typography.labelLarge.copy(
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = androidx.compose.ui.unit.TextUnit.Unspecified,
+                    ),
                 color = MaterialTheme.colorScheme.primary,
             )
         }
@@ -345,14 +354,16 @@ private fun FaqItemCard(
     )
 
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .clickable(onClick = onToggle),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(16.dp))
+                .clickable(onClick = onToggle),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
-        ),
+        colors =
+            CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+            ),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -371,9 +382,10 @@ private fun FaqItemCard(
                     imageVector = Icons.Rounded.KeyboardArrowDown,
                     contentDescription = if (isExpanded) "Collapse" else "Expand",
                     tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier
-                        .size(24.dp)
-                        .rotate(rotationAngle),
+                    modifier =
+                        Modifier
+                            .size(24.dp)
+                            .rotate(rotationAngle),
                 )
             }
 
@@ -423,10 +435,11 @@ fun ContactBottomSheet(
         dragHandle = { BottomSheetDefaults.DragHandle() },
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 24.dp)
-                .padding(bottom = 36.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp)
+                    .padding(bottom = 36.dp),
         ) {
             // Header
             Row(
@@ -434,10 +447,11 @@ fun ContactBottomSheet(
                 modifier = Modifier.padding(bottom = 20.dp),
             ) {
                 Box(
-                    modifier = Modifier
-                        .size(44.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(MaterialTheme.colorScheme.primaryContainer),
+                    modifier =
+                        Modifier
+                            .size(44.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(MaterialTheme.colorScheme.primaryContainer),
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(
@@ -479,10 +493,11 @@ fun ContactBottomSheet(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(14.dp),
                 keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = MaterialTheme.colorScheme.primary,
-                    unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
-                ),
+                colors =
+                    OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
+                    ),
             )
 
             Spacer(Modifier.height(14.dp))
@@ -501,16 +516,18 @@ fun ContactBottomSheet(
                         modifier = Modifier.padding(top = 14.dp),
                     )
                 },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(160.dp),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .height(160.dp),
                 maxLines = 8,
                 shape = RoundedCornerShape(14.dp),
                 keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = MaterialTheme.colorScheme.primary,
-                    unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
-                ),
+                colors =
+                    OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
+                    ),
             )
 
             Spacer(Modifier.height(20.dp))
@@ -519,16 +536,18 @@ fun ContactBottomSheet(
             Button(
                 onClick = { onSendEmail(subject.trim(), body.trim()) },
                 enabled = isSendEnabled,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(54.dp),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .height(54.dp),
                 shape = RoundedCornerShape(14.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary,
-                    disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                    disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                ),
+                colors =
+                    ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary,
+                        disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                        disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    ),
             ) {
                 Icon(Icons.AutoMirrored.Rounded.Send, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(10.dp))

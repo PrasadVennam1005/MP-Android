@@ -2,23 +2,28 @@ package prasad.vennam.moneypilot.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import kotlinx.coroutines.launch
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import prasad.vennam.moneypilot.data.UserPreferences
-import prasad.vennam.moneypilot.feature.ai.domain.AiRepository
 import prasad.vennam.moneypilot.data.entity.Budget
 import prasad.vennam.moneypilot.data.entity.Category
 import prasad.vennam.moneypilot.data.entity.Investment
 import prasad.vennam.moneypilot.data.entity.Transaction
 import prasad.vennam.moneypilot.data.entity.TransactionType
 import prasad.vennam.moneypilot.data.repository.ExchangeRateRepository
-import prasad.vennam.moneypilot.data.repository.MoneyPilotRepository
+import prasad.vennam.moneypilot.domain.usecase.GetBudgetsUseCase
+import prasad.vennam.moneypilot.domain.usecase.GetCategoriesUseCase
+import prasad.vennam.moneypilot.domain.usecase.GetInvestmentsUseCase
+import prasad.vennam.moneypilot.domain.usecase.GetTransactionsUseCase
+import prasad.vennam.moneypilot.feature.ai.domain.AiRepository
 import prasad.vennam.moneypilot.util.inRupees
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -47,9 +52,16 @@ data class FinancialInsight(
 
 sealed class AiRecommendationState {
     object Idle : AiRecommendationState()
+
     object Loading : AiRecommendationState()
-    data class Success(val text: String) : AiRecommendationState()
-    data class Error(val message: String) : AiRecommendationState()
+
+    data class Success(
+        val text: String,
+    ) : AiRecommendationState()
+
+    data class Error(
+        val message: String,
+    ) : AiRecommendationState()
 }
 
 data class TrendPoint(
@@ -89,7 +101,10 @@ private data class AnalyticsRawData(
 class AnalyticsViewModel
     @Inject
     constructor(
-        private val repository: MoneyPilotRepository,
+        private val getTransactionsUseCase: GetTransactionsUseCase,
+        private val getCategoriesUseCase: GetCategoriesUseCase,
+        private val getInvestmentsUseCase: GetInvestmentsUseCase,
+        private val getBudgetsUseCase: GetBudgetsUseCase,
         private val exchangeRateRepo: ExchangeRateRepository,
         private val userPreferences: UserPreferences,
         private val aiRepository: AiRepository,
@@ -100,10 +115,10 @@ class AnalyticsViewModel
 
         private val dbDataFlow =
             combine(
-                repository.allTransactions,
-                repository.allCategories,
-                repository.allInvestments,
-                repository.allBudgets,
+                getTransactionsUseCase(),
+                getCategoriesUseCase(),
+                getInvestmentsUseCase(),
+                getBudgetsUseCase(),
             ) { t, c, i, b -> AnalyticsRawData(t, c, i, b) }
 
         val uiState: StateFlow<AnalyticsState> =
@@ -402,11 +417,12 @@ class AnalyticsViewModel
                     assetAllocations = assetAllocations,
                     insights = insights,
                 )
-            }.stateIn(
-                scope = viewModelScope,
-                started = SharingStarted.WhileSubscribed(5000),
-                initialValue = AnalyticsState(isLoading = true),
-            )
+            }.flowOn(Dispatchers.Default)
+                .stateIn(
+                    scope = viewModelScope,
+                    started = SharingStarted.WhileSubscribed(5000),
+                    initialValue = AnalyticsState(isLoading = true),
+                )
 
         fun setTimeFilter(filter: TimeFilter) {
             selectedTimeFilter.update { filter }
@@ -415,21 +431,27 @@ class AnalyticsViewModel
         fun generateAiRecommendation(currencyCode: String) {
             val state = uiState.value
             if (state.isLoading) return
-            
+
             viewModelScope.launch {
                 _aiRecommendation.value = AiRecommendationState.Loading
                 try {
-                    val summary = buildString {
-                        append("Savings: ${String.format("%.1f", state.savingsRate)}%, ")
-                        if (state.insights.isNotEmpty()) {
-                            append("Key Findings: ${state.insights.take(2).joinToString("; ") { it.title + " (" + it.description + ")" }}")
+                    val summary =
+                        buildString {
+                            append("Savings: ${String.format("%.1f", state.savingsRate)}%, ")
+                            if (state.insights.isNotEmpty()) {
+                                append(
+                                    "Key Findings: ${state.insights.take(2).joinToString("; ") { it.title + " (" + it.description + ")" }}",
+                                )
+                            }
                         }
-                    }
                     val advice = aiRepository.generateShortAdvice(summary)
                     if (advice.isNotEmpty()) {
                         _aiRecommendation.value = AiRecommendationState.Success(advice)
                     } else {
-                        _aiRecommendation.value = AiRecommendationState.Error("AI Model is not ready. Go to the AI Chat tab to download and initialize the model.")
+                        _aiRecommendation.value =
+                            AiRecommendationState.Error(
+                                "AI Model is not ready. Go to the AI Chat tab to download and initialize the model.",
+                            )
                     }
                 } catch (e: Exception) {
                     _aiRecommendation.value = AiRecommendationState.Error(e.message ?: "Unknown error")

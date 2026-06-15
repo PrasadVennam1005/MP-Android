@@ -14,17 +14,28 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import net.sqlcipher.database.SQLiteDatabase
+import net.sqlcipher.database.SupportFactory
 import prasad.vennam.moneypilot.data.MoneyPilotDatabase
 import prasad.vennam.moneypilot.data.UserPreferences
+import prasad.vennam.moneypilot.data.dao.BookmarkedArticleDao
 import prasad.vennam.moneypilot.data.dao.BudgetDao
 import prasad.vennam.moneypilot.data.dao.CategoryDao
+import prasad.vennam.moneypilot.data.dao.EmergencyFundDao
 import prasad.vennam.moneypilot.data.dao.ExchangeRateDao
 import prasad.vennam.moneypilot.data.dao.InvestmentDao
 import prasad.vennam.moneypilot.data.dao.LoanDao
+import prasad.vennam.moneypilot.data.dao.LoanPaymentDao
 import prasad.vennam.moneypilot.data.dao.NotificationDao
+import prasad.vennam.moneypilot.data.dao.PendingTransactionDao
 import prasad.vennam.moneypilot.data.dao.TransactionDao
 import prasad.vennam.moneypilot.data.entity.Category
 import prasad.vennam.moneypilot.data.repository.MoneyPilotRepository
+import prasad.vennam.moneypilot.domain.usecase.BackupSyncManager
+import prasad.vennam.moneypilot.domain.usecase.LoanReminderScheduler
+import prasad.vennam.moneypilot.util.SecureStorageHelper
+import prasad.vennam.moneypilot.worker.BackupSyncManagerImpl
+import prasad.vennam.moneypilot.worker.LoanReminderSchedulerImpl
 import javax.inject.Provider
 import javax.inject.Singleton
 
@@ -33,16 +44,48 @@ import javax.inject.Singleton
 object DatabaseModule {
     @Provides
     @Singleton
+    fun provideSecureStorageHelper(
+        @ApplicationContext context: Context,
+    ): SecureStorageHelper = SecureStorageHelper(context)
+
+    @Provides
+    @Singleton
     fun provideDatabase(
         @ApplicationContext context: Context,
+        secureStorageHelper: SecureStorageHelper,
         categoryDaoProvider: Provider<CategoryDao>,
-    ): MoneyPilotDatabase =
-        Room
+    ): MoneyPilotDatabase {
+        val dbName = "money_pilot_database"
+        val dbFile = context.getDatabasePath(dbName)
+        val passphraseStr = secureStorageHelper.getOrGenerateDatabasePassphraseString()
+        val passphraseBytes = passphraseStr.toByteArray(Charsets.UTF_8)
+        val factory = SupportFactory(passphraseBytes)
+
+        if (dbFile.exists()) {
+            try {
+                SQLiteDatabase.loadLibs(context)
+                val db =
+                    SQLiteDatabase.openDatabase(
+                        dbFile.absolutePath,
+                        passphraseStr,
+                        null,
+                        SQLiteDatabase.OPEN_READONLY,
+                    )
+                db.close()
+            } catch (e: Exception) {
+                android.util.Log.e("DatabaseModule", "Existing database cannot be decrypted, deleting it to recreate securely", e)
+                context.deleteDatabase(dbName)
+            }
+        }
+
+        return Room
             .databaseBuilder(
                 context,
                 MoneyPilotDatabase::class.java,
-                "money_pilot_database",
-            ).addCallback(
+                dbName,
+            ).openHelperFactory(factory)
+            .fallbackToDestructiveMigration(true)
+            .addCallback(
                 object : RoomDatabase.Callback() {
                     override fun onOpen(db: SupportSQLiteDatabase) {
                         super.onOpen(db)
@@ -62,7 +105,12 @@ object DatabaseModule {
                 MoneyPilotDatabase.MIGRATION_3_4,
                 MoneyPilotDatabase.MIGRATION_4_5,
                 MoneyPilotDatabase.MIGRATION_5_6,
+                MoneyPilotDatabase.MIGRATION_6_7,
+                MoneyPilotDatabase.MIGRATION_7_8,
+                MoneyPilotDatabase.MIGRATION_8_9,
+                MoneyPilotDatabase.MIGRATION_9_10,
             ).build()
+    }
 
     @Provides
     fun provideNotificationDao(database: MoneyPilotDatabase): NotificationDao = database.notificationDao()
@@ -82,11 +130,27 @@ object DatabaseModule {
 
     @Provides
     @Singleton
+    fun provideLoanPaymentDao(database: MoneyPilotDatabase): LoanPaymentDao = database.loanPaymentDao()
+
+    @Provides
+    @Singleton
     fun provideInvestmentDao(database: MoneyPilotDatabase): InvestmentDao = database.investmentDao()
 
     @Provides
     @Singleton
     fun provideExchangeRateDao(database: MoneyPilotDatabase): ExchangeRateDao = database.exchangeRateDao()
+
+    @Provides
+    @Singleton
+    fun provideEmergencyFundDao(database: MoneyPilotDatabase): EmergencyFundDao = database.emergencyFundDao()
+
+    @Provides
+    @Singleton
+    fun providePendingTransactionDao(database: MoneyPilotDatabase): PendingTransactionDao = database.pendingTransactionDao()
+
+    @Provides
+    @Singleton
+    fun provideBookmarkedArticleDao(database: MoneyPilotDatabase): BookmarkedArticleDao = database.bookmarkedArticleDao()
 
     @Provides
     @Singleton
@@ -102,6 +166,39 @@ object DatabaseModule {
         budgetDao: BudgetDao,
         investmentDao: InvestmentDao,
         loanDao: LoanDao,
+        loanPaymentDao: LoanPaymentDao,
+        emergencyFundDao: EmergencyFundDao,
+        pendingTransactionDao: PendingTransactionDao,
+        bookmarkedArticleDao: BookmarkedArticleDao,
+        notificationDao: NotificationDao,
         database: MoneyPilotDatabase,
-    ): MoneyPilotRepository = MoneyPilotRepository(categoryDao, transactionDao, budgetDao, investmentDao, loanDao, database)
+    ): MoneyPilotRepository =
+        MoneyPilotRepository(
+            categoryDao = categoryDao,
+            transactionDao = transactionDao,
+            budgetDao = budgetDao,
+            investmentDao = investmentDao,
+            loanDao = loanDao,
+            loanPaymentDao = loanPaymentDao,
+            emergencyFundDao = emergencyFundDao,
+            pendingTransactionDao = pendingTransactionDao,
+            bookmarkedArticleDao = bookmarkedArticleDao,
+            notificationDao = notificationDao,
+            database = database,
+        )
+
+    @Provides
+    @Singleton
+    fun provideLoanReminderScheduler(
+        @ApplicationContext context: Context,
+        loanDao: LoanDao,
+        notificationDao: NotificationDao,
+    ): LoanReminderScheduler = LoanReminderSchedulerImpl(context, loanDao, notificationDao)
+
+    @Provides
+    @Singleton
+    fun provideBackupSyncManager(
+        repository: MoneyPilotRepository,
+        userPreferences: UserPreferences,
+    ): BackupSyncManager = BackupSyncManagerImpl(repository, userPreferences)
 }

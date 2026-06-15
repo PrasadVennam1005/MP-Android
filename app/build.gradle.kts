@@ -9,6 +9,7 @@ plugins {
     alias(libs.plugins.jetbrains.kotlin.plugin.serialization)
     alias(libs.plugins.google.services)
     alias(libs.plugins.ktlint)
+    alias(libs.plugins.detekt)
 }
 
 val localProperties = Properties()
@@ -58,8 +59,8 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
     buildFeatures {
         compose = true
@@ -101,6 +102,9 @@ dependencies {
     implementation(libs.googleid)
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
+    ksp(libs.kotlinx.metadata)
+    implementation(libs.androidx.hilt.work)
+    ksp(libs.androidx.hilt.compiler)
     implementation(libs.androidx.hilt.navigation.compose)
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.lifecycle.runtime.ktx)
@@ -125,6 +129,7 @@ dependencies {
     testImplementation(libs.androidx.junit)
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation("org.mockito:mockito-core:5.23.0")
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -136,4 +141,6 @@ dependencies {
     "ksp"(libs.moshi.kotlin.codegen)
     implementation(libs.androidx.work.runtime)
     implementation(libs.litert.lm.android)
+    implementation(libs.androidx.security.crypto)
+    implementation(libs.sqlcipher.android)
 }

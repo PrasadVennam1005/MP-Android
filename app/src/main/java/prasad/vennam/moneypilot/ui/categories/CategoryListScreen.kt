@@ -338,11 +338,20 @@ fun AddCategorySheetContent(
 
         Spacer(modifier = Modifier.height(16.dp))
 
+        val isNameError = name.isNotEmpty() && name.trim().isEmpty()
+
         OutlinedTextField(
             value = name,
             onValueChange = { name = it },
             label = { Text(stringResource(R.string.category_name)) },
             modifier = Modifier.fillMaxWidth(),
+            isError = isNameError,
+            supportingText =
+                if (isNameError) {
+                    { Text(stringResource(R.string.category_name_error_desc)) }
+                } else {
+                    null
+                },
             singleLine = true,
             shape = MaterialTheme.shapes.large,
         )
