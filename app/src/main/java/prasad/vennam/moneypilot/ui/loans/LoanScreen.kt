@@ -25,6 +25,7 @@ import androidx.compose.material.icons.rounded.AccountBalanceWallet
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Badge
 import androidx.compose.material.icons.rounded.Business
+import androidx.compose.material.icons.rounded.Calculate
 import androidx.compose.material.icons.rounded.CalendarMonth
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Close
@@ -50,8 +51,9 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import prasad.vennam.moneypilot.R
 import prasad.vennam.moneypilot.data.UserPreferences
 import prasad.vennam.moneypilot.data.entity.Loan
+import prasad.vennam.moneypilot.ui.components.ProfileIconButton
 import prasad.vennam.moneypilot.ui.dashboard.SyncState
-import prasad.vennam.moneypilot.ui.dashboard.components.DashboardTopBar
+import prasad.vennam.moneypilot.ui.dashboard.SyncStatusIndicator
 import prasad.vennam.moneypilot.ui.viewmodel.DashboardViewModel
 import prasad.vennam.moneypilot.util.CurrencyFormatter
 import prasad.vennam.moneypilot.util.LocalCurrencyCode
@@ -68,13 +70,37 @@ fun LoanScreen(
     userData: UserPreferences.UserData?,
     syncState: SyncState?,
     onProfileClick: () -> Unit,
+    onNavigateToEmiCalculator: () -> Unit,
+    prefillAmount: Double? = null,
+    prefillRate: Double? = null,
+    prefillTenureMonths: Int? = null,
+    prefillEmi: Double? = null
 ) {
     val currencyCode = LocalCurrencyCode.current
     val state by viewModel.uiState.collectAsState()
     var selectedLoan by remember { mutableStateOf<Loan?>(null) }
-    var showAddLoanSheet by remember { mutableStateOf(false) }
+    var showAddLoanSheet by remember { mutableStateOf(prefillAmount != null) }
     var loanToDelete by remember { mutableStateOf<Loan?>(null) }
     var loanToPay by remember { mutableStateOf<Loan?>(null) }
+
+    // Use derived state or side effect to handle pre-fill
+    val initialPrefillLoan = remember(prefillAmount, prefillRate, prefillTenureMonths, prefillEmi) {
+        if (prefillAmount != null) {
+            Loan(
+                name = "New Loan",
+                totalAmount = (prefillAmount * 100).toLong(),
+                outstandingAmount = (prefillAmount * 100).toLong(),
+                emiAmount = ((prefillEmi ?: 0.0) * 100).toLong(),
+                nextEmiDate = System.currentTimeMillis(),
+                interestRate = prefillRate ?: 0.0,
+                tenureMonths = prefillTenureMonths ?: 12
+            )
+        } else null
+    }
+
+    if (initialPrefillLoan != null && selectedLoan == null && showAddLoanSheet) {
+        // This is a bit hacky but works for pre-filling "Add" mode
+    }
 
     val lazyListState = rememberLazyListState()
     var isFabVisible by remember { mutableStateOf(true) }
@@ -97,12 +123,29 @@ fun LoanScreen(
 
     Scaffold(
         topBar = {
-            DashboardTopBar(
-                userData = userData,
-                syncState = syncState,
-                unreadCount = 0,
-                onProfileClick = onProfileClick,
-                onNotificationClick = {},
+            TopAppBar(
+                title = {
+                    Text(
+                        text = stringResource(R.string.my_loans),
+                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                    )
+                },
+                actions = {
+                    if (syncState != null) {
+                        SyncStatusIndicator(syncState)
+                    }
+                    IconButton(onClick = onNavigateToEmiCalculator) {
+                        Icon(
+                            imageVector = Icons.Rounded.Calculate,
+                            contentDescription = stringResource(R.string.emi_calculator),
+                        )
+                    }
+                    ProfileIconButton(userData = userData, onClick = onProfileClick)
+                },
+                colors =
+                    TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.background,
+                    ),
             )
         },
         floatingActionButton = {
@@ -132,13 +175,6 @@ fun LoanScreen(
                     .padding(horizontal = 20.dp, vertical = 16.dp)
                     .fillMaxSize(),
         ) {
-            Text(
-                text = stringResource(R.string.my_loans),
-                style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
-                color = MaterialTheme.colorScheme.onBackground,
-                modifier = Modifier.padding(bottom = 16.dp),
-            )
-
             if (state.loans.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -232,8 +268,11 @@ fun LoanScreen(
 
     if (showAddLoanSheet) {
         LoanFormBottomSheet(
-            initialLoan = selectedLoan,
-            onDismiss = { showAddLoanSheet = false },
+            initialLoan = selectedLoan ?: initialPrefillLoan,
+            onDismiss = { 
+                showAddLoanSheet = false
+                selectedLoan = null
+            },
             onConfirm = { name, total, outstanding, emi, lenderName, interestRate, tenureMonths, dueDayOfMonth, isNotificationEnabled ->
                 if (selectedLoan == null) {
                     viewModel.addLoan(

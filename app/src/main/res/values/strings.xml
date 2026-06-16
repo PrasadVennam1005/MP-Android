@@ -3,7 +3,7 @@
     <string name="dashboard">Dashboard</string>
     <string name="budgets">Budgets</string>
     <string name="reports">Reports</string>
-    <string name="search_currency">Search currency...</string>
+    <string name="search_currency">Search currency…</string>
     <string name="select_currency">Select Currency</string>
     <string name="search">Search</string>
     <string name="close">Close</string>
@@ -149,11 +149,11 @@
     <string name="profit_loss">Profit / Loss</string>
     <string name="quick_actions">Quick Actions</string>
     <string name="scan">Scan</string>
-    <string name="syncing_with_google_drive">Syncing with Google Drive...</string>
+    <string name="syncing_with_google_drive">Syncing with Google Drive…</string>
 
     <string name="transaction">Transaction</string>
     <string name="cloud_synced">Cloud Synced</string>
-    <string name="syncing">Syncing...</string>
+    <string name="syncing">Syncing…</string>
     <string name="not_connected">Not Connected</string>
     <string name="sync_failed">Sync Failed</string>
 
@@ -190,7 +190,7 @@
     <string name="support">Support</string>
     <string name="about">About</string>
     <string name="app_version_label">MoneyPilot v1.0.0</string>
-    <string name="syncing_data">Syncing data to Google Sheets...</string>
+    <string name="syncing_data">Syncing data to Google Sheets…</string>
     <string name="sign_in_to_sync">Sign in to sync your data</string>
     <string name="restricted_guest">This feature is restricted for Guest users.</string>
     <string name="financial_goal">Financial Goal</string>
@@ -242,7 +242,7 @@
     <string name="interest_rate_placeholder">e.g. 8.5</string>
     <string name="tenure_months">Tenure (Months)</string>
     <string name="tenure_placeholder">e.g. 36</string>
-    <string name="emi_due_day_label">EMI Due Day of Month (1 - 28)</string>
+    <string name="emi_due_day_label">EMI Due Day of Month (1 – 28)</string>
     <string name="emi_due_day_placeholder">e.g. 5</string>
     <string name="record_payment">Record Payment</string>
     <string name="extra_payment_top_up">This is an extra payment (Top-up)</string>
@@ -306,27 +306,27 @@
     <string name="not_enough_data_desc">To generate smart financial recommendations and health stats, please log your transactions, investments, or loans.</string>
     <string name="talk_to_copilot_btn">Talk to Copilot AI to Log</string>
     <string name="ai_smart_tip">AI Smart Tip</string>
-    <string name="analyzing_data_llm">Analyzing data with local LLM...</string>
+    <string name="analyzing_data_llm">Analyzing data with local LLM…</string>
     <string name="tap_to_download_model">Tap here to configure or download the AI model.</string>
     <string name="limit_exceeded">Limit Exceeded</string>
     <string name="budget_overrun_recommendation">Review category budgets and set strict caps in the reports tab.</string>
 
     <string name="moneypilot_copilot">MoneyPilot Copilot</string>
-    <string name="review_action_placeholder">Review the action above...</string>
-    <string name="ask_ai_placeholder">Ask anything or say \'add ₹500 Food\'...</string>
+    <string name="review_action_placeholder">Review the action above…</string>
+    <string name="ask_ai_placeholder">Ask anything or say \'add ₹500 Food\'…</string>
     <string name="ai_download_required_title">AI Model Download Required</string>
     <string name="ai_download_required_desc">To parse your commands and run queries privately, MoneyPilot needs to download a compact 1.5GB AI model directly onto your device. No financial data ever leaves your phone.</string>
     <string name="download_model_btn">Download Local Model (1.5 GB)</string>
-    <string name="downloading_model_title">Downloading AI Model...</string>
-    <string name="downloading_progress_desc">Downloading model assets... %1$d%% complete.</string>
-    <string name="initializing_llm_title">Initializing LLM Engine...</string>
+    <string name="downloading_model_title">Downloading AI Model…</string>
+    <string name="downloading_progress_desc">Downloading model assets… %1$d%% complete.</string>
+    <string name="initializing_llm_title">Initializing LLM Engine…</string>
     
     <string name="status_offline">Offline</string>
-    <string name="status_initializing">Initializing...</string>
+    <string name="status_initializing">Initializing…</string>
     <string name="status_ready">Ready &amp; Secure</string>
     <string name="status_error">Error</string>
-    <string name="status_processing">Processing...</string>
-    <string name="status_downloading">Downloading...</string>
+    <string name="status_processing">Processing…</string>
+    <string name="status_downloading">Downloading…</string>
     <string name="status_pending_confirm">Pending confirmation</string>
     
     <string name="meet_moneypilot_copilot">Meet MoneyPilot Copilot</string>
@@ -358,14 +358,14 @@
     <string name="delete_account">Delete Account</string>
     <string name="delete_account_confirm_title">Delete Account?</string>
     <string name="delete_account_confirm_message">Are you sure you want to delete your account? This action is permanent and will completely delete your local database, your Google Sheets backup spreadsheet, and all user preferences. This cannot be undone.</string>
-    <string name="delete_account_deleting">Deleting account and wiping data...</string>
+    <string name="delete_account_deleting">Deleting account and wiping data…</string>
     <string name="delete_account_success">Account successfully deleted.</string>
     <string name="delete_account_failed">Failed to delete account completely. Local data was cleared.</string>
 
     <string name="reset_guest_data">Reset Guest Data</string>
     <string name="reset_guest_confirm_title">Reset Guest Session?</string>
     <string name="reset_guest_confirm_message">Are you sure you want to reset your Guest session? This action is permanent and will completely clear your local transactions, budgets, investments, categories, and settings. This cannot be undone.</string>
-    <string name="resetting_guest_data">Resetting guest session and data...</string>
+    <string name="resetting_guest_data">Resetting guest session and data…</string>
     <string name="reset_guest_success">Guest session reset successfully.</string>
 
     <!-- Emergency Fund -->
@@ -506,4 +506,55 @@
     <!-- Currency Formatter -->
     <string name="default_currency_code">INR</string>
     <string name="currency_fallback_format">%1$.2f %2$s</string>
+
+    <!-- EMI Calculator -->
+    <string name="emi_calculator">EMI Calculator</string>
+    <string name="loan_emi_calculator">Loan EMI Calculator</string>
+    <string name="emi_calculator_desc">Plan your financial future with precision. Compare different loan types and calculate your monthly repayments instantly.</string>
+    <string name="home_loan">Home</string>
+    <string name="car_loan">Car</string>
+    <string name="personal_loan">Personal</string>
+    <string name="other_loan">Other</string>
+    <string name="loan_amount">Loan Amount</string>
+    <string name="tenure">Tenure</string>
+    <string name="tenure_years">Tenure (Years)</string>
+    <string name="calculate_emi">Calculate EMI</string>
+    <string name="total_interest">Total Interest</string>
+    <string name="total_payable">Total Payable</string>
+    <string name="payment_breakdown">Payment Breakdown</string>
+    <string name="principal_amount">Principal Amount</string>
+    <string name="view_detailed_report">View Detailed Report</string>
+    <string name="total_interest_vs_principal">TOTAL INTEREST VS PRINCIPAL</string>
+    <string name="completion_date">Completion Date</string>
+    <string name="yearly_label">Yearly</string>
+    <string name="search_installments">Search installments…</string>
+    <string name="installment">Installment</string>
+    <string name="principal">Principal</string>
+    <string name="interest">Interest</string>
+    <string name="showing_installments">Showing %1$d of %2$d installments</string>
+    <string name="showing_installment_range">Showing %1$d-%2$d of %3$d installments</string>
+    <string name="processing_fee">Processing Fee</string>
+    <string name="loan_ends">Loan Ends</string>
+    <string name="save_as_loan">Save As Loan</string>
+    <string name="share_calculation">Share Calculation</string>
+    <string name="effective_interest_rate">Effective Interest Rate</string>
+    <string name="loan_comparison">Loan Comparison</string>
+    <string name="prepayment_calculator">Prepayment Calculator</string>
+    <string name="affordability_calculator">Affordability Calculator</string>
+    <string name="extra_monthly_payment">Extra Monthly Payment</string>
+    <string name="one_time_prepayment">One-time Prepayment</string>
+    <string name="interest_saved">Interest Saved</string>
+    <string name="months_saved">Months Saved</string>
+    <string name="new_closure_date">New Closure Date</string>
+    <string name="monthly_income_label">Monthly Income</string>
+    <string name="recommended_emi">Recommended EMI</string>
+    <string name="max_safe_loan">Max Safe Loan Amount</string>
+    <string name="loan_a">Loan A</string>
+    <string name="loan_b">Loan B</string>
+    <string name="emi_difference">EMI Difference</string>
+    <string name="total_savings">Total Savings</string>
+    <string name="winner_recommendation">Recommendation: %1$s is better.</string>
+    <string name="jump_to_year">Jump to Year</string>
+    <string name="export_report">Export Report</string>
+    <string name="no_records_found">No records found</string>
 </resources>

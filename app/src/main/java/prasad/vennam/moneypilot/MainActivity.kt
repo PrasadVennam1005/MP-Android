@@ -40,8 +40,11 @@ import prasad.vennam.moneypilot.ui.dashboard.SyncState
 import prasad.vennam.moneypilot.ui.emergencyfund.EmergencyFundScreen
 import prasad.vennam.moneypilot.ui.faq.FaqScreen
 import prasad.vennam.moneypilot.ui.investments.InvestmentScreen
+import prasad.vennam.moneypilot.ui.loans.EmiCalculatorScreen
 import prasad.vennam.moneypilot.ui.loans.LoanScreen
 import prasad.vennam.moneypilot.ui.navigation.Destination
+import prasad.vennam.moneypilot.ui.news.NewsScreen
+import prasad.vennam.moneypilot.ui.news.NewsWebViewScreen
 import prasad.vennam.moneypilot.ui.scanner.ReceiptScannerScreen
 import prasad.vennam.moneypilot.ui.settings.SettingsScreen
 import prasad.vennam.moneypilot.ui.theme.MoneyPilotTheme
@@ -170,7 +173,8 @@ fun MoneyPilotApp(
                 currentDestination !is Destination.AiChat &&
                 currentDestination !is Destination.Insights &&
                 currentDestination !is Destination.TermsOfService &&
-                currentDestination !is Destination.PrivacyPolicy
+                currentDestination !is Destination.PrivacyPolicy &&
+                currentDestination !is Destination.EmiCalculator
 
         NavigationSuiteScaffold(
             layoutType =
@@ -211,7 +215,7 @@ fun MoneyPilotApp(
                         selected = currentDestination is Destination.Loans,
                         onClick = {
                             backStack.clear()
-                            backStack.add(Destination.Loans)
+                            backStack.add(Destination.Loans())
                         },
                         icon = {
                             Icon(
@@ -304,7 +308,7 @@ fun MoneyPilotApp(
                                         backStack.add(Destination.Notifications)
                                     },
                                     onNavigateToLoans = {
-                                        backStack.add(Destination.Loans)
+                                        backStack.add(Destination.Loans())
                                     },
                                     onNavigateToInsights = {
                                         backStack.add(Destination.Insights)
@@ -320,6 +324,9 @@ fun MoneyPilotApp(
                                     },
                                     onNavigateToSandbox = {
                                         backStack.add(Destination.FinancialSandbox)
+                                    },
+                                    onNavigateToEmiCalculator = {
+                                        backStack.add(Destination.EmiCalculator)
                                     },
                                     analyticsHelper = analyticsHelper,
                                 )
@@ -387,6 +394,11 @@ fun MoneyPilotApp(
                                     userData = userData,
                                     syncState = syncState,
                                     onProfileClick = { backStack.add(Destination.Settings) },
+                                    onNavigateToEmiCalculator = { backStack.add(Destination.EmiCalculator) },
+                                    prefillAmount = key.prefillAmount,
+                                    prefillRate = key.prefillRate,
+                                    prefillTenureMonths = key.prefillTenureMonths,
+                                    prefillEmi = key.prefillEmi
                                 )
                             }
 
@@ -480,7 +492,7 @@ fun MoneyPilotApp(
 
                         is Destination.TermsOfService ->
                             NavEntry(key) {
-                                prasad.vennam.moneypilot.ui.news.NewsWebViewScreen(
+                                NewsWebViewScreen(
                                     url = "https://prasadvennam1005.github.io/moneypilot-legal/terms-of-service.html",
                                     title = "Terms of Service",
                                     showBookmark = false,
@@ -490,7 +502,7 @@ fun MoneyPilotApp(
 
                         is Destination.PrivacyPolicy ->
                             NavEntry(key) {
-                                prasad.vennam.moneypilot.ui.news.NewsWebViewScreen(
+                                NewsWebViewScreen(
                                     url = "https://prasadvennam1005.github.io/moneypilot-legal/privacy-policy.html",
                                     title = "Privacy Policy",
                                     showBookmark = false,
@@ -500,7 +512,7 @@ fun MoneyPilotApp(
 
                         is Destination.FinancialNews ->
                             NavEntry(key) {
-                                prasad.vennam.moneypilot.ui.news.NewsScreen(
+                                NewsScreen(
                                     onBack = { backStack.removeLastOrNull() },
                                     onNavigateToWeb = { url, title ->
                                         backStack.add(Destination.NewsWebFrame(url = url, title = title))
@@ -510,7 +522,7 @@ fun MoneyPilotApp(
 
                         is Destination.NewsWebFrame ->
                             NavEntry(key) {
-                                prasad.vennam.moneypilot.ui.news.NewsWebViewScreen(
+                                NewsWebViewScreen(
                                     url = key.url,
                                     title = key.title,
                                     onBack = { backStack.removeLastOrNull() },
@@ -521,6 +533,26 @@ fun MoneyPilotApp(
                             NavEntry(key) {
                                 prasad.vennam.moneypilot.ui.sandbox.FinancialSandboxScreen(
                                     onBack = { backStack.removeLastOrNull() },
+                                )
+                            }
+
+                        is Destination.EmiCalculator ->
+                            NavEntry(key) {
+                                EmiCalculatorScreen(
+                                    onBack = { backStack.removeLastOrNull() },
+                                    onNavigateToSaveLoan = { amount, rate, months, emi ->
+                                        backStack.add(
+                                            Destination.Loans(
+                                                prefillAmount = amount,
+                                                prefillRate = rate,
+                                                prefillTenureMonths = months,
+                                                prefillEmi = emi
+                                            )
+                                        )
+                                    },
+                                    onNavigateToCompare = {
+
+                                    }
                                 )
                             }
 

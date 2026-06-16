@@ -51,6 +51,7 @@ fun QuickActionSection(
     onNavigateToEmergencyFund: () -> Unit,
     onNavigateToNews: () -> Unit,
     onNavigateToSandbox: () -> Unit,
+    onNavigateToEmiCalculator: () -> Unit,
     isGuest: Boolean,
 ) {
     Column {
@@ -83,13 +84,6 @@ fun QuickActionSection(
                 onAddInvestment,
                 Modifier.weight(1f),
             )
-            QuickActionButton(
-                stringResource(R.string.loans),
-                Icons.Rounded.AccountBalanceWallet,
-                MaterialTheme.colorScheme.tertiary,
-                onAddLoan,
-                Modifier.weight(1f),
-            )
         }
         Row(
             modifier =
@@ -98,6 +92,13 @@ fun QuickActionSection(
                     .padding(top = 8.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
+            QuickActionButton(
+                stringResource(R.string.loans),
+                Icons.Rounded.AccountBalanceWallet,
+                MaterialTheme.colorScheme.tertiary,
+                onAddLoan,
+                Modifier.weight(1f),
+            )
             QuickActionButton(
                 stringResource(R.string.scan),
                 Icons.Rounded.Camera,
@@ -113,6 +114,14 @@ fun QuickActionSection(
                 onNavigateToEmergencyFund,
                 Modifier.weight(1f),
             )
+        }
+        Row(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
             QuickActionButton(
                 stringResource(R.string.news),
                 Icons.AutoMirrored.Rounded.Article,
@@ -125,6 +134,13 @@ fun QuickActionSection(
                 Icons.Rounded.Calculate,
                 Color(0xFF8E24AA),
                 onNavigateToSandbox,
+                Modifier.weight(1f),
+            )
+            QuickActionButton(
+                stringResource(R.string.emi_calculator),
+                Icons.Rounded.Calculate,
+                Color(0xFF0288D1),
+                onNavigateToEmiCalculator,
                 Modifier.weight(1f),
             )
         }

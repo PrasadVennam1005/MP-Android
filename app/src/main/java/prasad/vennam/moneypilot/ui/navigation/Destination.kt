@@ -33,7 +33,12 @@ sealed interface Destination : NavKey {
     data object Investments : Destination
 
     @Serializable
-    data object Loans : Destination
+    data class Loans(
+        val prefillAmount: Double? = null,
+        val prefillRate: Double? = null,
+        val prefillTenureMonths: Int? = null,
+        val prefillEmi: Double? = null
+    ) : Destination
 
     @Serializable
     data object Reports : Destination
@@ -73,4 +78,10 @@ sealed interface Destination : NavKey {
 
     @Serializable
     data object FinancialSandbox : Destination
+
+    @Serializable
+    data object EmiCalculator : Destination
+
+    @Serializable
+    data object CompareLoans : Destination
 }

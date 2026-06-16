@@ -86,6 +86,7 @@ fun DashboardScreen(
     onNavigateToEmergencyFund: () -> Unit,
     onNavigateToNews: () -> Unit,
     onNavigateToSandbox: () -> Unit,
+    onNavigateToEmiCalculator: () -> Unit,
 ) {
     val dashboardState by dashboardViewModel.uiState.collectAsState()
     val userData by mainViewModel.userData.collectAsState()
@@ -460,6 +461,7 @@ fun DashboardScreen(
                             onNavigateToEmergencyFund = onNavigateToEmergencyFund,
                             onNavigateToNews = onNavigateToNews,
                             onNavigateToSandbox = onNavigateToSandbox,
+                            onNavigateToEmiCalculator = onNavigateToEmiCalculator,
                             isGuest = isGuest,
                         )
                     }
