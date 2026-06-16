@@ -99,16 +99,6 @@ object DatabaseModule {
                         }
                     }
                 },
-            ).addMigrations(
-                MoneyPilotDatabase.MIGRATION_1_2,
-                MoneyPilotDatabase.MIGRATION_2_3,
-                MoneyPilotDatabase.MIGRATION_3_4,
-                MoneyPilotDatabase.MIGRATION_4_5,
-                MoneyPilotDatabase.MIGRATION_5_6,
-                MoneyPilotDatabase.MIGRATION_6_7,
-                MoneyPilotDatabase.MIGRATION_7_8,
-                MoneyPilotDatabase.MIGRATION_8_9,
-                MoneyPilotDatabase.MIGRATION_9_10,
             ).build()
     }
 

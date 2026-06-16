@@ -32,3 +32,26 @@
 # Keep data classes that Moshi will serialize/deserialize
 -keep class prasad.vennam.moneypilot.data.entity.** { *; }
 -keep class prasad.vennam.moneypilot.util.FinancePriceFetcher$** { *; }
+
+# SQLCipher for Android
+-keep class net.sqlcipher.** { *; }
+-keep interface net.sqlcipher.** { *; }
+-dontwarn net.sqlcipher.**
+
+# Kotlinx Serialization
+-keepattributes *Annotation*,Signature,InnerClasses,EnclosingMethod
+-keepclassmembers class * {
+    @kotlinx.serialization.Serializable *;
+}
+-keep class * implements kotlinx.serialization.KSerializer {
+    *;
+}
+-keepclassmembers class * {
+    *** Companion;
+}
+-keepclassmembers class * {
+    *** write$Self$*(...);
+}
+
+# Keep all Navigation Destinations
+-keep class prasad.vennam.moneypilot.ui.navigation.Destination** { *; }

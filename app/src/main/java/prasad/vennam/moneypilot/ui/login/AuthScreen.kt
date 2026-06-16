@@ -81,6 +81,8 @@ fun AuthScreen(
     mainViewModel: MainViewModel,
     analyticsHelper: AnalyticsHelper,
     skipSplash: Boolean = false,
+    onNavigateToTerms: () -> Unit,
+    onNavigateToPrivacy: () -> Unit,
     onAuthSuccess: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -407,7 +409,7 @@ fun AuthScreen(
                         val annotatedText =
                             buildAnnotatedString {
                                 append("By continuing, you agree to our ")
-                                pushStringAnnotation(tag = "terms", annotation = "https://prasadvennam1005.github.io/MP-Android/terms.html")
+                                pushStringAnnotation(tag = "terms", annotation = "https://prasadvennam1005.github.io/moneypilot-legal/terms-of-service.html")
                                 withStyle(
                                     style =
                                         SpanStyle(
@@ -422,7 +424,7 @@ fun AuthScreen(
                                 append(" and ")
                                 pushStringAnnotation(
                                     tag = "privacy",
-                                    annotation = "https://prasadvennam1005.github.io/MP-Android/privacy.html",
+                                    annotation = "https://prasadvennam1005.github.io/moneypilot-legal/privacy-policy.html",
                                 )
                                 withStyle(
                                     style =
@@ -449,14 +451,14 @@ fun AuthScreen(
                                 annotatedText
                                     .getStringAnnotations(tag = "terms", start = offset, end = offset)
                                     .firstOrNull()
-                                    ?.let { annotation ->
-                                        uriHandler.openUri(annotation.item)
+                                    ?.let {
+                                        onNavigateToTerms()
                                     }
                                 annotatedText
                                     .getStringAnnotations(tag = "privacy", start = offset, end = offset)
                                     .firstOrNull()
-                                    ?.let { annotation ->
-                                        uriHandler.openUri(annotation.item)
+                                    ?.let {
+                                        onNavigateToPrivacy()
                                     }
                             },
                             modifier = Modifier.padding(horizontal = 32.dp),

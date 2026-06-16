@@ -1,7 +1,12 @@
 package prasad.vennam.moneypilot.domain.usecase
 
 import prasad.vennam.moneypilot.data.UserPreferences
-import prasad.vennam.moneypilot.data.entity.*
+import prasad.vennam.moneypilot.data.entity.Budget
+import prasad.vennam.moneypilot.data.entity.Category
+import prasad.vennam.moneypilot.data.entity.EmergencyFund
+import prasad.vennam.moneypilot.data.entity.Investment
+import prasad.vennam.moneypilot.data.entity.Loan
+import prasad.vennam.moneypilot.data.entity.Transaction
 import prasad.vennam.moneypilot.data.repository.MoneyPilotRepository
 import javax.inject.Inject
 

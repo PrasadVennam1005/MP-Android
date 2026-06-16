@@ -30,12 +30,6 @@ sealed interface Destination : NavKey {
     data object AiChat : Destination
 
     @Serializable
-    data object Expenses : Destination
-
-    @Serializable
-    data object Income : Destination
-
-    @Serializable
     data object Investments : Destination
 
     @Serializable

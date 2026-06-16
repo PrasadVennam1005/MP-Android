@@ -17,33 +17,18 @@ import kotlinx.coroutines.launch
 import prasad.vennam.moneypilot.data.UserPreferences
 import prasad.vennam.moneypilot.data.entity.Investment
 import prasad.vennam.moneypilot.data.repository.ExchangeRateRepository
+import prasad.vennam.moneypilot.domain.model.SymbolResult
+import prasad.vennam.moneypilot.domain.repository.FinanceRepository
 import prasad.vennam.moneypilot.domain.usecase.DeleteInvestmentUseCase
 import prasad.vennam.moneypilot.domain.usecase.GetInvestmentsUseCase
 import prasad.vennam.moneypilot.domain.usecase.SaveInvestmentUseCase
 import prasad.vennam.moneypilot.domain.usecase.UpdateInvestmentUseCase
-import prasad.vennam.moneypilot.util.FinancePriceFetcher
+import prasad.vennam.moneypilot.ui.viewmodel.state.*
+import prasad.vennam.moneypilot.util.FinanceMath
 import prasad.vennam.moneypilot.util.inPaisa
 import prasad.vennam.moneypilot.util.inRupees
 import javax.inject.Inject
-
-data class InvestmentSummary(
-    val totalInvested: Double = 0.0,
-    val totalCurrent: Double = 0.0,
-)
-
-// ─── Auto-fill quantity state ─────────────────────────────────────────────────
-sealed class AutoFillState {
-    object Idle : AutoFillState()
-
-    object Loading : AutoFillState()
-
-    data class Success(
-        val quantity: Double,
-        val priceUsed: Double,
-    ) : AutoFillState()
-
-    object Error : AutoFillState()
-}
+import kotlin.time.Duration.Companion.milliseconds
 
 @HiltViewModel
 class InvestmentViewModel
@@ -55,6 +40,7 @@ class InvestmentViewModel
         private val userPreferences: UserPreferences,
         private val saveInvestmentUseCase: SaveInvestmentUseCase,
         private val deleteInvestmentUseCase: DeleteInvestmentUseCase,
+        private val financeRepository: FinanceRepository,
     ) : ViewModel() {
         val allInvestments: StateFlow<List<Investment>> =
             getInvestmentsUseCase()
@@ -83,13 +69,91 @@ class InvestmentViewModel
                 InvestmentSummary(totalInvested, totalCurrent)
             }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), InvestmentSummary())
 
+        private val _selectedProfile = MutableStateFlow(AllocationProfile.BALANCED)
+        val selectedProfile: StateFlow<AllocationProfile> = _selectedProfile.asStateFlow()
+
+        fun selectProfile(profile: AllocationProfile) {
+            _selectedProfile.value = profile
+        }
+
+        val allocationDetails: StateFlow<List<AllocationDetail>> =
+            combine(
+                getInvestmentsUseCase(),
+                exchangeRateRepo.allRates,
+                userPreferences.currency,
+                _selectedProfile,
+            ) { investments, rates, currentCurrency, profile ->
+                fun convertAmount(
+                    amountInPaisa: Long,
+                    fromCurrency: String,
+                ): Double {
+                    if (fromCurrency == currentCurrency) return amountInPaisa / 100.0
+                    val rateFrom = rates[fromCurrency] ?: 1.0
+                    val rateTo = rates[currentCurrency] ?: 1.0
+                    val amountInUSD = (amountInPaisa / 100.0) / rateFrom
+                    return amountInUSD * rateTo
+                }
+
+                val totalCurrent = investments.sumOf { convertAmount(it.currentValue, it.currencyCode) }
+                val grouped = investments.groupBy { it.type }
+
+                val targetWeights =
+                    when (profile) {
+                        AllocationProfile.BALANCED ->
+                            mapOf(
+                                "Mutual Fund" to 35.0,
+                                "Stock" to 25.0,
+                                "Gold" to 10.0,
+                                "FD" to 15.0,
+                                "Crypto" to 5.0,
+                                "Real Estate" to 10.0,
+                            )
+                        AllocationProfile.AGGRESSIVE ->
+                            mapOf(
+                                "Mutual Fund" to 30.0,
+                                "Stock" to 45.0,
+                                "Gold" to 5.0,
+                                "FD" to 5.0,
+                                "Crypto" to 10.0,
+                                "Real Estate" to 5.0,
+                            )
+                        AllocationProfile.CONSERVATIVE ->
+                            mapOf(
+                                "Mutual Fund" to 25.0,
+                                "Stock" to 10.0,
+                                "Gold" to 15.0,
+                                "FD" to 35.0,
+                                "Crypto" to 0.0,
+                                "Real Estate" to 15.0,
+                            )
+                    }
+
+                targetWeights.map { (type, targetPct) ->
+                    val currentAmt = grouped[type]?.sumOf { convertAmount(it.currentValue, it.currencyCode) } ?: 0.0
+                    val currentPct = if (totalCurrent > 0.0) (currentAmt / totalCurrent) * 100.0 else 0.0
+
+                    val targetAmt = totalCurrent * (targetPct / 100.0)
+                    val diffAmt = targetAmt - currentAmt
+                    val diffPct = targetPct - currentPct
+
+                    AllocationDetail(
+                        assetType = type,
+                        currentAmount = currentAmt,
+                        currentPercent = currentPct,
+                        targetPercent = targetPct,
+                        differenceAmount = diffAmt,
+                        differencePercent = diffPct,
+                    )
+                }
+            }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
         // ── Live price refresh ────────────────────────────────────────────────────
         private val _isRefreshing = MutableStateFlow(false)
         val isRefreshing = _isRefreshing.asStateFlow()
 
         // ── Symbol search (debounced) ─────────────────────────────────────────────
-        private val _symbolResults = MutableStateFlow<List<FinancePriceFetcher.SymbolResult>>(emptyList())
-        val symbolResults: StateFlow<List<FinancePriceFetcher.SymbolResult>> = _symbolResults.asStateFlow()
+        private val _symbolResults = MutableStateFlow<List<SymbolResult>>(emptyList())
+        val symbolResults: StateFlow<List<SymbolResult>> = _symbolResults.asStateFlow()
 
         private val _isSearching = MutableStateFlow(false)
         val isSearching: StateFlow<Boolean> = _isSearching.asStateFlow()
@@ -124,9 +188,9 @@ class InvestmentViewModel
                     try {
                         when {
                             assetType == "Mutual Fund" && symbol.all { it.isDigit() } ->
-                                FinancePriceFetcher.fetchNavOnDate(symbol, dateMs)
+                                financeRepository.fetchNavOnDate(symbol, dateMs)
                             else ->
-                                FinancePriceFetcher.fetchPriceOnDate(symbol, dateMs)
+                                financeRepository.fetchPriceOnDate(symbol, dateMs)
                         }
                     } catch (e: Exception) {
                         if (e is kotlinx.coroutines.CancellationException) throw e
@@ -157,7 +221,7 @@ class InvestmentViewModel
         ) {
             searchJob?.cancel()
             if (assetType == "Gold") {
-                _symbolResults.value = FinancePriceFetcher.goldSuggestions()
+                _symbolResults.value = financeRepository.goldSuggestions()
                 return
             }
             if (query.length < 2) {
@@ -166,13 +230,13 @@ class InvestmentViewModel
             }
             searchJob =
                 viewModelScope.launch {
-                    delay(350)
+                    delay(350.milliseconds)
                     _isSearching.value = true
                     _symbolResults.value =
                         try {
                             when (assetType) {
-                                "Mutual Fund" -> FinancePriceFetcher.searchMutualFunds(query)
-                                else -> FinancePriceFetcher.searchStockSymbols(query)
+                                "Mutual Fund" -> financeRepository.searchMutualFunds(query)
+                                else -> financeRepository.searchStockSymbols(query)
                             }
                         } catch (e: Exception) {
                             if (e is kotlinx.coroutines.CancellationException) throw e
@@ -214,7 +278,7 @@ class InvestmentViewModel
                                                     val sym = investment.symbol
                                                     val qty = investment.quantity ?: 0.0
                                                     if (!sym.isNullOrBlank() && qty > 0.0) {
-                                                        val priceInfo = FinancePriceFetcher.fetchYahooPrice(sym)
+                                                        val priceInfo = financeRepository.fetchYahooPrice(sym)
                                                         if (priceInfo != null) {
                                                             val rateFrom = rates[priceInfo.currency] ?: 1.0
                                                             val rateTo = rates[investment.currencyCode] ?: 1.0
@@ -242,10 +306,10 @@ class InvestmentViewModel
                                                     if (!sym.isNullOrBlank() && qty > 0.0) {
                                                         val priceInAssetCurrency =
                                                             if (sym.all { it.isDigit() }) {
-                                                                val nav = FinancePriceFetcher.fetchAmfiNav(sym)
+                                                                val nav = financeRepository.fetchAmfiNav(sym)
                                                                 if (nav != null) nav to "INR" else null
                                                             } else {
-                                                                val priceInfo = FinancePriceFetcher.fetchYahooPrice(sym)
+                                                                val priceInfo = financeRepository.fetchYahooPrice(sym)
                                                                 if (priceInfo != null) priceInfo.price to priceInfo.currency else null
                                                             }
                                                         if (priceInAssetCurrency != null) {
@@ -274,7 +338,7 @@ class InvestmentViewModel
                                                     val rate = investment.interestRate ?: 0.0
                                                     val start = investment.startDate ?: 0L
                                                     if (rate > 0.0 && start > 0L) {
-                                                        FinancePriceFetcher.calculateCompoundedValue(
+                                                        FinanceMath.calculateCompoundedValue(
                                                             investedAmount = investment.investedAmount.inRupees,
                                                             annualRate = rate,
                                                             startDate = start,

@@ -268,6 +268,7 @@
 
     <string name="expenses">Expenses</string>
     <string name="history">History</string>
+    <string name="transactions">Transactions</string>
     <string name="no_results_found">No results found</string>
     <string name="no_transactions_yet">No transactions yet</string>
 
@@ -471,4 +472,38 @@
     <string name="clear_all_notifications_desc">This will permanently delete all notifications in all categories.</string>
     <string name="clear_all">Clear All</string>
     <string name="read_article">Read Article</string>
+    <!-- Camera/Scanner Screen -->
+    <string name="camera_rationale">Camera access is required to scan receipts and automatically extract expense details.</string>
+    <string name="scanning_failed">Scanning failed</string>
+    <string name="capture_failed_formatted">Capture failed: %1$s</string>
+    <string name="processing_receipt">Processing Receipt…</string>
+
+    <!-- Dashboard Top Bar -->
+    <string name="ai_assistant">AI Assistant</string>
+
+    <!-- Dashboard Screen -->
+    <string name="login_failed_formatted">Login failed: %1$s</string>
+    <string name="error_formatted">Error: %1$s</string>
+    <string name="auto_detected_transactions">Auto-detected Transactions</string>
+    <string name="pending_transaction_single">1 pending transaction to review</string>
+    <string name="pending_transactions_plural">%1$d pending transactions to review</string>
+    <string name="review">Review</string>
+    <string name="smart_ai_insights">Smart AI Insights</string>
+    <string name="build_safety_net_title">Build a Safety Net</string>
+    <string name="safety_net_setup_prompt">Set up your Emergency Fund to prepare for unforeseen expenses.</string>
+    <string name="emergency_safety_net">Emergency Safety Net</string>
+    <string name="saved_with_value">Saved: %1$s</string>
+    <string name="goal_with_value">Goal: %1$s</string>
+    <string name="quarterly">Quarterly</string>
+    <string name="yearly">Yearly</string>
+    <string name="review_auto_detected_transactions">Review Auto-Detected Transactions</string>
+    <string name="verify_pending_transactions_desc">Verify the merchant name, category, and details extracted from your notifications before adding them to your financial record.</string>
+    <string name="merchant_note_label">Merchant / Note</string>
+    <string name="source_formatted">Source: %1$s</string>
+    <string name="show_raw_notification_text">Show raw notification text</string>
+    <string name="approve">Approve</string>
+
+    <!-- Currency Formatter -->
+    <string name="default_currency_code">INR</string>
+    <string name="currency_fallback_format">%1$.2f %2$s</string>
 </resources>

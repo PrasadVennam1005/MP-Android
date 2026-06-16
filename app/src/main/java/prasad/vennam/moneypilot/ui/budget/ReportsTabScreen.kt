@@ -1,5 +1,10 @@
 package prasad.vennam.moneypilot.ui.budget
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -7,7 +12,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material3.*
@@ -30,6 +37,7 @@ import prasad.vennam.moneypilot.ui.components.ProfileIconButton
 import prasad.vennam.moneypilot.ui.dashboard.SyncState
 import prasad.vennam.moneypilot.ui.dashboard.SyncStatusIndicator
 import prasad.vennam.moneypilot.ui.viewmodel.AnalyticsViewModel
+import prasad.vennam.moneypilot.ui.viewmodel.BudgetProgress
 import prasad.vennam.moneypilot.ui.viewmodel.BudgetViewModel
 import prasad.vennam.moneypilot.ui.viewmodel.TransactionViewModel
 import prasad.vennam.moneypilot.util.inPaisa
@@ -50,9 +58,29 @@ fun ReportsTabScreen(
     var showFormSheet by remember { mutableStateOf(false) }
     var budgetToEdit by remember { mutableStateOf<Budget?>(null) }
 
+    val lazyListState = rememberLazyListState()
+    var isFabVisible by remember { mutableStateOf(true) }
+    var previousIndex by remember { mutableIntStateOf(0) }
+    var previousOffset by remember { mutableIntStateOf(0) }
+
+    LaunchedEffect(lazyListState.firstVisibleItemIndex, lazyListState.firstVisibleItemScrollOffset) {
+        val currentIndex = lazyListState.firstVisibleItemIndex
+        val currentOffset = lazyListState.firstVisibleItemScrollOffset
+        if (currentIndex == 0 && currentOffset == 0) {
+            isFabVisible = true
+        } else if (currentIndex > previousIndex || (currentIndex == previousIndex && currentOffset > previousOffset)) {
+            isFabVisible = false
+        } else if (currentIndex < previousIndex || (currentIndex == previousIndex && currentOffset < previousOffset)) {
+            isFabVisible = true
+        }
+        previousIndex = currentIndex
+        previousOffset = currentOffset
+    }
+
     val currencyCode = prasad.vennam.moneypilot.util.LocalCurrencyCode.current
     val monthlyString = stringResource(R.string.monthly)
     val categories by budgetViewModel.allCategories.collectAsState()
+    val budgetProgresses by budgetViewModel.budgetProgresses.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
@@ -84,7 +112,11 @@ fun ReportsTabScreen(
             )
         },
         floatingActionButton = {
-            if (selectedTab == 0) {
+            AnimatedVisibility(
+                visible = selectedTab == 0 && isFabVisible,
+                enter = scaleIn() + fadeIn(),
+                exit = scaleOut() + fadeOut(),
+            ) {
                 FloatingActionButton(
                     onClick = {
                         budgetToEdit = null
@@ -131,8 +163,8 @@ fun ReportsTabScreen(
                     val deletedMessage = stringResource(R.string.budget_deleted)
                     val undoLabel = stringResource(R.string.undo)
                     BudgetContent(
-                        budgetViewModel = budgetViewModel,
-                        transactionViewModel = transactionViewModel,
+                        budgetProgresses = budgetProgresses,
+                        lazyListState = lazyListState,
                         onEditBudget = { budget ->
                             budgetToEdit = budget
                             showFormSheet = true
@@ -196,19 +228,18 @@ fun ReportsTabScreen(
 
 @Composable
 fun BudgetContent(
-    budgetViewModel: BudgetViewModel,
-    transactionViewModel: TransactionViewModel,
+    budgetProgresses: List<BudgetProgress>,
+    lazyListState: LazyListState,
     onEditBudget: (Budget) -> Unit,
     onDeleteBudget: (Budget) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val budgetProgresses by budgetViewModel.budgetProgresses.collectAsState()
-
     val calendar = Calendar.getInstance()
     val currentMonth = calendar.get(Calendar.MONTH)
     val currentYear = calendar.get(Calendar.YEAR)
 
     LazyColumn(
+        state = lazyListState,
         modifier = modifier.fillMaxSize(),
         contentPadding = PaddingValues(24.dp),
         verticalArrangement = Arrangement.spacedBy(20.dp),

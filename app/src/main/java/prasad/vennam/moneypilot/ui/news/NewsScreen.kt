@@ -12,6 +12,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.automirrored.rounded.Feed
+import androidx.compose.material.icons.automirrored.rounded.OpenInNew
 import androidx.compose.material.icons.rounded.Bookmark
 import androidx.compose.material.icons.rounded.BookmarkBorder
 import androidx.compose.material.icons.rounded.Delete
@@ -30,7 +32,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import prasad.vennam.moneypilot.R
 import prasad.vennam.moneypilot.data.entity.BookmarkedArticle
 import prasad.vennam.moneypilot.ui.viewmodel.NewsPortal
@@ -90,7 +92,7 @@ fun NewsScreen(
                     .padding(innerPadding),
         ) {
             // Segmented Tabs: Portals vs Bookmarks
-            TabRow(
+            PrimaryTabRow(
                 selectedTabIndex = selectedTab,
                 containerColor = MaterialTheme.colorScheme.surface,
                 contentColor = MaterialTheme.colorScheme.primary,
@@ -131,7 +133,7 @@ fun NewsScreen(
 
             if (selectedTab == 0) {
                 // Category Pills Scroll Row
-                ScrollableTabRow(
+                PrimaryScrollableTabRow(
                     selectedTabIndex = categories.indexOf(selectedCategory).coerceAtLeast(0),
                     edgePadding = 16.dp,
                     containerColor = MaterialTheme.colorScheme.background,
@@ -395,7 +397,7 @@ private fun NewsPortalCard(
                 )
 
                 Icon(
-                    imageVector = Icons.Rounded.OpenInNew,
+                    imageVector = Icons.AutoMirrored.Rounded.OpenInNew,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(16.dp),
@@ -438,7 +440,7 @@ private fun BookmarkedArticleCard(
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
-                    imageVector = Icons.Rounded.Feed,
+                    imageVector = Icons.AutoMirrored.Rounded.Feed,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(24.dp),
@@ -502,20 +504,13 @@ private fun SwipeToDismissBookmark(
         visible = !isRemoved,
         exit = shrinkVertically(animationSpec = tween(500)) + fadeOut(animationSpec = tween(500)),
     ) {
-        val dismissState =
-            rememberSwipeToDismissBoxState(
-                confirmValueChange = { dismissValue ->
-                    if (dismissValue == SwipeToDismissBoxValue.EndToStart || dismissValue == SwipeToDismissBoxValue.StartToEnd) {
-                        isRemoved = true
-                        true
-                    } else {
-                        false
-                    }
-                },
-            )
+        val dismissState = rememberSwipeToDismissBoxState()
 
         SwipeToDismissBox(
             state = dismissState,
+            onDismiss = {
+                isRemoved = true
+            },
             backgroundContent = {
                 val color =
                     when (dismissState.dismissDirection) {

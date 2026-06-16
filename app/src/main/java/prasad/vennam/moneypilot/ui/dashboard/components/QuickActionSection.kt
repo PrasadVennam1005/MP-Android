@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
+import androidx.compose.material.icons.automirrored.rounded.Article
 import androidx.compose.material.icons.rounded.AccountBalanceWallet
 import androidx.compose.material.icons.rounded.AddCircleOutline
 import androidx.compose.material.icons.rounded.Article
@@ -114,7 +115,7 @@ fun QuickActionSection(
             )
             QuickActionButton(
                 stringResource(R.string.news),
-                Icons.Rounded.Article,
+                Icons.AutoMirrored.Rounded.Article,
                 Color(0xFFF57C00),
                 onNavigateToNews,
                 Modifier.weight(1f),

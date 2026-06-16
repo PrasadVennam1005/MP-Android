@@ -98,8 +98,10 @@ object ReceiptParser {
         var bestAmount: Double? = null
         var bestScore = -1
 
-        lines.forEach { line ->
+        lines.forEachIndexed { index, line ->
             val lower = line.lowercase(Locale.getDefault())
+            val prevLine = if (index > 0) lines[index - 1].lowercase(Locale.getDefault()) else ""
+            val nextLine = if (index < lines.size - 1) lines[index + 1].lowercase(Locale.getDefault()) else ""
 
             val matcher = amountRegex.matcher(line)
 
@@ -118,6 +120,10 @@ object ReceiptParser {
                 amountKeywords.forEach { (keyword, keywordScore) ->
                     if (lower.contains(keyword)) {
                         score += keywordScore
+                    } else if (prevLine.contains(keyword)) {
+                        score += (keywordScore * 0.8).toInt()
+                    } else if (nextLine.contains(keyword)) {
+                        score += (keywordScore * 0.5).toInt()
                     }
                 }
 

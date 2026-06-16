@@ -5,11 +5,11 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.TrendingDown
-import androidx.compose.material.icons.automirrored.rounded.TrendingUp
+import androidx.compose.material.icons.rounded.AccountBalance
 import androidx.compose.material.icons.rounded.AccountBalanceWallet
 import androidx.compose.material.icons.rounded.BarChart
 import androidx.compose.material.icons.rounded.Dashboard
+import androidx.compose.material.icons.rounded.History
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -31,7 +31,6 @@ import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.ui.NavDisplay
 import dagger.hilt.android.AndroidEntryPoint
 import prasad.vennam.moneypilot.data.UserPreferences
-import prasad.vennam.moneypilot.data.entity.TransactionType
 import prasad.vennam.moneypilot.feature.ai.presentation.AiChatScreen
 import prasad.vennam.moneypilot.ui.ai.InsightsScreen
 import prasad.vennam.moneypilot.ui.budget.ReportsTabScreen
@@ -41,8 +40,6 @@ import prasad.vennam.moneypilot.ui.dashboard.SyncState
 import prasad.vennam.moneypilot.ui.emergencyfund.EmergencyFundScreen
 import prasad.vennam.moneypilot.ui.faq.FaqScreen
 import prasad.vennam.moneypilot.ui.investments.InvestmentScreen
-import prasad.vennam.moneypilot.ui.legal.LegalContent
-import prasad.vennam.moneypilot.ui.legal.LegalScreen
 import prasad.vennam.moneypilot.ui.loans.LoanScreen
 import prasad.vennam.moneypilot.ui.navigation.Destination
 import prasad.vennam.moneypilot.ui.scanner.ReceiptScannerScreen
@@ -85,7 +82,7 @@ class MainActivity : ComponentActivity() {
             .schedule(applicationContext)
 
         // Trigger immediate run for development testing ONLY in debug builds
-        if (prasad.vennam.moneypilot.BuildConfig.DEBUG) {
+        if (BuildConfig.DEBUG) {
             androidx.work.WorkManager.getInstance(applicationContext).enqueue(
                 androidx.work.OneTimeWorkRequestBuilder<prasad.vennam.moneypilot.worker.DailyNewsWorker>().build(),
             )
@@ -99,8 +96,8 @@ class MainActivity : ComponentActivity() {
             val themeMode by mainViewModel.themeMode.collectAsState()
             val darkTheme =
                 when (themeMode) {
-                    prasad.vennam.moneypilot.data.UserPreferences.ThemeMode.LIGHT -> false
-                    prasad.vennam.moneypilot.data.UserPreferences.ThemeMode.DARK -> true
+                    UserPreferences.ThemeMode.LIGHT -> false
+                    UserPreferences.ThemeMode.DARK -> true
                     else -> androidx.compose.foundation.isSystemInDarkTheme()
                 }
             MoneyPilotTheme(darkTheme = darkTheme) {
@@ -125,8 +122,10 @@ fun MoneyPilotApp(
 
     val currentDestination = backStack.lastOrNull()
 
-    val currencyCode by mainViewModel.currency.collectAsState(initial = "INR")
+    val defaultCurrency = stringResource(R.string.default_currency_code)
+    val currencyCode by mainViewModel.currency.collectAsState(initial = defaultCurrency)
     val userData by mainViewModel.userData.collectAsState(initial = null)
+    val isLoggedIn by mainViewModel.isLoggedIn.collectAsState(initial = false)
 
     val context = androidx.compose.ui.platform.LocalContext.current
     val workManager = remember { androidx.work.WorkManager.getInstance(context) }
@@ -165,10 +164,13 @@ fun MoneyPilotApp(
         }
 
         val showNavigation =
-            currentDestination !is Destination.Auth &&
+            isLoggedIn &&
+                currentDestination !is Destination.Auth &&
                 currentDestination !is Destination.ReceiptScanner &&
                 currentDestination !is Destination.AiChat &&
-                currentDestination !is Destination.Insights
+                currentDestination !is Destination.Insights &&
+                currentDestination !is Destination.TermsOfService &&
+                currentDestination !is Destination.PrivacyPolicy
 
         NavigationSuiteScaffold(
             layoutType =
@@ -191,34 +193,34 @@ fun MoneyPilotApp(
                         alwaysShowLabel = currentDestination is Destination.Dashboard,
                     )
                     item(
-                        selected = currentDestination is Destination.Expenses,
+                        selected = currentDestination is Destination.History,
                         onClick = {
                             backStack.clear()
-                            backStack.add(Destination.Expenses)
+                            backStack.add(Destination.History)
                         },
                         icon = {
                             Icon(
-                                Icons.AutoMirrored.Rounded.TrendingDown,
-                                contentDescription = stringResource(R.string.expenses),
+                                Icons.Rounded.History,
+                                contentDescription = stringResource(R.string.transactions),
                             )
                         },
-                        label = { Text(stringResource(R.string.expenses)) },
-                        alwaysShowLabel = currentDestination is Destination.Expenses,
+                        label = { Text(stringResource(R.string.transactions)) },
+                        alwaysShowLabel = currentDestination is Destination.History,
                     )
                     item(
-                        selected = currentDestination is Destination.Income,
+                        selected = currentDestination is Destination.Loans,
                         onClick = {
                             backStack.clear()
-                            backStack.add(Destination.Income)
+                            backStack.add(Destination.Loans)
                         },
                         icon = {
                             Icon(
-                                Icons.AutoMirrored.Rounded.TrendingUp,
-                                contentDescription = stringResource(R.string.income),
+                                Icons.Rounded.AccountBalance,
+                                contentDescription = stringResource(R.string.loans),
                             )
                         },
-                        label = { Text(stringResource(R.string.income)) },
-                        alwaysShowLabel = currentDestination is Destination.Income,
+                        label = { Text(stringResource(R.string.loans)) },
+                        alwaysShowLabel = currentDestination is Destination.Loans,
                     )
                     item(
                         selected = currentDestination is Destination.Investments,
@@ -260,6 +262,12 @@ fun MoneyPilotApp(
                                     mainViewModel = mainViewModel,
                                     analyticsHelper = analyticsHelper,
                                     skipSplash = key.skipSplash,
+                                    onNavigateToTerms = {
+                                        backStack.add(Destination.TermsOfService)
+                                    },
+                                    onNavigateToPrivacy = {
+                                        backStack.add(Destination.PrivacyPolicy)
+                                    },
                                     onAuthSuccess = {
                                         backStack.clear()
                                         backStack.add(Destination.Dashboard)
@@ -281,7 +289,7 @@ fun MoneyPilotApp(
                                         backStack.add(Destination.Investments)
                                     },
                                     onNavigateToHistory = {
-                                        backStack.add(Destination.Expenses)
+                                        backStack.add(Destination.History)
                                     },
                                     onNavigateToBudgets = {
                                         backStack.add(Destination.Reports)
@@ -335,37 +343,20 @@ fun MoneyPilotApp(
                                 )
                             }
 
-                        is Destination.Expenses ->
+                        is Destination.History ->
                             NavEntry(key) {
                                 HistoryScreen(
                                     viewModel = transactionViewModel,
-                                    onAddTransaction = {
-                                        backStack.add(Destination.AddEditTransaction(initialType = TransactionType.EXPENSE))
+                                    onAddTransaction = { type ->
+                                        backStack.add(Destination.AddEditTransaction(initialType = type))
                                     },
-                                    onEditTransaction = { id ->
-                                        backStack.add(Destination.AddEditTransaction(id, TransactionType.EXPENSE))
+                                    onEditTransaction = { id, type ->
+                                        backStack.add(Destination.AddEditTransaction(id, type))
                                     },
                                     userData = userData,
                                     syncState = syncState,
                                     onProfileClick = { backStack.add(Destination.Settings) },
-                                    fixedType = TransactionType.EXPENSE,
-                                )
-                            }
-
-                        is Destination.Income ->
-                            NavEntry(key) {
-                                HistoryScreen(
-                                    viewModel = transactionViewModel,
-                                    onAddTransaction = {
-                                        backStack.add(Destination.AddEditTransaction(initialType = TransactionType.INCOME))
-                                    },
-                                    onEditTransaction = { id ->
-                                        backStack.add(Destination.AddEditTransaction(id, TransactionType.INCOME))
-                                    },
-                                    userData = userData,
-                                    syncState = syncState,
-                                    onProfileClick = { backStack.add(Destination.Settings) },
-                                    fixedType = TransactionType.INCOME,
+                                    fixedType = null,
                                 )
                             }
 
@@ -489,18 +480,20 @@ fun MoneyPilotApp(
 
                         is Destination.TermsOfService ->
                             NavEntry(key) {
-                                LegalScreen(
+                                prasad.vennam.moneypilot.ui.news.NewsWebViewScreen(
+                                    url = "https://prasadvennam1005.github.io/moneypilot-legal/terms-of-service.html",
                                     title = "Terms of Service",
-                                    content = LegalContent.TERMS_OF_SERVICE,
+                                    showBookmark = false,
                                     onBack = { backStack.removeLastOrNull() },
                                 )
                             }
 
                         is Destination.PrivacyPolicy ->
                             NavEntry(key) {
-                                LegalScreen(
+                                prasad.vennam.moneypilot.ui.news.NewsWebViewScreen(
+                                    url = "https://prasadvennam1005.github.io/moneypilot-legal/privacy-policy.html",
                                     title = "Privacy Policy",
-                                    content = LegalContent.PRIVACY_POLICY,
+                                    showBookmark = false,
                                     onBack = { backStack.removeLastOrNull() },
                                 )
                             }

@@ -14,6 +14,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.automirrored.rounded.OpenInNew
 import androidx.compose.material.icons.rounded.Bookmark
 import androidx.compose.material.icons.rounded.BookmarkBorder
 import androidx.compose.material.icons.rounded.OpenInNew
@@ -28,7 +29,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import prasad.vennam.moneypilot.R
 import prasad.vennam.moneypilot.ui.viewmodel.NewsViewModel
 
@@ -39,6 +40,7 @@ fun NewsWebViewScreen(
     url: String,
     title: String,
     onBack: () -> Unit,
+    showBookmark: Boolean = true,
     viewModel: NewsViewModel = hiltViewModel(),
 ) {
     val context = LocalContext.current
@@ -81,24 +83,26 @@ fun NewsWebViewScreen(
                 },
                 actions = {
                     // Bookmark toggle button
-                    IconButton(
-                        onClick = {
-                            if (isBookmarked) {
-                                viewModel.removeBookmarkByUrl(currentUrl)
-                            } else {
-                                viewModel.addBookmark(
-                                    title = currentTitle,
-                                    url = currentUrl,
-                                    currencyCode = uiState.selectedCurrency,
-                                )
-                            }
-                        },
-                    ) {
-                        Icon(
-                            imageVector = if (isBookmarked) Icons.Rounded.Bookmark else Icons.Rounded.BookmarkBorder,
-                            contentDescription = stringResource(R.string.bookmark),
-                            tint = if (isBookmarked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-                        )
+                    if (showBookmark) {
+                        IconButton(
+                            onClick = {
+                                if (isBookmarked) {
+                                    viewModel.removeBookmarkByUrl(currentUrl)
+                                } else {
+                                    viewModel.addBookmark(
+                                        title = currentTitle,
+                                        url = currentUrl,
+                                        currencyCode = uiState.selectedCurrency,
+                                    )
+                                }
+                            },
+                        ) {
+                            Icon(
+                                imageVector = if (isBookmarked) Icons.Rounded.Bookmark else Icons.Rounded.BookmarkBorder,
+                                contentDescription = stringResource(R.string.bookmark),
+                                tint = if (isBookmarked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                            )
+                        }
                     }
 
                     // Share button
@@ -132,7 +136,7 @@ fun NewsWebViewScreen(
                             }
                         },
                     ) {
-                        Icon(Icons.Rounded.OpenInNew, contentDescription = stringResource(R.string.open_in_browser))
+                        Icon(Icons.AutoMirrored.Rounded.OpenInNew, contentDescription = stringResource(R.string.open_in_browser))
                     }
 
                     // Reload page button

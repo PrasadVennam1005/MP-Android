@@ -24,8 +24,9 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import prasad.vennam.moneypilot.R
 import prasad.vennam.moneypilot.data.entity.Investment
-import prasad.vennam.moneypilot.ui.viewmodel.AutoFillState
-import prasad.vennam.moneypilot.ui.viewmodel.InvestmentViewModel
+import prasad.vennam.moneypilot.domain.model.SymbolResult
+import prasad.vennam.moneypilot.ui.viewmodel.state.AutoFillState
+import prasad.vennam.moneypilot.util.FinanceMath
 import prasad.vennam.moneypilot.util.LocalCurrencyCode
 import prasad.vennam.moneypilot.util.inRupees
 import java.text.SimpleDateFormat
@@ -36,7 +37,13 @@ import java.util.Date
 @Composable
 fun InvestmentFormBottomSheet(
     initialInvestment: Investment? = null,
-    viewModel: InvestmentViewModel,
+    symbolResults: List<SymbolResult>,
+    isSearching: Boolean,
+    autoFillState: AutoFillState,
+    onSearchSymbols: (String, String) -> Unit,
+    onClearSymbolSearch: () -> Unit,
+    onFetchQuantityForDate: (String, String, Double, Long) -> Unit,
+    onClearAutoFill: () -> Unit,
     onDismiss: () -> Unit,
     onSave: (String, String, Double, Double, String?, Double?, Double?, Long?) -> Unit,
 ) {
@@ -69,13 +76,6 @@ fun InvestmentFormBottomSheet(
 
     var showStartDatePicker by remember { mutableStateOf(false) }
 
-    // Symbol search
-    val symbolResults by viewModel.symbolResults.collectAsState()
-    val isSearching by viewModel.isSearching.collectAsState()
-
-    // Auto-fill quantity from historical price
-    val autoFillState by viewModel.autoFillState.collectAsState()
-
     // When a price is fetched successfully, fill in the quantity field
     LaunchedEffect(autoFillState) {
         val s = autoFillState
@@ -90,7 +90,7 @@ fun InvestmentFormBottomSheet(
 
     // Clear auto-fill result whenever symbol / date / type changes
     LaunchedEffect(symbol, startDate, type) {
-        viewModel.clearAutoFill()
+        onClearAutoFill()
     }
 
     val types = listOf("Stock", "Mutual Fund", "Crypto", "Real Estate", "Gold", "FD")
@@ -193,23 +193,6 @@ fun InvestmentFormBottomSheet(
                 modifier = Modifier.padding(horizontal = 24.dp),
                 verticalArrangement = Arrangement.spacedBy(20.dp),
             ) {
-                // Name Field
-                OutlinedTextField(
-                    value = name,
-                    onValueChange = { name = it },
-                    label = { Text(stringResource(R.string.investment_name)) },
-                    placeholder = { Text(stringResource(R.string.eg_bitcoin_apple_stocks)) },
-                    leadingIcon = {
-                        Icon(
-                            Icons.AutoMirrored.Rounded.Label,
-                            null,
-                            tint = MaterialTheme.colorScheme.primary,
-                        )
-                    },
-                    shape = MaterialTheme.shapes.large,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-
                 // Type Field
                 Box(modifier = Modifier.fillMaxWidth()) {
                     OutlinedTextField(
@@ -228,6 +211,13 @@ fun InvestmentFormBottomSheet(
                         modifier = Modifier.fillMaxWidth(),
                         shape = MaterialTheme.shapes.large,
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = showTypeBottomSheet) },
+                        colors =
+                            OutlinedTextFieldDefaults.colors(
+                                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.15f),
+                                focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.05f),
+                                unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            ),
                     )
                     Box(
                         modifier =
@@ -237,201 +227,89 @@ fun InvestmentFormBottomSheet(
                     )
                 }
 
-                // Invested Amount & Date Picker Row
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    OutlinedTextField(
-                        value = invested,
-                        onValueChange = {
-                            if (it.isEmpty() || it.matches(Regex("^\\d*\\.?\\d{0,2}$"))) invested = it
-                        },
-                        label = {
-                            Text(
-                                when (type) {
-                                    "FD" -> stringResource(R.string.principal_invested)
-                                    "Real Estate" -> stringResource(R.string.purchase_price)
-                                    else -> stringResource(R.string.invested_label)
-                                },
-                            )
-                        },
-                        leadingIcon = {
-                            Text(
-                                currencySymbol,
-                                color = MaterialTheme.colorScheme.primary,
-                                fontWeight = FontWeight.Bold,
-                            )
-                        },
-                        isError = isInvestedError,
-                        supportingText =
-                            if (isInvestedError) {
-                                {
-                                    val text =
-                                        when {
-                                            investedVal == null -> "Invalid format"
-                                            investedVal <= 0.0 -> stringResource(R.string.invested_amount_error_desc)
-                                            else -> "Amount cannot exceed 100,000,000"
-                                        }
-                                    Text(text)
-                                }
-                            } else {
-                                null
-                            },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                        shape = MaterialTheme.shapes.large,
-                        modifier = Modifier.weight(1f),
-                    )
-
-                    Box(modifier = Modifier.weight(1.2f)) {
+                // Conditional Fields: Stocks, Crypto, Gold, Mutual Funds (Symbol Search)
+                if (type in listOf("Stock", "Crypto", "Gold", "Mutual Fund")) {
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         OutlinedTextField(
-                            value = dateFormatter.format(Date(startDate)),
-                            onValueChange = {},
-                            readOnly = true,
+                            value = symbol,
+                            onValueChange = { newVal ->
+                                symbol = newVal
+                                onSearchSymbols(newVal, type)
+                            },
                             label = {
                                 Text(
+                                    if (type ==
+                                        "Mutual Fund"
+                                    ) {
+                                        stringResource(R.string.search_fund_scheme)
+                                    } else {
+                                        stringResource(R.string.search_symbol)
+                                    },
+                                )
+                            },
+                            placeholder = {
+                                Text(
                                     when (type) {
-                                        "FD" -> stringResource(R.string.start_date)
-                                        "Real Estate" -> stringResource(R.string.purchase_date)
-                                        else -> stringResource(R.string.invested_date)
+                                        "Crypto" -> stringResource(R.string.eg_crypto_symbol)
+                                        "Mutual Fund" -> stringResource(R.string.eg_mutual_fund_symbol)
+                                        "Gold" -> stringResource(R.string.tap_to_see_options)
+                                        else -> stringResource(R.string.eg_stock_symbol)
                                     },
                                 )
                             },
                             leadingIcon = {
-                                Icon(Icons.Rounded.CalendarToday, null, tint = MaterialTheme.colorScheme.primary)
+                                if (isSearching) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(18.dp),
+                                        strokeWidth = 2.dp,
+                                        color = MaterialTheme.colorScheme.primary,
+                                    )
+                                } else {
+                                    Icon(
+                                        Icons.Rounded.Search,
+                                        null,
+                                        tint = MaterialTheme.colorScheme.primary,
+                                    )
+                                }
                             },
+                            trailingIcon = {
+                                if (symbol.isNotEmpty()) {
+                                    IconButton(onClick = {
+                                        symbol = ""
+                                        onClearSymbolSearch()
+                                    }) {
+                                        Icon(
+                                            Icons.Rounded.Close,
+                                            contentDescription = stringResource(R.string.clear),
+                                            modifier = Modifier.size(16.dp),
+                                        )
+                                    }
+                                }
+                            },
+                            keyboardOptions =
+                                KeyboardOptions(
+                                    capitalization = KeyboardCapitalization.Characters,
+                                    autoCorrectEnabled = false,
+                                    imeAction = ImeAction.Done,
+                                ),
+                            singleLine = true,
                             shape = MaterialTheme.shapes.large,
-                            modifier = Modifier.fillMaxWidth(),
-                        )
-                        Box(
                             modifier =
                                 Modifier
-                                    .matchParentSize()
-                                    .clickable { showStartDatePicker = true },
-                        )
-                    }
-                }
-
-                // Conditional Fields: Stocks, Crypto, Gold, Mutual Funds (Symbol + Quantity)
-                if (type in listOf("Stock", "Crypto", "Gold", "Mutual Fund")) {
-                    Column(verticalArrangement = Arrangement.spacedBy(0.dp)) {
-                        // ── Symbol search field ──────────────────────────────
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(16.dp),
-                        ) {
-                            OutlinedTextField(
-                                value = symbol,
-                                onValueChange = { newVal ->
-                                    symbol = newVal
-                                    viewModel.searchSymbols(newVal, type)
-                                },
-                                label = {
-                                    Text(
-                                        if (type ==
-                                            "Mutual Fund"
-                                        ) {
-                                            stringResource(R.string.search_fund_scheme)
-                                        } else {
-                                            stringResource(R.string.search_symbol)
-                                        },
-                                    )
-                                },
-                                placeholder = {
-                                    Text(
-                                        when (type) {
-                                            "Crypto" -> stringResource(R.string.eg_crypto_symbol)
-                                            "Mutual Fund" -> stringResource(R.string.eg_mutual_fund_symbol)
-                                            "Gold" -> stringResource(R.string.tap_to_see_options)
-                                            else -> stringResource(R.string.eg_stock_symbol)
-                                        },
-                                    )
-                                },
-                                leadingIcon = {
-                                    if (isSearching) {
-                                        CircularProgressIndicator(
-                                            modifier = Modifier.size(18.dp),
-                                            strokeWidth = 2.dp,
-                                            color = MaterialTheme.colorScheme.primary,
-                                        )
-                                    } else {
-                                        Icon(
-                                            Icons.Rounded.Search,
-                                            null,
-                                            tint = MaterialTheme.colorScheme.primary,
-                                        )
-                                    }
-                                },
-                                trailingIcon = {
-                                    if (symbol.isNotEmpty()) {
-                                        IconButton(onClick = {
-                                            symbol = ""
-                                            viewModel.clearSymbolSearch()
-                                        }) {
-                                            Icon(
-                                                Icons.Rounded.Close,
-                                                contentDescription = stringResource(R.string.clear),
-                                                modifier = Modifier.size(16.dp),
-                                            )
-                                        }
-                                    }
-                                },
-                                keyboardOptions =
-                                    KeyboardOptions(
-                                        capitalization = KeyboardCapitalization.Characters,
-                                        autoCorrectEnabled = false,
-                                        imeAction = ImeAction.Done,
-                                    ),
-                                singleLine = true,
-                                shape = MaterialTheme.shapes.large,
-                                modifier =
-                                    Modifier
-                                        .weight(1.2f)
-                                        .clickable(enabled = type == "Gold") {
-                                            viewModel.searchSymbols("", type)
-                                        },
-                            )
-
-                            OutlinedTextField(
-                                value = quantity,
-                                onValueChange = {
-                                    if (it.isEmpty() || it.matches(Regex("^\\d*\\.?\\d{0,4}$"))) quantity = it
-                                },
-                                label = {
-                                    Text(
-                                        if (type ==
-                                            "Mutual Fund"
-                                        ) {
-                                            stringResource(R.string.units)
-                                        } else {
-                                            stringResource(R.string.quantity)
-                                        },
-                                    )
-                                },
-                                placeholder = { Text(stringResource(R.string.eg_15)) },
-                                isError = isQuantityError,
-                                supportingText =
-                                    if (isQuantityError) {
-                                        {
-                                            val text =
-                                                when {
-                                                    quantityVal == null -> "Invalid format"
-                                                    quantityVal <= 0.0 -> stringResource(R.string.quantity_error_desc)
-                                                    else -> "Quantity cannot exceed 100,000,000"
-                                                }
-                                            Text(text)
-                                        }
-                                    } else {
-                                        null
+                                    .fillMaxWidth()
+                                    .clickable(enabled = type == "Gold") {
+                                        onSearchSymbols("", type)
                                     },
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                                shape = MaterialTheme.shapes.large,
-                                modifier = Modifier.weight(0.8f),
-                            )
-                        }
+                            colors =
+                                OutlinedTextFieldDefaults.colors(
+                                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.15f),
+                                    focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.05f),
+                                    unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                ),
+                        )
 
-                        // ── Autocomplete Dropdown ─────────────────────────────
+                        // Autocomplete Dropdown
                         if (symbolResults.isNotEmpty()) {
                             Card(
                                 modifier =
@@ -453,7 +331,7 @@ fun InvestmentFormBottomSheet(
                                             onClick = {
                                                 symbol = result.symbol
                                                 if (name.isBlank()) name = result.name
-                                                viewModel.clearSymbolSearch()
+                                                onClearSymbolSearch()
                                             },
                                         )
                                         if (index < symbolResults.lastIndex) {
@@ -465,8 +343,167 @@ fun InvestmentFormBottomSheet(
                                 }
                             }
                         }
+                    }
+                }
 
-                        // ── Auto-fill quantity button ─────────────────────────
+                // Name Field
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text(stringResource(R.string.investment_name)) },
+                    placeholder = { Text(stringResource(R.string.eg_bitcoin_apple_stocks)) },
+                    leadingIcon = {
+                        Icon(
+                            Icons.AutoMirrored.Rounded.Label,
+                            null,
+                            tint = MaterialTheme.colorScheme.primary,
+                        )
+                    },
+                    shape = MaterialTheme.shapes.large,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors =
+                        OutlinedTextFieldDefaults.colors(
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.15f),
+                            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.05f),
+                            unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        ),
+                )
+
+                // Invested Amount
+                OutlinedTextField(
+                    value = invested,
+                    onValueChange = {
+                        if (it.isEmpty() || it.matches(Regex("^\\d*\\.?\\d{0,2}$"))) invested = it
+                    },
+                    label = {
+                        Text(
+                            when (type) {
+                                "FD" -> stringResource(R.string.principal_invested)
+                                "Real Estate" -> stringResource(R.string.purchase_price)
+                                else -> stringResource(R.string.invested_label)
+                            },
+                        )
+                    },
+                    leadingIcon = {
+                        Text(
+                            currencySymbol,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.Bold,
+                        )
+                    },
+                    isError = isInvestedError,
+                    supportingText =
+                        if (isInvestedError) {
+                            {
+                                val text =
+                                    when {
+                                        investedVal == null -> "Invalid format"
+                                        investedVal <= 0.0 -> stringResource(R.string.invested_amount_error_desc)
+                                        else -> "Amount cannot exceed 100,000,000"
+                                    }
+                                Text(text)
+                            }
+                        } else {
+                            null
+                        },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    shape = MaterialTheme.shapes.large,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors =
+                        OutlinedTextFieldDefaults.colors(
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.15f),
+                            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.05f),
+                            unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        ),
+                )
+
+                // Invested Date
+                Box(modifier = Modifier.fillMaxWidth()) {
+                    OutlinedTextField(
+                        value = dateFormatter.format(Date(startDate)),
+                        onValueChange = {},
+                        readOnly = true,
+                        label = {
+                            Text(
+                                when (type) {
+                                    "FD" -> stringResource(R.string.start_date)
+                                    "Real Estate" -> stringResource(R.string.purchase_date)
+                                    else -> stringResource(R.string.invested_date)
+                                },
+                            )
+                        },
+                        leadingIcon = {
+                            Icon(Icons.Rounded.CalendarToday, null, tint = MaterialTheme.colorScheme.primary)
+                        },
+                        shape = MaterialTheme.shapes.large,
+                        modifier = Modifier.fillMaxWidth(),
+                        colors =
+                            OutlinedTextFieldDefaults.colors(
+                                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.15f),
+                                focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.05f),
+                                unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            ),
+                    )
+                    Box(
+                        modifier =
+                            Modifier
+                                .matchParentSize()
+                                .clickable { showStartDatePicker = true },
+                    )
+                }
+
+                // Conditional Fields: Stocks, Crypto, Gold, Mutual Funds (Quantity + Auto-fill)
+                if (type in listOf("Stock", "Crypto", "Gold", "Mutual Fund")) {
+                    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                        // Quantity field
+                        OutlinedTextField(
+                            value = quantity,
+                            onValueChange = {
+                                if (it.isEmpty() || it.matches(Regex("^\\d*\\.?\\d{0,4}$"))) quantity = it
+                            },
+                            label = {
+                                Text(
+                                    if (type ==
+                                        "Mutual Fund"
+                                    ) {
+                                        stringResource(R.string.units)
+                                    } else {
+                                        stringResource(R.string.quantity)
+                                    },
+                                )
+                            },
+                            placeholder = { Text(stringResource(R.string.eg_15)) },
+                            isError = isQuantityError,
+                            supportingText =
+                                if (isQuantityError) {
+                                    {
+                                        val text =
+                                            when {
+                                                quantityVal == null -> "Invalid format"
+                                                quantityVal <= 0.0 -> stringResource(R.string.quantity_error_desc)
+                                                else -> "Quantity cannot exceed 100,000,000"
+                                            }
+                                        Text(text)
+                                    }
+                                } else {
+                                    null
+                                },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                            shape = MaterialTheme.shapes.large,
+                            modifier = Modifier.fillMaxWidth(),
+                            colors =
+                                OutlinedTextFieldDefaults.colors(
+                                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.15f),
+                                    focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.05f),
+                                    unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                ),
+                        )
+
+                        // Auto-fill quantity button
                         val investedValue = invested.toDoubleOrNull()
                         val canAutoFill =
                             symbolResults.isEmpty() &&
@@ -479,11 +516,11 @@ fun InvestmentFormBottomSheet(
                                 AutoFillState.Idle -> {
                                     OutlinedButton(
                                         onClick = {
-                                            viewModel.fetchQuantityForDate(
-                                                symbol = symbol,
-                                                assetType = type,
-                                                investedAmount = invested.toDouble(),
-                                                dateMs = startDate,
+                                            onFetchQuantityForDate(
+                                                symbol,
+                                                type,
+                                                invested.toDouble(),
+                                                startDate,
                                             )
                                         },
                                         modifier = Modifier.fillMaxWidth(),
@@ -542,7 +579,7 @@ fun InvestmentFormBottomSheet(
                                             )
                                             Spacer(modifier = Modifier.weight(1f))
                                             IconButton(
-                                                onClick = { viewModel.clearAutoFill() },
+                                                onClick = { onClearAutoFill() },
                                                 modifier = Modifier.size(20.dp),
                                             ) {
                                                 Icon(
@@ -625,6 +662,13 @@ fun InvestmentFormBottomSheet(
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         shape = MaterialTheme.shapes.large,
                         modifier = Modifier.fillMaxWidth(),
+                        colors =
+                            OutlinedTextFieldDefaults.colors(
+                                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.15f),
+                                focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.05f),
+                                unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            ),
                     )
                 }
 
@@ -648,7 +692,7 @@ fun InvestmentFormBottomSheet(
 
                         val computedCurrent =
                             if (type in listOf("FD", "Real Estate")) {
-                                prasad.vennam.moneypilot.util.FinancePriceFetcher.calculateCompoundedValue(
+                                FinanceMath.calculateCompoundedValue(
                                     investedAmount = investedValue,
                                     annualRate = finalRate ?: 0.0,
                                     startDate = finalStart,

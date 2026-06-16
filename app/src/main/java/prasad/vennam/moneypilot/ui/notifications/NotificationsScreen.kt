@@ -14,6 +14,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material.icons.automirrored.rounded.TrendingDown
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
@@ -28,7 +29,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import kotlinx.coroutines.launch
 import prasad.vennam.moneypilot.R
 import prasad.vennam.moneypilot.data.entity.Notification
 import prasad.vennam.moneypilot.ui.viewmodel.NotificationViewModel
@@ -85,7 +87,7 @@ fun NotificationsScreen(
                     }
                 },
                 colors =
-                    TopAppBarDefaults.centerAlignedTopAppBarColors(
+                    TopAppBarDefaults.topAppBarColors(
                         containerColor = MaterialTheme.colorScheme.background,
                     ),
             )
@@ -99,7 +101,7 @@ fun NotificationsScreen(
                     .background(MaterialTheme.colorScheme.background),
         ) {
             // Horizontal Categories Scroll
-            ScrollableTabRow(
+            PrimaryScrollableTabRow(
                 selectedTabIndex = categories.indexOf(selectedCategory),
                 edgePadding = 16.dp,
                 divider = {},
@@ -167,14 +169,14 @@ fun NotificationsScreen(
                             item = item,
                             onDismiss = {
                                 viewModel.deleteNotification(item.id)
-                                Toast.makeText(context, context.getString(R.string.notification_deleted), Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, with(context) { getString(R.string.notification_deleted) }, Toast.LENGTH_SHORT).show()
                             },
                             onBookmark = {
                                 if (!item.url.isNullOrBlank()) {
                                     viewModel.bookmarkNotificationUrl(item.title, item.url)
-                                    Toast.makeText(context, context.getString(R.string.saved_offline), Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(context, with(context) { getString(R.string.saved_offline) }, Toast.LENGTH_SHORT).show()
                                 } else {
-                                    Toast.makeText(context, context.getString(R.string.no_link_to_bookmark), Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(context, with(context) { getString(R.string.no_link_to_bookmark) }, Toast.LENGTH_SHORT).show()
                                 }
                             },
                             onNavigateToWeb = onNavigateToWeb,
@@ -195,7 +197,7 @@ fun NotificationsScreen(
                     onClick = {
                         viewModel.clearAll()
                         showClearAllConfirmation = false
-                        Toast.makeText(context, context.getString(R.string.all_notifications_cleared), Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, with(context) { getString(R.string.all_notifications_cleared) }, Toast.LENGTH_SHORT).show()
                     },
                     colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
                 ) {
@@ -223,6 +225,7 @@ fun SwipeToDismissNotification(
     onNavigateToWeb: (url: String, title: String) -> Unit,
 ) {
     var isRemoved by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
 
     LaunchedEffect(isRemoved) {
         if (isRemoved) {
@@ -234,25 +237,22 @@ fun SwipeToDismissNotification(
         visible = !isRemoved,
         exit = shrinkVertically(animationSpec = tween(500)) + fadeOut(animationSpec = tween(500)),
     ) {
-        val dismissState =
-            rememberSwipeToDismissBoxState(
-                confirmValueChange = { dismissValue ->
-                    when (dismissValue) {
-                        SwipeToDismissBoxValue.EndToStart -> {
-                            isRemoved = true
-                            true
-                        }
-                        SwipeToDismissBoxValue.StartToEnd -> {
-                            onBookmark()
-                            false
-                        }
-                        else -> false
-                    }
-                },
-            )
+        val dismissState = rememberSwipeToDismissBoxState()
 
         SwipeToDismissBox(
             state = dismissState,
+            onDismiss = { direction ->
+                when (direction) {
+                    SwipeToDismissBoxValue.EndToStart -> {
+                        isRemoved = true
+                    }
+                    SwipeToDismissBoxValue.StartToEnd -> {
+                        onBookmark()
+                        scope.launch { dismissState.reset() }
+                    }
+                    else -> {}
+                }
+            },
             backgroundContent = {
                 val color =
                     when (dismissState.dismissDirection) {
@@ -416,7 +416,7 @@ fun NotificationItemCard(
                                 style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
                             )
                             Icon(
-                                imageVector = Icons.Rounded.ArrowForward,
+                                imageVector = Icons.AutoMirrored.Rounded.ArrowForward,
                                 contentDescription = null,
                                 modifier = Modifier.size(14.dp),
                             )

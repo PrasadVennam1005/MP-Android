@@ -62,11 +62,17 @@ fun ReceiptScannerScreen(
     transactionViewModel: TransactionViewModel,
     analyticsHelper: AnalyticsHelper,
 ) {
+    val categories by transactionViewModel.allCategories.collectAsState()
     PermissionGate(
         permission = Manifest.permission.CAMERA,
-        rationale = "Camera access is required to scan receipts and automatically extract expense details.",
+        rationale = stringResource(R.string.camera_rationale),
     ) {
-        ReceiptScannerContent(onNavigateBack, transactionViewModel, analyticsHelper)
+        ReceiptScannerContent(
+            onNavigateBack = onNavigateBack,
+            categories = categories,
+            onSaveTransaction = { transactionViewModel.saveTransaction(it) },
+            analyticsHelper = analyticsHelper,
+        )
     }
 }
 
@@ -74,7 +80,8 @@ fun ReceiptScannerScreen(
 @Composable
 fun ReceiptScannerContent(
     onNavigateBack: () -> Unit,
-    transactionViewModel: TransactionViewModel,
+    categories: List<Category>,
+    onSaveTransaction: (Transaction) -> Unit,
     analyticsHelper: AnalyticsHelper,
 ) {
     val context = LocalContext.current
@@ -95,6 +102,8 @@ fun ReceiptScannerContent(
     var detectedData by remember { mutableStateOf<ParsedReceipt?>(null) }
     var showResultsSheet by remember { mutableStateOf(false) }
     var showSuccessDialog by remember { mutableStateOf(false) }
+    var isProcessing by remember { mutableStateOf(false) }
+    val imageCapture = remember { ImageCapture.Builder().build() }
 
     val previewView = remember { PreviewView(context) }
 
@@ -145,37 +154,13 @@ fun ReceiptScannerContent(
                         it.surfaceProvider = previewView.surfaceProvider
                     }
 
-                val imageAnalysis =
-                    ImageAnalysis
-                        .Builder()
-                        .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
-                        .build()
-                        .also {
-                            it.setAnalyzer(cameraExecutor) { imageProxy ->
-                                processImageProxy(imageProxy, recognizer) { result ->
-                                    if (result.amount != null && isScanning) {
-                                        analyticsHelper.logEvent(
-                                            "scanner_live_scan_success",
-                                            mapOf(
-                                                "merchant_found" to (result.merchant != null),
-                                            ),
-                                        )
-
-                                        detectedData = result
-                                        isScanning = false
-                                        showResultsSheet = true
-                                    }
-                                }
-                            }
-                        }
-
                 try {
                     provider.unbindAll()
                     provider.bindToLifecycle(
                         lifecycleOwner,
                         CameraSelector.DEFAULT_BACK_CAMERA,
                         preview,
-                        imageAnalysis,
+                        imageCapture,
                     )
                 } catch (e: Exception) {
                     // Ignore use case binding failures
@@ -234,17 +219,101 @@ fun ReceiptScannerContent(
                     modifier =
                         Modifier
                             .align(Alignment.Center)
-                            .padding(top = 350.dp),
+                            .padding(top = 220.dp),
                     color = Color.White,
                     style = MaterialTheme.typography.bodyMedium,
                 )
+            }
+
+            if (isScanning && !isProcessing) {
+                Box(
+                    modifier =
+                        Modifier
+                            .align(Alignment.BottomCenter)
+                            .padding(bottom = 48.dp)
+                            .size(72.dp)
+                            .background(Color.White.copy(alpha = 0.2f), CircleShape)
+                            .padding(6.dp)
+                            .background(Color.White, CircleShape)
+                            .clickable {
+                                isProcessing = true
+                                val executor = ContextCompat.getMainExecutor(context)
+                                imageCapture.takePicture(
+                                    executor,
+                                    object : ImageCapture.OnImageCapturedCallback() {
+                                        override fun onCaptureSuccess(image: ImageProxy) {
+                                            val mediaImage = image.image
+                                            if (mediaImage != null) {
+                                                val inputImage = InputImage.fromMediaImage(mediaImage, image.imageInfo.rotationDegrees)
+                                                recognizer
+                                                    .process(inputImage)
+                                                    .addOnSuccessListener { visionText ->
+                                                        val result = ReceiptParser.parse(visionText)
+                                                        analyticsHelper.logEvent(
+                                                            "scanner_picture_captured",
+                                                            mapOf(
+                                                                "success" to (result.amount != null),
+                                                                "merchant_found" to (result.merchant != null),
+                                                            ),
+                                                        )
+                                                        if (result.amount != null) {
+                                                            detectedData = result
+                                                            isScanning = false
+                                                            showResultsSheet = true
+                                                        } else {
+                                                            Toast
+                                                                .makeText(
+                                                                    context,
+                                                                    context.run { getString(R.string.could_not_detect_amount_in_this_image_please_try_another) },
+                                                                    Toast.LENGTH_LONG,
+                                                                ).show()
+                                                        }
+                                                        isProcessing = false
+                                                    }.addOnFailureListener {
+                                                        isProcessing = false
+                                                        Toast.makeText(context, context.getString(R.string.scanning_failed), Toast.LENGTH_SHORT).show()
+                                                    }
+                                            } else {
+                                                image.close()
+                                                isProcessing = false
+                                            }
+                                        }
+
+                                        override fun onError(exception: ImageCaptureException) {
+                                            isProcessing = false
+                                            Toast.makeText(context, context.getString(R.string.capture_failed_formatted, exception.message), Toast.LENGTH_SHORT).show()
+                                        }
+                                    },
+                                )
+                            },
+                )
+            }
+
+            if (isProcessing) {
+                Box(
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .background(Color.Black.copy(alpha = 0.5f)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            text = stringResource(R.string.processing_receipt),
+                            color = Color.White,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                        )
+                    }
+                }
             }
         }
     }
 
     val currentDetectedData = detectedData
     if (showResultsSheet && currentDetectedData != null) {
-        val categories by transactionViewModel.allCategories.collectAsState()
         ReceiptResultsBottomSheet(
             detectedData = currentDetectedData,
             categories = categories,
@@ -253,7 +322,7 @@ fun ReceiptScannerContent(
                 isScanning = true
             },
             onSave = { transaction ->
-                transactionViewModel.saveTransaction(transaction)
+                onSaveTransaction(transaction)
                 showResultsSheet = false
                 showSuccessDialog = true
             },

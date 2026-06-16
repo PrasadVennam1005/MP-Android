@@ -10,7 +10,7 @@ import androidx.work.WorkManager
 import java.util.concurrent.TimeUnit
 
 object WorkManagerSyncScheduler {
-    const val UNIQUE_WORK_NAME = "google_sheets_sync_work"
+    const val UNIQUE_WORK_NAME = GoogleSheetsSyncHelper.SYNC_WORK_NAME
 
     fun scheduleSync(context: Context) {
         val constraints =

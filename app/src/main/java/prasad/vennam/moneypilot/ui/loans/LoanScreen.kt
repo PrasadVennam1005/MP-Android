@@ -1,17 +1,25 @@
 package prasad.vennam.moneypilot.ui.loans
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.EventNote
+import androidx.compose.material.icons.automirrored.rounded.TrendingUp
 import androidx.compose.material.icons.rounded.AccountBalance
 import androidx.compose.material.icons.rounded.AccountBalanceWallet
 import androidx.compose.material.icons.rounded.Add
@@ -38,7 +46,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import prasad.vennam.moneypilot.R
 import prasad.vennam.moneypilot.data.UserPreferences
 import prasad.vennam.moneypilot.data.entity.Loan
@@ -68,6 +76,25 @@ fun LoanScreen(
     var loanToDelete by remember { mutableStateOf<Loan?>(null) }
     var loanToPay by remember { mutableStateOf<Loan?>(null) }
 
+    val lazyListState = rememberLazyListState()
+    var isFabVisible by remember { mutableStateOf(true) }
+    var previousIndex by remember { mutableIntStateOf(0) }
+    var previousOffset by remember { mutableIntStateOf(0) }
+
+    LaunchedEffect(lazyListState.firstVisibleItemIndex, lazyListState.firstVisibleItemScrollOffset) {
+        val currentIndex = lazyListState.firstVisibleItemIndex
+        val currentOffset = lazyListState.firstVisibleItemScrollOffset
+        if (currentIndex == 0 && currentOffset == 0) {
+            isFabVisible = true
+        } else if (currentIndex > previousIndex || (currentIndex == previousIndex && currentOffset > previousOffset)) {
+            isFabVisible = false
+        } else if (currentIndex < previousIndex || (currentIndex == previousIndex && currentOffset < previousOffset)) {
+            isFabVisible = true
+        }
+        previousIndex = currentIndex
+        previousOffset = currentOffset
+    }
+
     Scaffold(
         topBar = {
             DashboardTopBar(
@@ -79,16 +106,22 @@ fun LoanScreen(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(
-                onClick = {
-                    selectedLoan = null
-                    showAddLoanSheet = true
-                },
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary,
-                shape = RoundedCornerShape(16.dp),
+            AnimatedVisibility(
+                visible = isFabVisible,
+                enter = scaleIn() + fadeIn(),
+                exit = scaleOut() + fadeOut(),
             ) {
-                Icon(Icons.Rounded.Add, contentDescription = stringResource(R.string.add_loan))
+                FloatingActionButton(
+                    onClick = {
+                        selectedLoan = null
+                        showAddLoanSheet = true
+                    },
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary,
+                    shape = RoundedCornerShape(16.dp),
+                ) {
+                    Icon(Icons.Rounded.Add, contentDescription = stringResource(R.string.add_loan))
+                }
             }
         },
     ) { padding ->
@@ -124,6 +157,7 @@ fun LoanScreen(
                 }
             } else {
                 LazyColumn(
+                    state = lazyListState,
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                     contentPadding = PaddingValues(bottom = 80.dp),
                 ) {
@@ -1044,7 +1078,7 @@ fun LoanFormBottomSheet(
                         label = { Text(stringResource(R.string.interest_rate_pa_label)) },
                         leadingIcon = {
                             Icon(
-                                Icons.Rounded.TrendingUp,
+                                Icons.AutoMirrored.Rounded.TrendingUp,
                                 null,
                                 tint = MaterialTheme.colorScheme.primary,
                             )
@@ -1135,7 +1169,7 @@ fun LoanFormBottomSheet(
                     label = { Text(stringResource(R.string.emi_due_day_label)) },
                     leadingIcon = {
                         Icon(
-                            Icons.Rounded.EventNote,
+                            Icons.AutoMirrored.Rounded.EventNote,
                             null,
                             tint = MaterialTheme.colorScheme.primary,
                         )
@@ -1185,7 +1219,7 @@ fun LoanFormBottomSheet(
                     onClick = {
                         if (isFormValid) {
                             val totalValParsed = totalValFinal ?: 0.0
-                            val outstandingValParsed = outstandingValFinal ?: totalValFinal ?: 0.0
+                            val outstandingValParsed = outstandingVal ?: totalValFinal ?: 0.0
                             val emiValParsed = emiValFinal ?: 0.0
                             val rateVal = interestRateValFinal ?: 0.0
                             val tenureVal = tenureMonthsValFinal ?: 12

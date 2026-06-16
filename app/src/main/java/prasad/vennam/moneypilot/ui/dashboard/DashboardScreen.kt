@@ -5,13 +5,19 @@ import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.*
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -83,6 +89,25 @@ fun DashboardScreen(
 ) {
     val dashboardState by dashboardViewModel.uiState.collectAsState()
     val userData by mainViewModel.userData.collectAsState()
+
+    val lazyListState = rememberLazyListState()
+    var isFabVisible by remember { mutableStateOf(true) }
+    var previousIndex by remember { mutableIntStateOf(0) }
+    var previousOffset by remember { mutableIntStateOf(0) }
+
+    LaunchedEffect(lazyListState.firstVisibleItemIndex, lazyListState.firstVisibleItemScrollOffset) {
+        val currentIndex = lazyListState.firstVisibleItemIndex
+        val currentOffset = lazyListState.firstVisibleItemScrollOffset
+        if (currentIndex == 0 && currentOffset == 0) {
+            isFabVisible = true
+        } else if (currentIndex > previousIndex || (currentIndex == previousIndex && currentOffset > previousOffset)) {
+            isFabVisible = false
+        } else if (currentIndex < previousIndex || (currentIndex == previousIndex && currentOffset < previousOffset)) {
+            isFabVisible = true
+        }
+        previousIndex = currentIndex
+        previousOffset = currentOffset
+    }
     val isSynced by mainViewModel.isSynced.collectAsState()
     val spreadsheetId by mainViewModel.spreadsheetId.collectAsState()
 
@@ -184,10 +209,10 @@ fun DashboardScreen(
                         }
                     } catch (e: GetCredentialException) {
                         Log.e("DashboardScreen", "Login failed: ${e.message}")
-                        Toast.makeText(context, "Login failed: ${e.message}", Toast.LENGTH_LONG).show()
+                        Toast.makeText(context, context.getString(R.string.login_failed_formatted, e.message), Toast.LENGTH_LONG).show()
                     } catch (e: Exception) {
                         Log.e("DashboardScreen", "Error: ${e.message}")
-                        Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_LONG).show()
+                        Toast.makeText(context, context.getString(R.string.error_formatted, e.message), Toast.LENGTH_LONG).show()
                     }
                 }
             }
@@ -315,6 +340,8 @@ fun DashboardScreen(
                             onNavigateToNotifications()
                         }
                     },
+                    showAiChat = !isFabVisible,
+                    onAiChatClick = onNavigateToAiChat,
                 )
             },
         ) { innerPadding ->
@@ -336,6 +363,7 @@ fun DashboardScreen(
                 }
             } else {
                 LazyColumn(
+                    state = lazyListState,
                     modifier =
                         Modifier
                             .fillMaxSize()
@@ -381,7 +409,7 @@ fun DashboardScreen(
                                     Spacer(modifier = Modifier.width(12.dp))
                                     Column(modifier = Modifier.weight(1f)) {
                                         Text(
-                                            text = "Auto-detected Transactions",
+                                            text = stringResource(R.string.auto_detected_transactions),
                                             style = MaterialTheme.typography.titleMedium,
                                             fontWeight = FontWeight.Bold,
                                             color = Color.White,
@@ -391,9 +419,9 @@ fun DashboardScreen(
                                                 if (count ==
                                                     1
                                                 ) {
-                                                    "1 pending transaction to review"
+                                                    stringResource(R.string.pending_transaction_single)
                                                 } else {
-                                                    "$count pending transactions to review"
+                                                    stringResource(R.string.pending_transactions_plural, count)
                                                 },
                                             style = MaterialTheme.typography.bodySmall,
                                             color = Color.White.copy(alpha = 0.85f),
@@ -401,7 +429,7 @@ fun DashboardScreen(
                                     }
                                     Icon(
                                         imageVector = Icons.Rounded.ChevronRight,
-                                        contentDescription = "Review",
+                                        contentDescription = stringResource(R.string.review),
                                         tint = Color.White,
                                         modifier = Modifier.size(24.dp),
                                     )
@@ -498,13 +526,20 @@ fun DashboardScreen(
         }
 
         // Floating AI Bot Icon with Animation
-        FloatingAiBot(
+        AnimatedVisibility(
+            visible = isFabVisible,
+            enter = scaleIn() + fadeIn(),
+            exit = scaleOut() + fadeOut(),
             modifier =
                 Modifier
                     .align(Alignment.BottomEnd)
                     .padding(bottom = 32.dp, end = 24.dp),
-            onClick = onNavigateToAiChat,
-        )
+        ) {
+            FloatingAiBot(
+                modifier = Modifier,
+                onClick = onNavigateToAiChat,
+            )
+        }
     }
 
     if (showBreakdownSheet) {
@@ -575,7 +610,7 @@ fun SmartInsightsCard(onClick: () -> Unit) {
             Spacer(modifier = Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    "Smart AI Insights",
+                    stringResource(R.string.smart_ai_insights),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                 )
@@ -641,7 +676,7 @@ fun FloatingAiBot(
         ) {
             Icon(
                 Icons.Rounded.AutoAwesome,
-                contentDescription = "AI Assistant",
+                contentDescription = stringResource(R.string.ai_assistant),
                 tint = Color.White,
                 modifier = Modifier.size(32.dp),
             )
@@ -691,12 +726,12 @@ fun DashboardEmergencyFundCard(
                 Spacer(modifier = Modifier.width(16.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "Build a Safety Net",
+                        text = stringResource(R.string.build_safety_net_title),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                     )
                     Text(
-                        text = "Set up your Emergency Fund to prepare for unforeseen expenses.",
+                        text = stringResource(R.string.safety_net_setup_prompt),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -743,7 +778,7 @@ fun DashboardEmergencyFundCard(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "Emergency Safety Net",
+                            text = stringResource(R.string.emergency_safety_net),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                         )
@@ -777,13 +812,13 @@ fun DashboardEmergencyFundCard(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
-                        text = "Saved: $savedFormatted",
+                        text = stringResource(R.string.saved_with_value, savedFormatted),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontWeight = FontWeight.SemiBold,
                     )
                     Text(
-                        text = "Goal: $targetGoalFormatted",
+                        text = stringResource(R.string.goal_with_value, targetGoalFormatted),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -811,9 +846,9 @@ fun TimeFrameSelector(
             val isSelected = timeFrame == selectedTimeFrame
             val label =
                 when (timeFrame) {
-                    TimeFrame.MONTHLY -> "Monthly"
-                    TimeFrame.QUARTERLY -> "Quarterly"
-                    TimeFrame.YEARLY -> "Yearly"
+                    TimeFrame.MONTHLY -> stringResource(R.string.monthly)
+                    TimeFrame.QUARTERLY -> stringResource(R.string.quarterly)
+                    TimeFrame.YEARLY -> stringResource(R.string.yearly)
                 }
 
             val backgroundColor by animateColorAsState(
@@ -879,7 +914,7 @@ fun PendingReviewBottomSheet(
                     .padding(bottom = 24.dp),
         ) {
             Text(
-                text = "Review Auto-Detected Transactions",
+                text = stringResource(R.string.review_auto_detected_transactions),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface,
@@ -887,7 +922,7 @@ fun PendingReviewBottomSheet(
             )
 
             Text(
-                text = "Verify the merchant name, category, and details extracted from your notifications before adding them to your financial record.",
+                text = stringResource(R.string.verify_pending_transactions_desc),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(bottom = 16.dp),
@@ -966,7 +1001,7 @@ fun PendingReviewBottomSheet(
                             OutlinedTextField(
                                 value = currentNote,
                                 onValueChange = { noteTextMap[pending.id] = it },
-                                label = { Text("Merchant / Note") },
+                                label = { Text(stringResource(R.string.merchant_note_label)) },
                                 singleLine = true,
                                 modifier = Modifier.fillMaxWidth(),
                                 shape = RoundedCornerShape(12.dp),
@@ -996,7 +1031,7 @@ fun PendingReviewBottomSheet(
                                     )
                                     Spacer(modifier = Modifier.width(6.dp))
                                     Text(
-                                        text = "Source: ${pending.bankAccount}",
+                                        text = stringResource(R.string.source_formatted, pending.bankAccount),
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         fontWeight = FontWeight.Medium,
@@ -1013,7 +1048,7 @@ fun PendingReviewBottomSheet(
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 Text(
-                                    text = "Show raw notification text",
+                                    text = stringResource(R.string.show_raw_notification_text),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.primary,
                                     fontWeight = FontWeight.Bold,
@@ -1068,7 +1103,7 @@ fun PendingReviewBottomSheet(
                                         modifier = Modifier.size(18.dp),
                                     )
                                     Spacer(modifier = Modifier.width(6.dp))
-                                    Text("Dismiss")
+                                    Text(stringResource(R.string.dismiss))
                                 }
 
                                 Button(
@@ -1082,7 +1117,7 @@ fun PendingReviewBottomSheet(
                                         modifier = Modifier.size(18.dp),
                                     )
                                     Spacer(modifier = Modifier.width(6.dp))
-                                    Text("Approve")
+                                    Text(stringResource(R.string.approve))
                                 }
                             }
                         }
@@ -1104,10 +1139,10 @@ fun CategorySelectorDropdown(
 
     Box(modifier = Modifier.fillMaxWidth()) {
         OutlinedTextField(
-            value = selectedCategory?.name ?: "Select Category",
+            value = selectedCategory?.name ?: stringResource(R.string.select_category),
             onValueChange = {},
             readOnly = true,
-            label = { Text("Category") },
+            label = { Text(stringResource(R.string.category)) },
             leadingIcon = {
                 Icon(
                     imageVector =

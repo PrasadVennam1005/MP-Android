@@ -15,6 +15,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material.icons.automirrored.rounded.Send
+import androidx.compose.material.icons.automirrored.rounded.TrendingUp
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -29,7 +30,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import prasad.vennam.moneypilot.R
 import prasad.vennam.moneypilot.feature.ai.model.AiAction
 import prasad.vennam.moneypilot.feature.ai.model.Author
@@ -672,7 +673,7 @@ fun WelcomeScreen(onSuggestionClick: (String) -> Unit) {
 
             SuggestionCard(
                 category = stringResource(R.string.wealth_assets),
-                icon = Icons.Rounded.TrendingUp,
+                icon = Icons.AutoMirrored.Rounded.TrendingUp,
                 iconColor = Color(0xFF4CAF50),
                 suggestions =
                     listOf(
@@ -797,7 +798,7 @@ fun ActionConfirmationCard(
                     )
                 is AiAction.AddInvestment ->
                     Triple(
-                        Icons.Rounded.TrendingUp,
+                        Icons.AutoMirrored.Rounded.TrendingUp,
                         R.string.log_investment,
                         Color(0xFF4CAF50),
                     )

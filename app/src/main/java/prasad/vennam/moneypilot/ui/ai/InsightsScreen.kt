@@ -26,7 +26,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import prasad.vennam.moneypilot.R
 import prasad.vennam.moneypilot.data.UserPreferences
 import prasad.vennam.moneypilot.ui.budget.utils.getCategoryIcon
@@ -36,6 +36,7 @@ import prasad.vennam.moneypilot.ui.viewmodel.AnalyticsState
 import prasad.vennam.moneypilot.ui.viewmodel.AnalyticsViewModel
 import prasad.vennam.moneypilot.util.CurrencyFormatter
 import prasad.vennam.moneypilot.util.LocalCurrencyCode
+import kotlin.math.abs
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -716,24 +717,24 @@ private fun generateSmartInsights(
                         InsightStatus.POSITIVE,
                         "Your investment portfolio is in the green! Total return of ${String.format("%.1f", gainPct)}%.",
                         "Your diversified assets are performing well. Reinvest returns if possible.",
-                        Icons.Rounded.TrendingUp,
+                        Icons.AutoMirrored.Rounded.TrendingUp,
                     )
                 gain < 0.0 ->
                     InsightTheme(
                         InsightStatus.NEGATIVE,
                         "Your investment portfolio is currently experiencing a paper loss of ${String.format(
                             "%.1f",
-                            Math.abs(gainPct),
+                            abs(gainPct),
                         )}% due to market fluctuation.",
                         "Market volatility is normal. Avoid panic selling and focus on long-term compound growth.",
-                        Icons.Rounded.TrendingDown,
+                        Icons.AutoMirrored.Rounded.TrendingDown,
                     )
                 else ->
                     InsightTheme(
                         InsightStatus.NEUTRAL,
                         "Your investment portfolio value is flat compared to your invested capital.",
                         "Regularly review your asset allocation strategy.",
-                        Icons.Rounded.TrendingUp,
+                        Icons.AutoMirrored.Rounded.TrendingUp,
                     )
             }
 

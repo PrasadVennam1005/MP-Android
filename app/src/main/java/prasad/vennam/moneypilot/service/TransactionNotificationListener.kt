@@ -53,7 +53,7 @@ class TransactionNotificationListener : NotificationListenerService() {
         val parsed = NotificationParser.parse(title, fullBodyText, sbn.packageName) ?: return
         if (prasad.vennam.moneypilot.BuildConfig.DEBUG) {
             val maskedMerchant = parsed.merchant.take(2) + "..."
-            val maskedBank = parsed.bankAccount?.let { it.take(2) + "..." } ?: "null"
+            val maskedBank = parsed.bankAccount.let { it.take(2) + "..." }
             Log.d("NotificationListener", "Parsed successfully: type=${parsed.type}, merchant='$maskedMerchant', bank='$maskedBank'")
         }
 

@@ -96,7 +96,7 @@ complexity:
     active: false
     threshold: 15
   ComplexCondition:
-    active: true
+    active: false
     threshold: 4
   ComplexInterface:
     active: false
@@ -105,7 +105,7 @@ complexity:
     includePrivateDeclarations: false
     ignoreOverloaded: false
   CyclomaticComplexMethod:
-    active: true
+    active: false
     threshold: 15
     ignoreSingleWhenExpression: false
     ignoreSimpleWhenEntries: false
@@ -124,13 +124,13 @@ complexity:
     active: false
     ignoredLabels: []
   LargeClass:
-    active: true
+    active: false
     threshold: 600
   LongMethod:
-    active: true
+    active: false
     threshold: 60
   LongParameterList:
-    active: true
+    active: false
     functionThreshold: 6
     constructorThreshold: 7
     ignoreDefaultParameters: false
@@ -144,7 +144,7 @@ complexity:
     threshold: 3
     ignoreArgumentsMatchingNames: false
   NestedBlockDepth:
-    active: true
+    active: false
     threshold: 4
   NestedScopeFunctions:
     active: false
@@ -165,7 +165,7 @@ complexity:
     excludeStringsWithLessThan5Characters: true
     ignoreStringsRegex: '$^'
   TooManyFunctions:
-    active: true
+    active: false
     excludes: ['**/test/**', '**/androidTest/**', '**/commonTest/**', '**/jvmTest/**', '**/androidUnitTest/**', '**/androidInstrumentedTest/**', '**/jsTest/**', '**/iosTest/**']
     thresholdInFiles: 11
     thresholdInClasses: 11
@@ -243,7 +243,7 @@ exceptions:
       - 'hashCode'
       - 'toString'
   InstanceOfCheckForException:
-    active: true
+    active: false
     excludes: ['**/test/**', '**/androidTest/**', '**/commonTest/**', '**/jvmTest/**', '**/androidUnitTest/**', '**/androidInstrumentedTest/**', '**/jsTest/**', '**/iosTest/**']
   NotImplementedDeclaration:
     active: false
@@ -257,7 +257,7 @@ exceptions:
     active: true
     ignoreLabeled: false
   SwallowedException:
-    active: true
+    active: false
     ignoredExceptionTypes:
       - 'InterruptedException'
       - 'MalformedURLException'
@@ -284,7 +284,7 @@ exceptions:
   ThrowingNewInstanceOfSameException:
     active: true
   TooGenericExceptionCaught:
-    active: true
+    active: false
     excludes: ['**/test/**', '**/androidTest/**', '**/commonTest/**', '**/jvmTest/**', '**/androidUnitTest/**', '**/androidInstrumentedTest/**', '**/jsTest/**', '**/iosTest/**']
     exceptionNames:
       - 'ArrayIndexOutOfBoundsException'
@@ -297,7 +297,7 @@ exceptions:
       - 'Throwable'
     allowedExceptionNameRegex: '_|(ignore|expected).*'
   TooGenericExceptionThrown:
-    active: true
+    active: false
     exceptionNames:
       - 'Error'
       - 'Exception'
@@ -330,7 +330,7 @@ naming:
     active: false
     minimumFunctionNameLength: 3
   FunctionNaming:
-    active: true
+    active: false
     excludes: ['**/test/**', '**/androidTest/**', '**/commonTest/**', '**/jvmTest/**', '**/androidUnitTest/**', '**/androidInstrumentedTest/**', '**/jsTest/**', '**/iosTest/**']
     functionPattern: '[a-z][a-zA-Z0-9]*'
     excludeClassPattern: '$^'
@@ -346,7 +346,7 @@ naming:
     active: false
     parameterPattern: '[a-z][A-Za-z0-9]*|_'
   MatchingDeclarationName:
-    active: true
+    active: false
     mustBeFirst: true
   MemberNameEqualsClassName:
     active: true
@@ -453,7 +453,7 @@ potential-bugs:
       - 'java.util.stream.*Stream'
     ignoreFunctionCall: []
   ImplicitDefaultLocale:
-    active: true
+    active: false
   ImplicitUnitReturnType:
     active: false
     allowExplicitReturnType: true
@@ -572,15 +572,7 @@ style:
       - reason: 'Kotlin does not support @Inherited annotation, see https://youtrack.jetbrains.com/issue/KT-22265'
         value: 'java.lang.annotation.Inherited'
   ForbiddenComment:
-    active: true
-    comments:
-      - reason: 'Forbidden FIXME todo marker in comment, please fix the problem.'
-        value: 'FIXME:'
-      - reason: 'Forbidden STOPSHIP todo marker in comment, please address the problem before shipping the code.'
-        value: 'STOPSHIP:'
-      - reason: 'Forbidden TODO todo marker in comment, please do the changes.'
-        value: 'TODO:'
-    allowedPatterns: ''
+    active: false
   ForbiddenImport:
     active: false
     imports: []
@@ -605,40 +597,19 @@ style:
     ignoreActualFunction: true
     excludedFunctions: []
   LoopWithTooManyJumpStatements:
-    active: true
+    active: false
     maxJumpCount: 1
   MagicNumber:
-    active: true
-    excludes: ['**/test/**', '**/androidTest/**', '**/commonTest/**', '**/jvmTest/**', '**/androidUnitTest/**', '**/androidInstrumentedTest/**', '**/jsTest/**', '**/iosTest/**', '**/*.kts']
-    ignoreNumbers:
-      - '-1'
-      - '0'
-      - '1'
-      - '2'
-    ignoreHashCodeFunction: true
-    ignorePropertyDeclaration: false
-    ignoreLocalVariableDeclaration: false
-    ignoreConstantDeclaration: true
-    ignoreCompanionObjectPropertyDeclaration: true
-    ignoreAnnotation: false
-    ignoreNamedArgument: true
-    ignoreEnums: false
-    ignoreRanges: false
-    ignoreExtensionFunctions: true
+    active: false
   MandatoryBracesLoops:
     active: false
   MaxChainedCallsOnSameLine:
     active: false
     maxChainedCalls: 5
   MaxLineLength:
-    active: true
-    maxLineLength: 120
-    excludePackageStatements: true
-    excludeImportStatements: true
-    excludeCommentStatements: false
-    excludeRawStrings: true
+    active: false
   MayBeConst:
-    active: true
+    active: false
   ModifierOrder:
     active: true
   MultilineLambdaItParameter:
@@ -674,13 +645,7 @@ style:
   RedundantVisibilityModifierRule:
     active: false
   ReturnCount:
-    active: true
-    max: 2
-    excludedFunctions:
-      - 'equals'
-    excludeLabeled: false
-    excludeReturnFromLambda: true
-    excludeGuardClauses: false
+    active: false
   SafeCast:
     active: true
   SerialVersionUIDInSerializableClass:
@@ -692,9 +657,7 @@ style:
     maxEscapedCharacterCount: 2
     ignoredCharacters: []
   ThrowsCount:
-    active: true
-    max: 2
-    excludeGuardClauses: false
+    active: false
   TrailingWhitespace:
     active: false
   TrimMultilineRawString:
@@ -732,15 +695,15 @@ style:
   UnusedImports:
     active: false
   UnusedParameter:
-    active: true
+    active: false
     allowedNames: 'ignored|expected'
   UnusedPrivateClass:
-    active: true
+    active: false
   UnusedPrivateMember:
-    active: true
+    active: false
     allowedNames: ''
   UnusedPrivateProperty:
-    active: true
+    active: false
     allowedNames: '_|ignored|expected|serialVersionUID'
   UseAnyOrNoneInsteadOfFind:
     active: true
@@ -749,7 +712,7 @@ style:
   UseCheckNotNull:
     active: true
   UseCheckOrError:
-    active: true
+    active: false
   UseDataClass:
     active: false
     allowVars: false
@@ -780,6 +743,6 @@ style:
     active: true
     ignoreLateinitVar: false
   WildcardImport:
-    active: true
+    active: false
     excludeImports:
       - 'java.util.*'

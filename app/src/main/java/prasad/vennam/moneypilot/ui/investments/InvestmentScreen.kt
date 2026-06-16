@@ -1,8 +1,14 @@
 package prasad.vennam.moneypilot.ui.investments
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Refresh
@@ -34,11 +40,37 @@ fun InvestmentScreen(
     onProfileClick: () -> Unit,
 ) {
     val investments by viewModel.allInvestments.collectAsState()
+    val allocationDetails by viewModel.allocationDetails.collectAsState()
+    val selectedProfile by viewModel.selectedProfile.collectAsState()
+    val symbolResults by viewModel.symbolResults.collectAsState()
+    val isSearching by viewModel.isSearching.collectAsState()
+    val autoFillState by viewModel.autoFillState.collectAsState()
+    var selectedTab by remember { mutableIntStateOf(0) }
+    val tabs = listOf("Holdings", "Allocation")
     var showFormSheet by remember { mutableStateOf(false) }
     var investmentToEdit by remember { mutableStateOf<Investment?>(null) }
     val currencyCode = LocalCurrencyCode.current
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+
+    val lazyListState = rememberLazyListState()
+    var isFabVisible by remember { mutableStateOf(true) }
+    var previousIndex by remember { mutableIntStateOf(0) }
+    var previousOffset by remember { mutableIntStateOf(0) }
+
+    LaunchedEffect(lazyListState.firstVisibleItemIndex, lazyListState.firstVisibleItemScrollOffset) {
+        val currentIndex = lazyListState.firstVisibleItemIndex
+        val currentOffset = lazyListState.firstVisibleItemScrollOffset
+        if (currentIndex == 0 && currentOffset == 0) {
+            isFabVisible = true
+        } else if (currentIndex > previousIndex || (currentIndex == previousIndex && currentOffset > previousOffset)) {
+            isFabVisible = false
+        } else if (currentIndex < previousIndex || (currentIndex == previousIndex && currentOffset < previousOffset)) {
+            isFabVisible = true
+        }
+        previousIndex = currentIndex
+        previousOffset = currentOffset
+    }
 
     val investmentSummary by viewModel.investmentSummary.collectAsState()
     val totalInvested = investmentSummary.totalInvested
@@ -94,69 +126,115 @@ fun InvestmentScreen(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(
-                onClick = {
-                    investmentToEdit = null
-                    showFormSheet = true
-                },
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary,
-                shape = MaterialTheme.shapes.large,
+            AnimatedVisibility(
+                visible = selectedTab == 0 && isFabVisible,
+                enter = scaleIn() + fadeIn(),
+                exit = scaleOut() + fadeOut(),
             ) {
-                Icon(Icons.Rounded.Add, contentDescription = stringResource(R.string.add_investment))
+                FloatingActionButton(
+                    onClick = {
+                        investmentToEdit = null
+                        showFormSheet = true
+                    },
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary,
+                    shape = MaterialTheme.shapes.large,
+                ) {
+                    Icon(Icons.Rounded.Add, contentDescription = stringResource(R.string.add_investment))
+                }
             }
         },
     ) { innerPadding ->
-        LazyColumn(
+        Column(
             modifier =
                 Modifier
                     .padding(innerPadding)
                     .fillMaxSize(),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            item {
-                InvestmentSummaryCard(totalCurrent, totalGain, gainPercent)
-            }
-
-            item {
-                Text(
-                    stringResource(R.string.your_portfolio),
-                    style = MaterialTheme.typography.titleLarge,
-                    modifier = Modifier.padding(vertical = 8.dp),
-                )
-            }
-
-            if (investments.isEmpty()) {
-                item {
-                    EmptyInvestmentState()
-                }
-            } else {
-                items(investments, key = { it.id }) { investment ->
-                    val deletedMessage = stringResource(R.string.investment_deleted)
-                    val undoLabel = stringResource(R.string.undo)
-                    SwipeableInvestmentCard(
-                        investment = investment,
-                        onEdit = {
-                            investmentToEdit = investment
-                            showFormSheet = true
-                        },
-                        onDelete = {
-                            val investmentCopy = investment
-                            viewModel.deleteInvestment(investment)
-                            scope.launch {
-                                val result =
-                                    snackbarHostState.showSnackbar(
-                                        message = deletedMessage,
-                                        actionLabel = undoLabel,
-                                        duration = SnackbarDuration.Short,
-                                    )
-                                if (result == SnackbarResult.ActionPerformed) {
-                                    viewModel.saveInvestment(investmentCopy)
-                                }
-                            }
-                        },
+            PrimaryTabRow(
+                selectedTabIndex = selectedTab,
+                containerColor = MaterialTheme.colorScheme.background,
+                contentColor = MaterialTheme.colorScheme.primary,
+            ) {
+                tabs.forEachIndexed { index, title ->
+                    Tab(
+                        selected = selectedTab == index,
+                        onClick = { selectedTab = index },
+                        text = { Text(title, fontWeight = FontWeight.Bold) },
                     )
+                }
+            }
+
+            when (selectedTab) {
+                0 -> {
+                    LazyColumn(
+                        state = lazyListState,
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                    ) {
+                        item {
+                            InvestmentSummaryCard(totalCurrent, totalGain, gainPercent)
+                        }
+
+                        item {
+                            Text(
+                                stringResource(R.string.your_portfolio),
+                                style = MaterialTheme.typography.titleLarge,
+                                modifier = Modifier.padding(vertical = 8.dp),
+                            )
+                        }
+
+                        if (investments.isEmpty()) {
+                            item {
+                                EmptyInvestmentState()
+                            }
+                        } else {
+                            items(investments, key = { it.id }) { investment ->
+                                val deletedMessage = stringResource(R.string.investment_deleted)
+                                val undoLabel = stringResource(R.string.undo)
+                                SwipeableInvestmentCard(
+                                    investment = investment,
+                                    onEdit = {
+                                        investmentToEdit = investment
+                                        showFormSheet = true
+                                    },
+                                    onDelete = {
+                                        val investmentCopy = investment
+                                        viewModel.deleteInvestment(investment)
+                                        scope.launch {
+                                            val result =
+                                                snackbarHostState.showSnackbar(
+                                                    message = deletedMessage,
+                                                    actionLabel = undoLabel,
+                                                    duration = SnackbarDuration.Short,
+                                                )
+                                            if (result == SnackbarResult.ActionPerformed) {
+                                                viewModel.saveInvestment(investmentCopy)
+                                            }
+                                        }
+                                    },
+                                )
+                            }
+                        }
+                    }
+                }
+
+                1 -> {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                    ) {
+                        item {
+                            AssetAllocationCard(
+                                allocationDetails = allocationDetails,
+                                selectedProfile = selectedProfile,
+                                onProfileSelected = { viewModel.selectProfile(it) },
+                                currencyCode = currencyCode,
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -164,7 +242,15 @@ fun InvestmentScreen(
         if (showFormSheet) {
             InvestmentFormBottomSheet(
                 initialInvestment = investmentToEdit,
-                viewModel = viewModel,
+                symbolResults = symbolResults,
+                isSearching = isSearching,
+                autoFillState = autoFillState,
+                onSearchSymbols = { query, assetType -> viewModel.searchSymbols(query, assetType) },
+                onClearSymbolSearch = { viewModel.clearSymbolSearch() },
+                onFetchQuantityForDate = { symbol, assetType, investedAmount, dateMs ->
+                    viewModel.fetchQuantityForDate(symbol, assetType, investedAmount, dateMs)
+                },
+                onClearAutoFill = { viewModel.clearAutoFill() },
                 onDismiss = {
                     viewModel.clearSymbolSearch()
                     showFormSheet = false

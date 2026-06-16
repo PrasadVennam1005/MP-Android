@@ -270,7 +270,7 @@ fun AddCategorySheetContent(
             0xFF9E9E9E,
             0xFF607D8B,
         )
-    var selectedColor by remember(initialCategory) { mutableLongStateOf(initialCategory?.color?.toLong() ?: availableColors[0]) }
+    var selectedColor by remember(initialCategory) { mutableLongStateOf(initialCategory?.color ?: availableColors[0]) }
 
     val availableIcons =
         listOf(

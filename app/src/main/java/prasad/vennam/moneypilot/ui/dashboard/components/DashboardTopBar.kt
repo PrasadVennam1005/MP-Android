@@ -1,11 +1,17 @@
 package prasad.vennam.moneypilot.ui.dashboard.components
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material3.Badge
@@ -41,6 +47,8 @@ fun DashboardTopBar(
     unreadCount: Int,
     onProfileClick: () -> Unit,
     onNotificationClick: () -> Unit,
+    showAiChat: Boolean = false,
+    onAiChatClick: () -> Unit = {},
 ) {
     val greeting =
         when (Calendar.getInstance().get(Calendar.HOUR_OF_DAY)) {
@@ -67,6 +75,19 @@ fun DashboardTopBar(
         actions = {
             if (syncState != null) {
                 SyncStatusIndicator(syncState)
+            }
+            AnimatedVisibility(
+                visible = showAiChat,
+                enter = scaleIn() + fadeIn(),
+                exit = scaleOut() + fadeOut(),
+            ) {
+                IconButton(onClick = onAiChatClick) {
+                    Icon(
+                        imageVector = Icons.Rounded.AutoAwesome,
+                        contentDescription = stringResource(R.string.ai_assistant),
+                        tint = MaterialTheme.colorScheme.primary,
+                    )
+                }
             }
             IconButton(onClick = onNotificationClick) {
                 BadgedBox(

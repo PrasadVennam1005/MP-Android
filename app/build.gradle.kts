@@ -8,6 +8,7 @@ plugins {
     alias(libs.plugins.hilt)
     alias(libs.plugins.jetbrains.kotlin.plugin.serialization)
     alias(libs.plugins.google.services)
+    alias(libs.plugins.firebase.crashlytics)
     alias(libs.plugins.ktlint)
     alias(libs.plugins.detekt)
 }
@@ -40,7 +41,7 @@ android {
 
     signingConfigs {
         create("release") {
-            storeFile = file("moneypilot.jks")
+            storeFile = rootProject.file("moneypilot.jks")
             storePassword = localProperties.getProperty("KEYSTORE_PASSWORD", "")
             keyAlias = localProperties.getProperty("KEY_ALIAS", "")
             keyPassword = localProperties.getProperty("KEY_PASSWORD", "")
@@ -65,6 +66,11 @@ android {
     buildFeatures {
         compose = true
         buildConfig = true
+    }
+    packaging {
+        jniLibs {
+            useLegacyPackaging = false
+        }
     }
 }
 
@@ -95,6 +101,7 @@ dependencies {
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.auth)
     implementation(libs.firebase.analytics)
+    implementation(libs.firebase.crashlytics)
     implementation(libs.google.mlkit.text.recognition)
     implementation(libs.play.services.auth)
     implementation(libs.androidx.credentials)
@@ -129,11 +136,10 @@ dependencies {
     testImplementation(libs.androidx.junit)
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
-    testImplementation("org.mockito:mockito-core:5.23.0")
+    testImplementation(libs.mockito.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     androidTestImplementation(libs.androidx.espresso.core)
-    androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.runner)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
     debugImplementation(libs.androidx.compose.ui.tooling)

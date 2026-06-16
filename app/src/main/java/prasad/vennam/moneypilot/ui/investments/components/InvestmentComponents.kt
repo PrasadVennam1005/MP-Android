@@ -10,7 +10,7 @@ import androidx.compose.material.icons.automirrored.rounded.TrendingUp
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -19,10 +19,11 @@ import androidx.compose.ui.platform.LocalLocale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.launch
 import prasad.vennam.moneypilot.R
 import prasad.vennam.moneypilot.data.entity.Investment
+import prasad.vennam.moneypilot.domain.model.SymbolResult
 import prasad.vennam.moneypilot.util.CurrencyFormatter
-import prasad.vennam.moneypilot.util.FinancePriceFetcher
 import prasad.vennam.moneypilot.util.LocalCurrencyCode
 import prasad.vennam.moneypilot.util.inRupees
 
@@ -82,25 +83,20 @@ fun SwipeableInvestmentCard(
     onDelete: () -> Unit,
 ) {
     val dismissState = rememberSwipeToDismissBoxState()
-
-    LaunchedEffect(dismissState.currentValue) {
-        when (dismissState.currentValue) {
-            SwipeToDismissBoxValue.EndToStart -> {
-                onDelete()
-                dismissState.reset()
-            }
-
-            SwipeToDismissBoxValue.StartToEnd -> {
-                onEdit()
-                dismissState.reset()
-            }
-
-            else -> {}
-        }
-    }
+    val scope = rememberCoroutineScope()
 
     SwipeToDismissBox(
         state = dismissState,
+        onDismiss = { direction ->
+            when (direction) {
+                SwipeToDismissBoxValue.EndToStart -> onDelete()
+                SwipeToDismissBoxValue.StartToEnd -> {
+                    onEdit()
+                    scope.launch { dismissState.reset() }
+                }
+                else -> {}
+            }
+        },
         backgroundContent = {
             val color =
                 when (dismissState.dismissDirection) {
@@ -285,7 +281,7 @@ fun AssetTypeIcon(
 
 @Composable
 fun SymbolResultRow(
-    result: FinancePriceFetcher.SymbolResult,
+    result: SymbolResult,
     assetType: String,
     onClick: () -> Unit,
 ) {

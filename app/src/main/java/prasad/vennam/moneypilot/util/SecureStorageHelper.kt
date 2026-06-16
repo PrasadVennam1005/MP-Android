@@ -2,7 +2,11 @@ package prasad.vennam.moneypilot.util
 
 import android.content.Context
 import android.util.Base64
+import android.util.Base64.encodeToString
+import androidx.core.content.edit
 import androidx.security.crypto.EncryptedSharedPreferences
+import androidx.security.crypto.EncryptedSharedPreferences.PrefKeyEncryptionScheme
+import androidx.security.crypto.EncryptedSharedPreferences.PrefValueEncryptionScheme
 import androidx.security.crypto.MasterKey
 import java.security.SecureRandom
 
@@ -20,8 +24,8 @@ class SecureStorageHelper(
             context,
             "secure_money_pilot_prefs",
             masterKey,
-            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
+            PrefKeyEncryptionScheme.AES256_SIV,
+            PrefValueEncryptionScheme.AES256_GCM,
         )
 
     fun getOrGenerateDatabasePassphrase(): ByteArray {
@@ -32,8 +36,8 @@ class SecureStorageHelper(
         } else {
             val newPassphrase = ByteArray(32)
             SecureRandom().nextBytes(newPassphrase)
-            val encoded = Base64.encodeToString(newPassphrase, Base64.DEFAULT)
-            sharedPreferences.edit().putString(key, encoded).apply()
+            val encoded = encodeToString(newPassphrase, Base64.DEFAULT)
+            sharedPreferences.edit { putString(key, encoded) }
             newPassphrase
         }
     }
@@ -46,8 +50,8 @@ class SecureStorageHelper(
         } else {
             val newPassphrase = ByteArray(32)
             SecureRandom().nextBytes(newPassphrase)
-            val encoded = Base64.encodeToString(newPassphrase, Base64.DEFAULT)
-            sharedPreferences.edit().putString(key, encoded).apply()
+            val encoded = encodeToString(newPassphrase, Base64.DEFAULT)
+            sharedPreferences.edit { putString(key, encoded) }
             encoded
         }
     }

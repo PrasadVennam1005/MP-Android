@@ -95,6 +95,7 @@
         android:name=".MoneyPilotApplication"
         android:allowBackup="false"
         android:largeHeap="true"
+        android:extractNativeLibs="false"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
         android:icon="@mipmap/ic_launcher"

@@ -1,5 +1,10 @@
 package prasad.vennam.moneypilot.ui.transactions
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -16,6 +21,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Category
@@ -35,6 +41,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
@@ -43,6 +50,7 @@ import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Surface
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
+import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
@@ -93,8 +101,8 @@ data class TransactionItemState(
 @Composable
 fun HistoryScreen(
     viewModel: TransactionViewModel,
-    onAddTransaction: () -> Unit,
-    onEditTransaction: (Long) -> Unit,
+    onAddTransaction: (TransactionType) -> Unit,
+    onEditTransaction: (Long, TransactionType) -> Unit,
     userData: UserPreferences.UserData?,
     syncState: SyncState?,
     onProfileClick: () -> Unit,
@@ -114,10 +122,32 @@ fun HistoryScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
+    var selectedTabType by remember { mutableStateOf(TransactionType.EXPENSE) }
+    val activeType = fixedType ?: selectedTabType
+
+    val lazyListState = rememberLazyListState()
+    var isFabVisible by remember { mutableStateOf(true) }
+    var previousIndex by remember { androidx.compose.runtime.mutableIntStateOf(0) }
+    var previousOffset by remember { androidx.compose.runtime.mutableIntStateOf(0) }
+
+    LaunchedEffect(lazyListState.firstVisibleItemIndex, lazyListState.firstVisibleItemScrollOffset) {
+        val currentIndex = lazyListState.firstVisibleItemIndex
+        val currentOffset = lazyListState.firstVisibleItemScrollOffset
+        if (currentIndex == 0 && currentOffset == 0) {
+            isFabVisible = true
+        } else if (currentIndex > previousIndex || (currentIndex == previousIndex && currentOffset > previousOffset)) {
+            isFabVisible = false
+        } else if (currentIndex < previousIndex || (currentIndex == previousIndex && currentOffset < previousOffset)) {
+            isFabVisible = true
+        }
+        previousIndex = currentIndex
+        previousOffset = currentOffset
+    }
+
     val filteredTransactions =
-        remember(transactions, searchQuery, selectedCategoryId, selectedPaymentMode, fixedType) {
+        remember(transactions, searchQuery, selectedCategoryId, selectedPaymentMode, activeType) {
             transactions.filter { transaction ->
-                val matchesType = fixedType == null || transaction.type == fixedType
+                val matchesType = transaction.type == activeType
                 val matchesSearch =
                     transaction.note.contains(searchQuery, ignoreCase = true) ||
                         categories.find { it.id == transaction.categoryId }?.name?.contains(
@@ -143,7 +173,7 @@ fun HistoryScreen(
                             when (fixedType) {
                                 TransactionType.INCOME -> stringResource(R.string.income)
                                 TransactionType.EXPENSE -> stringResource(R.string.expenses)
-                                else -> stringResource(R.string.history)
+                                else -> stringResource(R.string.transactions)
                             },
                             style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
                         )
@@ -171,16 +201,43 @@ fun HistoryScreen(
                     onFilterClick = { showFilterSheet = true },
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                 )
+
+                if (fixedType == null) {
+                    val tabs = listOf(stringResource(R.string.expenses), stringResource(R.string.income))
+                    val selectedTab = if (activeType == TransactionType.EXPENSE) 0 else 1
+                    PrimaryTabRow(
+                        selectedTabIndex = selectedTab,
+                        containerColor = MaterialTheme.colorScheme.background,
+                        contentColor = MaterialTheme.colorScheme.primary,
+                    ) {
+                        tabs.forEachIndexed { index, title ->
+                            Tab(
+                                selected = selectedTab == index,
+                                onClick = {
+                                    selectedTabType = if (index == 0) TransactionType.EXPENSE else TransactionType.INCOME
+                                    selectedCategoryId = null // Reset category filter on tab switch
+                                },
+                                text = { Text(title, fontWeight = FontWeight.Bold) },
+                            )
+                        }
+                    }
+                }
             }
         },
         floatingActionButton = {
-            FloatingActionButton(
-                onClick = onAddTransaction,
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary,
-                shape = MaterialTheme.shapes.large,
+            AnimatedVisibility(
+                visible = isFabVisible,
+                enter = scaleIn() + fadeIn(),
+                exit = scaleOut() + fadeOut(),
             ) {
-                Icon(Icons.Rounded.Add, contentDescription = stringResource(R.string.add))
+                FloatingActionButton(
+                    onClick = { onAddTransaction(activeType) },
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary,
+                    shape = MaterialTheme.shapes.large,
+                ) {
+                    Icon(Icons.Rounded.Add, contentDescription = stringResource(R.string.add))
+                }
             }
         },
     ) { innerPadding ->
@@ -201,6 +258,7 @@ fun HistoryScreen(
                 EmptyState(searchQuery.isNotEmpty())
             } else {
                 LazyColumn(
+                    state = lazyListState,
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -211,7 +269,7 @@ fun HistoryScreen(
                         SwipeableTransactionCard(
                             transaction = itemState.transaction,
                             category = itemState.category,
-                            onEdit = { onEditTransaction(itemState.transaction.id) },
+                            onEdit = { onEditTransaction(itemState.transaction.id, itemState.transaction.type) },
                             onDelete = {
                                 val transactionCopy = itemState.transaction
                                 viewModel.deleteTransaction(itemState.transaction)
@@ -236,7 +294,7 @@ fun HistoryScreen(
 
     if (showFilterSheet) {
         FilterBottomSheet(
-            categories = categories.filter { fixedType == null || it.isExpense == (fixedType == TransactionType.EXPENSE) },
+            categories = categories.filter { it.isExpense == (activeType == TransactionType.EXPENSE) },
             selectedCategoryId = selectedCategoryId,
             selectedPaymentMode = selectedPaymentMode,
             onCategorySelect = { selectedCategoryId = it },
@@ -297,25 +355,22 @@ fun SwipeableTransactionCard(
     onDelete: () -> Unit,
 ) {
     val dismissState = rememberSwipeToDismissBoxState()
-
-    LaunchedEffect(dismissState.currentValue) {
-        when (dismissState.currentValue) {
-            SwipeToDismissBoxValue.EndToStart -> {
-                onDelete()
-                dismissState.reset()
-            }
-
-            SwipeToDismissBoxValue.StartToEnd -> {
-                onEdit()
-                dismissState.reset()
-            }
-
-            else -> {}
-        }
-    }
+    val scope = rememberCoroutineScope()
 
     SwipeToDismissBox(
         state = dismissState,
+        onDismiss = { direction ->
+            when (direction) {
+                SwipeToDismissBoxValue.EndToStart -> {
+                    onDelete()
+                }
+                SwipeToDismissBoxValue.StartToEnd -> {
+                    onEdit()
+                    scope.launch { dismissState.reset() }
+                }
+                else -> {}
+            }
+        },
         backgroundContent = {
             val color =
                 when (dismissState.dismissDirection) {
