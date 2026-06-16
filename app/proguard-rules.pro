@@ -55,3 +55,9 @@
 
 # Keep all Navigation Destinations
 -keep class prasad.vennam.moneypilot.ui.navigation.Destination** { *; }
+
+# LiteRT-LM (formerly TensorFlow Lite Edge AI)
+-keep class com.google.ai.edge.litertlm.** { *; }
+-keep class org.tensorflow.** { *; }
+-dontwarn com.google.ai.edge.litertlm.**
+-dontwarn org.tensorflow.**
