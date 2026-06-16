@@ -22,6 +22,14 @@
           }
         },
         {
+          "client_id": "769875296764-drhf3g9hvc3qb1mvh3tdipctlmj9p648.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "prasad.vennam.moneypilot",
+            "certificate_hash": "7de49a7eba7b3028a98905f8402d6da5d6f273fb"
+          }
+        },
+        {
           "client_id": "769875296764-fi8ktc2uq8u0bpjpjv5chv4q2gmk0mc6.apps.googleusercontent.com",
           "client_type": 3
         }
