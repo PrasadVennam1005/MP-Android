@@ -7,7 +7,19 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -15,9 +27,51 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.HelpOutline
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.rounded.Logout
-import androidx.compose.material.icons.rounded.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.rounded.Category
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.CloudSync
+import androidx.compose.material.icons.rounded.CurrencyExchange
+import androidx.compose.material.icons.rounded.DarkMode
+import androidx.compose.material.icons.rounded.DeleteForever
+import androidx.compose.material.icons.rounded.FileDownload
+import androidx.compose.material.icons.rounded.Flag
+import androidx.compose.material.icons.rounded.Gavel
+import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material.icons.rounded.LightMode
+import androidx.compose.material.icons.rounded.Lock
+import androidx.compose.material.icons.rounded.Notifications
+import androidx.compose.material.icons.rounded.Palette
+import androidx.compose.material.icons.rounded.Person
+import androidx.compose.material.icons.rounded.PrivacyTip
+import androidx.compose.material.icons.rounded.SettingsSuggest
+import androidx.compose.material.icons.rounded.Sms
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -44,21 +98,16 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import prasad.vennam.moneypilot.R
 import prasad.vennam.moneypilot.data.UserPreferences
-import prasad.vennam.moneypilot.ui.viewmodel.BudgetViewModel
-import prasad.vennam.moneypilot.ui.viewmodel.InvestmentViewModel
 import prasad.vennam.moneypilot.ui.viewmodel.MainViewModel
 import prasad.vennam.moneypilot.ui.viewmodel.RestoreState
 import prasad.vennam.moneypilot.ui.viewmodel.TransactionViewModel
 import prasad.vennam.moneypilot.util.AnalyticsHelper
 import prasad.vennam.moneypilot.util.ExportHelper
-import kotlin.collections.find
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
     transactionViewModel: TransactionViewModel,
-    budgetViewModel: BudgetViewModel,
-    investmentViewModel: InvestmentViewModel,
     mainViewModel: MainViewModel,
     analyticsHelper: AnalyticsHelper,
     onLogout: () -> Unit,
@@ -91,12 +140,11 @@ fun SettingsScreen(
 
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
-        val observer =
-            LifecycleEventObserver { _, event ->
-                if (event == Lifecycle.Event.ON_RESUME) {
-                    isNotificationTrackingEnabled = isNotificationServiceEnabled(context)
-                }
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                isNotificationTrackingEnabled = isNotificationServiceEnabled(context)
             }
+        }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose {
             lifecycleOwner.lifecycle.removeObserver(observer)
@@ -113,50 +161,49 @@ fun SettingsScreen(
     var showDeleteAccountConfirmation by remember { mutableStateOf(false) }
     var isDeletingAccount by remember { mutableStateOf(false) }
     val currentThemeMode by mainViewModel.themeMode.collectAsState()
-    val themeSubtitle =
-        when (currentThemeMode) {
-            prasad.vennam.moneypilot.data.UserPreferences.ThemeMode.LIGHT -> stringResource(R.string.light_mode)
-            prasad.vennam.moneypilot.data.UserPreferences.ThemeMode.DARK -> stringResource(R.string.dark_mode)
-            else -> stringResource(R.string.system_default)
-        }
+    val themeSubtitle = when (currentThemeMode) {
+        UserPreferences.ThemeMode.LIGHT -> stringResource(R.string.light_mode)
+        UserPreferences.ThemeMode.DARK -> stringResource(R.string.dark_mode)
+        else -> stringResource(R.string.system_default)
+    }
     var pendingFeatureName by remember { mutableStateOf("") }
     val credentialManager = remember { CredentialManager.create(context) }
     val restoreState by mainViewModel.restoreState.collectAsState()
 
-    val authLauncher =
-        rememberLauncherForActivityResult(
-            contract = ActivityResultContracts.StartActivityForResult(),
-        ) { result ->
-            if (result.resultCode == Activity.RESULT_OK) {
-                mainViewModel.checkAndPerformRestore(context)
-            }
+    val authLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult(),
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            mainViewModel.checkAndPerformRestore(context)
         }
+    }
 
     LaunchedEffect(restoreState) {
         when (val state = restoreState) {
             is RestoreState.Success -> {
-                Toast
-                    .makeText(
+                Toast.makeText(
                         context,
-                        context.run { getString(prasad.vennam.moneypilot.R.string.backup_successfully_restored) },
+                        context.run { getString(R.string.backup_successfully_restored) },
                         Toast.LENGTH_LONG,
                     ).show()
                 mainViewModel.resetRestoreCheck()
             }
+
             is RestoreState.NeedAuthorization -> {
                 authLauncher.launch(state.intent)
             }
+
             is RestoreState.Error -> {
-                Toast
-                    .makeText(
+                Toast.makeText(
                         context,
                         context.run {
-                            getString(prasad.vennam.moneypilot.R.string.restore_failed, state.message)
+                            getString(R.string.restore_failed, state.message)
                         },
                         Toast.LENGTH_LONG,
                     ).show()
                 mainViewModel.resetRestoreCheck()
             }
+
             else -> {}
         }
     }
@@ -173,37 +220,25 @@ fun SettingsScreen(
     val triggerGoogleLogin = {
         scope.launch {
             try {
-                val googleIdOption =
-                    GetGoogleIdOption
-                        .Builder()
-                        .setFilterByAuthorizedAccounts(false)
-                        .setServerClientId(prasad.vennam.moneypilot.BuildConfig.GOOGLE_CLIENT_ID)
-                        .setAutoSelectEnabled(true)
-                        .build()
+                val googleIdOption = GetGoogleIdOption.Builder().setFilterByAuthorizedAccounts(false).setServerClientId(prasad.vennam.moneypilot.BuildConfig.GOOGLE_CLIENT_ID).setAutoSelectEnabled(true).build()
 
-                val request =
-                    GetCredentialRequest
-                        .Builder()
-                        .addCredentialOption(googleIdOption)
-                        .build()
+                val request = GetCredentialRequest.Builder().addCredentialOption(googleIdOption).build()
 
-                val result =
-                    credentialManager.getCredential(
-                        request = request,
-                        context = context,
-                    )
+                val result = credentialManager.getCredential(
+                    request = request,
+                    context = context,
+                )
 
                 val credential = result.credential
-                val googleIdTokenCredential =
-                    try {
-                        if (credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
-                            GoogleIdTokenCredential.createFrom(credential.data)
-                        } else {
-                            null
-                        }
-                    } catch (e: Exception) {
+                val googleIdTokenCredential = try {
+                    if (credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
+                        GoogleIdTokenCredential.createFrom(credential.data)
+                    } else {
                         null
                     }
+                } catch (e: Exception) {
+                    null
+                }
 
                 if (googleIdTokenCredential != null) {
                     analyticsHelper.logEvent("login", mapOf("method" to "google"))
@@ -228,93 +263,89 @@ fun SettingsScreen(
         }
     }
 
-    val csvExportLauncher =
-        rememberLauncherForActivityResult(
-            contract = ActivityResultContracts.CreateDocument("text/csv"),
-        ) { uri ->
-            if (uri != null) {
-                scope.launch(Dispatchers.IO) {
-                    try {
-                        context.contentResolver.openOutputStream(uri)?.use { outputStream ->
-                            ExportHelper.exportToCsv(
-                                transactions = transactions,
-                                categories = categories,
-                                outputStream = outputStream,
-                                currencyCode = currentCurrencyCode,
-                            )
-                            scope.launch(Dispatchers.Main) {
-                                Toast.makeText(context, context.getString(R.string.data_exported_csv), Toast.LENGTH_LONG).show()
-                            }
-                        }
-                    } catch (e: Exception) {
+    val csvExportLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("text/csv"),
+    ) { uri ->
+        if (uri != null) {
+            scope.launch(Dispatchers.IO) {
+                try {
+                    context.contentResolver.openOutputStream(uri)?.use { outputStream ->
+                        ExportHelper.exportToCsv(
+                            transactions = transactions,
+                            categories = categories,
+                            outputStream = outputStream,
+                            currencyCode = currentCurrencyCode,
+                        )
                         scope.launch(Dispatchers.Main) {
-                            Toast.makeText(context, context.getString(R.string.export_failed, e.message ?: ""), Toast.LENGTH_LONG).show()
+                            Toast.makeText(context, with(context) { getString(R.string.data_exported_csv) }, Toast.LENGTH_LONG).show()
                         }
+                    }
+                } catch (e: Exception) {
+                    scope.launch(Dispatchers.Main) {
+                        Toast.makeText(context, with(context) { getString(R.string.export_failed, e.message ?: "") }, Toast.LENGTH_LONG).show()
                     }
                 }
             }
         }
+    }
 
-    val pdfExportLauncher =
-        rememberLauncherForActivityResult(
-            contract = ActivityResultContracts.CreateDocument("application/pdf"),
-        ) { uri ->
-            if (uri != null) {
-                scope.launch(Dispatchers.IO) {
-                    try {
-                        context.contentResolver.openOutputStream(uri)?.use { outputStream ->
-                            ExportHelper.exportToPdf(
-                                transactions = transactions,
-                                categories = categories,
-                                outputStream = outputStream,
-                                currencyCode = currentCurrencyCode,
-                            )
-                            scope.launch(Dispatchers.Main) {
-                                Toast.makeText(context, context.getString(R.string.data_exported_pdf), Toast.LENGTH_LONG).show()
-                            }
-                        }
-                    } catch (e: Exception) {
+    val pdfExportLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("application/pdf"),
+    ) { uri ->
+        if (uri != null) {
+            scope.launch(Dispatchers.IO) {
+                try {
+                    context.contentResolver.openOutputStream(uri)?.use { outputStream ->
+                        ExportHelper.exportToPdf(
+                            transactions = transactions,
+                            categories = categories,
+                            outputStream = outputStream,
+                            currencyCode = currentCurrencyCode,
+                        )
                         scope.launch(Dispatchers.Main) {
-                            Toast.makeText(context, context.getString(R.string.export_failed, e.message ?: ""), Toast.LENGTH_LONG).show()
+                            Toast.makeText(context, with(context) { getString(R.string.data_exported_pdf) }, Toast.LENGTH_LONG).show()
                         }
+                    }
+                } catch (e: Exception) {
+                    scope.launch(Dispatchers.Main) {
+                        Toast.makeText(context, with(context) { getString(R.string.export_failed, e.message ?: "") }, Toast.LENGTH_LONG).show()
                     }
                 }
             }
         }
+    }
 
-    val currencyOptions =
-        listOf(
-            CurrencyInfo("INR", "Indian Rupee", "₹", "🇮🇳"),
-            CurrencyInfo("USD", "US Dollar", "$", "🇺🇸"),
-            CurrencyInfo("EUR", "Euro", "€", "🇪🇺"),
-            CurrencyInfo("GBP", "British Pound", "£", "🇬🇧"),
-            CurrencyInfo("JPY", "Japanese Yen", "¥", "🇯🇵"),
-            CurrencyInfo("AUD", "Australian Dollar", "A$", "🇦🇺"),
-            CurrencyInfo("CAD", "Canadian Dollar", "C$", "🇨🇦"),
-            CurrencyInfo("CHF", "Swiss Franc", "Fr", "🇨🇭"),
-            CurrencyInfo("CNY", "Chinese Yuan", "¥", "🇨🇳"),
-            CurrencyInfo("SGD", "Singapore Dollar", "S$", "🇸🇬"),
-            CurrencyInfo("AED", "UAE Dirham", "د.إ", "🇦🇪"),
-            CurrencyInfo("SAR", "Saudi Riyal", "ر.س", "🇸🇦"),
-            CurrencyInfo("ZAR", "South African Rand", "R", "🇿🇦"),
-            CurrencyInfo("BRL", "Brazilian Real", "R$", "🇧🇷"),
-            CurrencyInfo("MXN", "Mexican Peso", "$", "🇲🇽"),
-            CurrencyInfo("KRW", "South Korean Won", "₩", "🇰🇷"),
-        )
+    val currencyOptions = listOf(
+        CurrencyInfo("INR", "Indian Rupee", "₹", "🇮🇳"),
+        CurrencyInfo("USD", "US Dollar", "$", "🇺🇸"),
+        CurrencyInfo("EUR", "Euro", "€", "🇪🇺"),
+        CurrencyInfo("GBP", "British Pound", "£", "🇬🇧"),
+        CurrencyInfo("JPY", "Japanese Yen", "¥", "🇯🇵"),
+        CurrencyInfo("AUD", "Australian Dollar", "A$", "🇦🇺"),
+        CurrencyInfo("CAD", "Canadian Dollar", "C$", "🇨🇦"),
+        CurrencyInfo("CHF", "Swiss Franc", "Fr", "🇨🇭"),
+        CurrencyInfo("CNY", "Chinese Yuan", "¥", "🇨🇳"),
+        CurrencyInfo("SGD", "Singapore Dollar", "S$", "🇸🇬"),
+        CurrencyInfo("AED", "UAE Dirham", "د.إ", "🇦🇪"),
+        CurrencyInfo("SAR", "Saudi Riyal", "ر.س", "🇸🇦"),
+        CurrencyInfo("ZAR", "South African Rand", "R", "🇿🇦"),
+        CurrencyInfo("BRL", "Brazilian Real", "R$", "🇧🇷"),
+        CurrencyInfo("MXN", "Mexican Peso", "$", "🇲🇽"),
+        CurrencyInfo("KRW", "South Korean Won", "₩", "🇰🇷"),
+    )
 
     val currentCurrency = currencyOptions.find { it.code == currentCurrencyCode } ?: currencyOptions[0]
 
     val rateAgainstUSD = exchangeRates[currentCurrencyCode] ?: 1.0
-    val liveRateText =
-        if (currentCurrencyCode == "USD") {
-            stringResource(R.string.base_currency)
-        } else {
-            stringResource(
-                R.string.usd_exchange_rate_format,
-                currentCurrency.symbol,
-                rateAgainstUSD,
-            )
-        }
+    val liveRateText = if (currentCurrencyCode == "USD") {
+        stringResource(R.string.base_currency)
+    } else {
+        stringResource(
+            R.string.usd_exchange_rate_format,
+            currentCurrency.symbol,
+            rateAgainstUSD,
+        )
+    }
 
     if (showCurrencySheet) {
         CurrencySelectionBottomSheet(
@@ -343,23 +374,21 @@ fun SettingsScreen(
                         style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
                     )
                 },
-                colors =
-                    TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.background,
-                        scrolledContainerColor = Color.Unspecified,
-                        navigationIconContentColor = Color.Unspecified,
-                        titleContentColor = Color.Unspecified,
-                        actionIconContentColor = Color.Unspecified,
-                    ),
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background,
+                    scrolledContainerColor = Color.Unspecified,
+                    navigationIconContentColor = Color.Unspecified,
+                    titleContentColor = Color.Unspecified,
+                    actionIconContentColor = Color.Unspecified,
+                ),
             )
         },
     ) { innerPadding ->
         LazyColumn(
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding)
-                    .background(MaterialTheme.colorScheme.background),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .background(MaterialTheme.colorScheme.background),
             contentPadding = PaddingValues(bottom = 32.dp),
         ) {
             // Profile Section
@@ -386,12 +415,11 @@ fun SettingsScreen(
                     SettingsItem(
                         icon = Icons.Rounded.Flag,
                         title = stringResource(R.string.financial_goal),
-                        subtitle =
-                            stringResource(
-                                R.string.savings_target_subtitle,
-                                currentGoal,
-                                currentTarget,
-                            ),
+                        subtitle = stringResource(
+                            R.string.savings_target_subtitle,
+                            currentGoal,
+                            currentTarget,
+                        ),
                         onClick = {
                             mainViewModel.resetOnboarding()
                         },
@@ -497,16 +525,14 @@ fun SettingsScreen(
                     onClick = {
                         mainViewModel.logout(onLogout)
                     },
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 24.dp)
-                            .height(56.dp),
-                    colors =
-                        ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.8f),
-                            contentColor = MaterialTheme.colorScheme.error,
-                        ),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp)
+                        .height(56.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.8f),
+                        contentColor = MaterialTheme.colorScheme.error,
+                    ),
                     shape = MaterialTheme.shapes.large,
                     elevation = null,
                 ) {
@@ -523,15 +549,13 @@ fun SettingsScreen(
                     onClick = {
                         showDeleteAccountConfirmation = true
                     },
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 24.dp)
-                            .height(56.dp),
-                    colors =
-                        ButtonDefaults.outlinedButtonColors(
-                            contentColor = MaterialTheme.colorScheme.error,
-                        ),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp)
+                        .height(56.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = MaterialTheme.colorScheme.error,
+                    ),
                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.5f)),
                     shape = MaterialTheme.shapes.large,
                 ) {
@@ -566,7 +590,9 @@ fun SettingsScreen(
             text = { Text(stringResource(R.string.export_description)) },
             confirmButton = {
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 8.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
                 ) {
                     TextButton(
@@ -607,27 +633,28 @@ fun SettingsScreen(
             },
             text = {
                 Column(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
-                    val modes =
-                        listOf(
-                            Triple(
-                                prasad.vennam.moneypilot.data.UserPreferences.ThemeMode.SYSTEM,
-                                stringResource(R.string.system_default),
-                                Icons.Rounded.SettingsSuggest,
-                            ),
-                            Triple(
-                                prasad.vennam.moneypilot.data.UserPreferences.ThemeMode.LIGHT,
-                                stringResource(R.string.light_mode),
-                                Icons.Rounded.LightMode,
-                            ),
-                            Triple(
-                                prasad.vennam.moneypilot.data.UserPreferences.ThemeMode.DARK,
-                                stringResource(R.string.dark_mode),
-                                Icons.Rounded.DarkMode,
-                            ),
-                        )
+                    val modes = listOf(
+                        Triple(
+                            UserPreferences.ThemeMode.SYSTEM,
+                            stringResource(R.string.system_default),
+                            Icons.Rounded.SettingsSuggest,
+                        ),
+                        Triple(
+                            UserPreferences.ThemeMode.LIGHT,
+                            stringResource(R.string.light_mode),
+                            Icons.Rounded.LightMode,
+                        ),
+                        Triple(
+                            UserPreferences.ThemeMode.DARK,
+                            stringResource(R.string.dark_mode),
+                            Icons.Rounded.DarkMode,
+                        ),
+                    )
                     modes.forEach { (mode, name, icon) ->
                         val isSelected = currentThemeMode == mode
                         Surface(
@@ -638,14 +665,15 @@ fun SettingsScreen(
                             modifier = Modifier.fillMaxWidth(),
                             shape = MaterialTheme.shapes.medium,
                             color = if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f) else Color.Transparent,
-                            border =
-                                androidx.compose.foundation.BorderStroke(
-                                    width = 1.dp,
-                                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
-                                ),
+                            border = BorderStroke(
+                                width = 1.dp,
+                                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
+                            ),
                         ) {
                             Row(
-                                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.SpaceBetween,
                             ) {
@@ -696,10 +724,9 @@ fun SettingsScreen(
             text = {
                 Column {
                     Text(
-                        text =
-                            stringResource(
-                                if (isGuest) R.string.reset_guest_confirm_message else R.string.delete_account_confirm_message,
-                            ),
+                        text = stringResource(
+                            if (isGuest) R.string.reset_guest_confirm_message else R.string.delete_account_confirm_message,
+                        ),
                         style = MaterialTheme.typography.bodyMedium,
                     )
                     if (isDeletingAccount) {
@@ -732,25 +759,25 @@ fun SettingsScreen(
                                 isDeletingAccount = false
                                 showDeleteAccountConfirmation = false
                                 if (success) {
-                                    Toast
-                                        .makeText(
+                                    Toast.makeText(
                                             context,
-                                            context.getString(
-                                                if (isGuest) R.string.reset_guest_success else R.string.delete_account_success,
-                                            ),
+                                            with(context) {
+                                                getString(
+                                                    if (isGuest) R.string.reset_guest_success else R.string.delete_account_success,
+                                                )
+                                            },
                                             Toast.LENGTH_LONG,
                                         ).show()
                                 } else {
-                                    Toast.makeText(context, context.getString(R.string.delete_account_failed), Toast.LENGTH_LONG).show()
+                                    Toast.makeText(context, with(context) { getString(R.string.delete_account_failed) }, Toast.LENGTH_LONG).show()
                                 }
                                 onAccountDeleted()
                             },
                         )
                     },
-                    colors =
-                        ButtonDefaults.textButtonColors(
-                            contentColor = MaterialTheme.colorScheme.error,
-                        ),
+                    colors = ButtonDefaults.textButtonColors(
+                        contentColor = MaterialTheme.colorScheme.error,
+                    ),
                 ) {
                     Text(stringResource(if (isGuest) R.string.reset else R.string.delete), fontWeight = FontWeight.Bold)
                 }
@@ -771,22 +798,20 @@ fun SettingsScreen(
 }
 
 @Composable
-fun ProfileHeader(userData: prasad.vennam.moneypilot.data.UserPreferences.UserData?) {
+fun ProfileHeader(userData: UserPreferences.UserData?) {
     Row(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .padding(24.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(24.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (userData?.photoUrl != null) {
             AsyncImage(
                 model = userData.photoUrl,
                 contentDescription = "Profile",
-                modifier =
-                    Modifier
-                        .size(72.dp)
-                        .clip(CircleShape),
+                modifier = Modifier
+                    .size(72.dp)
+                    .clip(CircleShape),
                 contentScale = ContentScale.Crop,
             )
         } else {
@@ -851,10 +876,9 @@ fun SettingsItem(
         color = Color.Transparent,
     ) {
         Row(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 24.dp, vertical = 16.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp, vertical = 16.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Surface(
@@ -919,25 +943,23 @@ fun LoginRequiredDialog(
         confirmButton = {
             Button(
                 onClick = onLoginClick,
-                colors =
-                    ButtonDefaults.buttonColors(
-                        containerColor = Color.White,
-                        contentColor = Color(0xFF1F1F1F),
-                    ),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color.White,
+                    contentColor = Color(0xFF1F1F1F),
+                ),
                 border = BorderStroke(1.dp, Color(0xFFDADCE0)),
                 elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp),
                 shape = MaterialTheme.shapes.large,
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .height(50.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(50.dp),
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.Center,
                 ) {
                     Icon(
-                        painter = painterResource(id = prasad.vennam.moneypilot.R.drawable.ic_google_logo),
+                        painter = painterResource(id = R.drawable.ic_google_logo),
                         contentDescription = "Google Logo",
                         tint = Color.Unspecified,
                         modifier = Modifier.size(20.dp),
@@ -945,11 +967,10 @@ fun LoginRequiredDialog(
                     Spacer(modifier = Modifier.width(12.dp))
                     Text(
                         stringResource(R.string.continue_with_google),
-                        style =
-                            MaterialTheme.typography.titleMedium.copy(
-                                fontWeight = FontWeight.SemiBold,
-                                color = Color(0xFF1F1F1F),
-                            ),
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.SemiBold,
+                            color = Color(0xFF1F1F1F),
+                        ),
                     )
                 }
             }
@@ -968,20 +989,17 @@ fun LoginRequiredDialog(
         },
         icon = {
             Box(
-                modifier =
-                    Modifier
-                        .size(80.dp)
-                        .background(
-                            brush =
-                                androidx.compose.ui.graphics.Brush.linearGradient(
-                                    colors =
-                                        listOf(
-                                            MaterialTheme.colorScheme.primary,
-                                            MaterialTheme.colorScheme.secondary,
-                                        ),
-                                ),
-                            shape = CircleShape,
+                modifier = Modifier
+                    .size(80.dp)
+                    .background(
+                        brush = androidx.compose.ui.graphics.Brush.linearGradient(
+                            colors = listOf(
+                                MaterialTheme.colorScheme.primary,
+                                MaterialTheme.colorScheme.secondary,
+                            ),
                         ),
+                        shape = CircleShape,
+                    ),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
@@ -1044,10 +1062,9 @@ fun SettingsSwitchItem(
         color = Color.Transparent,
     ) {
         Row(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 24.dp, vertical = 16.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp, vertical = 16.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Surface(
@@ -1084,11 +1101,10 @@ fun SettingsSwitchItem(
             Switch(
                 checked = checked,
                 onCheckedChange = onCheckedChange,
-                colors =
-                    SwitchDefaults.colors(
-                        checkedThumbColor = MaterialTheme.colorScheme.onSecondary,
-                        checkedTrackColor = MaterialTheme.colorScheme.secondary,
-                    ),
+                colors = SwitchDefaults.colors(
+                    checkedThumbColor = MaterialTheme.colorScheme.onSecondary,
+                    checkedTrackColor = MaterialTheme.colorScheme.secondary,
+                ),
             )
         }
     }
@@ -1096,8 +1112,6 @@ fun SettingsSwitchItem(
 
 fun isNotificationServiceEnabled(context: android.content.Context): Boolean {
     val cn = android.content.ComponentName(context, "prasad.vennam.moneypilot.service.TransactionNotificationListener")
-    val flat =
-        android.provider.Settings.Secure
-            .getString(context.contentResolver, "enabled_notification_listeners")
+    val flat = android.provider.Settings.Secure.getString(context.contentResolver, "enabled_notification_listeners")
     return flat != null && flat.contains(cn.flattenToString())
 }

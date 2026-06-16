@@ -30,6 +30,7 @@ import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.ui.NavDisplay
 import dagger.hilt.android.AndroidEntryPoint
+import prasad.vennam.moneypilot.data.AppLinks
 import prasad.vennam.moneypilot.data.UserPreferences
 import prasad.vennam.moneypilot.feature.ai.presentation.AiChatScreen
 import prasad.vennam.moneypilot.ui.ai.InsightsScreen
@@ -418,8 +419,6 @@ fun MoneyPilotApp(
                             NavEntry(key) {
                                 SettingsScreen(
                                     transactionViewModel = transactionViewModel,
-                                    budgetViewModel = budgetViewModel,
-                                    investmentViewModel = investmentViewModel,
                                     mainViewModel = mainViewModel,
                                     analyticsHelper = analyticsHelper,
                                     onLogout = {
@@ -493,7 +492,7 @@ fun MoneyPilotApp(
                         is Destination.TermsOfService ->
                             NavEntry(key) {
                                 NewsWebViewScreen(
-                                    url = "https://prasadvennam1005.github.io/moneypilot-legal/terms-of-service.html",
+                                    url = AppLinks.TERMS,
                                     title = "Terms of Service",
                                     showBookmark = false,
                                     onBack = { backStack.removeLastOrNull() },
@@ -503,7 +502,7 @@ fun MoneyPilotApp(
                         is Destination.PrivacyPolicy ->
                             NavEntry(key) {
                                 NewsWebViewScreen(
-                                    url = "https://prasadvennam1005.github.io/moneypilot-legal/privacy-policy.html",
+                                    url = AppLinks.PRIVACY_POLICY,
                                     title = "Privacy Policy",
                                     showBookmark = false,
                                     onBack = { backStack.removeLastOrNull() },

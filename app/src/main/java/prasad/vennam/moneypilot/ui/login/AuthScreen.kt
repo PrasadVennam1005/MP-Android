@@ -26,7 +26,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.text.ClickableText
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AirplanemodeActive
 import androidx.compose.material3.Button
@@ -44,6 +43,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -55,12 +55,14 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextLinkStyles
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
-import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.text.withLink
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.lerp
 import androidx.compose.ui.unit.sp
@@ -75,6 +77,7 @@ import prasad.vennam.moneypilot.R
 import prasad.vennam.moneypilot.data.UserPreferences
 import prasad.vennam.moneypilot.ui.viewmodel.MainViewModel
 import prasad.vennam.moneypilot.util.AnalyticsHelper
+import kotlin.time.Duration.Companion.milliseconds
 
 @Composable
 fun AuthScreen(
@@ -92,7 +95,7 @@ fun AuthScreen(
 
     val isLoggedIn by mainViewModel.isLoggedIn.collectAsState()
     var isLoading by remember { mutableStateOf(false) }
-    var isSplash by remember { mutableStateOf(!skipSplash) }
+    var isSplash by rememberSaveable { mutableStateOf(!skipSplash) }
     var loginError by remember { mutableStateOf<String?>(null) }
 
     val transitionProgress by animateFloatAsState(
@@ -101,11 +104,11 @@ fun AuthScreen(
         label = "SplashToLoginTransition",
     )
 
-    val initialScale = remember { Animatable(if (skipSplash) 1f else 0f) }
-    val initialAlpha = remember { Animatable(if (skipSplash) 1f else 0f) }
+    val initialScale = remember { Animatable(if (skipSplash || !isSplash) 1f else 0f) }
+    val initialAlpha = remember { Animatable(if (skipSplash || !isSplash) 1f else 0f) }
 
     LaunchedEffect(Unit) {
-        if (!skipSplash) {
+        if (!skipSplash && isSplash) {
             launch {
                 initialScale.animateTo(
                     1f,
@@ -120,7 +123,7 @@ fun AuthScreen(
                 initialAlpha.animateTo(1f, animationSpec = tween(1000))
             }
 
-            delay(2500)
+            delay(2500.milliseconds)
 
             // Read the current StateFlow value directly to avoid stale Compose snapshot
             if (mainViewModel.isLoggedIn.value) {
@@ -406,61 +409,51 @@ fun AuthScreen(
                         Spacer(modifier = Modifier.height(24.dp))
 
                         // Privacy Policy Text
-                        val annotatedText =
-                            buildAnnotatedString {
-                                append("By continuing, you agree to our ")
-                                pushStringAnnotation(tag = "terms", annotation = "https://prasadvennam1005.github.io/moneypilot-legal/terms-of-service.html")
-                                withStyle(
-                                    style =
-                                        SpanStyle(
+                        val annotatedText = buildAnnotatedString {
+                            append("By continuing, you agree to our ")
+                            withLink(
+                                LinkAnnotation.Clickable(
+                                    tag = "terms",
+                                    styles = TextLinkStyles(
+                                        style = SpanStyle(
                                             color = MaterialTheme.colorScheme.primary,
                                             fontWeight = FontWeight.SemiBold,
                                             textDecoration = TextDecoration.Underline,
-                                        ),
+                                        )
+                                    )
                                 ) {
-                                    append("Terms of Service")
+                                    onNavigateToTerms()
                                 }
-                                pop()
-                                append(" and ")
-                                pushStringAnnotation(
-                                    tag = "privacy",
-                                    annotation = "https://prasadvennam1005.github.io/moneypilot-legal/privacy-policy.html",
-                                )
-                                withStyle(
-                                    style =
-                                        SpanStyle(
-                                            color = MaterialTheme.colorScheme.primary,
-                                            fontWeight = FontWeight.SemiBold,
-                                            textDecoration = TextDecoration.Underline,
-                                        ),
-                                ) {
-                                    append("Privacy Policy")
-                                }
-                                pop()
-                                append(".")
+                            ) {
+                                append("Terms of Service")
                             }
+                            append(" and ")
+                            withLink(
+                                LinkAnnotation.Clickable(
+                                    tag = "privacy",
+                                    styles = TextLinkStyles(
+                                        style = SpanStyle(
+                                            color = MaterialTheme.colorScheme.primary,
+                                            fontWeight = FontWeight.SemiBold,
+                                            textDecoration = TextDecoration.Underline,
+                                        )
+                                    )
+                                ) {
+                                    onNavigateToPrivacy()
+                                }
+                            ) {
+                                append("Privacy Policy")
+                            }
+                            append(".")
+                        }
 
-                        ClickableText(
+                        Text(
                             text = annotatedText,
                             style =
                                 MaterialTheme.typography.labelMedium.copy(
                                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                                     textAlign = TextAlign.Center,
                                 ),
-                            onClick = { offset ->
-                                annotatedText
-                                    .getStringAnnotations(tag = "terms", start = offset, end = offset)
-                                    .firstOrNull()
-                                    ?.let {
-                                        onNavigateToTerms()
-                                    }
-                                annotatedText
-                                    .getStringAnnotations(tag = "privacy", start = offset, end = offset)
-                                    .firstOrNull()
-                                    ?.let {
-                                        onNavigateToPrivacy()
-                                    }
-                            },
                             modifier = Modifier.padding(horizontal = 32.dp),
                         )
                     }
