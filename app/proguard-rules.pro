@@ -69,3 +69,9 @@
 # Google Tink / AndroidX Security Crypto
 -keep class com.google.crypto.tink.** { *; }
 -dontwarn com.google.crypto.tink.**
+
+# Google Play Services Auth & Credentials Manager
+-keep class androidx.credentials.** { *; }
+-keep class com.google.android.libraries.identity.googleid.** { *; }
+-dontwarn androidx.credentials.**
+-dontwarn com.google.android.libraries.identity.googleid.**
