@@ -65,3 +65,7 @@
 # Google ML Kit
 -keep class com.google.mlkit.** { *; }
 -dontwarn com.google.mlkit.**
+
+# Google Tink / AndroidX Security Crypto
+-keep class com.google.crypto.tink.** { *; }
+-dontwarn com.google.crypto.tink.**
