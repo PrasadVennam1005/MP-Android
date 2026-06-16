@@ -31,6 +31,7 @@
 -keep interface com.squareup.moshi.** { *; }
 # Keep data classes that Moshi will serialize/deserialize
 -keep class prasad.vennam.moneypilot.data.entity.** { *; }
+-keep class prasad.vennam.moneypilot.data.model.** { *; }
 -keep class prasad.vennam.moneypilot.util.FinancePriceFetcher$** { *; }
 
 # SQLCipher for Android
