@@ -76,3 +76,12 @@
 -keep class com.google.android.libraries.identity.googleid.** { *; }
 -dontwarn androidx.credentials.**
 -dontwarn com.google.android.libraries.identity.googleid.**
+
+# Google Sheets Sync DTOs
+-keep class prasad.vennam.moneypilot.util.DriveFilesResponse { *; }
+-keep class prasad.vennam.moneypilot.util.DriveFile { *; }
+-keep class prasad.vennam.moneypilot.util.BatchGetSpreadsheetResponse { *; }
+-keep class prasad.vennam.moneypilot.util.ValueRange { *; }
+
+# Keep Kotlin Metadata for Moshi reflection
+-keep class kotlin.Metadata { *; }

@@ -5,6 +5,7 @@ import android.content.Intent
 import android.util.Log
 import com.google.android.gms.auth.GoogleAuthUtil
 import com.google.android.gms.auth.UserRecoverableAuthException
+import com.squareup.moshi.JsonClass
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import kotlinx.coroutines.Dispatchers
@@ -851,19 +852,23 @@ object GoogleSheetsSyncHelper {
     }
 }
 
+@JsonClass(generateAdapter = true)
 data class DriveFilesResponse(
     val files: List<DriveFile>?,
 )
 
+@JsonClass(generateAdapter = true)
 data class DriveFile(
     val id: String?,
     val name: String?,
 )
 
+@JsonClass(generateAdapter = true)
 data class BatchGetSpreadsheetResponse(
     val valueRanges: List<ValueRange>?,
 )
 
+@JsonClass(generateAdapter = true)
 data class ValueRange(
     val range: String?,
     val values: List<List<Any>>?,
