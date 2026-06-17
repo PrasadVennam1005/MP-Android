@@ -82,6 +82,7 @@ import prasad.vennam.moneypilot.data.entity.Category
 import prasad.vennam.moneypilot.data.entity.Transaction
 import prasad.vennam.moneypilot.data.entity.TransactionType
 import prasad.vennam.moneypilot.ui.budget.utils.getCategoryIcon
+import prasad.vennam.moneypilot.ui.components.AdBannerView
 import prasad.vennam.moneypilot.ui.components.ProfileIconButton
 import prasad.vennam.moneypilot.ui.dashboard.SyncState
 import prasad.vennam.moneypilot.ui.dashboard.SyncStatusIndicator
@@ -106,6 +107,7 @@ fun HistoryScreen(
     userData: UserPreferences.UserData?,
     syncState: SyncState?,
     onProfileClick: () -> Unit,
+    isPremium: Boolean,
     fixedType: TransactionType? = null,
 ) {
     val transactions by viewModel.allTransactions.collectAsState()
@@ -137,7 +139,7 @@ fun HistoryScreen(
             isFabVisible = true
         } else if (currentIndex > previousIndex || (currentIndex == previousIndex && currentOffset > previousOffset)) {
             isFabVisible = false
-        } else if (currentIndex < previousIndex || (currentIndex == previousIndex && currentOffset < previousOffset)) {
+        } else if (currentIndex < previousIndex || (currentOffset < previousOffset)) {
             isFabVisible = true
         }
         previousIndex = currentIndex
@@ -263,6 +265,9 @@ fun HistoryScreen(
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
+                    item {
+                        AdBannerView(isPremium = isPremium, modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp))
+                    }
                     items(transactionItemStates, key = { it.transaction.id }) { itemState ->
                         val deletedMessage = stringResource(R.string.transaction_deleted)
                         val undoLabel = stringResource(R.string.undo)

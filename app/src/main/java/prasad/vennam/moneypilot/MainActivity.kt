@@ -29,7 +29,9 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.ui.NavDisplay
+import com.google.android.gms.ads.MobileAds
 import dagger.hilt.android.AndroidEntryPoint
+import prasad.vennam.moneypilot.billing.BillingManager
 import prasad.vennam.moneypilot.data.AppLinks
 import prasad.vennam.moneypilot.data.UserPreferences
 import prasad.vennam.moneypilot.feature.ai.presentation.AiChatScreen
@@ -69,9 +71,13 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var userPreferences: UserPreferences
 
+    @Inject
+    lateinit var billingManager: BillingManager
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        MobileAds.initialize(this) {}
 
         // Request notification permission for Android 13+ (API 33+)
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
@@ -132,6 +138,12 @@ fun MoneyPilotApp(
     val isLoggedIn by mainViewModel.isLoggedIn.collectAsState(initial = false)
 
     val context = androidx.compose.ui.platform.LocalContext.current
+    val interstitialAdManager =
+        remember {
+            prasad.vennam.moneypilot.ads
+                .InterstitialAdManager(context)
+                .apply { loadAd() }
+        }
     val workManager = remember { androidx.work.WorkManager.getInstance(context) }
     val workInfos by workManager
         .getWorkInfosForUniqueWorkFlow(prasad.vennam.moneypilot.util.GoogleSheetsSyncHelper.SYNC_WORK_NAME)
@@ -139,6 +151,7 @@ fun MoneyPilotApp(
     val restoreState by mainViewModel.restoreState.collectAsState()
     val isSynced by mainViewModel.isSynced.collectAsState()
     val spreadsheetId by mainViewModel.spreadsheetId.collectAsState()
+    val isPremium by mainViewModel.isPremium.collectAsState()
     val isGuest = remember(userData) { userData?.email == "guest@moneypilot.app" }
 
     val syncState =
@@ -327,7 +340,15 @@ fun MoneyPilotApp(
                                         backStack.add(Destination.FinancialSandbox)
                                     },
                                     onNavigateToEmiCalculator = {
-                                        backStack.add(Destination.EmiCalculator)
+                                        if (isPremium) {
+                                            backStack.add(Destination.EmiCalculator)
+                                        } else {
+                                            (context as? android.app.Activity)?.let { activity ->
+                                                interstitialAdManager.showAd(activity) {
+                                                    backStack.add(Destination.EmiCalculator)
+                                                }
+                                            } ?: backStack.add(Destination.EmiCalculator)
+                                        }
                                     },
                                     analyticsHelper = analyticsHelper,
                                 )
@@ -363,6 +384,7 @@ fun MoneyPilotApp(
                                     },
                                     userData = userData,
                                     syncState = syncState,
+                                    isPremium = isPremium,
                                     onProfileClick = { backStack.add(Destination.Settings) },
                                     fixedType = null,
                                 )
@@ -375,6 +397,8 @@ fun MoneyPilotApp(
                                     initialType = key.initialType,
                                     viewModel = transactionViewModel,
                                     analyticsHelper = analyticsHelper,
+                                    interstitialAdManager = interstitialAdManager,
+                                    isPremium = isPremium,
                                     onNavigateBack = { backStack.removeLastOrNull() },
                                 )
                             }
@@ -385,6 +409,7 @@ fun MoneyPilotApp(
                                     viewModel = investmentViewModel,
                                     userData = userData,
                                     syncState = syncState,
+                                    isPremium = isPremium,
                                     onProfileClick = { backStack.add(Destination.Settings) },
                                 )
                             }
@@ -394,8 +419,19 @@ fun MoneyPilotApp(
                                 LoanScreen(
                                     userData = userData,
                                     syncState = syncState,
+                                    isPremium = isPremium,
                                     onProfileClick = { backStack.add(Destination.Settings) },
-                                    onNavigateToEmiCalculator = { backStack.add(Destination.EmiCalculator) },
+                                    onNavigateToEmiCalculator = {
+                                        if (isPremium) {
+                                            backStack.add(Destination.EmiCalculator)
+                                        } else {
+                                            (context as? android.app.Activity)?.let { activity ->
+                                                interstitialAdManager.showAd(activity) {
+                                                    backStack.add(Destination.EmiCalculator)
+                                                }
+                                            } ?: backStack.add(Destination.EmiCalculator)
+                                        }
+                                    },
                                     prefillAmount = key.prefillAmount,
                                     prefillRate = key.prefillRate,
                                     prefillTenureMonths = key.prefillTenureMonths,
@@ -439,6 +475,9 @@ fun MoneyPilotApp(
                                     },
                                     onNavigateToPrivacy = {
                                         backStack.add(Destination.PrivacyPolicy)
+                                    },
+                                    onNavigateToPremium = {
+                                        backStack.add(Destination.PremiumScreen)
                                     },
                                     onAccountDeleted = {
                                         backStack.clear()
@@ -539,6 +578,7 @@ fun MoneyPilotApp(
                             NavEntry(key) {
                                 EmiCalculatorScreen(
                                     onBack = { backStack.removeLastOrNull() },
+                                    isPremium = isPremium,
                                     onNavigateToSaveLoan = { amount, rate, months, emi ->
                                         backStack.add(
                                             Destination.Loans(
@@ -551,6 +591,13 @@ fun MoneyPilotApp(
                                     },
                                     onNavigateToCompare = {
                                     },
+                                )
+                            }
+
+                        is Destination.PremiumScreen ->
+                            NavEntry(key) {
+                                prasad.vennam.moneypilot.ui.premium.PremiumScreen(
+                                    onBackClick = { backStack.removeLastOrNull() },
                                 )
                             }
 

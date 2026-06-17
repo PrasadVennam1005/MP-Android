@@ -56,6 +56,7 @@ import prasad.vennam.moneypilot.data.entity.PendingTransaction
 import prasad.vennam.moneypilot.data.entity.TimeFrame
 import prasad.vennam.moneypilot.data.entity.TransactionType
 import prasad.vennam.moneypilot.ui.budget.utils.getCategoryIcon
+import prasad.vennam.moneypilot.ui.components.AdBannerView
 import prasad.vennam.moneypilot.ui.dashboard.components.*
 import prasad.vennam.moneypilot.ui.settings.LoginRequiredDialog
 import prasad.vennam.moneypilot.ui.viewmodel.*
@@ -90,6 +91,7 @@ fun DashboardScreen(
 ) {
     val dashboardState by dashboardViewModel.uiState.collectAsState()
     val userData by mainViewModel.userData.collectAsState()
+    val isPremium by mainViewModel.isPremium.collectAsState()
 
     val lazyListState = rememberLazyListState()
     var isFabVisible by remember { mutableStateOf(true) }
@@ -372,6 +374,10 @@ fun DashboardScreen(
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(24.dp),
                 ) {
+                    item {
+                        AdBannerView(isPremium = isPremium, modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp))
+                    }
+
                     item {
                         TimeFrameSelector(
                             selectedTimeFrame = dashboardState.selectedTimeFrame,

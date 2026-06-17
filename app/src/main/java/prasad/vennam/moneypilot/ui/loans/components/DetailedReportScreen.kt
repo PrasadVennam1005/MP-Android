@@ -28,6 +28,7 @@ fun DetailedReportScreen(
     state: EmiCalculatorUiState,
     viewModel: EmiCalculatorViewModel,
     currencyCode: String,
+    isPremium: Boolean,
 ) {
     val pageSize = 12
     val activeSchedule = if (state.isMonthlyView) state.monthlySchedule else state.yearlySchedule
@@ -53,6 +54,12 @@ fun DetailedReportScreen(
         contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
+        item {
+            prasad.vennam.moneypilot.ui.components.AdBannerView(
+                isPremium = isPremium,
+                modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+            )
+        }
         item {
             SummaryChartCard(
                 principal = state.amountInput.toDoubleOrNull() ?: 0.0,

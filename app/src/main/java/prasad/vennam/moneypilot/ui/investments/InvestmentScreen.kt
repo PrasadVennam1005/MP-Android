@@ -37,6 +37,7 @@ fun InvestmentScreen(
     viewModel: InvestmentViewModel,
     userData: UserPreferences.UserData?,
     syncState: SyncState?,
+    isPremium: Boolean,
     onProfileClick: () -> Unit,
 ) {
     val investments by viewModel.allInvestments.collectAsState()
@@ -173,6 +174,12 @@ fun InvestmentScreen(
                         contentPadding = PaddingValues(16.dp),
                         verticalArrangement = Arrangement.spacedBy(16.dp),
                     ) {
+                        item {
+                            prasad.vennam.moneypilot.ui.components.AdBannerView(
+                                isPremium = isPremium,
+                                modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                            )
+                        }
                         item {
                             InvestmentSummaryCard(totalCurrent, totalGain, gainPercent)
                         }

@@ -69,6 +69,7 @@ fun LoanScreen(
     viewModel: DashboardViewModel = hiltViewModel(),
     userData: UserPreferences.UserData?,
     syncState: SyncState?,
+    isPremium: Boolean,
     onProfileClick: () -> Unit,
     onNavigateToEmiCalculator: () -> Unit,
     prefillAmount: Double? = null,
@@ -200,6 +201,12 @@ fun LoanScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                     contentPadding = PaddingValues(bottom = 80.dp),
                 ) {
+                    item {
+                        prasad.vennam.moneypilot.ui.components.AdBannerView(
+                            isPremium = isPremium,
+                            modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                        )
+                    }
                     items(state.loans) { loan ->
                         FullWidthLoanCard(
                             loan = loan,

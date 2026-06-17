@@ -61,6 +61,7 @@ class UserPreferences
             androidx.datastore.preferences.core
                 .intPreferencesKey("theme_mode")
         private val hasSeededNotificationsKey = booleanPreferencesKey("has_seeded_notifications")
+        private val isPremiumKey = booleanPreferencesKey("is_premium")
 
         val isLoggedIn: Flow<Boolean> =
             context.dataStore.data
@@ -102,6 +103,12 @@ class UserPreferences
             context.dataStore.data
                 .map { preferences ->
                     preferences[hasSeededNotificationsKey] ?: false
+                }
+
+        val isPremium: Flow<Boolean> =
+            context.dataStore.data
+                .map { preferences ->
+                    preferences[isPremiumKey] ?: false
                 }
 
         val isSynced: Flow<Boolean> =
@@ -215,6 +222,12 @@ class UserPreferences
         suspend fun setNotificationsSeeded(seeded: Boolean) {
             context.dataStore.edit { preferences ->
                 preferences[hasSeededNotificationsKey] = seeded
+            }
+        }
+
+        suspend fun setPremium(premium: Boolean) {
+            context.dataStore.edit { preferences ->
+                preferences[isPremiumKey] = premium
             }
         }
 

@@ -84,4 +84,7 @@ sealed interface Destination : NavKey {
 
     @Serializable
     data object CompareLoans : Destination
+
+    @Serializable
+    data object PremiumScreen : Destination
 }

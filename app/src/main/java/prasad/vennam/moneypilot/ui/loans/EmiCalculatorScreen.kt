@@ -62,6 +62,7 @@ fun EmiCalculatorScreen(
     onBack: () -> Unit,
     onNavigateToSaveLoan: (Double, Double, Int, Double) -> Unit,
     onNavigateToCompare: () -> Unit,
+    isPremium: Boolean,
     viewModel: EmiCalculatorViewModel = hiltViewModel(),
 ) {
     val currencyCode = LocalCurrencyCode.current
@@ -171,6 +172,7 @@ fun EmiCalculatorScreen(
                         state = state,
                         viewModel = viewModel,
                         currencyCode = currencyCode,
+                        isPremium = isPremium,
                     )
                 }
             }

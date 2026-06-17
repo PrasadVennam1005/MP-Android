@@ -83,6 +83,8 @@ fun AddEditTransactionScreen(
     initialType: TransactionType = TransactionType.EXPENSE,
     viewModel: TransactionViewModel,
     analyticsHelper: AnalyticsHelper,
+    interstitialAdManager: prasad.vennam.moneypilot.ads.InterstitialAdManager,
+    isPremium: Boolean,
     onNavigateBack: () -> Unit,
 ) {
     val formState by viewModel.formState.collectAsStateWithLifecycle()
@@ -110,6 +112,8 @@ fun AddEditTransactionScreen(
             viewModel.updateType(initialType)
         }
     }
+
+    val context = androidx.compose.ui.platform.LocalContext.current
 
     Scaffold(
         topBar = {
@@ -268,7 +272,15 @@ fun AddEditTransactionScreen(
                             currencyCode = currencyCode,
                         )
                     viewModel.saveTransaction(transaction)
-                    onNavigateBack()
+
+                    val activity = context as? android.app.Activity
+                    if (activity != null) {
+                        interstitialAdManager.showAdIfNeeded(activity, isPremium) {
+                            onNavigateBack()
+                        }
+                    } else {
+                        onNavigateBack()
+                    }
                 },
                 modifier =
                     Modifier

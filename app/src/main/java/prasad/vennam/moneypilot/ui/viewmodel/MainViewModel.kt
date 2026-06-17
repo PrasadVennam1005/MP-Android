@@ -59,6 +59,10 @@ class MainViewModel
             userPreferences.isLoggedIn
                 .stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
+        val isPremium: StateFlow<Boolean> =
+            userPreferences.isPremium
+                .stateIn(viewModelScope, SharingStarted.Eagerly, false)
+
         val spreadsheetId: StateFlow<String?> =
             userPreferences.spreadsheetId
                 .stateIn(viewModelScope, SharingStarted.Eagerly, null)

@@ -56,6 +56,8 @@ google-mlkit-text-recognition = "19.0.1"
 playServicesAuth = "21.6.0"
 credentials = "1.6.0"
 googleid = "1.2.0"
+playServicesAds = "23.6.0"
+billingKtx = "7.1.1"
 ktlint = "14.2.0"
 workManager = "2.11.2"
 mediapipe = "0.10.35"
@@ -126,9 +128,11 @@ firebase-analytics = { group = "com.google.firebase", name = "firebase-analytics
 firebase-crashlytics = { group = "com.google.firebase", name = "firebase-crashlytics" }
 google-mlkit-text-recognition = { group = "com.google.android.gms", name = "play-services-mlkit-text-recognition", version.ref = "google-mlkit-text-recognition" }
 play-services-auth = { group = "com.google.android.gms", name = "play-services-auth", version.ref = "playServicesAuth" }
+play-services-ads = { group = "com.google.android.gms", name = "play-services-ads", version.ref = "playServicesAds" }
 androidx-credentials = { group = "androidx.credentials", name = "credentials", version.ref = "credentials" }
 androidx-credentials-play-auth = { group = "androidx.credentials", name = "credentials-play-services-auth", version.ref = "credentials" }
 googleid = { group = "com.google.android.libraries.identity.googleid", name = "googleid", version.ref = "googleid" }
+billing-ktx = { group = "com.android.billingclient", name = "billing-ktx", version.ref = "billingKtx" }
 androidx-work-runtime = { group = "androidx.work", name = "work-runtime-ktx", version.ref = "workManager" }
 mediapipe-tasks-genai = { group = "com.google.mediapipe", name = "tasks-genai", version.ref = "mediapipe" }
 litert-lm-android = { group = "com.google.ai.edge.litertlm", name = "litertlm-android", version.ref = "litert-lm" }

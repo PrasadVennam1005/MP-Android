@@ -45,6 +45,7 @@ import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.PrivacyTip
 import androidx.compose.material.icons.rounded.SettingsSuggest
 import androidx.compose.material.icons.rounded.Sms
+import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -116,6 +117,7 @@ fun SettingsScreen(
     onNavigateToFAQ: () -> Unit,
     onNavigateToTerms: () -> Unit,
     onNavigateToPrivacy: () -> Unit,
+    onNavigateToPremium: () -> Unit,
     onAccountDeleted: () -> Unit,
 ) {
     val userData by mainViewModel.userData.collectAsState()
@@ -428,6 +430,17 @@ fun SettingsScreen(
                         onClick = {
                             checkGuestAction("Currency Change") {
                                 showCurrencySheet = true
+                            }
+                        },
+                    )
+                    SettingsItem(
+                        icon = Icons.Rounded.Star,
+                        title = "MoneyPilot Premium",
+                        subtitle = "Remove ads and support development",
+                        isLocked = isGuest,
+                        onClick = {
+                            checkGuestAction("Premium") {
+                                onNavigateToPremium()
                             }
                         },
                     )
