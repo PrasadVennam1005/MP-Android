@@ -10,9 +10,11 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import prasad.vennam.moneypilot.data.UserPreferences
 import prasad.vennam.moneypilot.data.entity.Category
+import prasad.vennam.moneypilot.data.repository.MoneyPilotRepository
 import prasad.vennam.moneypilot.domain.usecase.BackupSyncManager
 import prasad.vennam.moneypilot.domain.usecase.ClearAllDataUseCase
 import prasad.vennam.moneypilot.domain.usecase.RestoreBackupUseCase
+import prasad.vennam.moneypilot.util.DemoDataSeeder
 import prasad.vennam.moneypilot.util.SyncResult
 import javax.inject.Inject
 
@@ -44,6 +46,7 @@ class MainViewModel
         private val userPreferences: UserPreferences,
         private val exchangeRateRepo: prasad.vennam.moneypilot.data.repository.ExchangeRateRepository,
         private val checkLoanRemindersUseCase: prasad.vennam.moneypilot.domain.usecase.CheckLoanRemindersUseCase,
+        private val repository: MoneyPilotRepository,
     ) : ViewModel() {
         init {
             viewModelScope.launch {
@@ -293,6 +296,20 @@ class MainViewModel
 
                 resetRestoreCheck()
                 onComplete(deleteSheetSuccess)
+            }
+        }
+
+        fun loadDemoData(onComplete: () -> Unit) {
+            viewModelScope.launch {
+                try {
+                    DemoDataSeeder.seed(repository)
+                    userPreferences.setCurrency("INR")
+                    userPreferences.setSynced(true)
+                } catch (e: Exception) {
+                    Log.e("MainViewModel", "Error seeding demo data", e)
+                } finally {
+                    onComplete()
+                }
             }
         }
 

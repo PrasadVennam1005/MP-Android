@@ -42,6 +42,8 @@ import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.Person
+import android.content.Intent
+import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.PrivacyTip
 import androidx.compose.material.icons.rounded.SettingsSuggest
 import androidx.compose.material.icons.rounded.Sms
@@ -164,6 +166,8 @@ fun SettingsScreen(
     var showThemeDialog by remember { mutableStateOf(false) }
     var showDeleteAccountConfirmation by remember { mutableStateOf(false) }
     var isDeletingAccount by remember { mutableStateOf(false) }
+    var showDemoConfirmDialog by remember { mutableStateOf(false) }
+    var isSeedingDemoData by remember { mutableStateOf(false) }
     val currentThemeMode by mainViewModel.themeMode.collectAsState()
     val themeSubtitle =
         when (currentThemeMode) {
@@ -584,6 +588,21 @@ fun SettingsScreen(
                 }
             }
 
+            if (isGuest) {
+                item { SectionDivider() }
+
+                item {
+                    SettingsGroup(title = "Developer Tools") {
+                        SettingsItem(
+                            icon = Icons.Rounded.PlayArrow,
+                            title = "Load Demo Data (INR)",
+                            subtitle = "Seeds rich Indian currency datasets for screenshots",
+                            onClick = { showDemoConfirmDialog = true },
+                        )
+                    }
+                }
+            }
+
             // Logout Button
             item {
                 Spacer(modifier = Modifier.height(32.dp))
@@ -645,6 +664,60 @@ fun SettingsScreen(
             featureName = pendingFeatureName,
             onDismiss = { showLoginRequiredDialog = false },
             onLoginClick = { triggerGoogleLogin() },
+        )
+    }
+
+    if (showDemoConfirmDialog) {
+        AlertDialog(
+            onDismissRequest = { if (!isSeedingDemoData) showDemoConfirmDialog = false },
+            title = { Text("Load Demo Data?") },
+            text = {
+                if (isSeedingDemoData) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp)
+                    ) {
+                        CircularProgressIndicator()
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text("Seeding Indian currency demo data...", textAlign = TextAlign.Center)
+                    }
+                } else {
+                    Text("This will clear all your current guest data, insert a comprehensive set of Indian Rupee (₹) transaction, budget, investment, and loan history, and relaunch the app. This is perfect for generating Play Store screenshots. Do you want to proceed?")
+                }
+            },
+            confirmButton = {
+                if (!isSeedingDemoData) {
+                    TextButton(
+                        onClick = {
+                            isSeedingDemoData = true
+                            mainViewModel.loadDemoData {
+                                isSeedingDemoData = false
+                                showDemoConfirmDialog = false
+                                val intent = context.packageManager.getLaunchIntentForPackage(context.packageName)
+                                intent?.let {
+                                    it.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or 
+                                                Intent.FLAG_ACTIVITY_NEW_TASK or 
+                                                Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                                    context.startActivity(it)
+                                    if (context is Activity) {
+                                        context.finish()
+                                    }
+                                    Runtime.getRuntime().exit(0)
+                                }
+                            }
+                        }
+                    ) {
+                        Text("Yes, Load & Relaunch")
+                    }
+                }
+            },
+            dismissButton = {
+                if (!isSeedingDemoData) {
+                    TextButton(onClick = { showDemoConfirmDialog = false }) {
+                        Text(stringResource(R.string.cancel))
+                    }
+                }
+            }
         )
     }
 
