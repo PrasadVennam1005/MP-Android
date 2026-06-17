@@ -36,6 +36,12 @@ android {
         val googleClientId = localProperties.getProperty("GOOGLE_CLIENT_ID", "\"\"")
         buildConfigField("String", "GOOGLE_CLIENT_ID", googleClientId)
 
+        val bannerProdId = localProperties.getProperty("BANNER_PROD_ID", "\"\"")
+        buildConfigField("String", "BANNER_PROD_ID", bannerProdId)
+
+        val interstitialProdId = localProperties.getProperty("INTERSTITIAL_PROD_ID", "\"\"")
+        buildConfigField("String", "INTERSTITIAL_PROD_ID", interstitialProdId)
+
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
