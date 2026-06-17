@@ -588,7 +588,7 @@ fun SettingsScreen(
                 }
             }
 
-            if (isGuest) {
+            if (isGuest && prasad.vennam.moneypilot.BuildConfig.DEBUG) {
                 item { SectionDivider() }
 
                 item {
