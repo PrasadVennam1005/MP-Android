@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
@@ -32,6 +33,7 @@ import prasad.vennam.moneypilot.ui.budget.components.BudgetFormBottomSheet
 import prasad.vennam.moneypilot.ui.budget.components.BudgetHeaderSection
 import prasad.vennam.moneypilot.ui.budget.components.EmptyBudgetState
 import prasad.vennam.moneypilot.ui.budget.components.PremiumBudgetCard
+import prasad.vennam.moneypilot.ui.components.AdBannerView
 import prasad.vennam.moneypilot.ui.components.ProfileIconButton
 import prasad.vennam.moneypilot.ui.dashboard.SyncState
 import prasad.vennam.moneypilot.ui.dashboard.SyncStatusIndicator
@@ -50,6 +52,7 @@ fun ReportsTabScreen(
     analyticsViewModel: AnalyticsViewModel,
     userData: UserPreferences.UserData?,
     syncState: SyncState?,
+    isPremium: Boolean,
     onProfileClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -163,6 +166,7 @@ fun ReportsTabScreen(
                     BudgetContent(
                         budgetProgresses = budgetProgresses,
                         lazyListState = lazyListState,
+                        isPremium = isPremium,
                         onEditBudget = { budget ->
                             budgetToEdit = budget
                             showFormSheet = true
@@ -185,7 +189,7 @@ fun ReportsTabScreen(
                     )
                 }
                 1 -> {
-                    AnalyticsScreen(viewModel = analyticsViewModel)
+                    AnalyticsScreen(viewModel = analyticsViewModel, isPremium = isPremium)
                 }
             }
         }
@@ -230,6 +234,7 @@ fun BudgetContent(
     lazyListState: LazyListState,
     onEditBudget: (Budget) -> Unit,
     onDeleteBudget: (Budget) -> Unit,
+    isPremium: Boolean,
     modifier: Modifier = Modifier,
 ) {
     val calendar = Calendar.getInstance()
@@ -264,6 +269,17 @@ fun BudgetContent(
                     budgetProgress = itemState,
                     onEdit = { onEditBudget(itemState.budget) },
                     onDelete = { onDeleteBudget(itemState.budget) },
+                )
+            }
+        }
+
+        if (!isPremium) {
+            item {
+                AdBannerView(
+                    isPremium = isPremium,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 16.dp)
                 )
             }
         }

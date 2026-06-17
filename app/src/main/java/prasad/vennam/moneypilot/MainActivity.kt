@@ -555,6 +555,7 @@ fun MoneyPilotApp(
                                     analyticsViewModel = analyticsViewModel,
                                     userData = userData,
                                     syncState = syncState,
+                                    isPremium = isPremium,
                                     onProfileClick = { backStack.add(Destination.Settings) },
                                 )
                             }

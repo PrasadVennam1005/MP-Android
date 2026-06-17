@@ -28,6 +28,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import prasad.vennam.moneypilot.R
+import prasad.vennam.moneypilot.ui.components.AdBannerView
 import prasad.vennam.moneypilot.ui.components.SpendingDonutChart
 import prasad.vennam.moneypilot.ui.components.TrendLineChart
 import prasad.vennam.moneypilot.ui.viewmodel.AnalyticsState
@@ -41,6 +42,7 @@ import prasad.vennam.moneypilot.util.CurrencyFormatter
 @Composable
 fun AnalyticsScreen(
     viewModel: AnalyticsViewModel,
+    isPremium: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.uiState.collectAsState()
@@ -230,6 +232,17 @@ fun AnalyticsScreen(
                     }
                     items(state.insights) { insight ->
                         InsightCard(insight = insight)
+                    }
+                }
+
+                if (!isPremium) {
+                    item {
+                        AdBannerView(
+                            isPremium = isPremium,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 16.dp)
+                        )
                     }
                 }
             }
