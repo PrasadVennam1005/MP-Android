@@ -196,7 +196,6 @@ fun NewsWebViewScreen(
                             builtInZoomControls = true
                             displayZoomControls = false
                             setSupportZoom(true)
-                            databaseEnabled = true
                         }
 
                         webViewClient =

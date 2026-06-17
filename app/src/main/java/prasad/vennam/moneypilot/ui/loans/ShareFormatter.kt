@@ -3,7 +3,6 @@ package prasad.vennam.moneypilot.ui.loans
 import prasad.vennam.moneypilot.data.AppLinks
 
 object ShareFormatter {
-
     fun buildLoanCalculationShareText(
         currencySymbol: String,
         amount: String,
@@ -15,12 +14,10 @@ object ShareFormatter {
         totalPayable: String,
         loanEndDate: String,
     ): String {
-
         val tenureText =
             "$tenure ${if (isTenureInYears) "Years" else "Months"}"
 
         return buildString {
-
             appendLine("💰 MONEYPILOT")
             appendLine("Loan EMI Report")
             appendLine()

@@ -8,17 +8,17 @@ import prasad.vennam.moneypilot.domain.usecase.LoanReminderScheduler
 import javax.inject.Inject
 
 class LoanReminderSchedulerImpl
-@Inject
-constructor(
-    @param:ApplicationContext private val context: Context,
-    private val loanDao: LoanDao,
-    private val notificationDao: NotificationDao,
-) : LoanReminderScheduler {
-    override suspend fun checkAndTriggerLoanReminders() {
-        LoanNotificationScheduler.checkAndTriggerLoanReminders(
-            context = context,
-            loanDao = loanDao,
-            notificationDao = notificationDao,
-        )
+    @Inject
+    constructor(
+        @param:ApplicationContext private val context: Context,
+        private val loanDao: LoanDao,
+        private val notificationDao: NotificationDao,
+    ) : LoanReminderScheduler {
+        override suspend fun checkAndTriggerLoanReminders() {
+            LoanNotificationScheduler.checkAndTriggerLoanReminders(
+                context = context,
+                loanDao = loanDao,
+                notificationDao = notificationDao,
+            )
+        }
     }
-}

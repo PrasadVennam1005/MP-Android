@@ -30,7 +30,7 @@ fun PaymentBreakdownCard(
     totalPayable: Double,
     formattedPrincipal: String,
     formattedInterest: String,
-    onViewReport: () -> Unit
+    onViewReport: () -> Unit,
 ) {
     if (totalPayable <= 0.0) return
 
@@ -57,10 +57,10 @@ fun PaymentBreakdownCard(
 
             val primaryColor = MaterialTheme.colorScheme.primary
             val tertiaryColor = MaterialTheme.colorScheme.tertiary
-            
+
             val animatedPrincipalSweep by animateFloatAsState(
                 targetValue = (principal / totalPayable * 360).toFloat(),
-                animationSpec = tween(1000)
+                animationSpec = tween(1000),
             )
 
             Box(
@@ -69,7 +69,7 @@ fun PaymentBreakdownCard(
             ) {
                 Canvas(modifier = Modifier.size(160.dp)) {
                     val strokeWidth = 20.dp.toPx()
-                    
+
                     drawArc(
                         color = primaryColor,
                         startAngle = -90f,
@@ -107,17 +107,17 @@ fun PaymentBreakdownCard(
                 LegendItem(
                     color = primaryColor,
                     label = stringResource(R.string.principal_amount),
-                    value = formattedPrincipal
+                    value = formattedPrincipal,
                 )
                 LegendItem(
                     color = tertiaryColor,
                     label = stringResource(R.string.total_interest),
-                    value = formattedInterest
+                    value = formattedInterest,
                 )
             }
 
             Spacer(modifier = Modifier.height(24.dp))
-            
+
             OutlinedButton(
                 onClick = onViewReport,
                 modifier = Modifier.fillMaxWidth(),
@@ -136,7 +136,11 @@ fun PaymentBreakdownCard(
 }
 
 @Composable
-private fun LegendItem(color: androidx.compose.ui.graphics.Color, label: String, value: String) {
+private fun LegendItem(
+    color: androidx.compose.ui.graphics.Color,
+    label: String,
+    value: String,
+) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -144,10 +148,11 @@ private fun LegendItem(color: androidx.compose.ui.graphics.Color, label: String,
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(
-                modifier = Modifier
-                    .size(12.dp)
-                    .clip(CircleShape)
-                    .background(color),
+                modifier =
+                    Modifier
+                        .size(12.dp)
+                        .clip(CircleShape)
+                        .background(color),
             )
             Spacer(modifier = Modifier.width(12.dp))
             Text(

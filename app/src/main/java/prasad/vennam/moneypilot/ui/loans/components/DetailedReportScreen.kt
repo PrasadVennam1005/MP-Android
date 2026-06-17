@@ -2,12 +2,9 @@ package prasad.vennam.moneypilot.ui.loans.components
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
@@ -19,8 +16,6 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import prasad.vennam.moneypilot.R
 import prasad.vennam.moneypilot.ui.viewmodel.EmiCalculatorUiState
@@ -32,22 +27,23 @@ import java.util.Locale
 fun DetailedReportScreen(
     state: EmiCalculatorUiState,
     viewModel: EmiCalculatorViewModel,
-    currencyCode: String
+    currencyCode: String,
 ) {
     val pageSize = 12
     val activeSchedule = if (state.isMonthlyView) state.monthlySchedule else state.yearlySchedule
 
-    val filteredSchedule = remember(activeSchedule, state.searchQuery) {
-        if (state.searchQuery.isBlank()) {
-            activeSchedule
-        } else {
-            activeSchedule.filter {
-                it.dateLabel.contains(state.searchQuery, ignoreCase = true) ||
+    val filteredSchedule =
+        remember(activeSchedule, state.searchQuery) {
+            if (state.searchQuery.isBlank()) {
+                activeSchedule
+            } else {
+                activeSchedule.filter {
+                    it.dateLabel.contains(state.searchQuery, ignoreCase = true) ||
                         String.format(Locale.getDefault(), "%.2f", it.principalPaid).contains(state.searchQuery) ||
                         String.format(Locale.getDefault(), "%.2f", it.interestPaid).contains(state.searchQuery)
+                }
             }
         }
-    }
 
     val maxPages = (filteredSchedule.size + pageSize - 1) / pageSize
     val displayedItems = filteredSchedule.drop(state.pageIndex * pageSize).take(pageSize)
@@ -62,7 +58,7 @@ fun DetailedReportScreen(
                 principal = state.amountInput.toDoubleOrNull() ?: 0.0,
                 totalInterest = state.emiResult.totalInterest,
                 totalPayable = state.emiResult.totalPayable,
-                currencyCode = currencyCode
+                currencyCode = currencyCode,
             )
         }
 
@@ -75,14 +71,14 @@ fun DetailedReportScreen(
                 isMonthlyView = state.isMonthlyView,
                 onViewToggle = { viewModel.updateIsMonthlyView(it) },
                 searchQuery = state.searchQuery,
-                onSearchChange = { viewModel.updateSearchQuery(it) }
+                onSearchChange = { viewModel.updateSearchQuery(it) },
             )
         }
 
         item {
             AmortizationTable(
                 installments = displayedItems,
-                currencyCode = currencyCode
+                currencyCode = currencyCode,
             )
         }
 
@@ -94,15 +90,15 @@ fun DetailedReportScreen(
                     onPageChange = { viewModel.updatePageIndex(it) },
                     startRange = (state.pageIndex * pageSize) + 1,
                     endRange = minOf((state.pageIndex + 1) * pageSize, filteredSchedule.size),
-                    totalCount = filteredSchedule.size
+                    totalCount = filteredSchedule.size,
                 )
             }
         }
-        
+
 //        item {
 //            ExportActions(onExport = { /* TODO: Implement Export */ })
 //        }
-        
+
         item { Spacer(modifier = Modifier.height(24.dp)) }
     }
 }
@@ -112,7 +108,7 @@ private fun SummaryChartCard(
     principal: Double,
     totalInterest: Double,
     totalPayable: Double,
-    currencyCode: String
+    currencyCode: String,
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -184,12 +180,12 @@ private fun SummaryChartCard(
                 LegendIndicator(
                     color = primaryColor,
                     label = "Principal",
-                    value = CurrencyFormatter.format(principal, currencyCode)
+                    value = CurrencyFormatter.format(principal, currencyCode),
                 )
                 LegendIndicator(
                     color = tertiaryColor,
                     label = "Interest",
-                    value = CurrencyFormatter.format(totalInterest, currencyCode)
+                    value = CurrencyFormatter.format(totalInterest, currencyCode),
                 )
             }
         }
@@ -197,13 +193,18 @@ private fun SummaryChartCard(
 }
 
 @Composable
-private fun LegendIndicator(color: androidx.compose.ui.graphics.Color, label: String, value: String) {
+private fun LegendIndicator(
+    color: androidx.compose.ui.graphics.Color,
+    label: String,
+    value: String,
+) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Box(
-            modifier = Modifier
-                .size(10.dp)
-                .clip(CircleShape)
-                .background(color),
+            modifier =
+                Modifier
+                    .size(10.dp)
+                    .clip(CircleShape)
+                    .background(color),
         )
         Spacer(modifier = Modifier.width(6.dp))
         Text(
@@ -215,20 +216,23 @@ private fun LegendIndicator(color: androidx.compose.ui.graphics.Color, label: St
 }
 
 @Composable
-private fun MetricsGrid(state: EmiCalculatorUiState, currencyCode: String) {
+private fun MetricsGrid(
+    state: EmiCalculatorUiState,
+    currencyCode: String,
+) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             MetricCard(
                 icon = Icons.Rounded.CreditCard,
                 label = stringResource(R.string.monthly_emi),
                 value = state.formattedMonthlyEmi,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
             )
             MetricCard(
                 icon = Icons.Rounded.CalendarMonth,
                 label = stringResource(R.string.tenure),
                 value = "${state.tenureInput} ${if (state.isTenureInYears) "Years" else "Months"}",
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
             )
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -236,13 +240,13 @@ private fun MetricsGrid(state: EmiCalculatorUiState, currencyCode: String) {
                 icon = Icons.Rounded.Percent,
                 label = "Interest Rate",
                 value = "${state.rateInput}% p.a.",
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
             )
             MetricCard(
                 icon = Icons.Rounded.Event,
                 label = stringResource(R.string.completion_date),
                 value = state.emiResult.loanEndDate,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
             )
         }
     }
@@ -253,7 +257,7 @@ private fun ScheduleControls(
     isMonthlyView: Boolean,
     onViewToggle: (Boolean) -> Unit,
     searchQuery: String,
-    onSearchChange: (String) -> Unit
+    onSearchChange: (String) -> Unit,
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -270,13 +274,13 @@ private fun ScheduleControls(
                     selected = isMonthlyView,
                     onClick = { onViewToggle(true) },
                     shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
-                    label = { Text(stringResource(R.string.monthly)) }
+                    label = { Text(stringResource(R.string.monthly)) },
                 )
                 SegmentedButton(
                     selected = !isMonthlyView,
                     onClick = { onViewToggle(false) },
                     shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
-                    label = { Text(stringResource(R.string.yearly_label)) }
+                    label = { Text(stringResource(R.string.yearly_label)) },
                 )
             }
 
@@ -307,7 +311,7 @@ private fun PaginationControl(
     onPageChange: (Int) -> Unit,
     startRange: Int,
     endRange: Int,
-    totalCount: Int
+    totalCount: Int,
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -315,19 +319,21 @@ private fun PaginationControl(
         shape = MaterialTheme.shapes.large,
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(12.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = stringResource(
-                    R.string.showing_installment_range,
-                    startRange,
-                    endRange,
-                    totalCount
-                ),
+                text =
+                    stringResource(
+                        R.string.showing_installment_range,
+                        startRange,
+                        endRange,
+                        totalCount,
+                    ),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -353,12 +359,12 @@ private fun PaginationControl(
 private fun ExportActions(onExport: (String) -> Unit) {
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         OutlinedButton(
             onClick = { onExport("PDF") },
             modifier = Modifier.weight(1f),
-            shape = MaterialTheme.shapes.large
+            shape = MaterialTheme.shapes.large,
         ) {
             Icon(Icons.Rounded.PictureAsPdf, null, modifier = Modifier.size(18.dp))
             Spacer(modifier = Modifier.width(8.dp))
@@ -367,7 +373,7 @@ private fun ExportActions(onExport: (String) -> Unit) {
         OutlinedButton(
             onClick = { onExport("CSV") },
             modifier = Modifier.weight(1f),
-            shape = MaterialTheme.shapes.large
+            shape = MaterialTheme.shapes.large,
         ) {
             Icon(Icons.Rounded.TableChart, null, modifier = Modifier.size(18.dp))
             Spacer(modifier = Modifier.width(8.dp))

@@ -4,7 +4,6 @@ import android.content.Context
 import android.content.Intent
 
 object ShareHelper {
-
     fun shareText(
         context: Context,
         subject: String,
@@ -20,8 +19,8 @@ object ShareHelper {
         context.startActivity(
             Intent.createChooser(
                 intent,
-                "Share Loan Report"
-            )
+                "Share Loan Report",
+            ),
         )
     }
 }

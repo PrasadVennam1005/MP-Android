@@ -22,18 +22,20 @@ fun EmiResultCard(
     totalPayable: String,
     loanEndDate: String,
     onSaveLoan: () -> Unit,
-    onShare: () -> Unit
+    onShare: () -> Unit,
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f),
-        ),
+        colors =
+            CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f),
+            ),
         shape = MaterialTheme.shapes.extraLarge,
-        border = BorderStroke(
-            width = 1.dp,
-            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
-        ),
+        border =
+            BorderStroke(
+                width = 1.dp,
+                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+            ),
     ) {
         Column(
             modifier = Modifier.padding(20.dp),
@@ -51,7 +53,7 @@ fun EmiResultCard(
                 style = MaterialTheme.typography.headlineLarge.copy(fontWeight = FontWeight.ExtraBold),
                 color = MaterialTheme.colorScheme.primary,
             )
-            
+
             Spacer(modifier = Modifier.height(12.dp))
             Text(
                 text = "${stringResource(R.string.loan_ends)} $loanEndDate",
@@ -62,31 +64,31 @@ fun EmiResultCard(
             Spacer(modifier = Modifier.height(16.dp))
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
             Spacer(modifier = Modifier.height(16.dp))
-            
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceEvenly,
             ) {
                 ResultMetric(
                     label = stringResource(R.string.total_interest),
-                    value = totalInterest
+                    value = totalInterest,
                 )
                 ResultMetric(
                     label = stringResource(R.string.total_payable),
-                    value = totalPayable
+                    value = totalPayable,
                 )
             }
-            
+
             Spacer(modifier = Modifier.height(24.dp))
-            
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 OutlinedButton(
                     onClick = onShare,
                     modifier = Modifier.weight(1f),
-                    shape = MaterialTheme.shapes.large
+                    shape = MaterialTheme.shapes.large,
                 ) {
                     Icon(Icons.Rounded.IosShare, null, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(8.dp))
@@ -95,7 +97,7 @@ fun EmiResultCard(
                 Button(
                     onClick = onSaveLoan,
                     modifier = Modifier.weight(1f),
-                    shape = MaterialTheme.shapes.large
+                    shape = MaterialTheme.shapes.large,
                 ) {
                     Icon(Icons.Rounded.Save, null, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(8.dp))
@@ -107,7 +109,10 @@ fun EmiResultCard(
 }
 
 @Composable
-private fun ResultMetric(label: String, value: String) {
+private fun ResultMetric(
+    label: String,
+    value: String,
+) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(
             text = label,

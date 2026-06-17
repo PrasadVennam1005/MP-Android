@@ -66,13 +66,14 @@ fun EmiCalculatorScreen(
 ) {
     val currencyCode = LocalCurrencyCode.current
     val context = LocalContext.current
-    val currencySymbol = remember(currencyCode) {
-        try {
-            Currency.getInstance(currencyCode).symbol
-        } catch (_: Exception) {
-            "$"
+    val currencySymbol =
+        remember(currencyCode) {
+            try {
+                Currency.getInstance(currencyCode).symbol
+            } catch (_: Exception) {
+                "$"
+            }
         }
-    }
 
     LaunchedEffect(currencyCode) {
         viewModel.initializeDefaults(currencyCode)
@@ -105,9 +106,10 @@ fun EmiCalculatorScreen(
                         )
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background,
-                ),
+                colors =
+                    TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.background,
+                    ),
             )
         },
         containerColor = MaterialTheme.colorScheme.background,
@@ -121,7 +123,7 @@ fun EmiCalculatorScreen(
                     slideInHorizontally { -it } togetherWith slideOutHorizontally { it }
                 }
             },
-            label = "EmiCalculatorContentTransition"
+            label = "EmiCalculatorContentTransition",
         ) { isDetailed ->
             Box(modifier = Modifier.padding(padding)) {
                 if (!isDetailed) {
@@ -134,13 +136,15 @@ fun EmiCalculatorScreen(
                             onNavigateToSaveLoan(
                                 state.amountInput.toDoubleOrNull() ?: 0.0,
                                 state.rateInput.toDoubleOrNull() ?: 0.0,
-                                if (state.isTenureInYears) (state.tenureInput.toIntOrNull() ?: 0) * 12
-                                else (state.tenureInput.toIntOrNull() ?: 0),
-                                state.emiResult.monthlyEmi
+                                if (state.isTenureInYears) {
+                                    (state.tenureInput.toIntOrNull() ?: 0) * 12
+                                } else {
+                                    (state.tenureInput.toIntOrNull() ?: 0)
+                                },
+                                state.emiResult.monthlyEmi,
                             )
                         },
                         onShare = {
-
                             val shareText =
                                 ShareFormatter.buildLoanCalculationShareText(
                                     currencySymbol = currencySymbol,
@@ -160,13 +164,13 @@ fun EmiCalculatorScreen(
                                 text = shareText,
                             )
                         },
-                        onCompare = onNavigateToCompare
+                        onCompare = onNavigateToCompare,
                     )
                 } else {
                     DetailedReportScreen(
                         state = state,
                         viewModel = viewModel,
-                        currencyCode = currencyCode
+                        currencyCode = currencyCode,
                     )
                 }
             }
@@ -185,16 +189,17 @@ private fun CalculatorMainView(
     onCompare: () -> Unit,
 ) {
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = 20.dp, vertical = 8.dp),
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             Column {
                 Text(
@@ -206,14 +211,14 @@ private fun CalculatorMainView(
                     text = stringResource(R.string.emi_calculator_desc),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
-                    modifier = Modifier.width(240.dp)
+                    modifier = Modifier.width(240.dp),
                 )
             }
         }
 
         LoanTypeSelector(
             selectedTabIndex = state.selectedTab,
-            onTabSelected = { viewModel.updateTab(it, currencyCode) }
+            onTabSelected = { viewModel.updateTab(it, currencyCode) },
         )
 
         Card(
@@ -226,37 +231,39 @@ private fun CalculatorMainView(
                 modifier = Modifier.padding(20.dp),
                 verticalArrangement = Arrangement.spacedBy(20.dp),
             ) {
-                val maxAmount = when (state.selectedTab) {
-                    0 -> if (currencyCode == "INR") 100_000_000f else 3_000_000f
-                    1 -> if (currencyCode == "INR") 10_000_000f else 150_000f
-                    2 -> if (currencyCode == "INR") 5_000_000f else 100_000f
-                    else -> if (currencyCode == "INR") 20_000_000f else 500_000f
-                }
-                val minAmount = when (state.selectedTab) {
-                    0 -> if (currencyCode == "INR") 500_000f else 10_000f
-                    1 -> if (currencyCode == "INR") 100_000f else 5_000f
-                    2 -> if (currencyCode == "INR") 20_000f else 1_000f
-                    else -> if (currencyCode == "INR") 10_000f else 500f
-                }
+                val maxAmount =
+                    when (state.selectedTab) {
+                        0 -> if (currencyCode == "INR") 100_000_000f else 3_000_000f
+                        1 -> if (currencyCode == "INR") 10_000_000f else 150_000f
+                        2 -> if (currencyCode == "INR") 5_000_000f else 100_000f
+                        else -> if (currencyCode == "INR") 20_000_000f else 500_000f
+                    }
+                val minAmount =
+                    when (state.selectedTab) {
+                        0 -> if (currencyCode == "INR") 500_000f else 10_000f
+                        1 -> if (currencyCode == "INR") 100_000f else 5_000f
+                        2 -> if (currencyCode == "INR") 20_000f else 1_000f
+                        else -> if (currencyCode == "INR") 10_000f else 500f
+                    }
 
                 LoanAmountInput(
                     amountInput = state.amountInput,
                     onAmountChange = { viewModel.updateAmount(it) },
                     currencySymbol = currencySymbol,
                     minAmount = minAmount,
-                    maxAmount = maxAmount
+                    maxAmount = maxAmount,
                 )
 
                 InterestRateInput(
                     rateInput = state.rateInput,
-                    onRateChange = { viewModel.updateRate(it) }
+                    onRateChange = { viewModel.updateRate(it) },
                 )
 
                 TenureInput(
                     tenureInput = state.tenureInput,
                     onTenureChange = { viewModel.updateTenure(it) },
                     isYears = state.isTenureInYears,
-                    onUnitToggle = { viewModel.updateTenureUnit(it) }
+                    onUnitToggle = { viewModel.updateTenureUnit(it) },
                 )
             }
         }
@@ -267,7 +274,7 @@ private fun CalculatorMainView(
             totalPayable = state.formattedTotalPayable,
             loanEndDate = state.emiResult.loanEndDate,
             onSaveLoan = onSaveLoan,
-            onShare = onShare
+            onShare = onShare,
         )
 
         if (state.emiResult.totalPayable > 0.0) {
@@ -277,7 +284,7 @@ private fun CalculatorMainView(
                 totalPayable = state.emiResult.totalPayable,
                 formattedPrincipal = CurrencyFormatter.format(state.amountInput.toDoubleOrNull() ?: 0.0, currencyCode),
                 formattedInterest = state.formattedTotalInterest,
-                onViewReport = { viewModel.updateShowDetailedReport(true) }
+                onViewReport = { viewModel.updateShowDetailedReport(true) },
             )
         }
 
@@ -292,7 +299,7 @@ private fun CalculatorMainView(
             monthlyIncome = state.monthlyIncomeInput,
             onIncomeChange = { viewModel.updateMonthlyIncome(it) },
             result = state.affordabilityResult,
-            currencyCode = currencyCode
+            currencyCode = currencyCode,
         )
 
         PrepaymentCalculator(
@@ -301,7 +308,7 @@ private fun CalculatorMainView(
             isMonthly = state.isMonthlyPrepayment,
             onTypeToggle = { viewModel.updateIsMonthlyPrepayment(it) },
             result = state.prepaymentResult,
-            currencyCode = currencyCode
+            currencyCode = currencyCode,
         )
 
         Spacer(modifier = Modifier.height(30.dp))

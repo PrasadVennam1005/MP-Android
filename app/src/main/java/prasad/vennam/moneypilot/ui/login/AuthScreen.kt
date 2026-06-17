@@ -409,43 +409,48 @@ fun AuthScreen(
                         Spacer(modifier = Modifier.height(24.dp))
 
                         // Privacy Policy Text
-                        val annotatedText = buildAnnotatedString {
-                            append("By continuing, you agree to our ")
-                            withLink(
-                                LinkAnnotation.Clickable(
-                                    tag = "terms",
-                                    styles = TextLinkStyles(
-                                        style = SpanStyle(
-                                            color = MaterialTheme.colorScheme.primary,
-                                            fontWeight = FontWeight.SemiBold,
-                                            textDecoration = TextDecoration.Underline,
-                                        )
-                                    )
+                        val annotatedText =
+                            buildAnnotatedString {
+                                append("By continuing, you agree to our ")
+                                withLink(
+                                    LinkAnnotation.Clickable(
+                                        tag = "terms",
+                                        styles =
+                                            TextLinkStyles(
+                                                style =
+                                                    SpanStyle(
+                                                        color = MaterialTheme.colorScheme.primary,
+                                                        fontWeight = FontWeight.SemiBold,
+                                                        textDecoration = TextDecoration.Underline,
+                                                    ),
+                                            ),
+                                    ) {
+                                        onNavigateToTerms()
+                                    },
                                 ) {
-                                    onNavigateToTerms()
+                                    append("Terms of Service")
                                 }
-                            ) {
-                                append("Terms of Service")
-                            }
-                            append(" and ")
-                            withLink(
-                                LinkAnnotation.Clickable(
-                                    tag = "privacy",
-                                    styles = TextLinkStyles(
-                                        style = SpanStyle(
-                                            color = MaterialTheme.colorScheme.primary,
-                                            fontWeight = FontWeight.SemiBold,
-                                            textDecoration = TextDecoration.Underline,
-                                        )
-                                    )
+                                append(" and ")
+                                withLink(
+                                    LinkAnnotation.Clickable(
+                                        tag = "privacy",
+                                        styles =
+                                            TextLinkStyles(
+                                                style =
+                                                    SpanStyle(
+                                                        color = MaterialTheme.colorScheme.primary,
+                                                        fontWeight = FontWeight.SemiBold,
+                                                        textDecoration = TextDecoration.Underline,
+                                                    ),
+                                            ),
+                                    ) {
+                                        onNavigateToPrivacy()
+                                    },
                                 ) {
-                                    onNavigateToPrivacy()
+                                    append("Privacy Policy")
                                 }
-                            ) {
-                                append("Privacy Policy")
+                                append(".")
                             }
-                            append(".")
-                        }
 
                         Text(
                             text = annotatedText,

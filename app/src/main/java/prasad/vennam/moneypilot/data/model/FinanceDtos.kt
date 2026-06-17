@@ -25,7 +25,7 @@ data class AmfiResponse(
 )
 
 data class AmfiMeta(
-    @Json(name = "scheme_name") val schemeName: String,
+    @param:Json(name = "scheme_name") val schemeName: String,
 )
 
 data class AmfiData(
@@ -74,6 +74,6 @@ data class AmfiSearchItem(
 
 data class ExchangeRateResponse(
     val result: String,
-    @Json(name = "time_last_update_unix") val timeLastUpdateUnix: Long,
+    @param:Json(name = "time_last_update_unix") val timeLastUpdateUnix: Long,
     val rates: Map<String, Double>,
 )

@@ -26,44 +26,66 @@ data class CompareLoansUiState(
     val tenureB: String = "15",
     val comparisonResult: LoanComparisonResult? = null,
     val emiResultA: EmiResult? = null,
-    val emiResultB: EmiResult? = null
+    val emiResultB: EmiResult? = null,
 )
 
 @HiltViewModel
-class CompareLoansViewModel @Inject constructor(
-    private val calculateEmiUseCase: CalculateEmiUseCase,
-    private val compareLoansUseCase: CompareLoansUseCase
-) : ViewModel() {
+class CompareLoansViewModel
+    @Inject
+    constructor(
+        private val calculateEmiUseCase: CalculateEmiUseCase,
+        private val compareLoansUseCase: CompareLoansUseCase,
+    ) : ViewModel() {
+        private val _uiState = MutableStateFlow(CompareLoansUiState())
 
-    private val _uiState = MutableStateFlow(CompareLoansUiState())
+        val uiState: StateFlow<CompareLoansUiState> =
+            _uiState
+                .combine(_uiState) { state, _ ->
+                    val resA =
+                        calculateEmiUseCase(
+                            state.amountA.toDoubleOrNull() ?: 0.0,
+                            state.rateA.toDoubleOrNull() ?: 0.0,
+                            state.tenureA.toIntOrNull() ?: 0,
+                            true,
+                        )
+                    val resB =
+                        calculateEmiUseCase(
+                            state.amountB.toDoubleOrNull() ?: 0.0,
+                            state.rateB.toDoubleOrNull() ?: 0.0,
+                            state.tenureB.toIntOrNull() ?: 0,
+                            true,
+                        )
 
-    val uiState: StateFlow<CompareLoansUiState> = _uiState.combine(_uiState) { state, _ ->
-        val resA = calculateEmiUseCase(
-            state.amountA.toDoubleOrNull() ?: 0.0,
-            state.rateA.toDoubleOrNull() ?: 0.0,
-            state.tenureA.toIntOrNull() ?: 0,
-            true
-        )
-        val resB = calculateEmiUseCase(
-            state.amountB.toDoubleOrNull() ?: 0.0,
-            state.rateB.toDoubleOrNull() ?: 0.0,
-            state.tenureB.toIntOrNull() ?: 0,
-            true
-        )
-        
-        val comp = compareLoansUseCase(resA, resB)
-        
-        state.copy(
-            comparisonResult = comp,
-            emiResultA = resA,
-            emiResultB = resB
-        )
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), CompareLoansUiState())
+                    val comp = compareLoansUseCase(resA, resB)
 
-    fun updateAmountA(v: String) { _uiState.update { it.copy(amountA = v) } }
-    fun updateRateA(v: String) { _uiState.update { it.copy(rateA = v) } }
-    fun updateTenureA(v: String) { _uiState.update { it.copy(tenureA = v) } }
-    fun updateAmountB(v: String) { _uiState.update { it.copy(amountB = v) } }
-    fun updateRateB(v: String) { _uiState.update { it.copy(rateB = v) } }
-    fun updateTenureB(v: String) { _uiState.update { it.copy(tenureB = v) } }
-}
+                    state.copy(
+                        comparisonResult = comp,
+                        emiResultA = resA,
+                        emiResultB = resB,
+                    )
+                }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), CompareLoansUiState())
+
+        fun updateAmountA(v: String) {
+            _uiState.update { it.copy(amountA = v) }
+        }
+
+        fun updateRateA(v: String) {
+            _uiState.update { it.copy(rateA = v) }
+        }
+
+        fun updateTenureA(v: String) {
+            _uiState.update { it.copy(tenureA = v) }
+        }
+
+        fun updateAmountB(v: String) {
+            _uiState.update { it.copy(amountB = v) }
+        }
+
+        fun updateRateB(v: String) {
+            _uiState.update { it.copy(rateB = v) }
+        }
+
+        fun updateTenureB(v: String) {
+            _uiState.update { it.copy(tenureB = v) }
+        }
+    }

@@ -150,3 +150,12 @@ dependencies {
     implementation(libs.androidx.security.crypto)
     implementation(libs.sqlcipher.android)
 }
+
+tasks.withType<JavaCompile>().configureEach {
+    doFirst {
+        val path = options.annotationProcessorPath
+        if (path != null) {
+            options.annotationProcessorPath = path.filter { !it.name.contains("moshi-kotlin-codegen") }
+        }
+    }
+}

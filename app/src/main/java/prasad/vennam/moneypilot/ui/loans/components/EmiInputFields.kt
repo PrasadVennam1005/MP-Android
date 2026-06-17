@@ -26,7 +26,7 @@ fun LoanAmountInput(
     onAmountChange: (String) -> Unit,
     currencySymbol: String,
     minAmount: Float,
-    maxAmount: Float
+    maxAmount: Float,
 ) {
     Column {
         Row(
@@ -44,7 +44,7 @@ fun LoanAmountInput(
                 onValueChange = { onAmountChange(it.filter { char -> char.isDigit() }) },
                 prefix = currencySymbol,
                 width = 120.dp,
-                keyboardType = KeyboardType.Number
+                keyboardType = KeyboardType.Number,
             )
         }
         Spacer(modifier = Modifier.height(10.dp))
@@ -54,11 +54,12 @@ fun LoanAmountInput(
             value = sliderAmount,
             onValueChange = { onAmountChange(it.roundToInt().toString()) },
             valueRange = minAmount..maxAmount,
-            colors = SliderDefaults.colors(
-                thumbColor = MaterialTheme.colorScheme.primary,
-                activeTrackColor = MaterialTheme.colorScheme.primary,
-                inactiveTrackColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f),
-            ),
+            colors =
+                SliderDefaults.colors(
+                    thumbColor = MaterialTheme.colorScheme.primary,
+                    activeTrackColor = MaterialTheme.colorScheme.primary,
+                    inactiveTrackColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f),
+                ),
         )
     }
 }
@@ -66,7 +67,7 @@ fun LoanAmountInput(
 @Composable
 fun InterestRateInput(
     rateInput: String,
-    onRateChange: (String) -> Unit
+    onRateChange: (String) -> Unit,
 ) {
     Column {
         Row(
@@ -84,7 +85,7 @@ fun InterestRateInput(
                 onValueChange = onRateChange,
                 suffix = "%",
                 width = 80.dp,
-                keyboardType = KeyboardType.Decimal
+                keyboardType = KeyboardType.Decimal,
             )
         }
         Spacer(modifier = Modifier.height(10.dp))
@@ -94,11 +95,12 @@ fun InterestRateInput(
             value = sliderRate,
             onValueChange = { onRateChange(String.format(Locale.US, "%.1f", it)) },
             valueRange = 1f..25f,
-            colors = SliderDefaults.colors(
-                thumbColor = MaterialTheme.colorScheme.primary,
-                activeTrackColor = MaterialTheme.colorScheme.primary,
-                inactiveTrackColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f),
-            ),
+            colors =
+                SliderDefaults.colors(
+                    thumbColor = MaterialTheme.colorScheme.primary,
+                    activeTrackColor = MaterialTheme.colorScheme.primary,
+                    inactiveTrackColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f),
+                ),
         )
     }
 }
@@ -109,7 +111,7 @@ fun TenureInput(
     tenureInput: String,
     onTenureChange: (String) -> Unit,
     isYears: Boolean,
-    onUnitToggle: (Boolean) -> Unit
+    onUnitToggle: (Boolean) -> Unit,
 ) {
     Column {
         Row(
@@ -128,13 +130,13 @@ fun TenureInput(
                         selected = isYears,
                         onClick = { onUnitToggle(true) },
                         shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
-                        label = { Text("Yr", style = MaterialTheme.typography.labelSmall) }
+                        label = { Text("Yr", style = MaterialTheme.typography.labelSmall) },
                     )
                     SegmentedButton(
                         selected = !isYears,
                         onClick = { onUnitToggle(false) },
                         shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
-                        label = { Text("Mo", style = MaterialTheme.typography.labelSmall) }
+                        label = { Text("Mo", style = MaterialTheme.typography.labelSmall) },
                     )
                 }
                 Spacer(modifier = Modifier.width(8.dp))
@@ -142,7 +144,7 @@ fun TenureInput(
                     value = tenureInput,
                     onValueChange = { onTenureChange(it.filter { char -> char.isDigit() }) },
                     width = 60.dp,
-                    keyboardType = KeyboardType.Number
+                    keyboardType = KeyboardType.Number,
                 )
             }
         }
@@ -155,11 +157,12 @@ fun TenureInput(
             value = sliderTenure,
             onValueChange = { onTenureChange(it.roundToInt().toString()) },
             valueRange = minTenure..maxTenure,
-            colors = SliderDefaults.colors(
-                thumbColor = MaterialTheme.colorScheme.primary,
-                activeTrackColor = MaterialTheme.colorScheme.primary,
-                inactiveTrackColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f),
-            ),
+            colors =
+                SliderDefaults.colors(
+                    thumbColor = MaterialTheme.colorScheme.primary,
+                    activeTrackColor = MaterialTheme.colorScheme.primary,
+                    inactiveTrackColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f),
+                ),
         )
     }
 }
@@ -171,18 +174,18 @@ private fun InputBox(
     prefix: String? = null,
     suffix: String? = null,
     width: androidx.compose.ui.unit.Dp,
-    keyboardType: KeyboardType
+    keyboardType: KeyboardType,
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier
-            .height(44.dp)
-            .border(
-                width = 1.dp,
-                color = MaterialTheme.colorScheme.outlineVariant,
-                shape = RoundedCornerShape(8.dp),
-            )
-            .padding(horizontal = 10.dp),
+        modifier =
+            Modifier
+                .height(44.dp)
+                .border(
+                    width = 1.dp,
+                    color = MaterialTheme.colorScheme.outlineVariant,
+                    shape = RoundedCornerShape(8.dp),
+                ).padding(horizontal = 10.dp),
     ) {
         if (prefix != null) {
             Text(
@@ -195,11 +198,12 @@ private fun InputBox(
         BasicTextField(
             value = value,
             onValueChange = onValueChange,
-            textStyle = MaterialTheme.typography.bodyMedium.copy(
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface,
-                textAlign = TextAlign.End,
-            ),
+            textStyle =
+                MaterialTheme.typography.bodyMedium.copy(
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    textAlign = TextAlign.End,
+                ),
             keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
             cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
             singleLine = true,

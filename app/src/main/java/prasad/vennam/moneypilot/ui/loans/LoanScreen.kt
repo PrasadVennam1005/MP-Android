@@ -74,7 +74,7 @@ fun LoanScreen(
     prefillAmount: Double? = null,
     prefillRate: Double? = null,
     prefillTenureMonths: Int? = null,
-    prefillEmi: Double? = null
+    prefillEmi: Double? = null,
 ) {
     val currencyCode = LocalCurrencyCode.current
     val state by viewModel.uiState.collectAsState()
@@ -84,19 +84,22 @@ fun LoanScreen(
     var loanToPay by remember { mutableStateOf<Loan?>(null) }
 
     // Use derived state or side effect to handle pre-fill
-    val initialPrefillLoan = remember(prefillAmount, prefillRate, prefillTenureMonths, prefillEmi) {
-        if (prefillAmount != null) {
-            Loan(
-                name = "New Loan",
-                totalAmount = (prefillAmount * 100).toLong(),
-                outstandingAmount = (prefillAmount * 100).toLong(),
-                emiAmount = ((prefillEmi ?: 0.0) * 100).toLong(),
-                nextEmiDate = System.currentTimeMillis(),
-                interestRate = prefillRate ?: 0.0,
-                tenureMonths = prefillTenureMonths ?: 12
-            )
-        } else null
-    }
+    val initialPrefillLoan =
+        remember(prefillAmount, prefillRate, prefillTenureMonths, prefillEmi) {
+            if (prefillAmount != null) {
+                Loan(
+                    name = "New Loan",
+                    totalAmount = (prefillAmount * 100).toLong(),
+                    outstandingAmount = (prefillAmount * 100).toLong(),
+                    emiAmount = ((prefillEmi ?: 0.0) * 100).toLong(),
+                    nextEmiDate = System.currentTimeMillis(),
+                    interestRate = prefillRate ?: 0.0,
+                    tenureMonths = prefillTenureMonths ?: 12,
+                )
+            } else {
+                null
+            }
+        }
 
     if (initialPrefillLoan != null && selectedLoan == null && showAddLoanSheet) {
         // This is a bit hacky but works for pre-filling "Add" mode
@@ -269,7 +272,7 @@ fun LoanScreen(
     if (showAddLoanSheet) {
         LoanFormBottomSheet(
             initialLoan = selectedLoan ?: initialPrefillLoan,
-            onDismiss = { 
+            onDismiss = {
                 showAddLoanSheet = false
                 selectedLoan = null
             },

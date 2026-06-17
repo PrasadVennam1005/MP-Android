@@ -235,7 +235,7 @@ object GoogleSheetsSyncHelper {
         client.newCall(request).execute().use { response ->
             val bodyStr = response.body.string()
             if (!response.isSuccessful) throw Exception("Failed to create spreadsheet")
-            val match = "\"spreadsheetId\"\\s*:\\s*\"([^\"]+)\"".toRegex().find(bodyStr ?: "")
+            val match = "\"spreadsheetId\"\\s*:\\s*\"([^\"]+)\"".toRegex().find(bodyStr)
             return match?.groupValues?.get(1) ?: throw Exception("Could not parse spreadsheetId")
         }
     }

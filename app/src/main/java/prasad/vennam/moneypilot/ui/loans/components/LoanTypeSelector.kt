@@ -18,17 +18,18 @@ import prasad.vennam.moneypilot.R
 @Composable
 fun LoanTypeSelector(
     selectedTabIndex: Int,
-    onTabSelected: (Int) -> Unit
+    onTabSelected: (Int) -> Unit,
 ) {
-    val options = listOf(
-        Triple(stringResource(R.string.home_loan), Icons.Rounded.Home, "Home"),
-        Triple(stringResource(R.string.car_loan), Icons.Rounded.DirectionsCar, "Car"),
-        Triple(stringResource(R.string.personal_loan), Icons.Rounded.Person, "Personal"),
-        Triple(stringResource(R.string.other_loan), Icons.Rounded.Payments, "Other")
-    )
+    val options =
+        listOf(
+            Triple(stringResource(R.string.home_loan), Icons.Rounded.Home, "Home"),
+            Triple(stringResource(R.string.car_loan), Icons.Rounded.DirectionsCar, "Car"),
+            Triple(stringResource(R.string.personal_loan), Icons.Rounded.Person, "Personal"),
+            Triple(stringResource(R.string.other_loan), Icons.Rounded.Payments, "Other"),
+        )
 
     SingleChoiceSegmentedButtonRow(
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier.fillMaxWidth(),
     ) {
         options.forEachIndexed { index, (label, icon, desc) ->
             SegmentedButton(
@@ -39,15 +40,15 @@ fun LoanTypeSelector(
                     Icon(
                         imageVector = icon,
                         contentDescription = desc,
-                        modifier = Modifier.size(18.dp)
+                        modifier = Modifier.size(18.dp),
                     )
                 },
                 label = {
                     Text(
                         text = label,
-                        style = MaterialTheme.typography.labelSmall
+                        style = MaterialTheme.typography.labelSmall,
                     )
-                }
+                },
             )
         }
     }

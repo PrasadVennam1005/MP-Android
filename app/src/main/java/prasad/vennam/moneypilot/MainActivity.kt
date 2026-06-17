@@ -399,7 +399,7 @@ fun MoneyPilotApp(
                                     prefillAmount = key.prefillAmount,
                                     prefillRate = key.prefillRate,
                                     prefillTenureMonths = key.prefillTenureMonths,
-                                    prefillEmi = key.prefillEmi
+                                    prefillEmi = key.prefillEmi,
                                 )
                             }
 
@@ -545,13 +545,12 @@ fun MoneyPilotApp(
                                                 prefillAmount = amount,
                                                 prefillRate = rate,
                                                 prefillTenureMonths = months,
-                                                prefillEmi = emi
-                                            )
+                                                prefillEmi = emi,
+                                            ),
                                         )
                                     },
                                     onNavigateToCompare = {
-
-                                    }
+                                    },
                                 )
                             }
 

@@ -94,6 +94,7 @@ class DashboardViewModel
             _selectedTimeFrame.value = timeFrame
         }
 
+        @Suppress("UNCHECKED_CAST")
         private val dataFlow =
             combine(
                 getTransactionsUseCase(),

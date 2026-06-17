@@ -25,12 +25,17 @@ import java.util.Currency
 @Composable
 fun CompareLoansScreen(
     onBack: () -> Unit,
-    viewModel: CompareLoansViewModel = hiltViewModel()
+    viewModel: CompareLoansViewModel = hiltViewModel(),
 ) {
     val currencyCode = LocalCurrencyCode.current
-    val currencySymbol = remember(currencyCode) {
-        try { Currency.getInstance(currencyCode).symbol } catch (_: Exception) { "$" }
-    }
+    val currencySymbol =
+        remember(currencyCode) {
+            try {
+                Currency.getInstance(currencyCode).symbol
+            } catch (_: Exception) {
+                "$"
+            }
+        }
     val state by viewModel.uiState.collectAsState()
 
     Scaffold(
@@ -47,18 +52,19 @@ fun CompareLoansScreen(
                         Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background),
             )
         },
-        containerColor = MaterialTheme.colorScheme.background
+        containerColor = MaterialTheme.colorScheme.background,
     ) { padding ->
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .verticalScroll(rememberScrollState())
-                .padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(24.dp)
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+                    .verticalScroll(rememberScrollState())
+                    .padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(24.dp),
         ) {
             // Loan A
             LoanInputSection(
@@ -69,7 +75,7 @@ fun CompareLoansScreen(
                 currencySymbol = currencySymbol,
                 onAmountChange = { viewModel.updateAmountA(it) },
                 onRateChange = { viewModel.updateRateA(it) },
-                onTenureChange = { viewModel.updateTenureA(it) }
+                onTenureChange = { viewModel.updateTenureA(it) },
             )
 
             // Loan B
@@ -81,14 +87,14 @@ fun CompareLoansScreen(
                 currencySymbol = currencySymbol,
                 onAmountChange = { viewModel.updateAmountB(it) },
                 onRateChange = { viewModel.updateRateB(it) },
-                onTenureChange = { viewModel.updateTenureB(it) }
+                onTenureChange = { viewModel.updateTenureB(it) },
             )
 
             LoanComparison(
                 result = state.comparisonResult,
-                currencyCode = currencyCode
+                currencyCode = currencyCode,
             )
-            
+
             Spacer(modifier = Modifier.height(32.dp))
         }
     }
@@ -103,34 +109,34 @@ private fun LoanInputSection(
     currencySymbol: String,
     onAmountChange: (String) -> Unit,
     onRateChange: (String) -> Unit,
-    onTenureChange: (String) -> Unit
+    onTenureChange: (String) -> Unit,
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
-        shape = MaterialTheme.shapes.extraLarge
+        shape = MaterialTheme.shapes.extraLarge,
     ) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             Text(text = title, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold))
-            
+
             LoanAmountInput(
                 amountInput = amount,
                 onAmountChange = onAmountChange,
                 currencySymbol = currencySymbol,
                 minAmount = 1000f,
-                maxAmount = 100000000f
+                maxAmount = 100000000f,
             )
-            
+
             InterestRateInput(
                 rateInput = rate,
-                onRateChange = onRateChange
+                onRateChange = onRateChange,
             )
-            
+
             TenureInput(
                 tenureInput = tenure,
                 onTenureChange = onTenureChange,
                 isYears = true,
-                onUnitToggle = {} // Fixed to years for comparison simplicity
+                onUnitToggle = {}, // Fixed to years for comparison simplicity
             )
         }
     }

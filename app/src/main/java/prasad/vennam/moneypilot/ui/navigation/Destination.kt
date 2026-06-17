@@ -37,7 +37,7 @@ sealed interface Destination : NavKey {
         val prefillAmount: Double? = null,
         val prefillRate: Double? = null,
         val prefillTenureMonths: Int? = null,
-        val prefillEmi: Double? = null
+        val prefillEmi: Double? = null,
     ) : Destination
 
     @Serializable

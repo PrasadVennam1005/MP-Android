@@ -34,15 +34,16 @@ fun AmortizationTable(
 
         if (installments.isEmpty()) {
             Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 32.dp),
-                contentAlignment = Alignment.Center
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 32.dp),
+                contentAlignment = Alignment.Center,
             ) {
                 Text(
                     text = stringResource(R.string.no_records_found),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         } else {
@@ -50,7 +51,7 @@ fun AmortizationTable(
                 InstallmentRow(installment, currencyCode)
                 HorizontalDivider(
                     modifier = Modifier.padding(horizontal = 8.dp),
-                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
                 )
             }
         }
@@ -60,11 +61,12 @@ fun AmortizationTable(
 @Composable
 private fun TableHeader() {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
-            .padding(horizontal = 12.dp, vertical = 8.dp),
-        horizontalArrangement = Arrangement.SpaceBetween
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
     ) {
         HeaderText(stringResource(R.string.installment), Modifier.weight(1.2f))
         HeaderText(stringResource(R.string.principal), Modifier.weight(1f), TextAlign.End)
@@ -73,22 +75,30 @@ private fun TableHeader() {
 }
 
 @Composable
-private fun HeaderText(text: String, modifier: Modifier, textAlign: TextAlign = TextAlign.Start) {
+private fun HeaderText(
+    text: String,
+    modifier: Modifier,
+    textAlign: TextAlign = TextAlign.Start,
+) {
     Text(
         text = text.uppercase(LocalLocale.current.platformLocale),
         style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = modifier,
-        textAlign = textAlign
+        textAlign = textAlign,
     )
 }
 
 @Composable
-private fun InstallmentRow(installment: AmortizationInstallment, currencyCode: String) {
+private fun InstallmentRow(
+    installment: AmortizationInstallment,
+    currencyCode: String,
+) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(12.dp),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
