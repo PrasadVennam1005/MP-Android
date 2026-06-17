@@ -16,7 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.android.billingclient.api.BillingClient
 import com.android.billingclient.api.ProductDetails
 
@@ -28,7 +28,7 @@ fun PremiumScreen(
 ) {
     val products by viewModel.products.collectAsState()
     val isPremium by viewModel.isPremium.collectAsState()
-    val context = LocalContext.current as Activity
+    val context = LocalContext.current
 
     Scaffold(
         topBar = {
@@ -113,7 +113,7 @@ fun PremiumScreen(
                         ProductCard(
                             product = product,
                             onPurchaseClick = {
-                                viewModel.launchBillingFlow(context, product)
+                                viewModel.launchBillingFlow(context as Activity, product)
                             },
                         )
                         Spacer(modifier = Modifier.height(16.dp))

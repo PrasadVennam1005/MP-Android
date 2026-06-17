@@ -55,6 +55,10 @@ class MainViewModel
             userPreferences.userData
                 .stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
+        val isBiometricEnabled: StateFlow<Boolean> =
+            userPreferences.isBiometricEnabled
+                .stateIn(viewModelScope, SharingStarted.Eagerly, false)
+
         val isLoggedIn: StateFlow<Boolean> =
             userPreferences.isLoggedIn
                 .stateIn(viewModelScope, SharingStarted.Eagerly, false)
@@ -107,6 +111,19 @@ class MainViewModel
             viewModelScope.launch {
                 userPreferences.saveUserData(userData)
                 onComplete()
+            }
+        }
+
+        fun clearAllData(onComplete: () -> Unit) {
+            viewModelScope.launch {
+                clearAllDataUseCase()
+                onComplete()
+            }
+        }
+
+        fun setIsBiometricEnabled(enabled: Boolean) {
+            viewModelScope.launch {
+                userPreferences.setIsBiometricEnabled(enabled)
             }
         }
 
@@ -269,7 +286,7 @@ class MainViewModel
 
                 // 4. Clear all user preferences in DataStore
                 try {
-                    userPreferences.clearAll()
+                    userPreferences.clear()
                 } catch (e: Exception) {
                     Log.e("MainViewModel", "Failed to clear user preferences", e)
                 }

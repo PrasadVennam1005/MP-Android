@@ -62,6 +62,7 @@ class UserPreferences
                 .intPreferencesKey("theme_mode")
         private val hasSeededNotificationsKey = booleanPreferencesKey("has_seeded_notifications")
         private val isPremiumKey = booleanPreferencesKey("is_premium")
+        private val isBiometricEnabledKey = booleanPreferencesKey("is_biometric_enabled")
 
         val isLoggedIn: Flow<Boolean> =
             context.dataStore.data
@@ -109,6 +110,12 @@ class UserPreferences
             context.dataStore.data
                 .map { preferences ->
                     preferences[isPremiumKey] ?: false
+                }
+
+        val isBiometricEnabled: Flow<Boolean> =
+            context.dataStore.data
+                .map { preferences ->
+                    preferences[isBiometricEnabledKey] ?: false
                 }
 
         val isSynced: Flow<Boolean> =
@@ -231,9 +238,15 @@ class UserPreferences
             }
         }
 
-        suspend fun clearAll() {
+        suspend fun clear() {
             context.dataStore.edit { preferences ->
                 preferences.clear()
+            }
+        }
+
+        suspend fun setIsBiometricEnabled(enabled: Boolean) {
+            context.dataStore.edit { preferences ->
+                preferences[isBiometricEnabledKey] = enabled
             }
         }
     }

@@ -129,6 +129,7 @@ fun SettingsScreen(
     val exchangeRates by mainViewModel.exchangeRates.collectAsState()
     val currentGoal by mainViewModel.financialGoal.collectAsState()
     val currentTarget by mainViewModel.monthlySavingsTarget.collectAsState()
+    val isBiometricEnabled by mainViewModel.isBiometricEnabled.collectAsState()
 
     val scope = rememberCoroutineScope()
     val isGuest = remember(userData) { userData?.email == "guest@moneypilot.app" }
@@ -473,6 +474,38 @@ fun SettingsScreen(
                         title = stringResource(R.string.theme),
                         subtitle = themeSubtitle,
                         onClick = { showThemeDialog = true },
+                    )
+                }
+            }
+
+            item { SectionDivider() }
+
+            // Security Settings
+            item {
+                SettingsGroup(title = "Security") {
+                    val activity = context as? androidx.fragment.app.FragmentActivity
+                    SettingsSwitchItem(
+                        icon = Icons.Rounded.Lock,
+                        title = "Biometric Authentication",
+                        subtitle = "Require fingerprint/face to open app",
+                        checked = isBiometricEnabled,
+                        onCheckedChange = { checked ->
+                            if (activity != null) {
+                                if (checked) {
+                                    prasad.vennam.moneypilot.util.BiometricHelper.authenticate(
+                                        activity = activity,
+                                        title = "Enable Biometric Lock",
+                                        subtitle = "Verify your identity to enable biometric lock",
+                                        onSuccess = { mainViewModel.setIsBiometricEnabled(true) },
+                                        onError = { Toast.makeText(context, "Authentication failed: $it", Toast.LENGTH_SHORT).show() }
+                                    )
+                                } else {
+                                    mainViewModel.setIsBiometricEnabled(false)
+                                }
+                            } else {
+                                Toast.makeText(context, "Biometric authentication requires app restart to work correctly.", Toast.LENGTH_LONG).show()
+                            }
+                        }
                     )
                 }
             }

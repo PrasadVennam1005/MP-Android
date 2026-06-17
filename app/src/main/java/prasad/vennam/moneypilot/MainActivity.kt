@@ -1,7 +1,7 @@
 package prasad.vennam.moneypilot
 
 import android.os.Bundle
-import androidx.activity.ComponentActivity
+import androidx.fragment.app.FragmentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.material.icons.Icons
@@ -10,6 +10,7 @@ import androidx.compose.material.icons.rounded.AccountBalanceWallet
 import androidx.compose.material.icons.rounded.BarChart
 import androidx.compose.material.icons.rounded.Dashboard
 import androidx.compose.material.icons.rounded.History
+import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -23,6 +24,14 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.setValue
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.unit.dp
+import androidx.compose.material3.Button
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -64,7 +73,7 @@ import prasad.vennam.moneypilot.util.LocalCurrencyCode
 import javax.inject.Inject
 
 @AndroidEntryPoint
-class MainActivity : ComponentActivity() {
+class MainActivity : FragmentActivity() {
     @Inject
     lateinit var analyticsHelper: AnalyticsHelper
 
@@ -104,6 +113,38 @@ class MainActivity : ComponentActivity() {
                 mainViewModel.checkLoanReminders()
             }
             val themeMode by mainViewModel.themeMode.collectAsState()
+            val isBiometricEnabled by mainViewModel.isBiometricEnabled.collectAsState()
+            // isAuthenticated is reset only on ON_STOP (app backgrounded), NOT on ON_PAUSE
+            // This prevents the biometric prompt itself (which pauses the activity) from re-locking.
+            var isAuthenticated by remember { mutableStateOf(false) }
+
+            val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+            DisposableEffect(lifecycleOwner) {
+                val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+                    if (event == androidx.lifecycle.Lifecycle.Event.ON_STOP) {
+                        // Only lock when the app goes fully to background, not for overlays/dialogs
+                        isAuthenticated = false
+                    }
+                }
+                lifecycleOwner.lifecycle.addObserver(observer)
+                onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+            }
+
+            // Auto-show biometric prompt once when the screen comes into focus and is not yet authenticated
+            LaunchedEffect(isBiometricEnabled) {
+                if (isBiometricEnabled && !isAuthenticated) {
+                    prasad.vennam.moneypilot.util.BiometricHelper.authenticate(
+                        activity = this@MainActivity,
+                        title = "Unlock MoneyPilot",
+                        subtitle = "Verify your identity to open the app",
+                        onSuccess = { isAuthenticated = true },
+                        onError = {
+                            // Silently ignore; user can tap Unlock button
+                        }
+                    )
+                }
+            }
+
             val darkTheme =
                 when (themeMode) {
                     UserPreferences.ThemeMode.LIGHT -> false
@@ -111,7 +152,74 @@ class MainActivity : ComponentActivity() {
                     else -> androidx.compose.foundation.isSystemInDarkTheme()
                 }
             MoneyPilotTheme(darkTheme = darkTheme) {
-                MoneyPilotApp(analyticsHelper, mainViewModel, userPreferences)
+                if (isBiometricEnabled && !isAuthenticated) {
+                    BiometricLockScreen(
+                        onUnlockClick = {
+                            prasad.vennam.moneypilot.util.BiometricHelper.authenticate(
+                                activity = this@MainActivity,
+                                title = "Unlock MoneyPilot",
+                                subtitle = "Verify your identity to open the app",
+                                onSuccess = { isAuthenticated = true },
+                                onError = {
+                                    android.widget.Toast.makeText(
+                                        this@MainActivity,
+                                        "Authentication failed. Please try again.",
+                                        android.widget.Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                            )
+                        }
+                    )
+                } else {
+                    MoneyPilotApp(analyticsHelper, mainViewModel, userPreferences)
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Lock screen shown when biometric authentication is required.
+ * Extracted as its own composable to prevent unnecessary recomposition
+ * of MoneyPilotApp when auth state changes.
+ */
+@Composable
+fun BiometricLockScreen(onUnlockClick: () -> Unit) {
+    androidx.compose.material3.Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.background
+    ) {
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Icon(
+                imageVector = Icons.Rounded.Lock,
+                contentDescription = "Locked",
+                modifier = Modifier.size(80.dp),
+                tint = MaterialTheme.colorScheme.primary
+            )
+            Spacer(modifier = Modifier.height(20.dp))
+            Text(
+                "MoneyPilot is locked",
+                style = MaterialTheme.typography.titleLarge
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                "Verify your identity to continue",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(32.dp))
+            Button(onClick = onUnlockClick) {
+                Icon(
+                    imageVector = Icons.Rounded.Lock,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Unlock")
             }
         }
     }
