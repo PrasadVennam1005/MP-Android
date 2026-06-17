@@ -104,10 +104,10 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.MoneyPilot">
 
-        <!-- AdMob Test Application ID -->
+        <!-- AdMob Application ID -->
         <meta-data
             android:name="com.google.android.gms.ads.APPLICATION_ID"
-            android:value="ca-app-pub-3940256099942544~3347511713"/>
+            android:value="ca-app-pub-5908710502730117~9956102404"/>
 
         <activity
             android:name=".MainActivity"
