@@ -43,6 +43,7 @@ android {
         buildConfigField("String", "INTERSTITIAL_PROD_ID", interstitialProdId)
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        manifestPlaceholders["admobAppId"] = "ca-app-pub-3940256099942544~3347511713" // Default to Test ID
     }
 
     signingConfigs {
@@ -56,6 +57,7 @@ android {
 
     buildTypes {
         release {
+            manifestPlaceholders["admobAppId"] = "ca-app-pub-5908710502730117~9956102404" // Production ID
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(
