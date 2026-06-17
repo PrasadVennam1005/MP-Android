@@ -17,7 +17,7 @@ import com.google.android.gms.ads.AdView
  * KPI card height reference:
  *   padding(16) + icon(20) + spacer(8) + labelMedium(~16) + titleLarge(~28) + padding(16) ≈ 104dp
  */
-private val KPI_CARD_HEIGHT = 104.dp
+private val KPI_CARD_HEIGHT = 100.dp
 
 @Composable
 fun AdBannerView(

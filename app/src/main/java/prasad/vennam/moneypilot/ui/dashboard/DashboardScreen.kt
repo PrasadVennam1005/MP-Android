@@ -365,173 +365,179 @@ fun DashboardScreen(
                     DashboardShimmer()
                 }
             } else {
-                LazyColumn(
-                    state = lazyListState,
-                    modifier =
-                        Modifier
-                            .fillMaxSize()
-                            .padding(innerPadding),
-                    contentPadding = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(24.dp),
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding),
                 ) {
-                    item {
-                        AdBannerView(isPremium = isPremium, modifier = Modifier.fillMaxWidth())
-                    }
+                    // Sticky banner — stays pinned at top while content scrolls below
+                    AdBannerView(
+                        isPremium = isPremium,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
 
-                    item {
-                        TimeFrameSelector(
-                            selectedTimeFrame = dashboardState.selectedTimeFrame,
-                            onTimeFrameSelected = { dashboardViewModel.setTimeFrame(it) },
-                        )
-                    }
-
-                    if (dashboardState.pendingTransactions.isNotEmpty()) {
+                    LazyColumn(
+                        state = lazyListState,
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(24.dp),
+                    ) {
                         item {
-                            val count = dashboardState.pendingTransactions.size
-                            Card(
-                                modifier =
-                                    Modifier
-                                        .fillMaxWidth()
-                                        .clickable { showPendingReviewSheet = true }
-                                        .graphicsLayer {
-                                            alpha = pendingPulseAlpha
-                                        },
-                                shape = RoundedCornerShape(16.dp),
-                                colors = CardDefaults.cardColors(containerColor = Color.Transparent),
-                            ) {
-                                Row(
+                            TimeFrameSelector(
+                                selectedTimeFrame = dashboardState.selectedTimeFrame,
+                                onTimeFrameSelected = { dashboardViewModel.setTimeFrame(it) },
+                            )
+                        }
+
+                        if (dashboardState.pendingTransactions.isNotEmpty()) {
+                            item {
+                                val count = dashboardState.pendingTransactions.size
+                                Card(
                                     modifier =
                                         Modifier
-                                            .background(bannerBrush)
-                                            .padding(horizontal = 20.dp, vertical = 14.dp)
-                                            .fillMaxWidth(),
-                                    verticalAlignment = Alignment.CenterVertically,
+                                            .fillMaxWidth()
+                                            .clickable { showPendingReviewSheet = true }
+                                            .graphicsLayer {
+                                                alpha = pendingPulseAlpha
+                                            },
+                                    shape = RoundedCornerShape(16.dp),
+                                    colors = CardDefaults.cardColors(containerColor = Color.Transparent),
                                 ) {
-                                    Icon(
-                                        imageVector = Icons.Rounded.AutoAwesome,
-                                        contentDescription = null,
-                                        tint = Color.White,
-                                        modifier = Modifier.size(24.dp),
-                                    )
-                                    Spacer(modifier = Modifier.width(12.dp))
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text(
-                                            text = stringResource(R.string.auto_detected_transactions),
-                                            style = MaterialTheme.typography.titleMedium,
-                                            fontWeight = FontWeight.Bold,
-                                            color = Color.White,
+                                    Row(
+                                        modifier =
+                                            Modifier
+                                                .background(bannerBrush)
+                                                .padding(horizontal = 20.dp, vertical = 14.dp)
+                                                .fillMaxWidth(),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Rounded.AutoAwesome,
+                                            contentDescription = null,
+                                            tint = Color.White,
+                                            modifier = Modifier.size(24.dp),
                                         )
-                                        Text(
-                                            text =
-                                                if (count ==
-                                                    1
-                                                ) {
-                                                    stringResource(R.string.pending_transaction_single)
-                                                } else {
-                                                    stringResource(R.string.pending_transactions_plural, count)
-                                                },
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = Color.White.copy(alpha = 0.85f),
+                                        Spacer(modifier = Modifier.width(12.dp))
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(
+                                                text = stringResource(R.string.auto_detected_transactions),
+                                                style = MaterialTheme.typography.titleMedium,
+                                                fontWeight = FontWeight.Bold,
+                                                color = Color.White,
+                                            )
+                                            Text(
+                                                text =
+                                                    if (count ==
+                                                        1
+                                                    ) {
+                                                        stringResource(R.string.pending_transaction_single)
+                                                    } else {
+                                                        stringResource(R.string.pending_transactions_plural, count)
+                                                    },
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = Color.White.copy(alpha = 0.85f),
+                                            )
+                                        }
+                                        Icon(
+                                            imageVector = Icons.Rounded.ChevronRight,
+                                            contentDescription = stringResource(R.string.review),
+                                            tint = Color.White,
+                                            modifier = Modifier.size(24.dp),
                                         )
                                     }
-                                    Icon(
-                                        imageVector = Icons.Rounded.ChevronRight,
-                                        contentDescription = stringResource(R.string.review),
-                                        tint = Color.White,
-                                        modifier = Modifier.size(24.dp),
-                                    )
                                 }
                             }
                         }
-                    }
 
-                    item {
-                        KPISection(
-                            today = dashboardState.todayExpense,
-                            periodExp = dashboardState.periodExpense,
-                            periodInc = dashboardState.periodIncome,
-                            savings = dashboardState.savings,
-                            investment = dashboardState.totalInvestment,
-                            currentInvestmentValue = dashboardState.currentInvestmentValue,
-                            timeFrame = dashboardState.selectedTimeFrame,
-                        )
-                    }
-
-                    item {
-                        QuickActionSection(
-                            onAddExpense = { onNavigateToAddTransaction(TransactionType.EXPENSE) },
-                            onAddIncome = { onNavigateToAddTransaction(TransactionType.INCOME) },
-                            onAddInvestment = onNavigateToAddInvestment,
-                            onAddLoan = onNavigateToLoans,
-                            onScanReceipt = onNavigateToScanner,
-                            onNavigateToEmergencyFund = onNavigateToEmergencyFund,
-                            onNavigateToNews = onNavigateToNews,
-                            onNavigateToSandbox = onNavigateToSandbox,
-                            onNavigateToEmiCalculator = onNavigateToEmiCalculator,
-                            isGuest = isGuest,
-                        )
-                    }
-
-                    item {
-                        SmartInsightsCard(onClick = onNavigateToInsights)
-                    }
-
-                    item {
-                        DashboardEmergencyFundCard(
-                            emergencyFund = dashboardState.emergencyFund,
-                            currencyCode = currencyCode,
-                            onClick = onNavigateToEmergencyFund,
-                        )
-                    }
-
-                    item {
-                        PaymentAppsSection(currencyCode = currencyCode)
-                    }
-
-                    if (dashboardState.loans.isNotEmpty()) {
                         item {
-                            LoanSection(
-                                loans = dashboardState.loans,
+                            KPISection(
+                                today = dashboardState.todayExpense,
+                                periodExp = dashboardState.periodExpense,
+                                periodInc = dashboardState.periodIncome,
+                                savings = dashboardState.savings,
+                                investment = dashboardState.totalInvestment,
+                                currentInvestmentValue = dashboardState.currentInvestmentValue,
+                                timeFrame = dashboardState.selectedTimeFrame,
+                            )
+                        }
+
+                        item {
+                            QuickActionSection(
+                                onAddExpense = { onNavigateToAddTransaction(TransactionType.EXPENSE) },
+                                onAddIncome = { onNavigateToAddTransaction(TransactionType.INCOME) },
+                                onAddInvestment = onNavigateToAddInvestment,
+                                onAddLoan = onNavigateToLoans,
+                                onScanReceipt = onNavigateToScanner,
+                                onNavigateToEmergencyFund = onNavigateToEmergencyFund,
+                                onNavigateToNews = onNavigateToNews,
+                                onNavigateToSandbox = onNavigateToSandbox,
+                                onNavigateToEmiCalculator = onNavigateToEmiCalculator,
+                                isGuest = isGuest,
+                            )
+                        }
+
+                        item {
+                            SmartInsightsCard(onClick = onNavigateToInsights)
+                        }
+
+                        item {
+                            DashboardEmergencyFundCard(
+                                emergencyFund = dashboardState.emergencyFund,
                                 currencyCode = currencyCode,
-                                onViewAll = onNavigateToLoans,
+                                onClick = onNavigateToEmergencyFund,
                             )
                         }
-                    }
 
-                    if (dashboardState.spendingByCategory.isNotEmpty()) {
                         item {
-                            SectionHeader(
-                                title = stringResource(R.string.expense_breakdown),
-                                onInfoClick =
-                                    if (dashboardState.spendingByCategory.size > 10) {
-                                        { showBreakdownSheet = true }
-                                    } else {
-                                        null
-                                    },
-                            )
-                            Spacer(modifier = Modifier.size(12.dp))
-                            ExpenseChartCard(dashboardState.spendingByCategory, chartColors, stringResource(R.string.other))
+                            PaymentAppsSection(currencyCode = currencyCode)
                         }
-                    }
 
-                    if (dashboardState.budgetProgresses.isNotEmpty()) {
-                        item {
-                            SectionHeader(stringResource(R.string.budget_progress), onActionClick = onNavigateToBudgets)
-                            BudgetProgressSection(dashboardState.budgetProgresses, unknownString)
+                        if (dashboardState.loans.isNotEmpty()) {
+                            item {
+                                LoanSection(
+                                    loans = dashboardState.loans,
+                                    currencyCode = currencyCode,
+                                    onViewAll = onNavigateToLoans,
+                                )
+                            }
                         }
-                    }
 
-                    if (dashboardState.recentTransactions.isNotEmpty()) {
-                        item {
-                            SectionHeader(stringResource(R.string.recent_transactions), onActionClick = onNavigateToHistory)
-                            RecentTransactionsCard(dashboardState.recentTransactions, dashboardState.categories)
+                        if (dashboardState.spendingByCategory.isNotEmpty()) {
+                            item {
+                                SectionHeader(
+                                    title = stringResource(R.string.expense_breakdown),
+                                    onInfoClick =
+                                        if (dashboardState.spendingByCategory.size > 10) {
+                                            { showBreakdownSheet = true }
+                                        } else {
+                                            null
+                                        },
+                                )
+                                Spacer(modifier = Modifier.size(12.dp))
+                                ExpenseChartCard(dashboardState.spendingByCategory, chartColors, stringResource(R.string.other))
+                            }
                         }
-                    }
 
-                    item { Spacer(modifier = Modifier.height(16.dp)) }
-                }
-            }
+                        if (dashboardState.budgetProgresses.isNotEmpty()) {
+                            item {
+                                SectionHeader(stringResource(R.string.budget_progress), onActionClick = onNavigateToBudgets)
+                                BudgetProgressSection(dashboardState.budgetProgresses, unknownString)
+                            }
+                        }
+
+                        if (dashboardState.recentTransactions.isNotEmpty()) {
+                            item {
+                                SectionHeader(stringResource(R.string.recent_transactions), onActionClick = onNavigateToHistory)
+                                RecentTransactionsCard(dashboardState.recentTransactions, dashboardState.categories)
+                            }
+                        }
+
+                        item { Spacer(modifier = Modifier.height(16.dp)) }
+                    }   // end LazyColumn
+                }       // end Column
+            }           // end else
         }
+
 
         // Floating AI Bot Icon with Animation
         AnimatedVisibility(
