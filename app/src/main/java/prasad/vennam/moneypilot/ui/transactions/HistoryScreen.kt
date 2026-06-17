@@ -266,7 +266,7 @@ fun HistoryScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     item {
-                        AdBannerView(isPremium = isPremium, modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp))
+                        AdBannerView(isPremium = isPremium, modifier = Modifier.fillMaxWidth())
                     }
                     items(transactionItemStates, key = { it.transaction.id }) { itemState ->
                         val deletedMessage = stringResource(R.string.transaction_deleted)

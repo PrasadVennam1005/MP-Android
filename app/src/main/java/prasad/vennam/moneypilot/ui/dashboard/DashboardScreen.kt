@@ -375,7 +375,7 @@ fun DashboardScreen(
                     verticalArrangement = Arrangement.spacedBy(24.dp),
                 ) {
                     item {
-                        AdBannerView(isPremium = isPremium, modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp))
+                        AdBannerView(isPremium = isPremium, modifier = Modifier.fillMaxWidth())
                     }
 
                     item {

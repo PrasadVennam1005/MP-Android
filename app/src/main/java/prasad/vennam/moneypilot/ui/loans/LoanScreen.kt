@@ -204,7 +204,7 @@ fun LoanScreen(
                     item {
                         prasad.vennam.moneypilot.ui.components.AdBannerView(
                             isPremium = isPremium,
-                            modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                            modifier = Modifier.fillMaxWidth(),
                         )
                     }
                     items(state.loans) { loan ->
