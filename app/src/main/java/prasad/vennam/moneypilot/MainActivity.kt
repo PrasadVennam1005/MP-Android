@@ -494,6 +494,7 @@ fun MoneyPilotApp(
                                     syncState = syncState,
                                     isPremium = isPremium,
                                     onProfileClick = { backStack.add(Destination.Settings) },
+                                    onNavigateToAiChat = { backStack.add(Destination.AiChat) },
                                     fixedType = null,
                                 )
                             }
@@ -540,6 +541,7 @@ fun MoneyPilotApp(
                                             } ?: backStack.add(Destination.EmiCalculator)
                                         }
                                     },
+                                    onNavigateToAiChat = { backStack.add(Destination.AiChat) },
                                     prefillAmount = key.prefillAmount,
                                     prefillRate = key.prefillRate,
                                     prefillTenureMonths = key.prefillTenureMonths,
@@ -557,6 +559,7 @@ fun MoneyPilotApp(
                                     syncState = syncState,
                                     isPremium = isPremium,
                                     onProfileClick = { backStack.add(Destination.Settings) },
+                                    onNavigateToAiChat = { backStack.add(Destination.AiChat) },
                                 )
                             }
 

@@ -23,6 +23,7 @@ import androidx.compose.material.icons.automirrored.rounded.TrendingUp
 import androidx.compose.material.icons.rounded.AccountBalance
 import androidx.compose.material.icons.rounded.AccountBalanceWallet
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.Badge
 import androidx.compose.material.icons.rounded.Business
 import androidx.compose.material.icons.rounded.Calculate
@@ -72,6 +73,7 @@ fun LoanScreen(
     isPremium: Boolean,
     onProfileClick: () -> Unit,
     onNavigateToEmiCalculator: () -> Unit,
+    onNavigateToAiChat: () -> Unit,
     prefillAmount: Double? = null,
     prefillRate: Double? = null,
     prefillTenureMonths: Int? = null,
@@ -137,6 +139,19 @@ fun LoanScreen(
                 actions = {
                     if (syncState != null) {
                         SyncStatusIndicator(syncState)
+                    }
+                    AnimatedVisibility(
+                        visible = !isFabVisible,
+                        enter = scaleIn() + fadeIn(),
+                        exit = scaleOut() + fadeOut(),
+                    ) {
+                        IconButton(onClick = onNavigateToAiChat) {
+                            Icon(
+                                imageVector = Icons.Rounded.AutoAwesome,
+                                contentDescription = stringResource(R.string.ai_assistant),
+                                tint = MaterialTheme.colorScheme.primary,
+                            )
+                        }
                     }
                     IconButton(onClick = onNavigateToEmiCalculator) {
                         Icon(

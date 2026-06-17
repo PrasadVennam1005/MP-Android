@@ -17,8 +17,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material3.*
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -54,6 +54,7 @@ fun ReportsTabScreen(
     syncState: SyncState?,
     isPremium: Boolean,
     onProfileClick: () -> Unit,
+    onNavigateToAiChat: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var selectedTab by remember { mutableStateOf(0) }
@@ -100,6 +101,19 @@ fun ReportsTabScreen(
                 actions = {
                     if (syncState != null) {
                         SyncStatusIndicator(syncState)
+                    }
+                    AnimatedVisibility(
+                        visible = !isFabVisible,
+                        enter = scaleIn() + fadeIn(),
+                        exit = scaleOut() + fadeOut(),
+                    ) {
+                        IconButton(onClick = onNavigateToAiChat) {
+                            Icon(
+                                imageVector = Icons.Rounded.AutoAwesome,
+                                contentDescription = stringResource(R.string.ai_assistant),
+                                tint = MaterialTheme.colorScheme.primary,
+                            )
+                        }
                     }
                     ProfileIconButton(userData = userData, onClick = onProfileClick)
                 },

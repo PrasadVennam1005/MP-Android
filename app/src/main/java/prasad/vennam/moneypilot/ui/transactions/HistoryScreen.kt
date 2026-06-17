@@ -24,6 +24,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.Category
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Edit
@@ -108,6 +109,7 @@ fun HistoryScreen(
     syncState: SyncState?,
     onProfileClick: () -> Unit,
     isPremium: Boolean,
+    onNavigateToAiChat: () -> Unit,
     fixedType: TransactionType? = null,
 ) {
     val transactions by viewModel.allTransactions.collectAsState()
@@ -183,6 +185,19 @@ fun HistoryScreen(
                     actions = {
                         if (syncState != null) {
                             SyncStatusIndicator(syncState)
+                        }
+                        AnimatedVisibility(
+                            visible = !isFabVisible,
+                            enter = scaleIn() + fadeIn(),
+                            exit = scaleOut() + fadeOut(),
+                        ) {
+                            IconButton(onClick = onNavigateToAiChat) {
+                                Icon(
+                                    imageVector = Icons.Rounded.AutoAwesome,
+                                    contentDescription = stringResource(R.string.ai_assistant),
+                                    tint = MaterialTheme.colorScheme.primary,
+                                )
+                            }
                         }
                         ProfileIconButton(userData = userData, onClick = onProfileClick)
                     },
