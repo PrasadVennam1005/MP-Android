@@ -16,8 +16,7 @@ class InterstitialAdManager(
     private var interstitialAd: InterstitialAd? = null
     private var isAdLoading = false
 
-    // Using Google's test Ad Unit ID for Interstitial Ads
-    private val adUnitId = "ca-app-pub-3940256099942544/1033173712"
+    private val adUnitId = AdConfig.interstitialAdUnitId
     var saveCounter = 0
 
     fun loadAd() {
