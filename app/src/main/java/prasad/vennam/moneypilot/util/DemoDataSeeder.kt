@@ -9,16 +9,38 @@ object DemoDataSeeder {
         val now = System.currentTimeMillis()
         val oneDayMs = 24 * 60 * 60 * 1000L
 
-        // Categories: We use Category.DEFAULT_CATEGORIES
-        val categories = Category.DEFAULT_CATEGORIES
+        // 1. Clear all data first
+        repository.clearAllData()
 
-        // Transactions
+        // 2. Insert default categories
+        val categories = Category.DEFAULT_CATEGORIES
+        repository.categoryDao.insertCategories(categories)
+
+        // 3. Query all categories to get their newly generated auto-increment IDs
+        val insertedCategories = repository.categoryDao.getAllCategoriesSync()
+
+        // Helper maps/IDs
+        val foodId = insertedCategories.find { it.name == "Food" && it.isExpense }?.id
+        val transportId = insertedCategories.find { it.name == "Transport" && it.isExpense }?.id
+        val shoppingId = insertedCategories.find { it.name == "Shopping" && it.isExpense }?.id
+        val entertainmentId = insertedCategories.find { it.name == "Entertainment" && it.isExpense }?.id
+        val healthId = insertedCategories.find { it.name == "Health" && it.isExpense }?.id
+        val utilitiesId = insertedCategories.find { it.name == "Utilities" && it.isExpense }?.id
+        val housingId = insertedCategories.find { it.name == "Housing" && it.isExpense }?.id
+        val giftsExpenseId = insertedCategories.find { it.name == "Gifts" && it.isExpense }?.id
+        val travelId = insertedCategories.find { it.name == "Travel" && it.isExpense }?.id
+        val insuranceId = insertedCategories.find { it.name == "Insurance" && it.isExpense }?.id
+
+        val salaryId = insertedCategories.find { it.name == "Salary" && !it.isExpense }?.id
+        val freelanceId = insertedCategories.find { it.name == "Freelance" && !it.isExpense }?.id
+
+        // 4. Create and insert Transactions
         val transactions = listOf(
             // Income
             Transaction(
                 amount = 15000000L, // ₹1,50,000
                 timestamp = now - 15 * oneDayMs,
-                categoryId = 13, // Salary
+                categoryId = salaryId,
                 subCategory = "Monthly Pay",
                 paymentMode = "Bank Transfer",
                 note = "TechCorp June Salary",
@@ -28,7 +50,7 @@ object DemoDataSeeder {
             Transaction(
                 amount = 4500000L, // ₹45,000
                 timestamp = now - 5 * oneDayMs,
-                categoryId = 14, // Freelance
+                categoryId = freelanceId,
                 subCategory = "Consulting",
                 paymentMode = "Bank Transfer",
                 note = "UI Design Consultation",
@@ -39,7 +61,7 @@ object DemoDataSeeder {
             Transaction(
                 amount = 2500000L, // ₹25,000
                 timestamp = now - 10 * oneDayMs,
-                categoryId = 7, // Housing
+                categoryId = housingId,
                 subCategory = "Rent",
                 paymentMode = "Bank Transfer",
                 note = "2BHK Apartment Rent",
@@ -49,7 +71,7 @@ object DemoDataSeeder {
             Transaction(
                 amount = 450000L, // ₹4,500
                 timestamp = now - 8 * oneDayMs,
-                categoryId = 1, // Food
+                categoryId = foodId,
                 subCategory = "Groceries",
                 paymentMode = "Card",
                 note = "BigBasket monthly groceries",
@@ -59,7 +81,7 @@ object DemoDataSeeder {
             Transaction(
                 amount = 180000L, // ₹1,800
                 timestamp = now - 1 * oneDayMs,
-                categoryId = 1, // Food
+                categoryId = foodId,
                 subCategory = "Dining Out",
                 paymentMode = "UPI",
                 note = "Dinner at Punjab Grill",
@@ -69,7 +91,7 @@ object DemoDataSeeder {
             Transaction(
                 amount = 350000L, // ₹3,500
                 timestamp = now - 6 * oneDayMs,
-                categoryId = 2, // Transport
+                categoryId = transportId,
                 subCategory = "Fuel",
                 paymentMode = "Card",
                 note = "Car petrol refill",
@@ -79,7 +101,7 @@ object DemoDataSeeder {
             Transaction(
                 amount = 85000L, // ₹850
                 timestamp = now - 2 * oneDayMs,
-                categoryId = 2, // Transport
+                categoryId = transportId,
                 subCategory = "Cab",
                 paymentMode = "UPI",
                 note = "Uber ride to office",
@@ -89,7 +111,7 @@ object DemoDataSeeder {
             Transaction(
                 amount = 1250000L, // ₹12,500
                 timestamp = now - 4 * oneDayMs,
-                categoryId = 3, // Shopping
+                categoryId = shoppingId,
                 subCategory = "Clothing",
                 paymentMode = "Card",
                 note = "Zara weekend shopping",
@@ -99,7 +121,7 @@ object DemoDataSeeder {
             Transaction(
                 amount = 240000L, // ₹2,400
                 timestamp = now - 12 * oneDayMs,
-                categoryId = 6, // Utilities
+                categoryId = utilitiesId,
                 subCategory = "Electricity",
                 paymentMode = "UPI",
                 note = "BESCOM electric bill",
@@ -109,7 +131,7 @@ object DemoDataSeeder {
             Transaction(
                 amount = 99900L, // ₹999
                 timestamp = now - 12 * oneDayMs,
-                categoryId = 6, // Utilities
+                categoryId = utilitiesId,
                 subCategory = "Internet",
                 paymentMode = "UPI",
                 note = "Airtel Fiber Broadband",
@@ -119,7 +141,7 @@ object DemoDataSeeder {
             Transaction(
                 amount = 149900L, // ₹1,499
                 timestamp = now - 14 * oneDayMs,
-                categoryId = 4, // Entertainment
+                categoryId = entertainmentId,
                 subCategory = "Subscriptions",
                 paymentMode = "UPI",
                 note = "Netflix Premium Annual",
@@ -129,7 +151,7 @@ object DemoDataSeeder {
             Transaction(
                 amount = 250000L, // ₹2,500
                 timestamp = now - 11 * oneDayMs,
-                categoryId = 5, // Health
+                categoryId = healthId,
                 subCategory = "Fitness",
                 paymentMode = "Card",
                 note = "Gym monthly membership",
@@ -139,7 +161,7 @@ object DemoDataSeeder {
             Transaction(
                 amount = 650000L, // ₹6,500
                 timestamp = now - 9 * oneDayMs,
-                categoryId = 11, // Insurance
+                categoryId = insuranceId,
                 subCategory = "Medical",
                 paymentMode = "UPI",
                 note = "Star Health Premium",
@@ -149,7 +171,7 @@ object DemoDataSeeder {
             Transaction(
                 amount = 300000L, // ₹3,000
                 timestamp = now - 3 * oneDayMs,
-                categoryId = 9, // Gifts
+                categoryId = giftsExpenseId,
                 subCategory = "Birthday",
                 paymentMode = "UPI",
                 note = "Birthday gift for Rohit",
@@ -159,7 +181,7 @@ object DemoDataSeeder {
             Transaction(
                 amount = 850000L, // ₹8,500
                 timestamp = now - 7 * oneDayMs,
-                categoryId = 10, // Travel
+                categoryId = travelId,
                 subCategory = "Flights",
                 paymentMode = "Card",
                 note = "IndiGo Bangalore to Mumbai",
@@ -167,36 +189,17 @@ object DemoDataSeeder {
                 currencyCode = "INR"
             )
         )
+        transactions.forEach { repository.transactionDao.insertTransaction(it) }
 
-        // Budgets
-        val budgets = listOf(
-            Budget(
-                categoryId = 1, // Food
-                amount = 1500000L, // ₹15,000
-                period = "Monthly",
-                currencyCode = "INR"
-            ),
-            Budget(
-                categoryId = 2, // Transport
-                amount = 600000L, // ₹6,000
-                period = "Monthly",
-                currencyCode = "INR"
-            ),
-            Budget(
-                categoryId = 3, // Shopping
-                amount = 1500000L, // ₹15,000
-                period = "Monthly",
-                currencyCode = "INR"
-            ),
-            Budget(
-                categoryId = 6, // Utilities
-                amount = 800000L, // ₹8,000
-                period = "Monthly",
-                currencyCode = "INR"
-            )
-        )
+        // 5. Create and insert Budgets (filtering nulls to be safe)
+        val budgets = mutableListOf<Budget>()
+        foodId?.let { budgets.add(Budget(categoryId = it, amount = 1500000L, period = "Monthly", currencyCode = "INR")) }
+        transportId?.let { budgets.add(Budget(categoryId = it, amount = 600000L, period = "Monthly", currencyCode = "INR")) }
+        shoppingId?.let { budgets.add(Budget(categoryId = it, amount = 1500000L, period = "Monthly", currencyCode = "INR")) }
+        utilitiesId?.let { budgets.add(Budget(categoryId = it, amount = 800000L, period = "Monthly", currencyCode = "INR")) }
+        budgets.forEach { repository.budgetDao.insertBudget(it) }
 
-        // Investments
+        // 6. Create and insert Investments
         val investments = listOf(
             Investment(
                 name = "Reliance Industries",
@@ -224,8 +227,9 @@ object DemoDataSeeder {
                 currencyCode = "INR"
             )
         )
+        investments.forEach { repository.investmentDao.insertInvestment(it) }
 
-        // Loans
+        // 7. Create and insert Loans
         val nextMonthCal = Calendar.getInstance().apply {
             add(Calendar.MONTH, 1)
             set(Calendar.DAY_OF_MONTH, 5)
@@ -246,22 +250,14 @@ object DemoDataSeeder {
                 startDate = System.currentTimeMillis() - 365 * 24 * 60 * 60 * 1000L
             )
         )
+        loans.forEach { repository.loanDao.insertLoan(it) }
 
-        // Emergency Fund
+        // 8. Create and insert Emergency Fund
         val emergencyFund = EmergencyFund(
             monthlyExpenses = 45000.0,
             targetMonths = 6,
             currentSaved = 180000.0
         )
-
-        // Perform atomic restore
-        repository.restoreBackup(
-            categories = categories,
-            transactions = transactions,
-            budgets = budgets,
-            investments = investments,
-            loans = loans,
-            emergencyFund = emergencyFund
-        )
+        repository.emergencyFundDao.insertEmergencyFund(emergencyFund)
     }
 }
