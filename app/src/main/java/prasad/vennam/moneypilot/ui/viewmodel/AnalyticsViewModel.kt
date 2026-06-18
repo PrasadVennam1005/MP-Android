@@ -177,11 +177,13 @@ class AnalyticsViewModel
                 val savingsRate = if (totalIncome > 0.0) (netSavings / totalIncome) * 100.0 else 0.0
 
                 // Calculate Spending Breakdown by Category
+                val categoriesMap = data.categories.associateBy { it.id }
+
                 val spendingByCategory =
                     filteredTransactions
                         .filter { it.type == TransactionType.EXPENSE }
                         .groupBy { it.categoryId }
-                        .mapKeys { (catId, _) -> data.categories.find { it.id == catId } }
+                        .mapKeys { (catId, _) -> categoriesMap[catId] }
                         .mapValues { (_, transList) -> transList.sumOf { convertAmount(it.amount, it.currencyCode) } }
 
                 // Calculate Trend Points
@@ -371,18 +373,19 @@ class AnalyticsViewModel
                 }
 
                 // 4. Budget Overrun Insight
+                val currentMonthExpenses = data.transactions.filter {
+                    val transCal = Calendar.getInstance().apply { timeInMillis = it.timestamp }
+                    it.type == TransactionType.EXPENSE &&
+                        transCal.get(Calendar.MONTH) == currentMonth &&
+                        transCal.get(Calendar.YEAR) == currentYear
+                }
+                val expensesByCategoryId = currentMonthExpenses.groupBy { it.categoryId }
+
                 val overruns =
                     data.budgets.mapNotNull { budget ->
-                        val cat = data.categories.find { it.id == budget.categoryId }
-                        val spent =
-                            data.transactions
-                                .filter {
-                                    val transCal = Calendar.getInstance().apply { timeInMillis = it.timestamp }
-                                    it.categoryId == budget.categoryId &&
-                                        it.type == TransactionType.EXPENSE &&
-                                        transCal.get(Calendar.MONTH) == currentMonth &&
-                                        transCal.get(Calendar.YEAR) == currentYear
-                                }.sumOf { convertAmount(it.amount, it.currencyCode) }
+                        val cat = categoriesMap[budget.categoryId]
+                        val spent = expensesByCategoryId[budget.categoryId]
+                            ?.sumOf { convertAmount(it.amount, it.currencyCode) } ?: 0.0
 
                         val budgetAmt = convertAmount(budget.amount, budget.currencyCode)
                         if (spent > budgetAmt) {

@@ -27,6 +27,7 @@ import prasad.vennam.moneypilot.data.repository.ExchangeRateRepository
 import prasad.vennam.moneypilot.data.repository.MoneyPilotRepository
 import prasad.vennam.moneypilot.domain.usecase.*
 import prasad.vennam.moneypilot.util.LoanIntelligenceUtil
+import prasad.vennam.moneypilot.util.RemoteConfigHelper
 import prasad.vennam.moneypilot.util.inRupees
 import java.util.Calendar
 import javax.inject.Inject
@@ -55,6 +56,7 @@ data class DashboardState(
     val emergencyFund: EmergencyFund? = null,
     val selectedTimeFrame: TimeFrame = TimeFrame.MONTHLY,
     val pendingTransactions: List<PendingTransaction> = emptyList(),
+    val isLearnFinanceEnabled: Boolean = false,
 )
 
 private data class DashboardData(
@@ -86,6 +88,7 @@ class DashboardViewModel
         private val getPendingTransactionsUseCase: GetPendingTransactionsUseCase,
         private val approvePendingTransactionUseCase: ApprovePendingTransactionUseCase,
         private val dismissPendingTransactionUseCase: DismissPendingTransactionUseCase,
+        private val remoteConfigHelper: RemoteConfigHelper,
     ) : ViewModel() {
         private val _selectedTimeFrame = MutableStateFlow(TimeFrame.MONTHLY)
         val selectedTimeFrame: StateFlow<TimeFrame> = _selectedTimeFrame.asStateFlow()
@@ -195,25 +198,28 @@ class DashboardViewModel
                 val totalInvestment = investments.sumOf { convertAmount(it.investedAmount, it.currencyCode) }
                 val currentInvestmentValue = investments.sumOf { convertAmount(it.currentValue, it.currencyCode) }
 
+                val categoriesMap = categories.associateBy { it.id }
+
                 val spendingByCategory =
                     filteredTransactions
                         .filter { it.type == TransactionType.EXPENSE }
                         .groupBy { it.categoryId }
-                        .mapKeys { (catId, _) -> categories.find { it.id == catId } }
+                        .mapKeys { (catId, _) -> categoriesMap[catId] }
                         .mapValues { (_, trans) -> trans.sumOf { convertAmount(it.amount, it.currencyCode) } }
+
+                val currentMonthExpenses = transactions.filter {
+                    val transCal = Calendar.getInstance().apply { timeInMillis = it.timestamp }
+                    it.type == TransactionType.EXPENSE &&
+                        transCal.get(Calendar.MONTH) == currentMonth &&
+                        transCal.get(Calendar.YEAR) == currentYear
+                }
+                val expensesByCategoryId = currentMonthExpenses.groupBy { it.categoryId }
 
                 val budgetProgresses =
                     budgets.map { budget ->
-                        val category = categories.find { it.id == budget.categoryId }
-                        val spent =
-                            transactions
-                                .filter {
-                                    val transCal = Calendar.getInstance().apply { timeInMillis = it.timestamp }
-                                    it.categoryId == budget.categoryId &&
-                                        it.type == TransactionType.EXPENSE &&
-                                        transCal.get(Calendar.MONTH) == currentMonth &&
-                                        transCal.get(Calendar.YEAR) == currentYear
-                                }.sumOf { convertAmount(it.amount, it.currencyCode) }
+                        val category = categoriesMap[budget.categoryId]
+                        val spent = expensesByCategoryId[budget.categoryId]
+                            ?.sumOf { convertAmount(it.amount, it.currencyCode) } ?: 0.0
 
                         val budgetConverted = convertAmount(budget.amount, budget.currencyCode)
                         val progress = if (budgetConverted > 0) (spent / budgetConverted).toFloat().coerceIn(0f, 1f) else 0f
@@ -236,6 +242,7 @@ class DashboardViewModel
                     emergencyFund = data.emergencyFund,
                     selectedTimeFrame = timeFrame,
                     pendingTransactions = data.pendingTransactions,
+                    isLearnFinanceEnabled = remoteConfigHelper.isLearnFinanceEnabled()
                 )
             }.flowOn(Dispatchers.Default)
                 .stateIn(

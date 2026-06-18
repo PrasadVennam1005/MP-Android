@@ -54,7 +54,6 @@ fun ReportsTabScreen(
     syncState: SyncState?,
     isPremium: Boolean,
     onProfileClick: () -> Unit,
-    onNavigateToAiChat: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var selectedTab by remember { mutableStateOf(0) }
@@ -73,7 +72,7 @@ fun ReportsTabScreen(
             isFabVisible = true
         } else if (currentIndex > previousIndex || (currentIndex == previousIndex && currentOffset > previousOffset)) {
             isFabVisible = false
-        } else if (currentIndex < previousIndex || (currentIndex == previousIndex && currentOffset < previousOffset)) {
+        } else if (currentIndex < previousIndex || (currentOffset < previousOffset)) {
             isFabVisible = true
         }
         previousIndex = currentIndex
@@ -107,10 +106,13 @@ fun ReportsTabScreen(
                         enter = scaleIn() + fadeIn(),
                         exit = scaleOut() + fadeOut(),
                     ) {
-                        IconButton(onClick = onNavigateToAiChat) {
+                        IconButton(onClick = {
+                            budgetToEdit = null
+                            showFormSheet = true
+                        }) {
                             Icon(
                                 imageVector = Icons.Rounded.AutoAwesome,
-                                contentDescription = stringResource(R.string.ai_assistant),
+                                contentDescription = stringResource(R.string.add_budget),
                                 tint = MaterialTheme.colorScheme.primary,
                             )
                         }

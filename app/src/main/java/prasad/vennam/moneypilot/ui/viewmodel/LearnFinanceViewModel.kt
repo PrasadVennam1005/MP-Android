@@ -3,6 +3,7 @@ package prasad.vennam.moneypilot.ui.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import prasad.vennam.moneypilot.data.dao.BookmarkedFinanceArticleDao
@@ -35,14 +36,18 @@ class LearnFinanceViewModel @Inject constructor(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
 
     val uiState: StateFlow<LearnFinanceUiState> = combine(
+        repository.getArticles(),
         _searchQuery,
         _selectedCategory,
         _showBookmarksOnly,
         bookmarkedIds
-    ) { query, category, showBookmarks, bookmarks ->
-        val filteredArticles = repository.getArticles().filter { article ->
-            val matchesQuery = article.title.contains(query, ignoreCase = true) ||
-                    article.content.contains(query, ignoreCase = true)
+    ) { articles, query, category, showBookmarks, bookmarks ->
+        val filteredArticles = articles.filter { article ->
+            val matchesQuery = query.isBlank() ||
+                    article.title.contains(query, ignoreCase = true) ||
+                    article.description.contains(query, ignoreCase = true) ||
+                    article.subcategory.contains(query, ignoreCase = true) ||
+                    article.tags.any { it.contains(query, ignoreCase = true) }
             val matchesCategory = category == null || article.category == category
             val matchesBookmark = !showBookmarks || bookmarks.contains(article.id)
             matchesQuery && matchesCategory && matchesBookmark
@@ -55,7 +60,8 @@ class LearnFinanceViewModel @Inject constructor(
             bookmarkedIds = bookmarks,
             showBookmarksOnly = showBookmarks
         )
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), LearnFinanceUiState())
+    }.flowOn(Dispatchers.Default)
+    .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), LearnFinanceUiState())
 
     fun onSearchQueryChanged(query: String) {
         _searchQuery.value = query

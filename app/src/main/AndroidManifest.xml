@@ -8,87 +8,31 @@
     <uses-feature android:name="android.hardware.camera" android:required="false" />
 
     <queries>
-        <!-- India Payment Apps -->
-        <package android:name="com.google.android.apps.nbu.paisa.user" />
-        <package android:name="com.phonepe.app" />
-        <package android:name="net.one97.paytm" />
-        <package android:name="in.org.npci.upiapp" />
-        <package android:name="in.amazon.mShop.android.shopping" />
-        <package android:name="com.mobikwik_new" />
+        <!--
+            Play Store-compliant package visibility.
+            We query by *capability* (intent), not by specific package name.
+            This discovers only apps the user has installed that support these schemes,
+            and avoids maintaining a static list of package names in the manifest.
 
-        <!-- US / Global Payment Apps -->
-        <package android:name="com.paypal.android.p2pmobile" />
-        <package android:name="com.venmo" />
-        <package android:name="com.squareup.cash" />
-        <package android:name="com.zellepay.zelle" />
-        <package android:name="com.google.android.apps.walletnfcrel" />
+            Justification (for Play Store review):
+            Money Pilot is a personal finance & expense-tracking app. The
+            "Launch Payment Apps" section lets users quickly open their preferred
+            payment app directly from the dashboard — a core user-facing feature.
+            Package information is used exclusively for display/launch and is
+            never collected, transmitted, or used for analytics/advertising.
+        -->
 
-        <!-- UK / Europe Payment Apps -->
-        <package android:name="com.revolut.revolut" />
-        <package android:name="co.uk.getmondo" />
-        <package android:name="mobi.barclays.android.barclaysmobilebanking" />
-        <package android:name="com.lloydsbank.mobilebanking" />
-        <package android:name="de.number26.android" />
-        <package android:name="com.lydia" />
+        <!-- Discover any app that can handle a UPI payment intent (INR markets) -->
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="upi" />
+        </intent>
 
-        <!-- Canada Payment Apps -->
-        <package android:name="com.rbc.mobile.android" />
-        <package android:name="com.td" />
-        <package android:name="com.cibc.mobile.banking" />
-        <package android:name="com.scotiabank.mobile" />
-        <package android:name="com.bmo.mobile" />
-        <package android:name="com.tangerine.android" />
-        <package android:name="com.wealthsimple.trade" />
-
-        <!-- Australia Payment Apps -->
-        <package android:name="au.com.commbank.netbank" />
-        <package android:name="au.com.nab.mobile" />
-        <package android:name="com.westpac.bank" />
-        <package android:name="au.com.anz.plus" />
-        <package android:name="au.com.beemit" />
-
-        <!-- Singapore Payment Apps -->
-        <package android:name="com.dbs.dbspaylah" />
-        <package android:name="com.grabtaxi.passenger" />
-        <package android:name="com.ocbc.mobile" />
-        <package android:name="com.uob.mobile" />
-        <package android:name="sg.nets.netspay" />
-        <package android:name="com.SingTel.mWallet" />
-
-        <!-- Japan Payment Apps -->
-        <package android:name="jp.ne.paypay.android" />
-        <package android:name="jp.co.rakuten.pay" />
-        <package android:name="com.linecorp.linepay" />
-
-        <!-- Brazil Payment Apps -->
-        <package android:name="com.nu" />
-        <package android:name="com.bb.android" />
-        <package android:name="com.itau" />
-        <package android:name="com.bradesco" />
-        <package android:name="com.picpay" />
-        <package android:name="com.mercadopago.merchant" />
-
-        <!-- New Zealand Payment Apps -->
-        <package android:name="nz.co.anz.gomoney" />
-        <package android:name="nz.co.asb.mobile" />
-        <package android:name="nz.co.bnz.droidbanking" />
-        <package android:name="nz.co.westpac" />
-
-        <!-- Mexico Payment Apps -->
-        <package android:name="com.bancomer.mbanking" />
-
-        <!-- UAE Payment Apps -->
-        <package android:name="com.etisalat.ewallet" />
-        <package android:name="com.Isys.Payitv2" />
-        <package android:name="com.emiratesnbd.EmiratesNBD" />
-        <package android:name="com.adcb.mobilebanking" />
-        <package android:name="com.mashreq.mobile" />
-
-        <!-- Saudi Arabia Payment Apps -->
-        <package android:name="sa.com.stcpay" />
-        <package android:name="com.neoleap.urpay" />
-        <package android:name="com.alrajhibank.alrajhimobile" />
-        <package android:name="com.alahli.mobile" />
+        <!-- Fallback: allow launching any app by package (for apps without a custom scheme) -->
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
     </queries>
 
     <application

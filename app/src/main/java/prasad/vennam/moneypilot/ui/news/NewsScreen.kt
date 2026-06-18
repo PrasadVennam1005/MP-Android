@@ -233,7 +233,7 @@ fun NewsScreen(
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
-                    items(filteredPortals) { portal ->
+                    items(filteredPortals, key = { it.url }) { portal ->
                         NewsPortalCard(
                             portal = portal,
                             onClick = { onNavigateToWeb(portal.url, portal.name) },

@@ -19,6 +19,7 @@ import net.sqlcipher.database.SupportFactory
 import prasad.vennam.moneypilot.data.MoneyPilotDatabase
 import prasad.vennam.moneypilot.data.UserPreferences
 import prasad.vennam.moneypilot.data.dao.BookmarkedArticleDao
+import prasad.vennam.moneypilot.data.dao.BookmarkedFinanceArticleDao
 import prasad.vennam.moneypilot.data.dao.BudgetDao
 import prasad.vennam.moneypilot.data.dao.CategoryDao
 import prasad.vennam.moneypilot.data.dao.EmergencyFundDao
@@ -141,6 +142,10 @@ object DatabaseModule {
     @Provides
     @Singleton
     fun provideBookmarkedArticleDao(database: MoneyPilotDatabase): BookmarkedArticleDao = database.bookmarkedArticleDao()
+
+    @Provides
+    @Singleton
+    fun provideBookmarkedFinanceArticleDao(database: MoneyPilotDatabase): BookmarkedFinanceArticleDao = database.bookmarkedFinanceArticleDao()
 
     @Provides
     @Singleton

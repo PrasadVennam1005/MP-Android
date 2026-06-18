@@ -32,7 +32,7 @@ fun LoanSection(
             contentPadding = PaddingValues(horizontal = 0.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            items(loans) { loan ->
+            items(loans, key = { it.id }) { loan ->
                 LoanCard(loan, currencyCode)
             }
         }

@@ -71,20 +71,19 @@ class BudgetViewModel
                 val currentMonth = calendar.get(java.util.Calendar.MONTH)
                 val currentYear = calendar.get(java.util.Calendar.YEAR)
 
+                val categoriesMap = categories.associateBy { it.id }
+                val currentMonthExpenses = transactions.filter {
+                    val transCal = java.util.Calendar.getInstance().apply { timeInMillis = it.timestamp }
+                    it.type == TransactionType.EXPENSE &&
+                        transCal.get(java.util.Calendar.MONTH) == currentMonth &&
+                        transCal.get(java.util.Calendar.YEAR) == currentYear
+                }
+                val expensesByCategoryId = currentMonthExpenses.groupBy { it.categoryId }
+
                 budgets.map { budget ->
-                    val category = categories.find { it.id == budget.categoryId }
-                    val spent =
-                        transactions
-                            .filter {
-                                val transCal =
-                                    java.util.Calendar
-                                        .getInstance()
-                                        .apply { timeInMillis = it.timestamp }
-                                it.categoryId == budget.categoryId &&
-                                    it.type == TransactionType.EXPENSE &&
-                                    transCal.get(java.util.Calendar.MONTH) == currentMonth &&
-                                    transCal.get(java.util.Calendar.YEAR) == currentYear
-                            }.sumOf { convertAmount(it.amount, it.currencyCode) }
+                    val category = categoriesMap[budget.categoryId]
+                    val spent = expensesByCategoryId[budget.categoryId]
+                        ?.sumOf { convertAmount(it.amount, it.currencyCode) } ?: 0.0
 
                     val budgetConverted = convertAmount(budget.amount, budget.currencyCode)
                     val progress = if (budgetConverted > 0) (spent / budgetConverted).toFloat().coerceIn(0f, 1f) else 0f

@@ -1,9 +1,15 @@
 package prasad.vennam.moneypilot
 
 import android.os.Bundle
-import androidx.fragment.app.FragmentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AccountBalance
 import androidx.compose.material.icons.rounded.AccountBalanceWallet
@@ -11,6 +17,7 @@ import androidx.compose.material.icons.rounded.BarChart
 import androidx.compose.material.icons.rounded.Dashboard
 import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.Lock
+import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -20,20 +27,18 @@ import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffo
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteType
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.unit.dp
-import androidx.compose.material3.Button
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
+import androidx.fragment.app.FragmentActivity
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.runtime.rememberNavBackStack
@@ -52,6 +57,8 @@ import prasad.vennam.moneypilot.ui.dashboard.SyncState
 import prasad.vennam.moneypilot.ui.emergencyfund.EmergencyFundScreen
 import prasad.vennam.moneypilot.ui.faq.FaqScreen
 import prasad.vennam.moneypilot.ui.investments.InvestmentScreen
+import prasad.vennam.moneypilot.ui.learnfinance.ArticleDetailScreen
+import prasad.vennam.moneypilot.ui.learnfinance.LearnFinanceScreen
 import prasad.vennam.moneypilot.ui.loans.EmiCalculatorScreen
 import prasad.vennam.moneypilot.ui.loans.LoanScreen
 import prasad.vennam.moneypilot.ui.navigation.Destination
@@ -65,6 +72,7 @@ import prasad.vennam.moneypilot.ui.transactions.HistoryScreen
 import prasad.vennam.moneypilot.ui.viewmodel.AnalyticsViewModel
 import prasad.vennam.moneypilot.ui.viewmodel.BudgetViewModel
 import prasad.vennam.moneypilot.ui.viewmodel.InvestmentViewModel
+import prasad.vennam.moneypilot.ui.viewmodel.LearnFinanceViewModel
 import prasad.vennam.moneypilot.ui.viewmodel.MainViewModel
 import prasad.vennam.moneypilot.ui.viewmodel.RestoreState
 import prasad.vennam.moneypilot.ui.viewmodel.TransactionViewModel
@@ -237,6 +245,7 @@ fun MoneyPilotApp(
     val budgetViewModel: BudgetViewModel = hiltViewModel()
     val investmentViewModel: InvestmentViewModel = hiltViewModel()
     val analyticsViewModel: AnalyticsViewModel = hiltViewModel()
+    val learnFinanceViewModel: LearnFinanceViewModel = hiltViewModel()
 
     val currentDestination = backStack.lastOrNull()
 
@@ -290,13 +299,14 @@ fun MoneyPilotApp(
 
         val showNavigation =
             isLoggedIn &&
-                currentDestination !is Destination.Auth &&
-                currentDestination !is Destination.ReceiptScanner &&
-                currentDestination !is Destination.AiChat &&
-                currentDestination !is Destination.Insights &&
-                currentDestination !is Destination.TermsOfService &&
-                currentDestination !is Destination.PrivacyPolicy &&
-                currentDestination !is Destination.EmiCalculator
+                    currentDestination !is Destination.Auth &&
+                    currentDestination !is Destination.ReceiptScanner &&
+                    currentDestination !is Destination.AiChat &&
+                    currentDestination !is Destination.Insights &&
+                    currentDestination !is Destination.TermsOfService &&
+                    currentDestination !is Destination.PrivacyPolicy &&
+                    currentDestination !is Destination.EmiCalculator &&
+                    currentDestination !is Destination.LearnFinance
 
         NavigationSuiteScaffold(
             layoutType =
@@ -404,9 +414,6 @@ fun MoneyPilotApp(
                         is Destination.Dashboard ->
                             NavEntry(key) {
                                 DashboardScreen(
-                                    transactionViewModel = transactionViewModel,
-                                    investmentViewModel = investmentViewModel,
-                                    budgetViewModel = budgetViewModel,
                                     mainViewModel = mainViewModel,
                                     onNavigateToAddTransaction = { type ->
                                         backStack.add(Destination.AddEditTransaction(initialType = type))
@@ -458,6 +465,9 @@ fun MoneyPilotApp(
                                             } ?: backStack.add(Destination.EmiCalculator)
                                         }
                                     },
+                                    onNavigateToLearnFinance = {
+                                        backStack.add(Destination.LearnFinance)
+                                    },
                                     analyticsHelper = analyticsHelper,
                                 )
                             }
@@ -494,7 +504,6 @@ fun MoneyPilotApp(
                                     syncState = syncState,
                                     isPremium = isPremium,
                                     onProfileClick = { backStack.add(Destination.Settings) },
-                                    onNavigateToAiChat = { backStack.add(Destination.AiChat) },
                                     fixedType = null,
                                 )
                             }
@@ -541,7 +550,6 @@ fun MoneyPilotApp(
                                             } ?: backStack.add(Destination.EmiCalculator)
                                         }
                                     },
-                                    onNavigateToAiChat = { backStack.add(Destination.AiChat) },
                                     prefillAmount = key.prefillAmount,
                                     prefillRate = key.prefillRate,
                                     prefillTenureMonths = key.prefillTenureMonths,
@@ -559,7 +567,6 @@ fun MoneyPilotApp(
                                     syncState = syncState,
                                     isPremium = isPremium,
                                     onProfileClick = { backStack.add(Destination.Settings) },
-                                    onNavigateToAiChat = { backStack.add(Destination.AiChat) },
                                 )
                             }
 
@@ -703,6 +710,30 @@ fun MoneyPilotApp(
                                     },
                                     onNavigateToCompare = {
                                     },
+                                )
+                            }
+
+                        is Destination.LearnFinance ->
+                            NavEntry(key) {
+                                LearnFinanceScreen(
+                                    viewModel = learnFinanceViewModel,
+                                    onBack = { backStack.removeLastOrNull() },
+                                    onArticleClick = { articleId ->
+                                        backStack.add(Destination.ArticleDetail(articleId))
+                                    },
+                                    isPremium = isPremium
+                                )
+                            }
+
+                        is Destination.ArticleDetail ->
+                            NavEntry(key) {
+                                ArticleDetailScreen(
+                                    articleId = key.articleId,
+                                    viewModel = learnFinanceViewModel,
+                                    onBack = { backStack.removeLastOrNull() },
+                                    onArticleClick = { articleId ->
+                                        backStack.add(Destination.ArticleDetail(articleId))
+                                    }
                                 )
                             }
 

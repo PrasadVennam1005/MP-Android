@@ -4,10 +4,12 @@ import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import prasad.vennam.moneypilot.domain.model.AffordabilityResult
@@ -61,6 +63,14 @@ class EmiCalculatorViewModel
         private val _uiState = MutableStateFlow(EmiCalculatorUiState())
         private val currencyCodeFlow = MutableStateFlow("INR")
 
+        // Caching for amortization schedules to optimize performance
+        private var lastPrincipal = -1.0
+        private var lastRate = -1.0
+        private var lastTenure = -1
+        private var lastIsTenureInYears = false
+        private var lastMonthlySchedule: List<AmortizationInstallment> = emptyList()
+        private var lastYearlySchedule: List<AmortizationInstallment> = emptyList()
+
         val uiState: StateFlow<EmiCalculatorUiState> =
             combine(
                 flow = _uiState,
@@ -74,8 +84,27 @@ class EmiCalculatorViewModel
                 val result = calculateEmiUseCase(principal, rate, tenure, state.isTenureInYears, feePercent)
 
                 val tenureMonths = if (state.isTenureInYears) tenure * 12 else tenure
-                val monthlySchedule = generateScheduleUseCase(principal, rate, tenureMonths, result.monthlyEmi)
-                val yearlySchedule = generateScheduleUseCase.generateYearlySchedule(monthlySchedule)
+
+                // Conditionally calculate amortization schedule only when inputs change AND detailed report is visible
+                val (monthlySchedule, yearlySchedule) = if (state.showDetailedReport) {
+                    if (principal != lastPrincipal ||
+                        rate != lastRate ||
+                        tenure != lastTenure ||
+                        state.isTenureInYears != lastIsTenureInYears
+                    ) {
+                        lastPrincipal = principal
+                        lastRate = rate
+                        lastTenure = tenure
+                        lastIsTenureInYears = state.isTenureInYears
+                        val newMonthly = generateScheduleUseCase(principal, rate, tenureMonths, result.monthlyEmi)
+                        val newYearly = generateScheduleUseCase.generateYearlySchedule(newMonthly)
+                        lastMonthlySchedule = newMonthly
+                        lastYearlySchedule = newYearly
+                    }
+                    Pair(lastMonthlySchedule, lastYearlySchedule)
+                } else {
+                    Pair(emptyList(), emptyList())
+                }
 
                 val prepaymentResult =
                     if (state.prepaymentAmount.isNotEmpty()) {
@@ -113,7 +142,8 @@ class EmiCalculatorViewModel
                     prepaymentResult = prepaymentResult,
                     affordabilityResult = affordabilityResult,
                 )
-            }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), EmiCalculatorUiState())
+            }.flowOn(Dispatchers.Default)
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), EmiCalculatorUiState())
 
         fun initializeDefaults(currencyCode: String) {
             currencyCodeFlow.value = currencyCode

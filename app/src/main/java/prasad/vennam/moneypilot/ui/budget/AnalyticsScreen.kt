@@ -230,7 +230,7 @@ fun AnalyticsScreen(
                             color = MaterialTheme.colorScheme.onSurface,
                         )
                     }
-                    items(state.insights) { insight ->
+                    items(state.insights, key = { it.title }) { insight ->
                         InsightCard(insight = insight)
                     }
                 }

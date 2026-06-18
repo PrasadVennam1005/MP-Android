@@ -3,6 +3,7 @@ package prasad.vennam.moneypilot.ui.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
@@ -12,6 +13,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import prasad.vennam.moneypilot.data.UserPreferences
@@ -67,7 +69,8 @@ class InvestmentViewModel
                 val totalCurrent = investments.sumOf { convertAmount(it.currentValue, it.currencyCode) }
 
                 InvestmentSummary(totalInvested, totalCurrent)
-            }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), InvestmentSummary())
+            }.flowOn(Dispatchers.Default)
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), InvestmentSummary())
 
         private val _selectedProfile = MutableStateFlow(AllocationProfile.BALANCED)
         val selectedProfile: StateFlow<AllocationProfile> = _selectedProfile.asStateFlow()
@@ -145,7 +148,8 @@ class InvestmentViewModel
                         differencePercent = diffPct,
                     )
                 }
-            }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+            }.flowOn(Dispatchers.Default)
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
         // ── Live price refresh ────────────────────────────────────────────────────
         private val _isRefreshing = MutableStateFlow(false)

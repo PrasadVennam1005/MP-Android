@@ -9,6 +9,7 @@ plugins {
     alias(libs.plugins.jetbrains.kotlin.plugin.serialization)
     alias(libs.plugins.google.services)
     alias(libs.plugins.firebase.crashlytics)
+    alias(libs.plugins.firebase.appdistribution)
     alias(libs.plugins.ktlint)
     alias(libs.plugins.detekt)
 }
@@ -65,6 +66,10 @@ android {
                 "proguard-rules.pro",
             )
             signingConfig = signingConfigs.getByName("release")
+
+            configure<com.google.firebase.appdistribution.gradle.AppDistributionExtension> {
+                artifactType = "APK"
+            }
         }
     }
     compileOptions {
@@ -108,6 +113,7 @@ dependencies {
     implementation(libs.androidx.datastore.preferences)
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.auth)
+    implementation(libs.firebase.config)
     implementation(libs.firebase.analytics)
     implementation(libs.firebase.crashlytics)
     implementation(libs.google.mlkit.text.recognition)

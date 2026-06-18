@@ -1,12 +1,12 @@
 package prasad.vennam.moneypilot.feature.ai.domain
 
-import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.StateFlow
 import prasad.vennam.moneypilot.feature.ai.model.AiAction
 import prasad.vennam.moneypilot.feature.ai.model.LlmState
 
 interface AiRepository {
-    val state: Flow<LlmState>
-    val downloadProgress: Flow<Float>
+    val state: StateFlow<LlmState>
+    val downloadProgress: StateFlow<Float>
 
     suspend fun initialize()
 

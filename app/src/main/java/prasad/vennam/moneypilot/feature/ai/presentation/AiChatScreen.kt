@@ -381,7 +381,7 @@ fun AiChatScreen(
                         contentPadding = PaddingValues(16.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
-                        items(messages) { message ->
+                        items(messages, key = { it.id }) { message ->
                             ChatBubble(message)
                         }
                     }

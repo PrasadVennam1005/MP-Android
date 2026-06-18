@@ -73,7 +73,6 @@ fun LoanScreen(
     isPremium: Boolean,
     onProfileClick: () -> Unit,
     onNavigateToEmiCalculator: () -> Unit,
-    onNavigateToAiChat: () -> Unit,
     prefillAmount: Double? = null,
     prefillRate: Double? = null,
     prefillTenureMonths: Int? = null,
@@ -120,7 +119,7 @@ fun LoanScreen(
             isFabVisible = true
         } else if (currentIndex > previousIndex || (currentIndex == previousIndex && currentOffset > previousOffset)) {
             isFabVisible = false
-        } else if (currentIndex < previousIndex || (currentIndex == previousIndex && currentOffset < previousOffset)) {
+        } else if (currentIndex < previousIndex || (currentOffset < previousOffset)) {
             isFabVisible = true
         }
         previousIndex = currentIndex
@@ -145,10 +144,13 @@ fun LoanScreen(
                         enter = scaleIn() + fadeIn(),
                         exit = scaleOut() + fadeOut(),
                     ) {
-                        IconButton(onClick = onNavigateToAiChat) {
+                        IconButton(onClick = {
+                            selectedLoan = null
+                            showAddLoanSheet = true
+                        }) {
                             Icon(
                                 imageVector = Icons.Rounded.AutoAwesome,
-                                contentDescription = stringResource(R.string.ai_assistant),
+                                contentDescription = stringResource(R.string.add_loan),
                                 tint = MaterialTheme.colorScheme.primary,
                             )
                         }
@@ -222,7 +224,7 @@ fun LoanScreen(
                             modifier = Modifier.fillMaxWidth(),
                         )
                     }
-                    items(state.loans) { loan ->
+                    items(state.loans, key = { it.id }) { loan ->
                         FullWidthLoanCard(
                             loan = loan,
                             currencyCode = currencyCode,

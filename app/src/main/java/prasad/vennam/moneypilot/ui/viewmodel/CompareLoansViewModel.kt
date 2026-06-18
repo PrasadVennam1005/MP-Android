@@ -4,10 +4,12 @@ import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import prasad.vennam.moneypilot.domain.model.EmiResult
@@ -40,7 +42,7 @@ class CompareLoansViewModel
 
         val uiState: StateFlow<CompareLoansUiState> =
             _uiState
-                .combine(_uiState) { state, _ ->
+                .map { state ->
                     val resA =
                         calculateEmiUseCase(
                             state.amountA.toDoubleOrNull() ?: 0.0,
@@ -63,7 +65,8 @@ class CompareLoansViewModel
                         emiResultA = resA,
                         emiResultB = resB,
                     )
-                }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), CompareLoansUiState())
+                }.flowOn(Dispatchers.Default)
+                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), CompareLoansUiState())
 
         fun updateAmountA(v: String) {
             _uiState.update { it.copy(amountA = v) }

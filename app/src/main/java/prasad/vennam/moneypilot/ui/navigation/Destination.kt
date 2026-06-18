@@ -87,4 +87,12 @@ sealed interface Destination : NavKey {
 
     @Serializable
     data object PremiumScreen : Destination
+
+    @Serializable
+    data object LearnFinance : Destination
+
+    @Serializable
+    data class ArticleDetail(
+        val articleId: String,
+    ) : Destination
 }

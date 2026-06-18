@@ -92,6 +92,7 @@
     <string name="investments">Investments</string>
     <string name="clear">Clear</string>
     <string name="add_investment">Add Investment</string>
+    <string name="learn_finance">Learn Finance</string>
     <string name="refresh_prices">Refresh prices</string>
     <string name="edit_investment">Edit Investment</string>
     <string name="principal_invested">Principal Invested</string>

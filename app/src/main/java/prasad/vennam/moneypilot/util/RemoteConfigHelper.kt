@@ -16,7 +16,8 @@ class RemoteConfigHelper @Inject constructor() {
             .build()
         remoteConfig.setConfigSettingsAsync(configSettings)
         remoteConfig.setDefaultsAsync(mapOf(
-            FEATURE_LEARN_FINANCE_ENABLED to false
+            FEATURE_LEARN_FINANCE_ENABLED to false,
+            FINANCE_ARTICLES_JSON to ""
         ))
         fetchAndActivate()
     }
@@ -29,7 +30,12 @@ class RemoteConfigHelper @Inject constructor() {
         return remoteConfig.getBoolean(FEATURE_LEARN_FINANCE_ENABLED)
     }
 
+    fun getFinanceArticlesJson(): String {
+        return remoteConfig.getString(FINANCE_ARTICLES_JSON)
+    }
+
     companion object {
         private const val FEATURE_LEARN_FINANCE_ENABLED = "feature_learn_finance_enabled"
+        private const val FINANCE_ARTICLES_JSON = "finance_articles_json"
     }
 }

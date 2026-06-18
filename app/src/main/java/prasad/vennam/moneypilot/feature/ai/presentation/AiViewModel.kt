@@ -68,6 +68,9 @@ class AiViewModel
         }
 
         fun downloadModel() {
+            // Check state to prevent duplicate triggers
+            if (aiRepository.state.value is LlmState.Downloading) return
+
             viewModelScope.launch {
                 aiRepository.downloadModel()
             }
@@ -80,17 +83,17 @@ class AiViewModel
                 result
                     .onSuccess { msg ->
                         _actionFeedback.emit(msg)
-                        _messages.value = _messages.value + ChatMessage(content = "✅ $msg", author = Author.AI)
+                        _messages.value += ChatMessage(content = "✅ $msg", author = Author.AI)
                     }.onFailure { err ->
                         _actionFeedback.emit("Error: ${err.message}")
-                        _messages.value = _messages.value + ChatMessage(content = "❌ Failed: ${err.message}", author = Author.AI)
+                        _messages.value += ChatMessage(content = "❌ Failed: ${err.message}", author = Author.AI)
                     }
             }
         }
 
         fun dismissAction() {
             _pendingAction.value = null
-            _messages.value = _messages.value + ChatMessage(content = "Action cancelled.", author = Author.AI)
+            _messages.value += ChatMessage(content = "Action cancelled.", author = Author.AI)
         }
 
         private fun updateLastAiMessage(content: String) {

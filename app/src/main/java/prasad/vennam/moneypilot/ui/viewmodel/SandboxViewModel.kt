@@ -3,9 +3,11 @@ package prasad.vennam.moneypilot.ui.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 import prasad.vennam.moneypilot.data.UserPreferences
 import prasad.vennam.moneypilot.data.entity.TransactionType
@@ -57,7 +59,8 @@ class SandboxViewModel
                     avgMonthlyExpense = defaultExpense,
                     currencyCode = currency,
                 )
-            }.stateIn(
+            }.flowOn(Dispatchers.Default)
+            .stateIn(
                 scope = viewModelScope,
                 started = SharingStarted.WhileSubscribed(5000),
                 initialValue = SandboxDefaults(50000.0, 30000.0, "INR"),

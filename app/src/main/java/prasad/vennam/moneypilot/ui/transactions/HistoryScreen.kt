@@ -109,7 +109,6 @@ fun HistoryScreen(
     syncState: SyncState?,
     onProfileClick: () -> Unit,
     isPremium: Boolean,
-    onNavigateToAiChat: () -> Unit,
     fixedType: TransactionType? = null,
 ) {
     val transactions by viewModel.allTransactions.collectAsState()
@@ -149,12 +148,13 @@ fun HistoryScreen(
     }
 
     val filteredTransactions =
-        remember(transactions, searchQuery, selectedCategoryId, selectedPaymentMode, activeType) {
+        remember(transactions, searchQuery, selectedCategoryId, selectedPaymentMode, activeType, categories) {
+            val categoryMap = categories.associateBy { it.id }
             transactions.filter { transaction ->
                 val matchesType = transaction.type == activeType
                 val matchesSearch =
                     transaction.note.contains(searchQuery, ignoreCase = true) ||
-                        categories.find { it.id == transaction.categoryId }?.name?.contains(
+                        categoryMap[transaction.categoryId]?.name?.contains(
                             searchQuery,
                             ignoreCase = true,
                         ) == true
@@ -191,10 +191,10 @@ fun HistoryScreen(
                             enter = scaleIn() + fadeIn(),
                             exit = scaleOut() + fadeOut(),
                         ) {
-                            IconButton(onClick = onNavigateToAiChat) {
+                            IconButton(onClick = {onAddTransaction(activeType)}) {
                                 Icon(
-                                    imageVector = Icons.Rounded.AutoAwesome,
-                                    contentDescription = stringResource(R.string.ai_assistant),
+                                    imageVector = Icons.Rounded.Add,
+                                    contentDescription = stringResource(R.string.add),
                                     tint = MaterialTheme.colorScheme.primary,
                                 )
                             }
@@ -260,8 +260,9 @@ fun HistoryScreen(
     ) { innerPadding ->
         val transactionItemStates =
             remember(filteredTransactions, categories) {
+                val categoryMap = categories.associateBy { it.id }
                 filteredTransactions.map { transaction ->
-                    TransactionItemState(transaction, categories.find { it.id == transaction.categoryId })
+                    TransactionItemState(transaction, categoryMap[transaction.categoryId])
                 }
             }
 

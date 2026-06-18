@@ -35,10 +35,10 @@ class AiRepositoryImpl
         private val moneyPilotRepository: MoneyPilotRepository,
     ) : AiRepository {
         private val _state = MutableStateFlow<LlmState>(LlmState.Idle)
-        override val state: Flow<LlmState> = _state.asStateFlow()
+        override val state: StateFlow<LlmState> = _state.asStateFlow()
 
         private val _downloadProgress = MutableStateFlow(0f)
-        override val downloadProgress: Flow<Float> = _downloadProgress.asStateFlow()
+        override val downloadProgress: StateFlow<Float> = _downloadProgress.asStateFlow()
 
         // Emulator detection: use a small, CPU-compatible model
         private val isEmulator: Boolean by lazy {
@@ -153,8 +153,13 @@ class AiRepositoryImpl
 
         override suspend fun downloadModel() =
             withContext(Dispatchers.IO) {
-                if (_state.value is LlmState.Downloading || _state.value is LlmState.Initializing || _state.value is LlmState.Ready) {
-                    Log.d(TAG, "Download ignored — Model already downloading, initializing, or ready.")
+                // Check if already downloading OR if model is already ready/initializing
+                if (_state.value is LlmState.Downloading) {
+                    Log.d(TAG, "Download ignored — Model download already in progress.")
+                    return@withContext
+                }
+                if (_state.value is LlmState.Initializing || _state.value is LlmState.Ready) {
+                    Log.d(TAG, "Download ignored — Model already initializing or ready.")
                     return@withContext
                 }
                 _state.value = LlmState.Downloading

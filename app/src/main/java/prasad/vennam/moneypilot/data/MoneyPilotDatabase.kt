@@ -4,6 +4,7 @@ import androidx.room.Database
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import prasad.vennam.moneypilot.data.dao.BookmarkedArticleDao
+import prasad.vennam.moneypilot.data.dao.BookmarkedFinanceArticleDao
 import prasad.vennam.moneypilot.data.dao.BudgetDao
 import prasad.vennam.moneypilot.data.dao.CategoryDao
 import prasad.vennam.moneypilot.data.dao.EmergencyFundDao
@@ -15,6 +16,7 @@ import prasad.vennam.moneypilot.data.dao.NotificationDao
 import prasad.vennam.moneypilot.data.dao.PendingTransactionDao
 import prasad.vennam.moneypilot.data.dao.TransactionDao
 import prasad.vennam.moneypilot.data.entity.BookmarkedArticle
+import prasad.vennam.moneypilot.data.entity.BookmarkedFinanceArticle
 import prasad.vennam.moneypilot.data.entity.Budget
 import prasad.vennam.moneypilot.data.entity.Category
 import prasad.vennam.moneypilot.data.entity.EmergencyFund
@@ -27,7 +29,7 @@ import prasad.vennam.moneypilot.data.entity.PendingTransaction
 import prasad.vennam.moneypilot.data.entity.Transaction
 
 @Database(
-    entities = [Category::class, Transaction::class, Budget::class, Investment::class, ExchangeRate::class, Notification::class, Loan::class, LoanPayment::class, EmergencyFund::class, PendingTransaction::class, BookmarkedArticle::class],
+    entities = [Category::class, Transaction::class, Budget::class, Investment::class, ExchangeRate::class, Notification::class, Loan::class, LoanPayment::class, EmergencyFund::class, PendingTransaction::class, BookmarkedArticle::class, BookmarkedFinanceArticle::class],
     version = 1,
     exportSchema = true,
 )
@@ -54,4 +56,6 @@ abstract class MoneyPilotDatabase : RoomDatabase() {
     abstract fun pendingTransactionDao(): PendingTransactionDao
 
     abstract fun bookmarkedArticleDao(): BookmarkedArticleDao
+
+    abstract fun bookmarkedFinanceArticleDao(): BookmarkedFinanceArticleDao
 }

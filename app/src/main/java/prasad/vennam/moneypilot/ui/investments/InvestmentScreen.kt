@@ -11,6 +11,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -95,6 +96,22 @@ fun InvestmentScreen(
                 actions = {
                     if (syncState != null) {
                         SyncStatusIndicator(syncState)
+                    }
+                    AnimatedVisibility(
+                        visible = !isFabVisible,
+                        enter = scaleIn() + fadeIn(),
+                        exit = scaleOut() + fadeOut(),
+                    ) {
+                        IconButton(onClick = {
+                            investmentToEdit = null
+                            showFormSheet = true
+                        }) {
+                            Icon(
+                                imageVector = Icons.Rounded.Add,
+                                contentDescription = stringResource(R.string.add_investment),
+                                tint = MaterialTheme.colorScheme.primary,
+                            )
+                        }
                     }
                     val isRefreshing by viewModel.isRefreshing.collectAsState()
                     if (isRefreshing) {

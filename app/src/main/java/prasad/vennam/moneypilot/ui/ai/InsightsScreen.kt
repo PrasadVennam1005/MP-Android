@@ -120,7 +120,7 @@ fun InsightsScreen(
                         EmptyInsightsState(onNavigateToAiChat)
                     }
                 } else {
-                    items(insights) { insight ->
+                    items(insights, key = { it.id }) { insight ->
                         InsightCard(insight)
                     }
                 }

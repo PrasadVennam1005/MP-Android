@@ -7,14 +7,32 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.*
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -29,8 +47,35 @@ import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Shield
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.BottomSheetDefaults
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -57,9 +102,22 @@ import prasad.vennam.moneypilot.data.entity.TimeFrame
 import prasad.vennam.moneypilot.data.entity.TransactionType
 import prasad.vennam.moneypilot.ui.budget.utils.getCategoryIcon
 import prasad.vennam.moneypilot.ui.components.AdBannerView
-import prasad.vennam.moneypilot.ui.dashboard.components.*
+import prasad.vennam.moneypilot.ui.dashboard.components.BudgetProgressSection
+import prasad.vennam.moneypilot.ui.dashboard.components.CategoryBreakdownBottomSheet
+import prasad.vennam.moneypilot.ui.dashboard.components.DashboardTopBar
+import prasad.vennam.moneypilot.ui.dashboard.components.ExpenseChartCard
+import prasad.vennam.moneypilot.ui.dashboard.components.KPISection
+import prasad.vennam.moneypilot.ui.dashboard.components.LearnFinancePromoCard
+import prasad.vennam.moneypilot.ui.dashboard.components.LoanSection
+import prasad.vennam.moneypilot.ui.dashboard.components.PaymentAppsSection
+import prasad.vennam.moneypilot.ui.dashboard.components.QuickActionSection
+import prasad.vennam.moneypilot.ui.dashboard.components.RecentTransactionsCard
+import prasad.vennam.moneypilot.ui.dashboard.components.SectionHeader
 import prasad.vennam.moneypilot.ui.settings.LoginRequiredDialog
-import prasad.vennam.moneypilot.ui.viewmodel.*
+import prasad.vennam.moneypilot.ui.viewmodel.DashboardViewModel
+import prasad.vennam.moneypilot.ui.viewmodel.MainViewModel
+import prasad.vennam.moneypilot.ui.viewmodel.NotificationViewModel
+import prasad.vennam.moneypilot.ui.viewmodel.RestoreState
 import prasad.vennam.moneypilot.util.AnalyticsHelper
 import prasad.vennam.moneypilot.util.CurrencyFormatter
 import prasad.vennam.moneypilot.util.GoogleSheetsSyncHelper
@@ -68,9 +126,6 @@ import java.util.Calendar
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DashboardScreen(
-    transactionViewModel: TransactionViewModel,
-    investmentViewModel: InvestmentViewModel,
-    budgetViewModel: BudgetViewModel,
     mainViewModel: MainViewModel,
     analyticsHelper: AnalyticsHelper,
     dashboardViewModel: DashboardViewModel = hiltViewModel(),
@@ -88,6 +143,7 @@ fun DashboardScreen(
     onNavigateToNews: () -> Unit,
     onNavigateToSandbox: () -> Unit,
     onNavigateToEmiCalculator: () -> Unit,
+    onNavigateToLearnFinance: () -> Unit,
 ) {
     val dashboardState by dashboardViewModel.uiState.collectAsState()
     val userData by mainViewModel.userData.collectAsState()
@@ -105,7 +161,7 @@ fun DashboardScreen(
             isFabVisible = true
         } else if (currentIndex > previousIndex || (currentIndex == previousIndex && currentOffset > previousOffset)) {
             isFabVisible = false
-        } else if (currentIndex < previousIndex || (currentIndex == previousIndex && currentOffset < previousOffset)) {
+        } else if (currentIndex < previousIndex || (currentOffset < previousOffset)) {
             isFabVisible = true
         }
         previousIndex = currentIndex
@@ -142,13 +198,16 @@ fun DashboardScreen(
                 Toast.makeText(context, context.run { getString(R.string.backup_successfully_restored) }, Toast.LENGTH_LONG).show()
                 mainViewModel.resetRestoreCheck()
             }
+
             is RestoreState.NeedAuthorization -> {
                 authLauncher.launch(state.intent)
             }
+
             is RestoreState.Error -> {
                 Toast.makeText(context, context.run { getString(R.string.restore_failed, state.message) }, Toast.LENGTH_LONG).show()
                 mainViewModel.resetRestoreCheck()
             }
+
             else -> {}
         }
     }
@@ -212,10 +271,10 @@ fun DashboardScreen(
                         }
                     } catch (e: GetCredentialException) {
                         Log.e("DashboardScreen", "Login failed: ${e.message}")
-                        Toast.makeText(context, context.getString(R.string.login_failed_formatted, e.message), Toast.LENGTH_LONG).show()
+                        Toast.makeText(context, with(context) { getString(R.string.login_failed_formatted, e.message) }, Toast.LENGTH_LONG).show()
                     } catch (e: Exception) {
                         Log.e("DashboardScreen", "Error: ${e.message}")
-                        Toast.makeText(context, context.getString(R.string.error_formatted, e.message), Toast.LENGTH_LONG).show()
+                        Toast.makeText(context, with(context) { getString(R.string.error_formatted, e.message) }, Toast.LENGTH_LONG).show()
                     }
                 }
             }
@@ -480,6 +539,13 @@ fun DashboardScreen(
                             SmartInsightsCard(onClick = onNavigateToInsights)
                         }
 
+                        // Learn Finance promotional banner — shown after Smart Insights
+                        if (dashboardState.isLearnFinanceEnabled) {
+                            item {
+                                LearnFinancePromoCard(onClick = onNavigateToLearnFinance)
+                            }
+                        }
+
                         item {
                             DashboardEmergencyFundCard(
                                 emergencyFund = dashboardState.emergencyFund,
@@ -668,7 +734,8 @@ fun FloatingAiBot(
                 .graphicsLayer {
                     scaleX = scale
                     scaleY = scale
-                }.clickable { onClick() },
+                }
+                .clickable { onClick() },
         shape = CircleShape,
         color = Color.Transparent,
         shadowElevation = 12.dp,
@@ -1086,7 +1153,8 @@ fun PendingReviewBottomSheet(
                                             .background(
                                                 color = MaterialTheme.colorScheme.surfaceVariant,
                                                 shape = RoundedCornerShape(8.dp),
-                                            ).padding(8.dp)
+                                            )
+                                            .padding(8.dp)
                                             .fillMaxWidth(),
                                 )
                             }
@@ -1223,85 +1291,85 @@ fun autoMatchCategory(
         if (isExpense) {
             when {
                 nameLower.contains("uber") ||
-                    nameLower.contains("ola") ||
-                    nameLower.contains("lyft") ||
-                    nameLower.contains("taxi") ||
-                    nameLower.contains("metro") ||
-                    nameLower.contains("rail") ||
-                    nameLower.contains("train") ||
-                    nameLower.contains("fuel") ||
-                    nameLower.contains("petrol") ||
-                    nameLower.contains("diesel") ||
-                    nameLower.contains("gas station") -> "Transport"
+                        nameLower.contains("ola") ||
+                        nameLower.contains("lyft") ||
+                        nameLower.contains("taxi") ||
+                        nameLower.contains("metro") ||
+                        nameLower.contains("rail") ||
+                        nameLower.contains("train") ||
+                        nameLower.contains("fuel") ||
+                        nameLower.contains("petrol") ||
+                        nameLower.contains("diesel") ||
+                        nameLower.contains("gas station") -> "Transport"
 
                 nameLower.contains("starbucks") ||
-                    nameLower.contains("swiggy") ||
-                    nameLower.contains("zomato") ||
-                    nameLower.contains("ubereats") ||
-                    nameLower.contains("food") ||
-                    nameLower.contains("restaurant") ||
-                    nameLower.contains("cafe") ||
-                    nameLower.contains("dining") ||
-                    nameLower.contains("pizza") ||
-                    nameLower.contains("mcdonald") ||
-                    nameLower.contains("burger") -> "Food"
+                        nameLower.contains("swiggy") ||
+                        nameLower.contains("zomato") ||
+                        nameLower.contains("ubereats") ||
+                        nameLower.contains("food") ||
+                        nameLower.contains("restaurant") ||
+                        nameLower.contains("cafe") ||
+                        nameLower.contains("dining") ||
+                        nameLower.contains("pizza") ||
+                        nameLower.contains("mcdonald") ||
+                        nameLower.contains("burger") -> "Food"
 
                 nameLower.contains("netflix") ||
-                    nameLower.contains("spotify") ||
-                    nameLower.contains("youtube") ||
-                    nameLower.contains("disney") ||
-                    nameLower.contains("prime video") ||
-                    nameLower.contains("movie") ||
-                    nameLower.contains("cinema") ||
-                    nameLower.contains("game") ||
-                    nameLower.contains("steam") ||
-                    nameLower.contains("epic") ||
-                    nameLower.contains("entertainment") -> "Entertainment"
+                        nameLower.contains("spotify") ||
+                        nameLower.contains("youtube") ||
+                        nameLower.contains("disney") ||
+                        nameLower.contains("prime video") ||
+                        nameLower.contains("movie") ||
+                        nameLower.contains("cinema") ||
+                        nameLower.contains("game") ||
+                        nameLower.contains("steam") ||
+                        nameLower.contains("epic") ||
+                        nameLower.contains("entertainment") -> "Entertainment"
 
                 nameLower.contains("amazon") ||
-                    nameLower.contains("flipkart") ||
-                    nameLower.contains("myntra") ||
-                    nameLower.contains("shopping") ||
-                    nameLower.contains("store") ||
-                    nameLower.contains("supermarket") ||
-                    nameLower.contains("grocery") ||
-                    nameLower.contains("walmart") ||
-                    nameLower.contains("target") -> "Shopping"
+                        nameLower.contains("flipkart") ||
+                        nameLower.contains("myntra") ||
+                        nameLower.contains("shopping") ||
+                        nameLower.contains("store") ||
+                        nameLower.contains("supermarket") ||
+                        nameLower.contains("grocery") ||
+                        nameLower.contains("walmart") ||
+                        nameLower.contains("target") -> "Shopping"
 
                 nameLower.contains("hospital") ||
-                    nameLower.contains("clinic") ||
-                    nameLower.contains("medical") ||
-                    nameLower.contains("pharmacy") ||
-                    nameLower.contains("doctor") ||
-                    nameLower.contains("dentist") ||
-                    nameLower.contains("health") ||
-                    nameLower.contains("medicine") -> "Health"
+                        nameLower.contains("clinic") ||
+                        nameLower.contains("medical") ||
+                        nameLower.contains("pharmacy") ||
+                        nameLower.contains("doctor") ||
+                        nameLower.contains("dentist") ||
+                        nameLower.contains("health") ||
+                        nameLower.contains("medicine") -> "Health"
 
                 nameLower.contains("electricity") || nameLower.contains("water bill") || nameLower.contains("power") -> "Utilities"
 
                 nameLower.contains("airtel") ||
-                    nameLower.contains("jio") ||
-                    nameLower.contains("bill") ||
-                    nameLower.contains("recharge") ||
-                    nameLower.contains("internet") ||
-                    nameLower.contains("wifi") ||
-                    nameLower.contains("mobile") -> "Bills"
+                        nameLower.contains("jio") ||
+                        nameLower.contains("bill") ||
+                        nameLower.contains("recharge") ||
+                        nameLower.contains("internet") ||
+                        nameLower.contains("wifi") ||
+                        nameLower.contains("mobile") -> "Bills"
 
                 nameLower.contains("rent") || nameLower.contains("housing") || nameLower.contains("apartment") -> "Housing"
 
                 nameLower.contains("school") ||
-                    nameLower.contains("college") ||
-                    nameLower.contains("university") ||
-                    nameLower.contains("course") ||
-                    nameLower.contains("udemy") ||
-                    nameLower.contains("education") -> "Education"
+                        nameLower.contains("college") ||
+                        nameLower.contains("university") ||
+                        nameLower.contains("course") ||
+                        nameLower.contains("udemy") ||
+                        nameLower.contains("education") -> "Education"
 
                 nameLower.contains("flight") ||
-                    nameLower.contains("hotel") ||
-                    nameLower.contains("travel") ||
-                    nameLower.contains("trip") ||
-                    nameLower.contains("booking") ||
-                    nameLower.contains("airbnb") -> "Travel"
+                        nameLower.contains("hotel") ||
+                        nameLower.contains("travel") ||
+                        nameLower.contains("trip") ||
+                        nameLower.contains("booking") ||
+                        nameLower.contains("airbnb") -> "Travel"
 
                 nameLower.contains("insurance") || nameLower.contains("lic") -> "Insurance"
 
@@ -1312,11 +1380,12 @@ fun autoMatchCategory(
                 nameLower.contains("salary") || nameLower.contains("payroll") || nameLower.contains("wage") -> "Salary"
                 nameLower.contains("freelance") || nameLower.contains("gigs") || nameLower.contains("consulting") -> "Freelance"
                 nameLower.contains("interest") ||
-                    nameLower.contains("dividend") ||
-                    nameLower.contains("mutual fund") ||
-                    nameLower.contains("stock") ||
-                    nameLower.contains("crypto") ||
-                    nameLower.contains("investment") -> "Investments"
+                        nameLower.contains("dividend") ||
+                        nameLower.contains("mutual fund") ||
+                        nameLower.contains("stock") ||
+                        nameLower.contains("crypto") ||
+                        nameLower.contains("investment") -> "Investments"
+
                 nameLower.contains("rental") || nameLower.contains("tenant") -> "Rental"
                 nameLower.contains("gift") || nameLower.contains("present") -> "Gifts"
                 nameLower.contains("refund") || nameLower.contains("cashback") || nameLower.contains("reward") -> "Refund"
