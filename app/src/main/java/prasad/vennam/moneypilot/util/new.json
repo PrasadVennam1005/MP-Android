@@ -1,0 +1,11 @@
+{
+  "parameters": {
+    "feature_learn_finance_enabled": {
+      "defaultValue": {
+        "value": "true"
+      },
+      "description": "Enables the Learn Finance section in Quick Actions.",
+      "valueType": "BOOLEAN"
+    }
+  }
+}
