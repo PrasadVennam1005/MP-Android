@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import prasad.vennam.moneypilot.data.UserPreferences
 import prasad.vennam.moneypilot.data.entity.Budget
@@ -25,6 +26,9 @@ import prasad.vennam.moneypilot.domain.usecase.RestoreBackupUseCase
 import prasad.vennam.moneypilot.domain.usecase.SaveCategoryUseCase
 import prasad.vennam.moneypilot.domain.usecase.SaveTransactionUseCase
 import javax.inject.Inject
+import prasad.vennam.moneypilot.feature.ai.domain.AiRepository
+import prasad.vennam.moneypilot.feature.ai.model.LlmState
+import prasad.vennam.moneypilot.util.ParsedReceipt
 
 data class TransactionFormState(
     val amount: String = "",
@@ -49,6 +53,7 @@ class TransactionViewModel
         private val saveCategoryUseCase: SaveCategoryUseCase,
         private val deleteCategoryUseCase: DeleteCategoryUseCase,
         private val restoreBackupUseCase: RestoreBackupUseCase,
+        private val aiRepository: AiRepository,
     ) : ViewModel() {
         val allTransactions: StateFlow<List<Transaction>> =
             getTransactionsUseCase()
@@ -57,6 +62,20 @@ class TransactionViewModel
         val allCategories: StateFlow<List<Category>> =
             getCategoriesUseCase()
                 .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+        val isPremium: StateFlow<Boolean> =
+            userPreferences.isPremium
+                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
+        val remainingAiScans: StateFlow<Int> =
+            userPreferences.remainingAiScans
+                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 3)
+
+        init {
+            viewModelScope.launch {
+                userPreferences.checkAndResetDailyQuota()
+            }
+        }
 
         private val _formState = MutableStateFlow(TransactionFormState())
         val formState: StateFlow<TransactionFormState> = _formState.asStateFlow()
@@ -181,5 +200,23 @@ class TransactionViewModel
 
         suspend fun clearLocalDatabase() {
             restoreBackupUseCase(Category.DEFAULT_CATEGORIES, emptyList(), emptyList(), emptyList())
+        }
+
+        val isAiReady: Boolean
+            get() = aiRepository.state.value is LlmState.Ready
+
+        suspend fun parseReceiptText(ocrText: String): ParsedReceipt? {
+            val result = aiRepository.parseReceiptText(ocrText)
+            val premium = userPreferences.isPremium.first()
+            if (result != null && !premium) {
+                userPreferences.decrementAiScans()
+            }
+            return result
+        }
+
+        fun incrementAiScans(amount: Int) {
+            viewModelScope.launch {
+                userPreferences.incrementAiScans(amount)
+            }
         }
     }

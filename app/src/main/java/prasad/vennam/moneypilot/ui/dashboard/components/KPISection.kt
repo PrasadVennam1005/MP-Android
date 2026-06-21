@@ -19,8 +19,12 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -148,6 +152,12 @@ fun KPICard(
     currencyCode: String,
     modifier: Modifier = Modifier,
 ) {
+    val animatedAmount by animateFloatAsState(
+        targetValue = amount.toFloat(),
+        animationSpec = tween(durationMillis = 1000, easing = FastOutSlowInEasing),
+        label = "KPICardAmountAnimation",
+    )
+
     Card(
         modifier = modifier,
         colors = CardDefaults.cardColors(containerColor = containerColor),
@@ -167,7 +177,7 @@ fun KPICard(
                 color = contentColor.copy(alpha = 0.7f),
             )
             Text(
-                CurrencyFormatter.format(amount, currencyCode),
+                CurrencyFormatter.format(animatedAmount.toDouble(), currencyCode),
                 style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
                 color = contentColor,
             )

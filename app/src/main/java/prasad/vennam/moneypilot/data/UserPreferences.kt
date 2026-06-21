@@ -63,6 +63,12 @@ class UserPreferences
         private val hasSeededNotificationsKey = booleanPreferencesKey("has_seeded_notifications")
         private val isPremiumKey = booleanPreferencesKey("is_premium")
         private val isBiometricEnabledKey = booleanPreferencesKey("is_biometric_enabled")
+        private val remainingAiScansKey =
+            androidx.datastore.preferences.core
+                .intPreferencesKey("remaining_ai_scans")
+        private val lastAiScanResetDateKey =
+            androidx.datastore.preferences.core
+                .stringPreferencesKey("last_ai_scan_reset_date")
 
         val isLoggedIn: Flow<Boolean> =
             context.dataStore.data
@@ -110,6 +116,12 @@ class UserPreferences
             context.dataStore.data
                 .map { preferences ->
                     preferences[isPremiumKey] ?: false
+                }
+
+        val remainingAiScans: Flow<Int> =
+            context.dataStore.data
+                .map { preferences ->
+                    preferences[remainingAiScansKey] ?: 3
                 }
 
         val isBiometricEnabled: Flow<Boolean> =
@@ -247,6 +259,34 @@ class UserPreferences
         suspend fun setIsBiometricEnabled(enabled: Boolean) {
             context.dataStore.edit { preferences ->
                 preferences[isBiometricEnabledKey] = enabled
+            }
+        }
+
+        suspend fun checkAndResetDailyQuota() {
+            val currentDate = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()).format(java.util.Date())
+            context.dataStore.edit { preferences ->
+                val lastResetDate = preferences[lastAiScanResetDateKey]
+                if (lastResetDate != currentDate) {
+                    val currentScans = preferences[remainingAiScansKey] ?: 3
+                    if (currentScans < 3) {
+                        preferences[remainingAiScansKey] = 3
+                    }
+                    preferences[lastAiScanResetDateKey] = currentDate
+                }
+            }
+        }
+
+        suspend fun decrementAiScans() {
+            context.dataStore.edit { preferences ->
+                val current = preferences[remainingAiScansKey] ?: 3
+                preferences[remainingAiScansKey] = (current - 1).coerceAtLeast(0)
+            }
+        }
+
+        suspend fun incrementAiScans(amount: Int) {
+            context.dataStore.edit { preferences ->
+                val current = preferences[remainingAiScansKey] ?: 3
+                preferences[remainingAiScansKey] = current + amount
             }
         }
     }

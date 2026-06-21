@@ -558,4 +558,12 @@
     <string name="jump_to_year">Jump to Year</string>
     <string name="export_report">Export Report</string>
     <string name="no_records_found">No records found</string>
+    
+    <string name="unlock_scans_title">Unlock AI Receipt Scans</string>
+    <string name="unlock_scans_desc">You have used all your daily free scans for the AI Receipt Scanner. Watch a short video ad to unlock 3 more scans, or use the basic scan instead.</string>
+    <string name="watch_ad_btn">Watch Ad (+3 Scans)</string>
+    <string name="basic_scan_btn">Basic Scan</string>
+    <string name="loading_ad">Loading Ad…</string>
+    <string name="ad_failed_to_load">Ad failed to load. Falling back to basic scan.</string>
+    <string name="unlocked_scans_toast">Unlocked 3 scans!</string>
 </resources>

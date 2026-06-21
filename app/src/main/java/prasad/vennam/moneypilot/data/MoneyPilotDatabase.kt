@@ -30,7 +30,7 @@ import prasad.vennam.moneypilot.data.entity.Transaction
 
 @Database(
     entities = [Category::class, Transaction::class, Budget::class, Investment::class, ExchangeRate::class, Notification::class, Loan::class, LoanPayment::class, EmergencyFund::class, PendingTransaction::class, BookmarkedArticle::class, BookmarkedFinanceArticle::class],
-    version = 1,
+    version = 2,
     exportSchema = true,
 )
 @TypeConverters(Converters::class)
@@ -58,4 +58,12 @@ abstract class MoneyPilotDatabase : RoomDatabase() {
     abstract fun bookmarkedArticleDao(): BookmarkedArticleDao
 
     abstract fun bookmarkedFinanceArticleDao(): BookmarkedFinanceArticleDao
+
+    companion object {
+        val MIGRATION_1_2 = object : androidx.room.migration.Migration(1, 2) {
+            override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+                db.execSQL("CREATE TABLE IF NOT EXISTS `bookmarked_finance_articles` (`articleId` TEXT NOT NULL, `bookmarkedAt` INTEGER NOT NULL, PRIMARY KEY(`articleId`))")
+            }
+        }
+    }
 }

@@ -18,6 +18,9 @@ import prasad.vennam.moneypilot.feature.ai.domain.AiRepository
 import prasad.vennam.moneypilot.feature.ai.model.AiAction
 import prasad.vennam.moneypilot.feature.ai.model.LlmState
 import prasad.vennam.moneypilot.feature.ai.service.LlmService
+import prasad.vennam.moneypilot.util.ParsedReceipt
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
@@ -40,27 +43,24 @@ class AiRepositoryImpl
         private val _downloadProgress = MutableStateFlow(0f)
         override val downloadProgress: StateFlow<Float> = _downloadProgress.asStateFlow()
 
+        private val downloadMutex = Mutex()
+
         // Emulator detection: use a small, CPU-compatible model
         private val isEmulator: Boolean by lazy {
-            android.os.Build.FINGERPRINT
-                .contains("generic") ||
-                android.os.Build.FINGERPRINT
-                    .startsWith("unknown") ||
-                android.os.Build.MODEL
-                    .contains("google_sdk") ||
-                android.os.Build.MODEL
-                    .contains("sdk_gphone64_arm64") ||
-                android.os.Build.MODEL
-                    .contains("sdk_gphone64_arm64") ||
-                android.os.Build.MANUFACTURER
-                    .contains("google") ||
-                (
-                    android.os.Build.BRAND
-                        .startsWith("google") &&
-                        android.os.Build.DEVICE
-                            .startsWith("emu64a")
-                ) ||
-                android.os.Build.PRODUCT == "sdk_gphone64_arm64"
+            val fingerprint = android.os.Build.FINGERPRINT ?: ""
+            val model = android.os.Build.MODEL ?: ""
+            val manufacturer = android.os.Build.MANUFACTURER ?: ""
+            val brand = android.os.Build.BRAND ?: ""
+            val device = android.os.Build.DEVICE ?: ""
+            val product = android.os.Build.PRODUCT ?: ""
+
+            fingerprint.contains("generic") ||
+                fingerprint.startsWith("unknown") ||
+                model.contains("google_sdk") ||
+                model.contains("sdk_gphone64_arm64") ||
+                manufacturer.contains("google") ||
+                (brand.startsWith("google") && device.startsWith("emu64a")) ||
+                product == "sdk_gphone64_arm64"
         }
 
         /**
@@ -88,6 +88,8 @@ class AiRepositoryImpl
                 .followRedirects(true)
                 .build()
 
+        private val workManager by lazy { androidx.work.WorkManager.getInstance(context) }
+
         init {
             Log.d(TAG, "AiRepositoryImpl created. isEmulator=$isEmulator, modelFile=$modelFileName")
 
@@ -109,6 +111,45 @@ class AiRepositoryImpl
                         }
                     }
                 }.launchIn(kotlinx.coroutines.GlobalScope)
+
+            // Listen to background model download updates via WorkManager
+            workManager.getWorkInfosForUniqueWorkFlow("llm_model_download_work")
+                .onEach { workInfos ->
+                    val workInfo = workInfos.firstOrNull() ?: return@onEach
+                    when (workInfo.state) {
+                        androidx.work.WorkInfo.State.RUNNING -> {
+                            val progress = workInfo.progress.getFloat("progress", 0f)
+                            _state.value = LlmState.Downloading
+                            _downloadProgress.value = progress
+                        }
+                        androidx.work.WorkInfo.State.SUCCEEDED -> {
+                            if (_state.value is LlmState.Downloading || _state.value is LlmState.Idle || _state.value is LlmState.Error) {
+                                Log.d(TAG, "Background download succeeded. Initializing model...")
+                                _downloadProgress.value = 1f
+                                _state.value = LlmState.Idle // Reset downloading state to allow initialization
+                                initialize()
+                            }
+                        }
+                        androidx.work.WorkInfo.State.FAILED -> {
+                            if (_state.value is LlmState.Downloading) {
+                                Log.e(TAG, "Background download failed.")
+                                _state.value = LlmState.Error("Background model download failed. Please try again.")
+                            }
+                        }
+                        androidx.work.WorkInfo.State.CANCELLED -> {
+                            if (_state.value is LlmState.Downloading) {
+                                Log.w(TAG, "Background download cancelled.")
+                                _state.value = LlmState.Idle
+                            }
+                        }
+                        else -> {
+                            // ENQUEUED, BLOCKED, etc.
+                            if (_state.value is LlmState.Idle) {
+                                _state.value = LlmState.Downloading
+                            }
+                        }
+                    }
+                }.launchIn(kotlinx.coroutines.GlobalScope)
         }
 
         private fun getModelFile(): File {
@@ -117,7 +158,7 @@ class AiRepositoryImpl
         }
 
         override suspend fun initialize() {
-            if (_state.value is LlmState.Ready) return
+            if (_state.value is LlmState.Ready || _state.value is LlmState.Initializing || _state.value is LlmState.Downloading) return
 
             val modelFile = getModelFile()
             Log.d(TAG, "Initializing with model: ${modelFile.absolutePath} (exists=${modelFile.exists()}, size=${modelFile.length()})")
@@ -153,21 +194,35 @@ class AiRepositoryImpl
 
         override suspend fun downloadModel() =
             withContext(Dispatchers.IO) {
-                // Check if already downloading OR if model is already ready/initializing
-                if (_state.value is LlmState.Downloading) {
-                    Log.d(TAG, "Download ignored — Model download already in progress.")
+                // Check if already downloading, ready, or if model already exists on disk
+                val shouldInitialize = downloadMutex.withLock {
+                    if (_state.value is LlmState.Downloading) {
+                        Log.d(TAG, "Download ignored — Model download already in progress.")
+                        return@withContext
+                    }
+                    if (_state.value is LlmState.Initializing || _state.value is LlmState.Ready) {
+                        Log.d(TAG, "Download ignored — Model already initializing or ready.")
+                        return@withContext
+                    }
+
+                    val destinationDir = context.getExternalFilesDir(null) ?: context.filesDir
+                    val modelFile = File(destinationDir, modelFileName)
+                    if (modelFile.exists() && modelFile.length() > 0L) {
+                        Log.d(TAG, "Download ignored — Model file already exists on disk. Initializing...")
+                        true
+                    } else {
+                        _state.value = LlmState.Downloading
+                        _downloadProgress.value = 0f
+                        false
+                    }
+                }
+
+                if (shouldInitialize) {
+                    initialize()
                     return@withContext
                 }
-                if (_state.value is LlmState.Initializing || _state.value is LlmState.Ready) {
-                    Log.d(TAG, "Download ignored — Model already initializing or ready.")
-                    return@withContext
-                }
-                _state.value = LlmState.Downloading
-                _downloadProgress.value = 0f
 
                 val destinationDir = context.getExternalFilesDir(null) ?: context.filesDir
-                val modelFile = File(destinationDir, modelFileName)
-                val tempFile = File(destinationDir, "$modelFileName.tmp")
 
                 Log.d(TAG, "Download requested. Model: $modelFileName, URL: $modelUrl, isEmulator: $isEmulator")
 
@@ -182,84 +237,31 @@ class AiRepositoryImpl
                     return@withContext
                 }
 
+                // Enqueue background download using WorkManager
                 try {
-                    Log.d(TAG, "Starting model download from: $modelUrl")
-                    val request =
-                        Request
-                            .Builder()
-                            .url(modelUrl)
-                            .header("User-Agent", "Mozilla/5.0 MoneyPilot/1.0")
-                            .build()
+                    val workRequest = androidx.work.OneTimeWorkRequestBuilder<prasad.vennam.moneypilot.worker.ModelDownloadWorker>()
+                        .setInputData(
+                            androidx.work.workDataOf(
+                                "model_url" to modelUrl,
+                                "model_file_name" to modelFileName
+                            )
+                        )
+                        .setConstraints(
+                            androidx.work.Constraints.Builder()
+                                .setRequiredNetworkType(androidx.work.NetworkType.CONNECTED)
+                                .build()
+                        )
+                        .build()
 
-                    downloadClient.newCall(request).execute().use { response ->
-                        if (!response.isSuccessful) {
-                            val errorMsg = "Server error ${response.code}: ${response.message}"
-                            Log.e(TAG, errorMsg)
-                            _state.value = LlmState.Error(errorMsg)
-                            return@withContext
-                        }
-
-                        val body = response.body
-                        val totalBytes = body.contentLength()
-                        Log.d(TAG, "Content length: $totalBytes bytes")
-
-                        tempFile.parentFile?.mkdirs()
-                        if (tempFile.exists()) tempFile.delete()
-
-                        var bytesCopied = 0L
-                        val buffer = ByteArray(64 * 1024) // 64 KB
-                        var lastProgressUpdate = System.currentTimeMillis()
-
-                        body.byteStream().use { input ->
-                            FileOutputStream(tempFile).use { output ->
-                                var bytesRead = input.read(buffer)
-                                while (bytesRead >= 0) {
-                                    output.write(buffer, 0, bytesRead)
-                                    bytesCopied += bytesRead
-
-                                    if (totalBytes > 0) {
-                                        val progress = bytesCopied.toFloat() / totalBytes.toFloat()
-                                        val now = System.currentTimeMillis()
-                                        if (now - lastProgressUpdate > 100 || progress >= 1f) {
-                                            _downloadProgress.value = progress
-                                            lastProgressUpdate = now
-                                        }
-                                    }
-                                    bytesRead = input.read(buffer)
-                                }
-                                output.flush()
-                            }
-                        }
-
-                        Log.d(TAG, "Download complete ($bytesCopied bytes). Renaming temp file...")
-                        if (modelFile.exists()) modelFile.delete()
-
-                        if (tempFile.renameTo(modelFile)) {
-                            Log.d(TAG, "Rename successful. Initializing model.")
-                            _downloadProgress.value = 1f
-                            initialize()
-                        } else {
-                            Log.e(TAG, "Rename failed. Attempting manual copy...")
-                            try {
-                                tempFile.copyTo(modelFile, overwrite = true)
-                                tempFile.delete()
-                                Log.d(TAG, "Manual copy successful. Initializing model.")
-                                _downloadProgress.value = 1f
-                                initialize()
-                            } catch (copyEx: Exception) {
-                                Log.e(TAG, "Manual copy failed", copyEx)
-                                _state.value = LlmState.Error("Failed to save downloaded model file.")
-                            }
-                        }
-                    }
-                } catch (e: IOException) {
-                    Log.e(TAG, "Network/IO error during download", e)
-                    _state.value = LlmState.Error("Network error: ${e.localizedMessage ?: "Connection reset or timeout"}")
-                    if (tempFile.exists()) tempFile.delete()
+                    workManager.enqueueUniqueWork(
+                        "llm_model_download_work",
+                        androidx.work.ExistingWorkPolicy.KEEP,
+                        workRequest
+                    )
+                    Log.d(TAG, "Model download enqueued via WorkManager successfully.")
                 } catch (e: Exception) {
-                    Log.e(TAG, "Unexpected error during download", e)
-                    _state.value = LlmState.Error("Error: ${e.message}")
-                    if (tempFile.exists()) tempFile.delete()
+                    Log.e(TAG, "Failed to enqueue download via WorkManager: ${e.message}", e)
+                    _state.value = LlmState.Error("Failed to start background download.")
                 }
             }
 
@@ -537,6 +539,41 @@ class AiRepositoryImpl
                     Log.e(TAG, "Failed to generate short advice: ${e.message}", e)
                     ""
                 }
+            }
+
+        override suspend fun parseReceiptText(ocrText: String): ParsedReceipt? =
+            withContext(Dispatchers.Default) {
+                if (_state.value !is LlmState.Ready) {
+                    Log.d(TAG, "parseReceiptText ignored: LLM is not ready.")
+                    return@withContext null
+                }
+                try {
+                    val prompt = buildString {
+                        append("<start_of_turn>user\n")
+                        append("Analyze the following OCR text from a transaction receipt and extract:\n")
+                        append("1. The merchant name (e.g. Starbucks, Walmart, Swiggy).\n")
+                        append("2. The total transaction amount paid as a numeric value.\n")
+                        append("Format your response as an action tag with NO other text or explanation:\n")
+                        append("[ACTION:ADD_EXPENSE|amount=VALUE|category=Other|note=MERCHANT_NAME|date=today]\n\n")
+                        append("OCR Text:\n")
+                        append(ocrText)
+                        append("<end_of_turn>\n<start_of_turn>model\n")
+                    }
+                    val response = llmService.generateResponse(prompt).trim()
+                    Log.d(TAG, "OCR LLM Response: $response")
+                    val (action, _) = AiActionParser.parse(response)
+                    if (action is AiAction.AddTransaction) {
+                        val finalDate = System.currentTimeMillis() + (action.dateOffset * 24 * 60 * 60 * 1000L)
+                        return@withContext ParsedReceipt(
+                            merchant = action.note.trim().ifBlank { null },
+                            amount = action.amount.toDouble(),
+                            date = finalDate,
+                        )
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to parse receipt text using LLM: ${e.message}", e)
+                }
+                return@withContext null
             }
 
         override fun cleanup() {

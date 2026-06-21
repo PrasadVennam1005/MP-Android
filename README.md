@@ -63,3 +63,9 @@ For detailed notes on current iterations, code checklists, and development targe
 - 🗺️ **[Development Plan](plan.md)**: Roadmap, goals, and multi-module migration strategy.
 - 📋 **[Task List](task.md)**: Active compliance items and feature checklists.
 - ⚙️ **[Project Specification](project.md)**: Tech specifications and historic iteration logs.
+
+## How to use it:
+- To increment the build number: Run ./incrementVersion.sh from your terminal.
+- Example: 1.0.0 (1) becomes 1.0.0 (2).
+- To change the version name: Simply edit the VERSION_NAME in version.properties.
+- Example: Change it to 1.0.1. The next time you run the script, it will become 1.0.1 (3).

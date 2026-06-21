@@ -85,6 +85,7 @@ object DatabaseModule {
                 MoneyPilotDatabase::class.java,
                 dbName,
             ).openHelperFactory(factory)
+            .addMigrations(MoneyPilotDatabase.MIGRATION_1_2)
             .fallbackToDestructiveMigration(true)
             .addCallback(
                 object : RoomDatabase.Callback() {

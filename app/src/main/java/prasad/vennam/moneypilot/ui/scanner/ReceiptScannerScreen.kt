@@ -55,6 +55,14 @@ import prasad.vennam.moneypilot.util.ReceiptParser
 import prasad.vennam.moneypilot.util.inPaisa
 import java.util.Currency
 import java.util.concurrent.Executors
+import kotlinx.coroutines.launch
+import com.google.mlkit.vision.text.Text
+import com.google.android.gms.ads.rewarded.RewardedAd
+import com.google.android.gms.ads.rewarded.RewardedAdLoadCallback
+import com.google.android.gms.ads.AdRequest
+import com.google.android.gms.ads.LoadAdError
+import prasad.vennam.moneypilot.ads.AdConfig
+import android.app.Activity
 
 @Composable
 fun ReceiptScannerScreen(
@@ -72,6 +80,7 @@ fun ReceiptScannerScreen(
             categories = categories,
             onSaveTransaction = { transactionViewModel.saveTransaction(it) },
             analyticsHelper = analyticsHelper,
+            transactionViewModel = transactionViewModel,
         )
     }
 }
@@ -83,12 +92,120 @@ fun ReceiptScannerContent(
     categories: List<Category>,
     onSaveTransaction: (Transaction) -> Unit,
     analyticsHelper: AnalyticsHelper,
+    transactionViewModel: TransactionViewModel,
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val cameraExecutor = remember { Executors.newSingleThreadExecutor() }
     val recognizer = remember { TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS) }
     var cameraProvider by remember { mutableStateOf<ProcessCameraProvider?>(null) }
+    val scope = rememberCoroutineScope()
+
+    var isScanning by remember { mutableStateOf(true) }
+    var detectedData by remember { mutableStateOf<ParsedReceipt?>(null) }
+    var showResultsSheet by remember { mutableStateOf(false) }
+    var showSuccessDialog by remember { mutableStateOf(false) }
+    var isProcessing by remember { mutableStateOf(false) }
+    val imageCapture = remember { ImageCapture.Builder().build() }
+
+    val remainingScans by transactionViewModel.remainingAiScans.collectAsState()
+    val isPremium by transactionViewModel.isPremium.collectAsState()
+
+    var showUnlockDialog by remember { mutableStateOf(false) }
+    var isAdLoading by remember { mutableStateOf(false) }
+    var pendingVisionText by remember { mutableStateOf<Text?>(null) }
+    var isGalleryScan by remember { mutableStateOf(false) }
+
+    fun loadAndShowAd(onRewardEarned: () -> Unit, onFailure: () -> Unit) {
+        val activity = context as? Activity
+        if (activity == null) {
+            onFailure()
+            return
+        }
+        isAdLoading = true
+        val adRequest = AdRequest.Builder().build()
+        RewardedAd.load(
+            context,
+            AdConfig.rewardedAdUnitId,
+            adRequest,
+            object : RewardedAdLoadCallback() {
+                override fun onAdFailedToLoad(error: LoadAdError) {
+                    isAdLoading = false
+                    onFailure()
+                }
+
+                override fun onAdLoaded(ad: RewardedAd) {
+                    isAdLoading = false
+                    ad.show(activity) {
+                        onRewardEarned()
+                    }
+                }
+            }
+        )
+    }
+
+    suspend fun processOcrResult(visionText: Text): ParsedReceipt {
+        val rawText = visionText.text
+        if (transactionViewModel.isAiReady && rawText.isNotBlank()) {
+            val aiResult = transactionViewModel.parseReceiptText(rawText)
+            if (aiResult != null && aiResult.amount != null) {
+                return aiResult
+            }
+        }
+        return ReceiptParser.parse(visionText)
+    }
+
+    fun logScanEvent(result: ParsedReceipt, isGallery: Boolean) {
+        val eventName = if (isGallery) "scanner_gallery_upload" else "scanner_picture_captured"
+        analyticsHelper.logEvent(
+            eventName,
+            mapOf(
+                "success" to (result.amount != null),
+                "merchant_found" to (result.merchant != null),
+                "parsed_by_ai" to transactionViewModel.isAiReady,
+            )
+        )
+    }
+
+    fun handleScanResult(result: ParsedReceipt) {
+        if (result.amount != null) {
+            detectedData = result
+            isScanning = false
+            showResultsSheet = true
+        } else {
+            Toast.makeText(
+                context,
+                context.getString(R.string.could_not_detect_amount_in_this_image_please_try_another),
+                Toast.LENGTH_LONG
+            ).show()
+        }
+        isProcessing = false
+    }
+
+    fun handleOcrResult(visionText: Text, isGallery: Boolean) {
+        val rawText = visionText.text
+        if (rawText.isBlank()) {
+            Toast.makeText(context, context.getString(R.string.could_not_detect_amount_in_this_image_please_try_another), Toast.LENGTH_LONG).show()
+            isProcessing = false
+            return
+        }
+
+        if (transactionViewModel.isAiReady && !isPremium && remainingScans <= 0) {
+            // Out of scans: prompt unlock dialog
+            pendingVisionText = visionText
+            isGalleryScan = isGallery
+            showUnlockDialog = true
+            isProcessing = false
+        } else {
+            // Proceed normally
+            isProcessing = true
+            scope.launch {
+                val result = processOcrResult(visionText)
+                logScanEvent(result, isGallery)
+                handleScanResult(result)
+            }
+        }
+    }
 
     DisposableEffect(Unit) {
         onDispose {
@@ -98,13 +215,6 @@ fun ReceiptScannerContent(
         }
     }
 
-    var isScanning by remember { mutableStateOf(true) }
-    var detectedData by remember { mutableStateOf<ParsedReceipt?>(null) }
-    var showResultsSheet by remember { mutableStateOf(false) }
-    var showSuccessDialog by remember { mutableStateOf(false) }
-    var isProcessing by remember { mutableStateOf(false) }
-    val imageCapture = remember { ImageCapture.Builder().build() }
-
     val previewView = remember { PreviewView(context) }
 
     // Gallery Picker Launcher
@@ -113,32 +223,16 @@ fun ReceiptScannerContent(
             contract = ActivityResultContracts.GetContent(),
         ) { uri: Uri? ->
             uri?.let {
+                isProcessing = true
                 val inputImage = InputImage.fromFilePath(context, it)
                 recognizer
                     .process(inputImage)
                     .addOnSuccessListener { visionText ->
-                        val result = ReceiptParser.parse(visionText)
-
-                        analyticsHelper.logEvent(
-                            "scanner_gallery_upload",
-                            mapOf(
-                                "success" to (result.amount != null),
-                                "merchant_found" to (result.merchant != null),
-                            ),
-                        )
-
-                        if (result.amount != null) {
-                            detectedData = result
-                            isScanning = false
-                            showResultsSheet = true
-                        } else {
-                            Toast
-                                .makeText(
-                                    context,
-                                    context.run { getString(R.string.could_not_detect_amount_in_this_image_please_try_another) },
-                                    Toast.LENGTH_LONG,
-                                ).show()
-                        }
+                        handleOcrResult(visionText, isGallery = true)
+                    }
+                    .addOnFailureListener {
+                        isProcessing = false
+                        Toast.makeText(context, context.getString(R.string.scanning_failed), Toast.LENGTH_SHORT).show()
                     }
             }
         }
@@ -248,30 +342,12 @@ fun ReceiptScannerContent(
                                                 recognizer
                                                     .process(inputImage)
                                                     .addOnSuccessListener { visionText ->
-                                                        val result = ReceiptParser.parse(visionText)
-                                                        analyticsHelper.logEvent(
-                                                            "scanner_picture_captured",
-                                                            mapOf(
-                                                                "success" to (result.amount != null),
-                                                                "merchant_found" to (result.merchant != null),
-                                                            ),
-                                                        )
-                                                        if (result.amount != null) {
-                                                            detectedData = result
-                                                            isScanning = false
-                                                            showResultsSheet = true
-                                                        } else {
-                                                            Toast
-                                                                .makeText(
-                                                                    context,
-                                                                    context.run { getString(R.string.could_not_detect_amount_in_this_image_please_try_another) },
-                                                                    Toast.LENGTH_LONG,
-                                                                ).show()
-                                                        }
-                                                        isProcessing = false
+                                                        handleOcrResult(visionText, isGallery = false)
                                                     }.addOnFailureListener {
                                                         isProcessing = false
                                                         Toast.makeText(context, context.getString(R.string.scanning_failed), Toast.LENGTH_SHORT).show()
+                                                    }.addOnCompleteListener {
+                                                        image.close()
                                                     }
                                             } else {
                                                 image.close()
@@ -350,6 +426,114 @@ fun ReceiptScannerContent(
                     onNavigateBack()
                 }) { Text(stringResource(R.string.go_to_dashboard)) }
             },
+        )
+    }
+
+    if (showUnlockDialog) {
+        AlertDialog(
+            onDismissRequest = {
+                if (!isAdLoading) {
+                    showUnlockDialog = false
+                    isProcessing = false
+                    pendingVisionText = null
+                }
+            },
+            title = {
+                Text(
+                    stringResource(R.string.unlock_scans_title),
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Column {
+                    Text(stringResource(R.string.unlock_scans_desc))
+                    if (isAdLoading) {
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text(stringResource(R.string.loading_ad))
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        loadAndShowAd(
+                            onRewardEarned = {
+                                transactionViewModel.incrementAiScans(3)
+                                Toast.makeText(context, context.getString(R.string.unlocked_scans_toast), Toast.LENGTH_SHORT).show()
+                                pendingVisionText?.let { visionText ->
+                                    isProcessing = true
+                                    scope.launch {
+                                        val result = processOcrResult(visionText)
+                                        logScanEvent(result, isGalleryScan)
+                                        handleScanResult(result)
+                                    }
+                                }
+                                pendingVisionText = null
+                                showUnlockDialog = false
+                            },
+                            onFailure = {
+                                Toast.makeText(context, context.getString(R.string.ad_failed_to_load), Toast.LENGTH_LONG).show()
+                                pendingVisionText?.let { visionText ->
+                                    isProcessing = true
+                                    scope.launch {
+                                        val result = ReceiptParser.parse(visionText)
+                                        logScanEvent(result, isGalleryScan)
+                                        handleScanResult(result)
+                                    }
+                                }
+                                pendingVisionText = null
+                                showUnlockDialog = false
+                            }
+                        )
+                    },
+                    enabled = !isAdLoading,
+                    shape = MaterialTheme.shapes.large
+                ) {
+                    Icon(Icons.Rounded.PlayArrow, contentDescription = null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(stringResource(R.string.watch_ad_btn))
+                }
+            },
+            dismissButton = {
+                Row {
+                    TextButton(
+                        onClick = {
+                            pendingVisionText?.let { visionText ->
+                                isProcessing = true
+                                scope.launch {
+                                    val result = ReceiptParser.parse(visionText)
+                                    logScanEvent(result, isGalleryScan)
+                                    handleScanResult(result)
+                                }
+                            }
+                            pendingVisionText = null
+                            showUnlockDialog = false
+                        },
+                        enabled = !isAdLoading
+                    ) {
+                        Text(stringResource(R.string.basic_scan_btn))
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    TextButton(
+                        onClick = {
+                            showUnlockDialog = false
+                            isProcessing = false
+                            pendingVisionText = null
+                        },
+                        enabled = !isAdLoading
+                    ) {
+                        Text(stringResource(R.string.cancel))
+                    }
+                }
+            }
         )
     }
 }

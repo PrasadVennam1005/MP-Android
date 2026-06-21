@@ -25,6 +25,7 @@ object ReceiptParser {
             "gstin",
             "phone",
             "mobile",
+            "tel",
             "date",
             "bill no",
             "receipt no",
@@ -40,6 +41,14 @@ object ReceiptParser {
             "sgst",
             "igst",
             "hsn",
+            "thank you",
+            "thanks",
+            "visit again",
+            "www.",
+            ".com",
+            ".in",
+            ".org",
+            "email",
         )
 
     private val amountKeywords =
@@ -82,8 +91,8 @@ object ReceiptParser {
         )
     }
 
-    private fun extractMerchant(lines: List<String>): String? =
-        lines.firstOrNull { line ->
+    private fun extractMerchant(lines: List<String>): String? {
+        val rawMerchant = lines.firstOrNull { line ->
             val lower = line.lowercase(Locale.getDefault())
 
             merchantIgnoreWords.none {
@@ -92,7 +101,15 @@ object ReceiptParser {
                 !line.any { char -> char.isDigit() } &&
                 line.length > 2 &&
                 line.length < 60
+        } ?: return null
+
+        val lower = rawMerchant.lowercase(Locale.getDefault())
+        return when {
+            lower.startsWith("welcome to ") -> rawMerchant.substring(11).trim()
+            lower.startsWith("welcome ") -> rawMerchant.substring(8).trim()
+            else -> rawMerchant.trim()
         }
+    }
 
     private fun extractAmount(lines: List<String>): Double? {
         var bestAmount: Double? = null
@@ -145,7 +162,17 @@ object ReceiptParser {
             return bestAmount
         }
 
-        return lines
+        val filteredLines = lines.filter { line ->
+            val lower = line.lowercase(Locale.getDefault())
+            val containsIgnoreMetadata = listOf(
+                "phone", "mobile", "tel", "invoice", "date", "bill no",
+                "receipt no", "gstin", "zip", "pin", "card", "tax",
+                "number", "ac no", "a/c", "fax", "email"
+            ).any { lower.contains(it) }
+            !containsIgnoreMetadata
+        }
+
+        return filteredLines
             .flatMap { line ->
                 amountRegex.matcher(line).run {
                     generateSequence {

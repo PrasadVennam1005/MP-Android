@@ -13,7 +13,11 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
@@ -34,6 +38,12 @@ fun BudgetProgressSection(
             val category = budgetProgress.category
             val spent = budgetProgress.spent
             val progress = budgetProgress.progress
+
+            val animatedProgress by animateFloatAsState(
+                targetValue = progress,
+                animationSpec = tween(durationMillis = 1000, easing = FastOutSlowInEasing),
+                label = "BudgetProgressAnimation",
+            )
 
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -62,7 +72,7 @@ fun BudgetProgressSection(
                     }
                     Spacer(modifier = Modifier.height(8.dp))
                     LinearProgressIndicator(
-                        progress = { progress },
+                        progress = { animatedProgress },
                         modifier =
                             Modifier
                                 .fillMaxWidth()

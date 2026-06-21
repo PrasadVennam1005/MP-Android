@@ -26,8 +26,15 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Text
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -156,17 +163,33 @@ fun QuickActionButton(
     modifier: Modifier = Modifier,
     disabled: Boolean = false,
 ) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed && !disabled) 0.92f else 1f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessLow,
+        ),
+        label = "QuickActionButtonPressedScale",
+    )
+
     OutlinedCard(
         onClick = if (disabled) ({}) else onClick,
         modifier =
             modifier
                 .height(90.dp)
-                .graphicsLayer { alpha = if (disabled) 0.5f else 1f },
+                .graphicsLayer {
+                    alpha = if (disabled) 0.5f else 1f
+                    scaleX = scale
+                    scaleY = scale
+                },
         shape = MaterialTheme.shapes.large,
         border =
             CardDefaults
                 .outlinedCardBorder()
                 .copy(brush = Brush.linearGradient(listOf(color.copy(alpha = 0.5f), color))),
+        interactionSource = interactionSource,
     ) {
         Column(
             modifier =

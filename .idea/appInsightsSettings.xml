@@ -22,8 +22,8 @@
             <InsightsFilterSettings>
               <option name="connection">
                 <ConnectionSetting>
-                  <option name="appId" value="prasad.vennam.moneypilot" />
-                  <option name="mobileSdkAppId" value="1:769875296764:android:728dd63aa68467259f3279" />
+                  <option name="appId" value="prasad.vennam.moneypilot.dev" />
+                  <option name="mobileSdkAppId" value="1:769875296764:android:10235416b424bdb09f3279" />
                   <option name="projectId" value="money-pilot-mobile" />
                   <option name="projectNumber" value="769875296764" />
                 </ConnectionSetting>

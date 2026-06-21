@@ -1,5 +1,8 @@
 package prasad.vennam.moneypilot.ui.components
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGestures
@@ -53,6 +56,14 @@ fun TrendLineChart(
         }
 
     val minVal = 0.0
+
+    val animationProgress = remember { Animatable(0f) }
+    LaunchedEffect(points) {
+        animationProgress.animateTo(
+            targetValue = 1f,
+            animationSpec = tween(durationMillis = 1000, easing = FastOutSlowInEasing),
+        )
+    }
 
     Box(
         modifier =
@@ -194,7 +205,7 @@ fun TrendLineChart(
 
                 fun getY(value: Double): Float {
                     val ratio = ((value - minVal) / (maxVal - minVal)).toFloat().coerceIn(0f, 1f)
-                    return canvasHeight - paddingBottom - (ratio * chartHeight)
+                    return canvasHeight - paddingBottom - (ratio * chartHeight * animationProgress.value)
                 }
 
                 // Draw horizontal grid lines

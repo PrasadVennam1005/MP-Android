@@ -2,22 +2,30 @@ package prasad.vennam.moneypilot.ui.components
 
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import com.google.android.gms.ads.AdListener
 import com.google.android.gms.ads.AdRequest
 import com.google.android.gms.ads.AdSize
 import com.google.android.gms.ads.AdView
+import com.google.android.gms.ads.LoadAdError
+import kotlinx.coroutines.delay
+import prasad.vennam.moneypilot.ads.AdConfig
+import kotlin.time.Duration.Companion.milliseconds
 
-/**
- * KPI card height reference:
- *   padding(16) + icon(20) + spacer(8) + labelMedium(~16) + titleLarge(~28) + padding(16) ≈ 104dp
- */
-private val KPI_CARD_HEIGHT = 100.dp
+private sealed interface AdState {
+    data object Loading : AdState
+    data object Loaded : AdState
+    data object Failed : AdState
+}
 
 @Composable
 fun AdBannerView(
@@ -28,38 +36,83 @@ fun AdBannerView(
 
     val context = LocalContext.current
 
-    // BoxWithConstraints measures the *actual* available width after parent
-    // padding/margins are applied — so the AdSize never overflows the container.
-    BoxWithConstraints(modifier = modifier.fillMaxWidth()) {
-        // maxWidth is the real pixel-accurate width of this slot in dp
+    BoxWithConstraints(
+        modifier = modifier.fillMaxWidth()
+    ) {
+
         val availableWidthDp = maxWidth.value.toInt()
 
-        val adSize = remember(availableWidthDp) {
-            AdSize.getCurrentOrientationAnchoredAdaptiveBannerAdSize(context, availableWidthDp)
+        if (availableWidthDp <= 0) return@BoxWithConstraints
+
+        var adState by remember(availableWidthDp) {
+            mutableStateOf<AdState>(AdState.Loading)
         }
 
-        AndroidView(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(KPI_CARD_HEIGHT),
-            factory = { ctx ->
-                AdView(ctx).apply {
-                    setAdSize(adSize)
-                    adUnitId = prasad.vennam.moneypilot.ads.AdConfig.bannerAdUnitId
-                    loadAd(AdRequest.Builder().build())
+        var showPlaceholder by remember {
+            mutableStateOf(true)
+        }
+
+        LaunchedEffect(Unit) {
+            delay(3000.milliseconds)
+            if (adState == AdState.Loading) {
+                showPlaceholder = false
+            }
+        }
+
+        val adSize = remember(availableWidthDp) {
+            AdSize.getLargeAnchoredAdaptiveBannerAdSize(
+                context,
+                availableWidthDp
+            )
+        }
+
+        val adView = remember(availableWidthDp) {
+            AdView(context).apply {
+
+                setAdSize(adSize)
+                adUnitId = AdConfig.bannerAdUnitId
+
+                adListener = object : AdListener() {
+
+                    override fun onAdLoaded() {
+                        adState = AdState.Loaded
+                    }
+
+                    override fun onAdFailedToLoad(error: LoadAdError) {
+                        adState = AdState.Failed
+                    }
                 }
-            },
-            update = { adView ->
-                // Re-calculate and reload if available width changed (e.g. orientation)
-                val newSize = AdSize.getCurrentOrientationAnchoredAdaptiveBannerAdSize(
-                    context,
-                    availableWidthDp,
+
+                loadAd(
+                    AdRequest.Builder().build()
                 )
-                if (adView.adSize != newSize) {
-                    adView.setAdSize(newSize)
-                    adView.loadAd(AdRequest.Builder().build())
+            }
+        }
+
+        DisposableEffect(adView) {
+            onDispose {
+                adView.destroy()
+            }
+        }
+
+        when (adState) {
+
+            AdState.Loaded -> {
+                AndroidView(
+                    modifier = Modifier.fillMaxWidth(),
+                    factory = { adView }
+                )
+            }
+
+            AdState.Loading -> {
+                if (showPlaceholder) {
+                    BannerPlaceholder()
                 }
-            },
-        )
+            }
+
+            AdState.Failed -> {
+                // Hide completely
+            }
+        }
     }
 }

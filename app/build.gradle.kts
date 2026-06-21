@@ -20,6 +20,12 @@ if (localPropertiesFile.exists()) {
     localProperties.load(FileInputStream(localPropertiesFile))
 }
 
+val versionProps = Properties()
+val versionPropsFile = rootProject.file("version.properties")
+if (versionPropsFile.exists()) {
+    versionProps.load(FileInputStream(versionPropsFile))
+}
+
 android {
     namespace = "prasad.vennam.moneypilot"
     compileSdk = 37
@@ -28,11 +34,8 @@ android {
         applicationId = "prasad.vennam.moneypilot"
         minSdk = 24
         targetSdk = 37
-        versionCode =
-            libs.versions.versionCode
-                .get()
-                .toInt()
-        versionName = libs.versions.versionName.get()
+        versionCode = versionProps.getProperty("VERSION_CODE", "1").toInt()
+        versionName = versionProps.getProperty("VERSION_NAME", "1.0.0")
 
         val googleClientId = localProperties.getProperty("GOOGLE_CLIENT_ID", "\"\"")
         buildConfigField("String", "GOOGLE_CLIENT_ID", googleClientId)
@@ -43,8 +46,26 @@ android {
         val interstitialProdId = localProperties.getProperty("INTERSTITIAL_PROD_ID", "\"\"")
         buildConfigField("String", "INTERSTITIAL_PROD_ID", interstitialProdId)
 
+        val rewardedProdId = localProperties.getProperty("REWARDED_PROD_ID", "\"\"")
+        buildConfigField("String", "REWARDED_PROD_ID", rewardedProdId)
+
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         manifestPlaceholders["admobAppId"] = "ca-app-pub-3940256099942544~3347511713" // Default to Test ID
+    }
+
+    flavorDimensions += "environment"
+    productFlavors {
+        create("dev") {
+            dimension = "environment"
+            applicationId = "prasad.vennam.moneypilot.dev"
+            versionNameSuffix = "-dev"
+            manifestPlaceholders["appLabel"] = "MoneyPilot Dev"
+        }
+        create("prod") {
+            dimension = "environment"
+            applicationId = "prasad.vennam.moneypilot.android"
+            manifestPlaceholders["appLabel"] = "MoneyPilot"
+        }
     }
 
     signingConfigs {
