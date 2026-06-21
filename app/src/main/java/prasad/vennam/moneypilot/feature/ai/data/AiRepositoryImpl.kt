@@ -36,6 +36,7 @@ class AiRepositoryImpl
         private val context: Context,
         private val llmService: LlmService,
         private val moneyPilotRepository: MoneyPilotRepository,
+        private val remoteConfigHelper: prasad.vennam.moneypilot.util.RemoteConfigHelper,
     ) : AiRepository {
         private val _state = MutableStateFlow<LlmState>(LlmState.Idle)
         override val state: StateFlow<LlmState> = _state.asStateFlow()
@@ -70,10 +71,18 @@ class AiRepositoryImpl
          * - Physical device (GPU): Gemma 4 E2B IT (~2.58GB). Best quality, requires GPU/NPU.
          */
         private val modelFileName: String
-            get() = if (isEmulator) EMULATOR_MODEL_FILE else DEVICE_MODEL_FILE
+            get() = if (isEmulator) {
+                remoteConfigHelper.getEmulatorModelFile().ifEmpty { EMULATOR_MODEL_FILE }
+            } else {
+                remoteConfigHelper.getDeviceModelFile().ifEmpty { DEVICE_MODEL_FILE }
+            }
 
         private val modelUrl: String
-            get() = if (isEmulator) EMULATOR_MODEL_URL else DEVICE_MODEL_URL
+            get() = if (isEmulator) {
+                remoteConfigHelper.getEmulatorModelUrl().ifEmpty { EMULATOR_MODEL_URL }
+            } else {
+                remoteConfigHelper.getDeviceModelUrl().ifEmpty { DEVICE_MODEL_URL }
+            }
 
         // Required free disk space per model
         private val requiredSpaceBytes: Long

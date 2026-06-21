@@ -27,5 +27,6 @@ object AiModule {
         @ApplicationContext context: Context,
         llmService: LlmService,
         moneyPilotRepository: MoneyPilotRepository,
-    ): AiRepository = AiRepositoryImpl(context, llmService, moneyPilotRepository)
+        remoteConfigHelper: prasad.vennam.moneypilot.util.RemoteConfigHelper,
+    ): AiRepository = AiRepositoryImpl(context, llmService, moneyPilotRepository, remoteConfigHelper)
 }

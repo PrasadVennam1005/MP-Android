@@ -132,6 +132,7 @@ fun SettingsScreen(
     val currentGoal by mainViewModel.financialGoal.collectAsState()
     val currentTarget by mainViewModel.monthlySavingsTarget.collectAsState()
     val isBiometricEnabled by mainViewModel.isBiometricEnabled.collectAsState()
+    val isDevToolEnabled by mainViewModel.isDevToolEnabled.collectAsState()
 
     val scope = rememberCoroutineScope()
     val isGuest = remember(userData) { userData?.email == "guest@moneypilot.app" }
@@ -588,11 +589,18 @@ fun SettingsScreen(
                 }
             }
 
-            if (isGuest && prasad.vennam.moneypilot.BuildConfig.DEBUG) {
+            if (isGuest || prasad.vennam.moneypilot.BuildConfig.DEBUG) {
                 item { SectionDivider() }
 
                 item {
                     SettingsGroup(title = "Developer Tools") {
+                        SettingsSwitchItem(
+                            icon = Icons.Rounded.SettingsSuggest,
+                            title = "Enable DevTools",
+                            subtitle = "Unlock restricted features for testing",
+                            checked = isDevToolEnabled,
+                            onCheckedChange = { mainViewModel.setDevToolEnabled(it) }
+                        )
                         SettingsItem(
                             icon = Icons.Rounded.PlayArrow,
                             title = "Load Demo Data (INR)",

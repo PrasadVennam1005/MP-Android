@@ -69,6 +69,7 @@ class UserPreferences
         private val lastAiScanResetDateKey =
             androidx.datastore.preferences.core
                 .stringPreferencesKey("last_ai_scan_reset_date")
+        private val isDevToolEnabledKey = booleanPreferencesKey("is_dev_tool_enabled")
 
         val isLoggedIn: Flow<Boolean> =
             context.dataStore.data
@@ -128,6 +129,12 @@ class UserPreferences
             context.dataStore.data
                 .map { preferences ->
                     preferences[isBiometricEnabledKey] ?: false
+                }
+
+        val isDevToolEnabled: Flow<Boolean> =
+            context.dataStore.data
+                .map { preferences ->
+                    preferences[isDevToolEnabledKey] ?: false
                 }
 
         val isSynced: Flow<Boolean> =
@@ -259,6 +266,12 @@ class UserPreferences
         suspend fun setIsBiometricEnabled(enabled: Boolean) {
             context.dataStore.edit { preferences ->
                 preferences[isBiometricEnabledKey] = enabled
+            }
+        }
+
+        suspend fun setDevToolEnabled(enabled: Boolean) {
+            context.dataStore.edit { preferences ->
+                preferences[isDevToolEnabledKey] = enabled
             }
         }
 

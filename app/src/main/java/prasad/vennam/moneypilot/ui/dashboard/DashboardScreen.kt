@@ -148,6 +148,7 @@ fun DashboardScreen(
     val dashboardState by dashboardViewModel.uiState.collectAsState()
     val userData by mainViewModel.userData.collectAsState()
     val isPremium by mainViewModel.isPremium.collectAsState()
+    val isDevToolEnabled by mainViewModel.isDevToolEnabled.collectAsState()
 
     val lazyListState = rememberLazyListState()
     var isFabVisible by remember { mutableStateOf(true) }
@@ -531,7 +532,7 @@ fun DashboardScreen(
                                 onNavigateToNews = onNavigateToNews,
                                 onNavigateToSandbox = onNavigateToSandbox,
                                 onNavigateToEmiCalculator = onNavigateToEmiCalculator,
-                                isGuest = isGuest,
+                                isGuest = isGuest && !prasad.vennam.moneypilot.BuildConfig.DEBUG && !isDevToolEnabled,
                             )
                         }
 

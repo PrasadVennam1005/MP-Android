@@ -243,10 +243,17 @@ class ParserTests {
             val modelFile2 = java.io.File(tempDir, "gemma-3n-E4B-it-int4.litertlm")
             modelFile2.writeText("dummy_model_content")
 
+            val mockRemoteConfigHelper = mock(prasad.vennam.moneypilot.util.RemoteConfigHelper::class.java)
+            whenever(mockRemoteConfigHelper.getEmulatorModelFile()).thenReturn("")
+            whenever(mockRemoteConfigHelper.getEmulatorModelUrl()).thenReturn("")
+            whenever(mockRemoteConfigHelper.getDeviceModelFile()).thenReturn("")
+            whenever(mockRemoteConfigHelper.getDeviceModelUrl()).thenReturn("")
+
             val repository = prasad.vennam.moneypilot.feature.ai.data.AiRepositoryImpl(
                 context = mockContext,
                 llmService = mockLlmService,
-                moneyPilotRepository = mockRepository
+                moneyPilotRepository = mockRepository,
+                remoteConfigHelper = mockRemoteConfigHelper
             )
 
             // Initialize to transition state to LlmState.Ready

@@ -70,6 +70,10 @@ class MainViewModel
             userPreferences.isPremium
                 .stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
+        val isDevToolEnabled: StateFlow<Boolean> =
+            userPreferences.isDevToolEnabled
+                .stateIn(viewModelScope, SharingStarted.Eagerly, false)
+
         val spreadsheetId: StateFlow<String?> =
             userPreferences.spreadsheetId
                 .stateIn(viewModelScope, SharingStarted.Eagerly, null)
@@ -127,6 +131,12 @@ class MainViewModel
         fun setIsBiometricEnabled(enabled: Boolean) {
             viewModelScope.launch {
                 userPreferences.setIsBiometricEnabled(enabled)
+            }
+        }
+
+        fun setDevToolEnabled(enabled: Boolean) {
+            viewModelScope.launch {
+                userPreferences.setDevToolEnabled(enabled)
             }
         }
 
