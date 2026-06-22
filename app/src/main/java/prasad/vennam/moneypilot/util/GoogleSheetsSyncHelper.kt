@@ -111,53 +111,28 @@ object GoogleSheetsSyncHelper {
                         "performTwoWaySync: Verifying required sheets exist in $currentSpreadsheetId...",
                     )
                     ensureRequiredSheetsExist(token, currentSpreadsheetId)
-                    if (isRestore) {
+                    Log.d(
+                        "GoogleSheetsSyncHelper",
+                        "performTwoWaySync: Running Two-Way Sync sequence. Downloading cloud data first...",
+                    )
+                    val valueRanges = downloadSpreadsheetData(token, currentSpreadsheetId)
+                    if (valueRanges != null) {
                         Log.d(
                             "GoogleSheetsSyncHelper",
-                            "performTwoWaySync: Running Restore sequence. Downloading cloud data first...",
+                            "performTwoWaySync: Cloud data downloaded. Merging into local database...",
                         )
-                        val valueRanges = downloadSpreadsheetData(token, currentSpreadsheetId)
-                        if (valueRanges != null) {
-                            Log.d(
-                                "GoogleSheetsSyncHelper",
-                                "performTwoWaySync: Cloud data downloaded. Merging into local database...",
-                            )
-                            mergeCloudDataIntoLocal(repository, userPreferences, valueRanges)
-                        } else {
-                            Log.w(
-                                "GoogleSheetsSyncHelper",
-                                "performTwoWaySync: Downloaded valueRanges is null",
-                            )
-                        }
-                        Log.d(
-                            "GoogleSheetsSyncHelper",
-                            "performTwoWaySync: Uploading local data to sync database on cloud...",
-                        )
-                        uploadLocalDataToSpreadsheet(token, currentSpreadsheetId, repository)
+                        mergeCloudDataIntoLocal(repository, userPreferences, valueRanges)
                     } else {
-                        Log.d(
+                        Log.w(
                             "GoogleSheetsSyncHelper",
-                            "performTwoWaySync: Running normal Sync sequence. Uploading local changes first...",
+                            "performTwoWaySync: Downloaded valueRanges is null",
                         )
-                        uploadLocalDataToSpreadsheet(token, currentSpreadsheetId, repository)
-                        Log.d(
-                            "GoogleSheetsSyncHelper",
-                            "performTwoWaySync: Downloading latest cloud updates...",
-                        )
-                        val valueRanges = downloadSpreadsheetData(token, currentSpreadsheetId)
-                        if (valueRanges != null) {
-                            Log.d(
-                                "GoogleSheetsSyncHelper",
-                                "performTwoWaySync: Merging cloud updates into local database...",
-                            )
-                            mergeCloudDataIntoLocal(repository, userPreferences, valueRanges)
-                        } else {
-                            Log.w(
-                                "GoogleSheetsSyncHelper",
-                                "performTwoWaySync: Downloaded valueRanges is null",
-                            )
-                        }
                     }
+                    Log.d(
+                        "GoogleSheetsSyncHelper",
+                        "performTwoWaySync: Uploading local data to sync database on cloud...",
+                    )
+                    uploadLocalDataToSpreadsheet(token, currentSpreadsheetId, repository)
                     Log.d(
                         "GoogleSheetsSyncHelper",
                         "performTwoWaySync: Sync sequence successfully completed",
@@ -294,7 +269,7 @@ object GoogleSheetsSyncHelper {
         }
     }
 
-    private suspend fun mergeCloudDataIntoLocal(
+    internal suspend fun mergeCloudDataIntoLocal(
         repository: MoneyPilotRepository,
         userPreferences: UserPreferences,
         valueRanges: List<ValueRange>,
@@ -308,6 +283,7 @@ object GoogleSheetsSyncHelper {
                     "GoogleSheetsSyncHelper",
                     "mergeCloudDataIntoLocal: Parsing ${values.size} categories...",
                 )
+                val localCategories = repository.categoryDao.getAllCategoriesSync().associateBy { it.id }
                 for (row in values) {
                     val idStr = row.getOrNull(0)?.toString().orEmpty()
                     val id = idStr.toDoubleOrNull()?.toLong() ?: 0L
@@ -320,8 +296,21 @@ object GoogleSheetsSyncHelper {
                             ?.toDoubleOrNull()
                             ?.toLong() ?: 0L
                     val isExpense = row.getOrNull(4)?.toString()?.toBoolean() ?: true
+                    val lastUpdated = row.getOrNull(5)?.toString()?.toDoubleOrNull()?.toLong() ?: 0L
                     if (name.isNotEmpty()) {
-                        repository.insertCategory(Category(id = id, name = name, iconName = iconName, color = color, isExpense = isExpense))
+                        val localCat = localCategories[id]
+                        if (localCat == null || lastUpdated > localCat.lastUpdated) {
+                            repository.insertCategory(
+                                Category(
+                                    id = id,
+                                    name = name,
+                                    iconName = iconName,
+                                    color = color,
+                                    isExpense = isExpense,
+                                    lastUpdated = lastUpdated
+                                )
+                            )
+                        }
                     }
                 }
             } else if (range.contains("Budgets")) {
@@ -329,6 +318,7 @@ object GoogleSheetsSyncHelper {
                     "GoogleSheetsSyncHelper",
                     "mergeCloudDataIntoLocal: Parsing ${values.size} budgets...",
                 )
+                val localBudgets = repository.budgetDao.getAllBudgetsSync().associateBy { it.id }
                 for (row in values) {
                     val idStr = row.getOrNull(0)?.toString().orEmpty()
                     val id = idStr.toDoubleOrNull()?.toLong() ?: 0L
@@ -341,15 +331,20 @@ object GoogleSheetsSyncHelper {
                     val amount = row.getOrNull(2)?.toString()?.toDoubleOrNull() ?: 0.0
                     val period = row.getOrNull(3)?.toString().orEmpty()
                     val currencyCode = row.getOrNull(4)?.toString().takeIf { !it.isNullOrBlank() } ?: "INR"
-                    repository.insertBudget(
-                        Budget(
-                            id = id,
-                            categoryId = categoryId,
-                            amount = (amount * 100).toLong(),
-                            period = period,
-                            currencyCode = currencyCode,
-                        ),
-                    )
+                    val lastUpdated = row.getOrNull(5)?.toString()?.toDoubleOrNull()?.toLong() ?: 0L
+                    val localB = localBudgets[id]
+                    if (localB == null || lastUpdated > localB.lastUpdated) {
+                        repository.insertBudget(
+                            Budget(
+                                id = id,
+                                categoryId = categoryId,
+                                amount = (amount * 100).toLong(),
+                                period = period,
+                                currencyCode = currencyCode,
+                                lastUpdated = lastUpdated
+                            ),
+                        )
+                    }
                 }
             } else if (range.contains("Investments")) {
                 Log.d(
@@ -375,6 +370,7 @@ object GoogleSheetsSyncHelper {
                             ?.toString()
                             ?.toDoubleOrNull()
                             ?.toLong()
+                    val lastUpdated = row.getOrNull(10)?.toString()?.toDoubleOrNull()?.toLong() ?: 0L
 
                     val localInv = localInvestments[id]
                     val symbol = sheetSymbol ?: localInv?.symbol
@@ -383,20 +379,23 @@ object GoogleSheetsSyncHelper {
                     val startDate = sheetStartDate ?: localInv?.startDate
 
                     if (name.isNotEmpty()) {
-                        repository.insertInvestment(
-                            Investment(
-                                id = id,
-                                name = name,
-                                type = type,
-                                investedAmount = (investedAmount * 100).toLong(),
-                                currentValue = (currentValue * 100).toLong(),
-                                currencyCode = currencyCode,
-                                symbol = symbol,
-                                quantity = quantity,
-                                interestRate = interestRate,
-                                startDate = startDate,
-                            ),
-                        )
+                        if (localInv == null || lastUpdated > localInv.lastUpdated) {
+                            repository.insertInvestment(
+                                Investment(
+                                    id = id,
+                                    name = name,
+                                    type = type,
+                                    investedAmount = (investedAmount * 100).toLong(),
+                                    currentValue = (currentValue * 100).toLong(),
+                                    currencyCode = currencyCode,
+                                    symbol = symbol,
+                                    quantity = quantity,
+                                    interestRate = interestRate,
+                                    startDate = startDate,
+                                    lastUpdated = lastUpdated
+                                ),
+                            )
+                        }
                     }
                 }
             } else if (range.contains("Transactions")) {
@@ -423,6 +422,7 @@ object GoogleSheetsSyncHelper {
                     val currencyCode = row.getOrNull(7)?.toString().takeIf { !it.isNullOrBlank() } ?: "INR"
 
                     val sheetSubCategory = row.getOrNull(8)?.toString().orEmpty()
+                    val lastUpdated = row.getOrNull(9)?.toString()?.toDoubleOrNull()?.toLong() ?: 0L
                     val localTrans = localTransactions[id]
                     val subCategory = if (row.size > 8) sheetSubCategory else (localTrans?.subCategory ?: "")
 
@@ -439,19 +439,22 @@ object GoogleSheetsSyncHelper {
                             TransactionType.EXPENSE
                         }
 
-                    repository.insertTransaction(
-                        Transaction(
-                            id = id,
-                            amount = (amount * 100).toLong(),
-                            timestamp = timestamp,
-                            categoryId = categoryId,
-                            paymentMode = paymentMode,
-                            note = note,
-                            type = type,
-                            currencyCode = currencyCode,
-                            subCategory = subCategory,
-                        ),
-                    )
+                    if (localTrans == null || lastUpdated > localTrans.lastUpdated) {
+                        repository.insertTransaction(
+                            Transaction(
+                                id = id,
+                                amount = (amount * 100).toLong(),
+                                timestamp = timestamp,
+                                categoryId = categoryId,
+                                paymentMode = paymentMode,
+                                note = note,
+                                type = type,
+                                currencyCode = currencyCode,
+                                subCategory = subCategory,
+                                lastUpdated = lastUpdated
+                            ),
+                        )
+                    }
                 }
             } else if (range.contains("EmergencyFund")) {
                 val row = values.getOrNull(0)
@@ -565,6 +568,7 @@ object GoogleSheetsSyncHelper {
                     "Note",
                     "Currency Code",
                     "Subcategory",
+                    "Last Updated",
                 ),
             )
         for (t in transactions) {
@@ -580,15 +584,16 @@ object GoogleSheetsSyncHelper {
                     t.note,
                     t.currencyCode,
                     t.subCategory,
+                    t.lastUpdated,
                 ),
             )
         }
 
-        val cRows = mutableListOf<List<Any>>(listOf("ID", "Name", "Icon Name", "Color", "Is Expense"))
-        for (c in categories) cRows.add(listOf(c.id, c.name, c.iconName, c.color, c.isExpense))
+        val cRows = mutableListOf<List<Any>>(listOf("ID", "Name", "Icon Name", "Color", "Is Expense", "Last Updated"))
+        for (c in categories) cRows.add(listOf(c.id, c.name, c.iconName, c.color, c.isExpense, c.lastUpdated))
 
-        val bRows = mutableListOf<List<Any>>(listOf("ID", "Category ID", "Amount", "Period", "Currency Code"))
-        for (b in budgets) bRows.add(listOf(b.id, b.categoryId, b.amount / 100.0, b.period, b.currencyCode))
+        val bRows = mutableListOf<List<Any>>(listOf("ID", "Category ID", "Amount", "Period", "Currency Code", "Last Updated"))
+        for (b in budgets) bRows.add(listOf(b.id, b.categoryId, b.amount / 100.0, b.period, b.currencyCode, b.lastUpdated))
 
         val iRows =
             mutableListOf<List<Any>>(
@@ -603,6 +608,7 @@ object GoogleSheetsSyncHelper {
                     "Quantity",
                     "Interest Rate",
                     "Start Date",
+                    "Last Updated",
                 ),
             )
         for (i in investments) {
@@ -618,6 +624,7 @@ object GoogleSheetsSyncHelper {
                     i.quantity ?: "",
                     i.interestRate ?: "",
                     i.startDate ?: "",
+                    i.lastUpdated,
                 ),
             )
         }

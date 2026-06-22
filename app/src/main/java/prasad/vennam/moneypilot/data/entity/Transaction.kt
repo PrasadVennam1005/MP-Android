@@ -27,6 +27,7 @@ data class Transaction(
     val note: String,
     val type: TransactionType,
     val currencyCode: String = "INR",
+    val lastUpdated: Long = System.currentTimeMillis(),
 )
 
 enum class TransactionType {

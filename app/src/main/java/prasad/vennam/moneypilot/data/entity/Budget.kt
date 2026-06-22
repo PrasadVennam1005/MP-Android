@@ -23,4 +23,5 @@ data class Budget(
     val amount: Long,
     val period: String,
     val currencyCode: String = "INR",
+    val lastUpdated: Long = System.currentTimeMillis(),
 )

@@ -10,6 +10,7 @@ data class Category(
     val iconName: String,
     val color: Long,
     val isExpense: Boolean = true,
+    val lastUpdated: Long = System.currentTimeMillis(),
 ) {
     companion object {
         val DEFAULT_CATEGORIES =

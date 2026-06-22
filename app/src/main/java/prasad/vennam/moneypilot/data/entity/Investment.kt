@@ -15,4 +15,5 @@ data class Investment(
     val interestRate: Double? = null,
     val startDate: Long? = null,
     val currencyCode: String = "INR",
+    val lastUpdated: Long = System.currentTimeMillis(),
 )
