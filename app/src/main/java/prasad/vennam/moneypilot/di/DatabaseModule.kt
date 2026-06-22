@@ -14,8 +14,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import net.sqlcipher.database.SQLiteDatabase
-import net.sqlcipher.database.SupportFactory
+import net.zetetic.database.sqlcipher.SQLiteDatabase
+import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
 import prasad.vennam.moneypilot.data.MoneyPilotDatabase
 import prasad.vennam.moneypilot.data.UserPreferences
 import prasad.vennam.moneypilot.data.dao.BookmarkedArticleDao
@@ -60,17 +60,18 @@ object DatabaseModule {
         val dbFile = context.getDatabasePath(dbName)
         val passphraseStr = secureStorageHelper.getOrGenerateDatabasePassphraseString()
         val passphraseBytes = passphraseStr.toByteArray(Charsets.UTF_8)
-        val factory = SupportFactory(passphraseBytes)
+        val factory = SupportOpenHelperFactory(passphraseBytes)
 
         if (dbFile.exists()) {
             try {
-                SQLiteDatabase.loadLibs(context)
+                System.loadLibrary("sqlcipher")
                 val db =
                     SQLiteDatabase.openDatabase(
                         dbFile.absolutePath,
                         passphraseStr,
                         null,
                         SQLiteDatabase.OPEN_READONLY,
+                        null
                     )
                 db.close()
             } catch (e: Exception) {
