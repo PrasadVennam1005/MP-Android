@@ -77,6 +77,7 @@ object ReceiptParser {
         val lines =
             visionText.textBlocks
                 .flatMap { block -> block.lines }
+                .sortedWith(compareBy({ it.boundingBox?.top ?: 0 }, { it.boundingBox?.left ?: 0 }))
                 .map { it.text.trim() }
                 .filter { it.isNotBlank() }
 
@@ -89,6 +90,18 @@ object ReceiptParser {
             amount = amount,
             date = date,
         )
+    }
+
+    private fun cleanOcrLine(line: String): String {
+        val numberCandidateRegex = Regex("(?i)^(?:\\p{Sc}|rs\\.?|inr)?[0-9oOlI|.,]+$")
+        return line.split("\\s+".toRegex()).joinToString(" ") { word ->
+            if (numberCandidateRegex.matches(word)) {
+                word.replace(Regex("[oO]"), "0")
+                    .replace(Regex("[lI|]"), "1")
+            } else {
+                word
+            }
+        }
     }
 
     private fun extractMerchant(lines: List<String>): String? {
@@ -112,34 +125,33 @@ object ReceiptParser {
     }
 
     private fun extractAmount(lines: List<String>): Double? {
+        val cleanedLines = lines.map { cleanOcrLine(it) }
         var bestAmount: Double? = null
         var bestScore = -1
 
-        lines.forEachIndexed { index, line ->
+        cleanedLines.forEachIndexed { index, line ->
             val lower = line.lowercase(Locale.getDefault())
-            val prevLine = if (index > 0) lines[index - 1].lowercase(Locale.getDefault()) else ""
-            val nextLine = if (index < lines.size - 1) lines[index + 1].lowercase(Locale.getDefault()) else ""
+            val prevLine = if (index > 0) cleanedLines[index - 1].lowercase(Locale.getDefault()) else ""
+            val nextLine = if (index < cleanedLines.size - 1) cleanedLines[index + 1].lowercase(Locale.getDefault()) else ""
 
             val matcher = amountRegex.matcher(line)
 
             while (matcher.find()) {
-                val amount =
-                    matcher
-                        .group(1)
-                        ?.replace(",", "")
-                        ?.toDoubleOrNull()
-                        ?: continue
+                val amountStr = matcher.group(1)?.replace(",", "") ?: continue
+                if (amountStr.substringBefore('.').length > 7) continue
 
-                if (amount <= 0) continue
+                val amount = amountStr.toDoubleOrNull() ?: continue
+                if (amount <= 0 || amount > 100000.0) continue
 
                 var score = 0
 
                 amountKeywords.forEach { (keyword, keywordScore) ->
-                    if (lower.contains(keyword)) {
+                    val regex = Regex("\\b${Regex.escape(keyword)}\\b")
+                    if (regex.containsMatchIn(lower)) {
                         score += keywordScore
-                    } else if (prevLine.contains(keyword)) {
+                    } else if (regex.containsMatchIn(prevLine)) {
                         score += (keywordScore * 0.8).toInt()
-                    } else if (nextLine.contains(keyword)) {
+                    } else if (regex.containsMatchIn(nextLine)) {
                         score += (keywordScore * 0.5).toInt()
                     }
                 }
@@ -162,7 +174,7 @@ object ReceiptParser {
             return bestAmount
         }
 
-        val filteredLines = lines.filter { line ->
+        val filteredLines = cleanedLines.filter { line ->
             val lower = line.lowercase(Locale.getDefault())
             val containsIgnoreMetadata = listOf(
                 "phone", "mobile", "tel", "invoice", "date", "bill no",
@@ -179,9 +191,10 @@ object ReceiptParser {
                         if (find()) group(1) else null
                     }.toList()
                 }
-            }.mapNotNull {
-                it.replace(",", "").toDoubleOrNull()
-            }.filter { it > 0 }
+            }.map { it.replace(",", "") }
+            .filter { it.substringBefore('.').length <= 7 }
+            .mapNotNull { it.toDoubleOrNull() }
+            .filter { it > 0 && it <= 100000.0 }
             .maxOrNull()
     }
 
@@ -223,18 +236,20 @@ object ReceiptParser {
 
                     for (format in formats) {
                         try {
-                            val sdf =
-                                SimpleDateFormat(
-                                    format,
-                                    Locale.ENGLISH,
-                                )
-                            sdf.isLenient = false
-
+                            val sdf = SimpleDateFormat(format, Locale.ENGLISH).apply { isLenient = false }
                             val parsed = sdf.parse(dateStr)
                             if (parsed != null) {
                                 return parsed.time
                             }
                         } catch (_: Exception) {
+                            try {
+                                val sdf = SimpleDateFormat(format, Locale.getDefault()).apply { isLenient = false }
+                                val parsed = sdf.parse(dateStr)
+                                if (parsed != null) {
+                                    return parsed.time
+                                }
+                            } catch (__: Exception) {
+                            }
                         }
                     }
                 }

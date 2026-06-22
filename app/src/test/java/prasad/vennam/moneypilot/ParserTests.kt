@@ -490,5 +490,35 @@ class ParserTests {
             tempDir.delete()
         }
     }
+
+    @Test
+    fun testReceiptParser_filtersOversizedNumbersEvenWithoutKeywords() {
+        val ocrLines = listOf(
+            "Store Receipt",
+            "9876543210", // Raw phone number without "Phone:" label
+            "2026062012", // Raw invoice number
+            "Subtotal: Rs 150.00"
+        )
+        val mockText = createMockVisionText(ocrLines)
+        val parsed = ReceiptParser.parse(mockText)
+
+        // The fallback/amount extraction should ignore numbers > 100,000 or length > 7,
+        // so 150.0 is correctly matched rather than the phone/invoice numbers.
+        assertEquals(150.0, parsed.amount ?: 0.0, 0.0)
+    }
+
+    @Test
+    fun testReceiptParser_correctsOcrSubstitutions() {
+        val ocrLines = listOf(
+            "Starbucks",
+            "Total: Rs 22O.OO", // letter O instead of 0
+            "Subtotal: Rs 22I.OO" // letter I instead of 1
+        )
+        val mockText = createMockVisionText(ocrLines)
+        val parsed = ReceiptParser.parse(mockText)
+
+        // It should correct "22O.OO" to "220.00" and match it
+        assertEquals(220.0, parsed.amount ?: 0.0, 0.0)
+    }
 }
 

@@ -478,6 +478,7 @@
     <string name="scanning_failed">Scanning failed</string>
     <string name="capture_failed_formatted">Capture failed: %1$s</string>
     <string name="processing_receipt">Processing Receipt…</string>
+    <string name="flash">Flash</string>
 
     <!-- Dashboard Top Bar -->
     <string name="ai_assistant">AI Assistant</string>

@@ -1,8 +1,17 @@
 package prasad.vennam.moneypilot.ui.scanner
 
 import android.Manifest
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.graphics.Matrix
+import android.media.ExifInterface
 import android.net.Uri
+import android.view.MotionEvent
 import android.widget.Toast
+import androidx.camera.core.FocusMeteringAction
+import java.util.concurrent.TimeUnit
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.core.*
@@ -116,6 +125,16 @@ fun ReceiptScannerContent(
     var pendingVisionText by remember { mutableStateOf<Text?>(null) }
     var isGalleryScan by remember { mutableStateOf(false) }
 
+    var camera by remember { mutableStateOf<Camera?>(null) }
+    var isTorchOn by remember { mutableStateOf(false) }
+    var showShutter by remember { mutableStateOf(false) }
+
+    LaunchedEffect(isTorchOn, camera) {
+        try {
+            camera?.cameraControl?.enableTorch(isTorchOn)
+        } catch (_: Exception) {}
+    }
+
     fun loadAndShowAd(onRewardEarned: () -> Unit, onFailure: () -> Unit) {
         val activity = context as? Activity
         if (activity == null) {
@@ -224,16 +243,25 @@ fun ReceiptScannerContent(
         ) { uri: Uri? ->
             uri?.let {
                 isProcessing = true
-                val inputImage = InputImage.fromFilePath(context, it)
-                recognizer
-                    .process(inputImage)
-                    .addOnSuccessListener { visionText ->
-                        handleOcrResult(visionText, isGallery = true)
+                scope.launch {
+                    val inputImage = withContext(Dispatchers.IO) {
+                        getDownscaledInputImage(context, it)
                     }
-                    .addOnFailureListener {
+                    if (inputImage != null) {
+                        recognizer
+                            .process(inputImage)
+                            .addOnSuccessListener { visionText ->
+                                handleOcrResult(visionText, isGallery = true)
+                            }
+                            .addOnFailureListener {
+                                isProcessing = false
+                                Toast.makeText(context, context.getString(R.string.scanning_failed), Toast.LENGTH_SHORT).show()
+                            }
+                    } else {
                         isProcessing = false
                         Toast.makeText(context, context.getString(R.string.scanning_failed), Toast.LENGTH_SHORT).show()
                     }
+                }
             }
         }
 
@@ -250,18 +278,20 @@ fun ReceiptScannerContent(
 
                 try {
                     provider.unbindAll()
-                    provider.bindToLifecycle(
+                    val boundCamera = provider.bindToLifecycle(
                         lifecycleOwner,
                         CameraSelector.DEFAULT_BACK_CAMERA,
                         preview,
                         imageCapture,
                     )
+                    camera = boundCamera
                 } catch (e: Exception) {
                     // Ignore use case binding failures
                 }
             }, ContextCompat.getMainExecutor(context))
         } else {
             cameraProvider?.unbindAll()
+            camera = null
         }
     }
 
@@ -281,6 +311,13 @@ fun ReceiptScannerContent(
                     }
                 },
                 actions = {
+                    IconButton(onClick = { isTorchOn = !isTorchOn }) {
+                        Icon(
+                            imageVector = if (isTorchOn) Icons.Rounded.FlashOn else Icons.Rounded.FlashOff,
+                            contentDescription = stringResource(R.string.flash),
+                            tint = Color.White
+                        )
+                    }
                     IconButton(onClick = { galleryLauncher.launch("image/*") }) {
                         Icon(Icons.Rounded.Collections, contentDescription = stringResource(R.string.gallery), tint = Color.White)
                     }
@@ -300,7 +337,29 @@ fun ReceiptScannerContent(
                     .padding(innerPadding),
         ) {
             AndroidView(
-                factory = { previewView },
+                factory = { ctx ->
+                    previewView.apply {
+                        setOnTouchListener { view, event ->
+                            if (event.action == MotionEvent.ACTION_DOWN) {
+                                true
+                            } else if (event.action == MotionEvent.ACTION_UP) {
+                                val cameraControl = camera?.cameraControl
+                                if (cameraControl != null) {
+                                    val factory = meteringPointFactory
+                                    val point = factory.createPoint(event.x, event.y)
+                                    val action = FocusMeteringAction.Builder(point, FocusMeteringAction.FLAG_AF or FocusMeteringAction.FLAG_AE)
+                                        .setAutoCancelDuration(3, TimeUnit.SECONDS)
+                                        .build()
+                                    cameraControl.startFocusAndMetering(action)
+                                }
+                                view.performClick()
+                                true
+                            } else {
+                                false
+                            }
+                        }
+                    }
+                },
                 modifier = Modifier.fillMaxSize(),
             )
 
@@ -331,6 +390,11 @@ fun ReceiptScannerContent(
                             .background(Color.White, CircleShape)
                             .clickable {
                                 isProcessing = true
+                                showShutter = true
+                                scope.launch {
+                                    kotlinx.coroutines.delay(100)
+                                    showShutter = false
+                                }
                                 val executor = ContextCompat.getMainExecutor(context)
                                 imageCapture.takePicture(
                                     executor,
@@ -385,6 +449,13 @@ fun ReceiptScannerContent(
                     }
                 }
             }
+            if (showShutter) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.White)
+                )
+            }
         }
     }
 
@@ -393,6 +464,7 @@ fun ReceiptScannerContent(
         ReceiptResultsBottomSheet(
             detectedData = currentDetectedData,
             categories = categories,
+            onPredictCategory = { transactionViewModel.predictCategoryForMerchant(it) },
             onDismiss = {
                 showResultsSheet = false
                 isScanning = true
@@ -543,6 +615,7 @@ fun ReceiptScannerContent(
 fun ReceiptResultsBottomSheet(
     detectedData: ParsedReceipt,
     categories: List<Category>,
+    onPredictCategory: (String) -> Long?,
     onDismiss: () -> Unit,
     onSave: (Transaction) -> Unit,
 ) {
@@ -550,7 +623,18 @@ fun ReceiptResultsBottomSheet(
     val currencySymbol = remember(currencyCode) { Currency.getInstance(currencyCode).symbol }
     var merchant by remember { mutableStateOf(detectedData.merchant ?: "") }
     var amount by remember { mutableStateOf(detectedData.amount?.toString() ?: "") }
-    var selectedCategoryId by remember { mutableStateOf<Long?>(null) }
+    var selectedCategoryId by remember {
+        mutableStateOf<Long?>(
+            detectedData.merchant?.let { onPredictCategory(it) }
+        )
+    }
+
+    LaunchedEffect(merchant) {
+        val predicted = onPredictCategory(merchant)
+        if (predicted != null) {
+            selectedCategoryId = predicted
+        }
+    }
     var timestamp by remember { mutableStateOf(detectedData.date ?: System.currentTimeMillis()) }
     var showCategoryMenu by remember { mutableStateOf(false) }
 
@@ -792,5 +876,64 @@ fun InfoRow(
             Spacer(modifier = Modifier.width(8.dp))
             Text(value, style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold))
         }
+    }
+}
+
+private fun getDownscaledInputImage(context: android.content.Context, uri: Uri, maxDimension: Int = 2000): InputImage? {
+    return try {
+        // Step 1: Decode image size only
+        val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        context.contentResolver.openInputStream(uri)?.use { inputStream ->
+            BitmapFactory.decodeStream(inputStream, null, options)
+        } ?: return null
+
+        // Calculate scale factor
+        var scale = 1
+        val height = options.outHeight
+        val width = options.outWidth
+        if (height > maxDimension || width > maxDimension) {
+            val maxDep = maxOf(height, width)
+            scale = (maxDep / maxDimension.toDouble()).let { Math.round(it).toInt() }
+        }
+
+        // Step 2: Decode bitmap with sample size
+        val outputOptions = BitmapFactory.Options().apply {
+            inSampleSize = scale
+        }
+        var bitmap = context.contentResolver.openInputStream(uri)?.use { inputStream ->
+            BitmapFactory.decodeStream(inputStream, null, outputOptions)
+        } ?: return null
+
+        // Step 3: Get orientation from EXIF
+        var rotationDegrees = 0
+        context.contentResolver.openInputStream(uri)?.use { inputStream ->
+            val exifInterface = ExifInterface(inputStream)
+            val orientation = exifInterface.getAttributeInt(
+                ExifInterface.TAG_ORIENTATION,
+                ExifInterface.ORIENTATION_NORMAL
+            )
+            rotationDegrees = when (orientation) {
+                ExifInterface.ORIENTATION_ROTATE_90 -> 90
+                ExifInterface.ORIENTATION_ROTATE_180 -> 180
+                ExifInterface.ORIENTATION_ROTATE_270 -> 270
+                else -> 0
+            }
+        }
+
+        // Step 4: If rotated, perform rotation on the bitmap
+        if (rotationDegrees != 0) {
+            val matrix = Matrix().apply { postRotate(rotationDegrees.toFloat()) }
+            val rotatedBitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
+            if (rotatedBitmap != bitmap) {
+                bitmap.recycle()
+                bitmap = rotatedBitmap
+            }
+            rotationDegrees = 0
+        }
+
+        InputImage.fromBitmap(bitmap, rotationDegrees)
+    } catch (e: Exception) {
+        e.printStackTrace()
+        null
     }
 }

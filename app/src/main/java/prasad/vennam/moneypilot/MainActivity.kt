@@ -77,13 +77,6 @@ class MainActivity : FragmentActivity() {
         enableEdgeToEdge()
         MobileAds.initialize(this) {}
 
-        // Request notification permission for Android 13+ (API 33+)
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-            val permission = android.Manifest.permission.POST_NOTIFICATIONS
-            if (checkSelfPermission(permission) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
-                requestPermissions(arrayOf(permission), 101)
-            }
-        }
 
         // Schedule timezone-based Daily News Notifications
         prasad.vennam.moneypilot.worker.DailyNewsWorker

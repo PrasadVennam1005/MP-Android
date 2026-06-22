@@ -219,4 +219,17 @@ class TransactionViewModel
                 userPreferences.incrementAiScans(amount)
             }
         }
+
+        fun predictCategoryForMerchant(merchant: String): Long? {
+            if (merchant.isBlank()) return null
+            val query = merchant.lowercase(java.util.Locale.getDefault()).trim()
+            val matches = allTransactions.value
+                .filter { it.note.lowercase(java.util.Locale.getDefault()).contains(query) && it.categoryId != null }
+            if (matches.isEmpty()) return null
+
+            return matches
+                .groupBy { it.categoryId }
+                .maxByOrNull { it.value.size }
+                ?.key
+        }
     }
