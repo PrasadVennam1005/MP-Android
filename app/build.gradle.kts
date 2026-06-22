@@ -101,9 +101,36 @@ android {
         compose = true
         buildConfig = true
     }
+
     packaging {
         jniLibs {
             useLegacyPackaging = false
+        }
+    }
+}
+
+base {
+    val vName = versionProps.getProperty("VERSION_NAME", "1.0.0")
+    val vCode = versionProps.getProperty("VERSION_CODE", "1")
+    archivesName.set("MoneyPilot - $vName($vCode)")
+}
+
+tasks.configureEach {
+    if (name.startsWith("assemble") || name.startsWith("bundle")) {
+        doLast {
+            val desktopBuilds = java.io.File(System.getProperty("user.home"), "Desktop/MoneyPilot_Builds")
+            desktopBuilds.mkdirs()
+            
+            val outputsDir = layout.buildDirectory.dir("outputs").get().asFile
+            if (outputsDir.exists()) {
+                outputsDir.walkTopDown().filter { it.extension == "apk" || it.extension == "aab" }.forEach { file ->
+                    // Only copy freshly generated files from this current build (last 1 minute)
+                    if (System.currentTimeMillis() - file.lastModified() < 60000) { 
+                        file.copyTo(java.io.File(desktopBuilds, file.name), overwrite = true)
+                        println("✅ Saved build to Desktop: ${file.name}")
+                    }
+                }
+            }
         }
     }
 }

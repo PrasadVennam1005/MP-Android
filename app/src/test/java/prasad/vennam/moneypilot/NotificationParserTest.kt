@@ -68,4 +68,28 @@ class NotificationParserTest {
         // Since there is no financial amount matching pattern in the text, it should return null
         assertNull(result)
     }
+
+    @Test
+    fun testIndianBankSMSWithDateAndUPI() {
+        val title = "Bank Alert"
+        val text = "UPDATE: Rs. 1250.00 debited from HDFC Bank A/c ending 1234 on 22-06-26 at Swiggy. Avl Bal: Rs. 10000.00."
+        val result = NotificationParser.parse(title, text, "com.google.android.apps.messaging")
+
+        assertNotNull(result)
+        assertEquals(1250.0, result!!.amount, 0.0)
+        assertEquals("EXPENSE", result.type)
+        assertEquals("Swiggy", result.merchant) // Should successfully ignore "on 22-06-26"
+    }
+
+    @Test
+    fun testIndianBankSMSWithUPIInfo() {
+        val title = "Bank Alert"
+        val text = "Dear Customer, Acct XX1234 is debited with Rs 500.00 on 22-Jun-26. Info: UPI/312345/AmazonPay/123. Available Balance is Rs 12000.00."
+        val result = NotificationParser.parse(title, text, "com.google.android.apps.messaging")
+
+        assertNotNull(result)
+        assertEquals(500.0, result!!.amount, 0.0)
+        assertEquals("EXPENSE", result.type)
+        assertEquals("AmazonPay", result.merchant) // Should extract the UPI info correctly
+    }
 }

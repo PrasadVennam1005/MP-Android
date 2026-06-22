@@ -48,11 +48,12 @@ object NotificationParser {
             "credit",
         )
 
-    // Patterns to extract merchant info (matches text after at/to/on/for/info/vpa)
     private val merchantPatterns =
         listOf(
-            Pattern.compile("(?i)\\b(?:at|to|on|for|info|vpa|transfer to)\\b\\s+([A-Za-z0-9\\s&*'-]+)"),
-            Pattern.compile("(?i)paid\\s+([A-Za-z0-9\\s&*'-]+)\\s+Rs"),
+            Pattern.compile("(?i)info:\\s*(?:upi/\\d+/)?([^/]+)"), // Handles Info: Swiggy or Info: UPI/123/Swiggy/Remark
+            Pattern.compile("(?i)upi/\\d+/([^/]+)"), // Handles UPI/123/Swiggy/Remark directly
+            Pattern.compile("(?i)\\b(?:at|to|for|vpa|transfer to)\\b\\s+([A-Za-z0-9\\s&*'-]+)"), // Removed 'on'
+            Pattern.compile("(?i)paid\\s+([A-Za-z0-9\\s&*'-]+)\\s+(?:to|Rs|inr)"),
             Pattern.compile("(?i)sent\\s+([A-Za-z0-9\\s&*'-]+)\\s+to"),
         )
 
@@ -198,7 +199,13 @@ object NotificationParser {
                 break
             }
             // Skip numeric-only parts (like transaction IDs)
-            if (word.all { it.isDigit() } && word.length > 5) {
+            if (word.all { it.isDigit() } && word.length > 4) {
+                break
+            }
+            // Skip dates and times (e.g., 22-06-26, 22-Jun, 12:30)
+            val isDateOrTime = word.matches(Regex("\\d{1,2}[-/](?:\\d{1,2}|[a-zA-Z]{3})[-/]\\d{2,4}")) ||
+                               word.matches(Regex("\\d{1,2}:\\d{2}(?::\\d{2})?.*"))
+            if (isDateOrTime) {
                 break
             }
             if (merchantIgnoreKeywords.contains(lowerWord)) {

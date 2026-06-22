@@ -106,6 +106,12 @@ import prasad.vennam.moneypilot.ui.viewmodel.RestoreState
 import prasad.vennam.moneypilot.ui.viewmodel.TransactionViewModel
 import prasad.vennam.moneypilot.util.AnalyticsHelper
 import prasad.vennam.moneypilot.util.ExportHelper
+import android.Manifest
+import android.content.pm.PackageManager
+import android.net.Uri
+import android.provider.Settings
+import androidx.core.content.ContextCompat
+import androidx.compose.material.icons.rounded.NotificationsActive
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -143,6 +149,9 @@ fun SettingsScreen(
     var isNotificationTrackingEnabled by remember {
         mutableStateOf(isNotificationServiceEnabled(context))
     }
+    var isSmsTrackingEnabled by remember {
+        mutableStateOf(ContextCompat.checkSelfPermission(context, Manifest.permission.RECEIVE_SMS) == PackageManager.PERMISSION_GRANTED)
+    }
 
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
@@ -150,6 +159,7 @@ fun SettingsScreen(
             LifecycleEventObserver { _, event ->
                 if (event == Lifecycle.Event.ON_RESUME) {
                     isNotificationTrackingEnabled = isNotificationServiceEnabled(context)
+                    isSmsTrackingEnabled = ContextCompat.checkSelfPermission(context, Manifest.permission.RECEIVE_SMS) == PackageManager.PERMISSION_GRANTED
                 }
             }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -338,6 +348,15 @@ fun SettingsScreen(
                 }
             }
         }
+
+    val smsPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted: Boolean ->
+        isSmsTrackingEnabled = isGranted
+        if (!isGranted) {
+            Toast.makeText(context, "SMS tracking requires permission.", Toast.LENGTH_SHORT).show()
+        }
+    }
 
     val currencyOptions =
         listOf(
@@ -545,13 +564,31 @@ fun SettingsScreen(
                     )
 
                     SettingsSwitchItem(
-                        icon = Icons.Rounded.Sms,
-                        title = "Auto-Track SMS & Notifications",
-                        subtitle = "Parse debit/credit SMS to auto-add expenses",
+                        icon = Icons.Rounded.NotificationsActive,
+                        title = "Auto-Track via Notifications",
+                        subtitle = "Parse notifications to auto-add expenses",
                         checked = isNotificationTrackingEnabled,
                         onCheckedChange = {
                             val intent = android.content.Intent(android.provider.Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)
                             context.startActivity(intent)
+                        },
+                    )
+
+                    SettingsSwitchItem(
+                        icon = Icons.Rounded.Sms,
+                        title = "Auto-Track via SMS",
+                        subtitle = "Parse debit/credit SMS to auto-add expenses",
+                        checked = isSmsTrackingEnabled,
+                        onCheckedChange = { checked ->
+                            if (checked) {
+                                smsPermissionLauncher.launch(Manifest.permission.RECEIVE_SMS)
+                            } else {
+                                Toast.makeText(context, "Please disable permission from app settings to stop SMS tracking.", Toast.LENGTH_LONG).show()
+                                val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                                    data = Uri.fromParts("package", context.packageName, null)
+                                }
+                                context.startActivity(intent)
+                            }
                         },
                     )
 
