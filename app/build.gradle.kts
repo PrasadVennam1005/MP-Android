@@ -118,7 +118,7 @@ base {
 tasks.configureEach {
     if (name.startsWith("assemble") || name.startsWith("bundle")) {
         doLast {
-            val desktopBuilds = java.io.File(System.getProperty("user.home"), "Desktop/MoneyPilot_Builds")
+            val desktopBuilds = File(System.getProperty("user.home"), "Desktop/MoneyPilot_Builds")
             desktopBuilds.mkdirs()
             
             val outputsDir = layout.buildDirectory.dir("outputs").get().asFile
@@ -126,7 +126,7 @@ tasks.configureEach {
                 outputsDir.walkTopDown().filter { it.extension == "apk" || it.extension == "aab" }.forEach { file ->
                     // Only copy freshly generated files from this current build (last 1 minute)
                     if (System.currentTimeMillis() - file.lastModified() < 60000) { 
-                        file.copyTo(java.io.File(desktopBuilds, file.name), overwrite = true)
+                        file.copyTo(File(desktopBuilds, file.name), overwrite = true)
                         println("✅ Saved build to Desktop: ${file.name}")
                     }
                 }
