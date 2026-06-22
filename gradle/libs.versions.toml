@@ -63,7 +63,7 @@ workManager = "2.11.2"
 mediapipe = "0.10.35"
 litert-lm = "0.13.1"
 securityCrypto = "1.1.0"
-sqlcipher = "4.5.4"
+sqlcipher = "4.6.1"
 hiltWork = "1.3.0"
 detekt = "1.23.8"
 biometric = "1.1.0"
@@ -139,7 +139,7 @@ androidx-work-runtime = { group = "androidx.work", name = "work-runtime-ktx", ve
 mediapipe-tasks-genai = { group = "com.google.mediapipe", name = "tasks-genai", version.ref = "mediapipe" }
 litert-lm-android = { group = "com.google.ai.edge.litertlm", name = "litertlm-android", version.ref = "litert-lm" }
 androidx-security-crypto = { group = "androidx.security", name = "security-crypto", version.ref = "securityCrypto" }
-sqlcipher-android = { group = "net.zetetic", name = "android-database-sqlcipher", version.ref = "sqlcipher" }
+sqlcipher-android = { group = "net.zetetic", name = "sqlcipher-android", version.ref = "sqlcipher" }
 androidx-hilt-work = { group = "androidx.hilt", name = "hilt-work", version.ref = "hiltWork" }
 androidx-hilt-compiler = { group = "androidx.hilt", name = "hilt-compiler", version.ref = "hiltWork" }
 androidx-biometric = { group = "androidx.biometric", name = "biometric", version.ref = "biometric" }

@@ -101,8 +101,14 @@ class ExchangeRateRepository
                                         currentRate <= alert.targetRate
                                     }
                                     if (triggered) {
-                                        val title = "Currency Alert Triggered! 🚨"
-                                        val message = "1 ${alert.from} has crossed your target of ${alert.targetRate} ${alert.to} (Current rate: ${String.format(java.util.Locale.US, "%.4f", currentRate)})"
+                                        val title = context.getString(prasad.vennam.moneypilot.R.string.currency_alert_triggered)
+                                        val message = context.getString(
+                                            prasad.vennam.moneypilot.R.string.currency_alert_triggered_message,
+                                            alert.from,
+                                            alert.targetRate,
+                                            alert.to,
+                                            currentRate
+                                        )
                                         
                                         val dbNotification = Notification(
                                             title = title,
@@ -138,10 +144,10 @@ class ExchangeRateRepository
                 val channel =
                     android.app.NotificationChannel(
                         "currency_alerts_channel",
-                        "Currency Rate Alerts",
+                        context.getString(prasad.vennam.moneypilot.R.string.currency_rate_alerts_channel_name),
                         android.app.NotificationManager.IMPORTANCE_HIGH,
                     ).apply {
-                        description = "Triggers alerts when specified currency exchange thresholds are crossed."
+                        description = context.getString(prasad.vennam.moneypilot.R.string.currency_rate_alerts_channel_desc)
                     }
                 notificationManager.createNotificationChannel(channel)
             }
@@ -218,6 +224,38 @@ class ExchangeRateRepository
                     e.printStackTrace()
                     emptyList()
                 }
+            }
+        }
+
+        suspend fun detectCountryByIp(): String? {
+            return withContext(Dispatchers.IO) {
+                try {
+                    val req = Request.Builder().url("https://ipapi.co/json/").build()
+                    client.newCall(req).execute().use { resp ->
+                        if (resp.isSuccessful) {
+                            val map = moshi.adapter(Map::class.java).fromJson(resp.body.string())
+                            val code = map?.get("country_code")?.toString()
+                            if (!code.isNullOrBlank()) return@withContext code
+                        }
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+
+                try {
+                    val req = Request.Builder().url("https://ipinfo.io/json").build()
+                    client.newCall(req).execute().use { resp ->
+                        if (resp.isSuccessful) {
+                            val map = moshi.adapter(Map::class.java).fromJson(resp.body.string())
+                            val code = map?.get("country")?.toString()
+                            if (!code.isNullOrBlank()) return@withContext code
+                        }
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+
+                null
             }
         }
 

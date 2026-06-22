@@ -11,6 +11,7 @@ import kotlinx.coroutines.launch
 import prasad.vennam.moneypilot.data.UserPreferences
 import prasad.vennam.moneypilot.data.model.RateAlert
 import prasad.vennam.moneypilot.data.repository.ExchangeRateRepository
+import dagger.hilt.android.qualifiers.ApplicationContext
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -20,7 +21,8 @@ import javax.inject.Inject
 @HiltViewModel
 class CurrencyConverterViewModel @Inject constructor(
     private val exchangeRateRepository: ExchangeRateRepository,
-    private val userPreferences: UserPreferences
+    private val userPreferences: UserPreferences,
+    @ApplicationContext private val context: Context
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(CurrencyConverterState())
@@ -195,7 +197,7 @@ class CurrencyConverterViewModel @Inject constructor(
             _uiState.update {
                 it.copy(
                     convertedAmount = "",
-                    exchangeRateText = "No rates available. Connect to sync.",
+                    exchangeRateText = context.getString(prasad.vennam.moneypilot.R.string.no_rates_available),
                     basketConversions = emptyMap()
                 )
             }
@@ -383,48 +385,36 @@ class CurrencyConverterViewModel @Inject constructor(
         _uiState.update { it.copy(error = null) }
     }
 
-    fun selectCurrencyFromLocation(latitude: Double, longitude: Double, context: Context) {
+    fun detectLocationByIp() {
         _uiState.update { it.copy(isLocationLoading = true) }
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                val geocoder = Geocoder(context, Locale.getDefault())
-                @Suppress("DEPRECATION")
-                val addresses = geocoder.getFromLocation(latitude, longitude, 1)
-                val countryCode = addresses?.firstOrNull()?.countryCode
-                if (countryCode != null) {
-                    val detectedCurrency = getCurrencyForCountryCode(countryCode)
-                    if (detectedCurrency != null) {
-                        _uiState.update {
-                            it.copy(
-                                toCurrency = detectedCurrency,
-                                detectedCountry = countryCode,
-                                isLocationLoading = false
-                            )
-                        }
-                        saveRecent(_uiState.value.fromCurrency, detectedCurrency)
-                        recalculate()
-                        fetchHistoricalRates()
-                    } else {
-                        _uiState.update {
-                            it.copy(
-                                isLocationLoading = false,
-                                error = "Currency not supported for country: $countryCode"
-                            )
-                        }
+        viewModelScope.launch {
+            val countryCode = exchangeRateRepository.detectCountryByIp()
+            if (countryCode != null) {
+                val detectedCurrency = getCurrencyForCountryCode(countryCode)
+                if (detectedCurrency != null) {
+                    _uiState.update {
+                        it.copy(
+                            toCurrency = detectedCurrency,
+                            detectedCountry = countryCode,
+                            isLocationLoading = false
+                        )
                     }
+                    saveRecent(_uiState.value.fromCurrency, detectedCurrency)
+                    recalculate()
+                    fetchHistoricalRates()
                 } else {
                     _uiState.update {
                         it.copy(
                             isLocationLoading = false,
-                            error = "Could not resolve country from coordinates."
+                            error = context.getString(prasad.vennam.moneypilot.R.string.currency_not_supported, countryCode)
                         )
                     }
                 }
-            } catch (e: Exception) {
+            } else {
                 _uiState.update {
                     it.copy(
                         isLocationLoading = false,
-                        error = "Geocoder error: ${e.localizedMessage}"
+                        error = context.getString(prasad.vennam.moneypilot.R.string.could_not_resolve_country)
                     )
                 }
             }

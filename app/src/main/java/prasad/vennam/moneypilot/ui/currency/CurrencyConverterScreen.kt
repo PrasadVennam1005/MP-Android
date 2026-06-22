@@ -5,7 +5,6 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
-import android.location.Geocoder
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -45,6 +44,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
@@ -54,8 +54,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import com.google.android.gms.location.LocationServices
-import com.google.android.gms.location.Priority
 import kotlinx.coroutines.launch
 import prasad.vennam.moneypilot.data.model.RateAlert
 import prasad.vennam.moneypilot.ui.theme.MoneyPilotTheme
@@ -87,47 +85,14 @@ fun CurrencyConverterScreen(
         label = "SwapRotation"
     )
 
-    // Geolocation prefill launcher
-    val locationPermissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestMultiplePermissions()
-    ) { permissions ->
-        val granted = permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
-                permissions[Manifest.permission.ACCESS_COARSE_LOCATION] == true
-        if (granted) {
-            detectLocation(context, viewModel)
-        } else {
-            Toast.makeText(context, "Location permission denied", Toast.LENGTH_SHORT).show()
-        }
-    }
 
-    val checkAndRequestLocationPermission = {
-        val fineGranted = ContextCompat.checkSelfPermission(
-            context,
-            Manifest.permission.ACCESS_FINE_LOCATION
-        ) == android.content.pm.PackageManager.PERMISSION_GRANTED
-        val coarseGranted = ContextCompat.checkSelfPermission(
-            context,
-            Manifest.permission.ACCESS_COARSE_LOCATION
-        ) == android.content.pm.PackageManager.PERMISSION_GRANTED
-
-        if (fineGranted || coarseGranted) {
-            detectLocation(context, viewModel)
-        } else {
-            locationPermissionLauncher.launch(
-                arrayOf(
-                    Manifest.permission.ACCESS_FINE_LOCATION,
-                    Manifest.permission.ACCESS_COARSE_LOCATION
-                )
-            )
-        }
-    }
 
     Scaffold(
         topBar = {
             TopAppBar(
                 title = {
                     Text(
-                        "Currency Converter",
+                        stringResource(prasad.vennam.moneypilot.R.string.currency_converter),
                         style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
                     )
                 },
@@ -135,7 +100,7 @@ fun CurrencyConverterScreen(
                     IconButton(onClick = onNavigateBack) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
-                            contentDescription = "Back"
+                            contentDescription = stringResource(prasad.vennam.moneypilot.R.string.back)
                         )
                     }
                 },
@@ -145,7 +110,7 @@ fun CurrencyConverterScreen(
                     ) {
                         Icon(
                             imageVector = Icons.Rounded.Refresh,
-                            contentDescription = "Refresh Rates"
+                            contentDescription = stringResource(prasad.vennam.moneypilot.R.string.refresh_rates)
                         )
                     }
                 },
@@ -174,7 +139,7 @@ fun CurrencyConverterScreen(
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    // Premium feature: Mode Selector Tabs
+                    // Mode Selector Tabs
                     item {
                         TabRow(
                             selectedTabIndex = if (uiState.isComparisonMode) 1 else 0,
@@ -193,13 +158,13 @@ fun CurrencyConverterScreen(
                             Tab(
                                 selected = !uiState.isComparisonMode,
                                 onClick = { viewModel.setComparisonMode(false) },
-                                text = { Text("Standard Mode", fontWeight = FontWeight.Bold) },
+                                text = { Text(stringResource(prasad.vennam.moneypilot.R.string.standard_mode), fontWeight = FontWeight.Bold) },
                                 icon = { Icon(Icons.Rounded.SwapHoriz, contentDescription = null) }
                             )
                             Tab(
                                 selected = uiState.isComparisonMode,
                                 onClick = { viewModel.setComparisonMode(true) },
-                                text = { Text("Comparison Basket", fontWeight = FontWeight.Bold) },
+                                text = { Text(stringResource(prasad.vennam.moneypilot.R.string.comparison_basket), fontWeight = FontWeight.Bold) },
                                 icon = { Icon(Icons.Rounded.GridView, contentDescription = null) }
                             )
                         }
@@ -213,7 +178,7 @@ fun CurrencyConverterScreen(
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
                                 AmountInputCard(
-                                    title = "Base Amount",
+                                    title = stringResource(prasad.vennam.moneypilot.R.string.base_amount),
                                     amount = uiState.amount,
                                     currencyCode = uiState.fromCurrency,
                                     currencies = uiState.currencies,
@@ -229,7 +194,7 @@ fun CurrencyConverterScreen(
                                 TravelModeLocationButton(
                                     isLoading = uiState.isLocationLoading,
                                     detectedCountry = uiState.detectedCountry,
-                                    onDetectClick = { checkAndRequestLocationPermission() }
+                                    onDetectClick = { viewModel.detectLocationByIp() }
                                 )
                             }
                         } else {
@@ -245,7 +210,7 @@ fun CurrencyConverterScreen(
                                     ) {
                                         Box(modifier = Modifier.weight(1f)) {
                                             AmountInputCard(
-                                                title = "From",
+                                                title = stringResource(prasad.vennam.moneypilot.R.string.from_label),
                                                 amount = uiState.amount,
                                                 currencyCode = uiState.fromCurrency,
                                                 currencies = uiState.currencies,
@@ -270,7 +235,7 @@ fun CurrencyConverterScreen(
 
                                         Box(modifier = Modifier.weight(1f)) {
                                             AmountInputCard(
-                                                title = "To",
+                                                title = stringResource(prasad.vennam.moneypilot.R.string.to_label),
                                                 amount = uiState.convertedAmount,
                                                 currencyCode = uiState.toCurrency,
                                                 currencies = uiState.currencies,
@@ -287,7 +252,7 @@ fun CurrencyConverterScreen(
                                     }
                                 } else {
                                     AmountInputCard(
-                                        title = "From",
+                                        title = stringResource(prasad.vennam.moneypilot.R.string.from_label),
                                         amount = uiState.amount,
                                         currencyCode = uiState.fromCurrency,
                                         currencies = uiState.currencies,
@@ -314,7 +279,7 @@ fun CurrencyConverterScreen(
                                     Spacer(modifier = Modifier.height(8.dp))
 
                                     AmountInputCard(
-                                        title = "To",
+                                        title = stringResource(prasad.vennam.moneypilot.R.string.to_label),
                                         amount = uiState.convertedAmount,
                                         currencyCode = uiState.toCurrency,
                                         currencies = uiState.currencies,
@@ -333,7 +298,7 @@ fun CurrencyConverterScreen(
                                 TravelModeLocationButton(
                                     isLoading = uiState.isLocationLoading,
                                     detectedCountry = uiState.detectedCountry,
-                                    onDetectClick = { checkAndRequestLocationPermission() }
+                                    onDetectClick = { viewModel.detectLocationByIp() }
                                 )
                             }
                         }
@@ -376,15 +341,25 @@ fun CurrencyConverterScreen(
                                     val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                                     val clip = ClipData.newPlainText("Conversion Result", "${uiState.amount} ${uiState.fromCurrency} = ${uiState.convertedAmount} ${uiState.toCurrency}")
                                     clipboard.setPrimaryClip(clip)
-                                    Toast.makeText(context, "Copied result to clipboard", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(context, context.getString(prasad.vennam.moneypilot.R.string.copied_result_to_clipboard), Toast.LENGTH_SHORT).show()
                                 },
                                 onShareClick = {
                                     val shareIntent = Intent().apply {
                                         action = Intent.ACTION_SEND
-                                        putExtra(Intent.EXTRA_TEXT, "Currency Conversion:\n${uiState.amount} ${uiState.fromCurrency} = ${uiState.convertedAmount} ${uiState.toCurrency}\nExchange Rate: ${uiState.exchangeRateText}")
+                                        putExtra(
+                                            Intent.EXTRA_TEXT,
+                                            context.getString(
+                                                prasad.vennam.moneypilot.R.string.share_conversion_template,
+                                                uiState.amount,
+                                                uiState.fromCurrency,
+                                                uiState.convertedAmount,
+                                                uiState.toCurrency,
+                                                uiState.exchangeRateText
+                                            )
+                                        )
                                         type = "text/plain"
                                     }
-                                    context.startActivity(Intent.createChooser(shareIntent, "Share conversion"))
+                                    context.startActivity(Intent.createChooser(shareIntent, context.getString(prasad.vennam.moneypilot.R.string.share_conversion_title)))
                                 },
                                 onAlertClick = { showRateAlertSheet = true }
                             )
@@ -402,7 +377,7 @@ fun CurrencyConverterScreen(
 
                     if (uiState.favoriteConversions.isNotEmpty()) {
                         item {
-                            SectionHeader(title = "Favorite Pairs")
+                            SectionHeader(title = stringResource(prasad.vennam.moneypilot.R.string.favorite_pairs))
                             Spacer(modifier = Modifier.height(8.dp))
                             LazyRow(
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -421,7 +396,7 @@ fun CurrencyConverterScreen(
 
                     if (uiState.recentConversions.isNotEmpty()) {
                         item {
-                            SectionHeader(title = "Recent Searches")
+                            SectionHeader(title = stringResource(prasad.vennam.moneypilot.R.string.recent_searches))
                             Spacer(modifier = Modifier.height(8.dp))
                             LazyRow(
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -453,7 +428,7 @@ fun CurrencyConverterScreen(
                         .padding(16.dp),
                     action = {
                         TextButton(onClick = { viewModel.clearError() }) {
-                            Text("Dismiss", color = MaterialTheme.colorScheme.inversePrimary)
+                            Text(stringResource(prasad.vennam.moneypilot.R.string.dismiss), color = MaterialTheme.colorScheme.inversePrimary)
                         }
                     }
                 ) {
@@ -476,11 +451,11 @@ fun CurrencyConverterScreen(
             ) {
                 Text(
                     text = if (selectingFromCurrency) {
-                        "Select Source Currency"
+                        stringResource(prasad.vennam.moneypilot.R.string.select_source_currency)
                     } else if (selectingBasketCurrency) {
-                        "Add Currency to Comparison Basket"
+                        stringResource(prasad.vennam.moneypilot.R.string.add_currency_to_comparison_basket)
                     } else {
-                        "Select Target Currency"
+                        stringResource(prasad.vennam.moneypilot.R.string.select_target_currency)
                     },
                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                     modifier = Modifier.padding(bottom = 12.dp)
@@ -489,7 +464,7 @@ fun CurrencyConverterScreen(
                 OutlinedTextField(
                     value = searchQuery,
                     onValueChange = { searchQuery = it },
-                    placeholder = { Text("Search currency...") },
+                    placeholder = { Text(stringResource(prasad.vennam.moneypilot.R.string.search_currency)) },
                     leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null) },
                     modifier = Modifier
                         .fillMaxWidth()
@@ -578,42 +553,7 @@ fun CurrencyConverterScreen(
     }
 }
 
-private fun detectLocation(context: Context, viewModel: CurrencyConverterViewModel) {
-    try {
-        val client = LocationServices.getFusedLocationProviderClient(context)
-        val fineGranted = ContextCompat.checkSelfPermission(
-            context,
-            Manifest.permission.ACCESS_FINE_LOCATION
-        ) == android.content.pm.PackageManager.PERMISSION_GRANTED
-        val coarseGranted = ContextCompat.checkSelfPermission(
-            context,
-            Manifest.permission.ACCESS_COARSE_LOCATION
-        ) == android.content.pm.PackageManager.PERMISSION_GRANTED
 
-        if (fineGranted || coarseGranted) {
-            client.getCurrentLocation(
-                Priority.PRIORITY_BALANCED_POWER_ACCURACY,
-                null
-            ).addOnSuccessListener { location ->
-                if (location != null) {
-                    viewModel.selectCurrencyFromLocation(location.latitude, location.longitude, context)
-                } else {
-                    client.lastLocation.addOnSuccessListener { lastLoc ->
-                        if (lastLoc != null) {
-                            viewModel.selectCurrencyFromLocation(lastLoc.latitude, lastLoc.longitude, context)
-                        } else {
-                            Toast.makeText(context, "Could not determine location. Please ensure location is enabled.", Toast.LENGTH_LONG).show()
-                        }
-                    }
-                }
-            }.addOnFailureListener { e ->
-                Toast.makeText(context, "Failed to get location: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
-            }
-        }
-    } catch (e: SecurityException) {
-        e.printStackTrace()
-    }
-}
 
 @Composable
 fun AmountInputCard(
@@ -678,7 +618,7 @@ fun AmountInputCard(
                     decorationBox = { innerTextField ->
                         if (amount.isEmpty()) {
                             Text(
-                                "Enter amount",
+                                stringResource(prasad.vennam.moneypilot.R.string.enter_amount),
                                 style = MaterialTheme.typography.headlineLarge.copy(
                                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
                                 )
@@ -715,7 +655,7 @@ fun AmountInputCard(
                 )
                 Icon(
                     imageVector = Icons.Rounded.ArrowDropDown,
-                    contentDescription = "Select Currency",
+                    contentDescription = stringResource(prasad.vennam.moneypilot.R.string.select_currency),
                     modifier = Modifier.size(24.dp)
                 )
             }
@@ -745,7 +685,7 @@ fun SwapCurrencyButton(
         ) {
             Icon(
                 imageVector = if (isVertical) Icons.Rounded.SwapVert else Icons.Rounded.SwapHoriz,
-                contentDescription = "Swap Currencies",
+                contentDescription = stringResource(prasad.vennam.moneypilot.R.string.swap_currencies),
                 modifier = Modifier.size(24.dp)
             )
         }
@@ -839,7 +779,7 @@ fun QuickActionsRow(
         ) {
             Icon(
                 imageVector = if (isFavorite) Icons.Rounded.Star else Icons.Rounded.StarBorder,
-                contentDescription = "Favorite Pair"
+                contentDescription = stringResource(prasad.vennam.moneypilot.R.string.favorite_pair)
             )
         }
 
@@ -849,7 +789,7 @@ fun QuickActionsRow(
         ) {
             Icon(
                 imageVector = Icons.Rounded.ContentCopy,
-                contentDescription = "Copy Result"
+                contentDescription = stringResource(prasad.vennam.moneypilot.R.string.copy_result)
             )
         }
 
@@ -859,7 +799,7 @@ fun QuickActionsRow(
         ) {
             Icon(
                 imageVector = Icons.Rounded.Share,
-                contentDescription = "Share Conversion"
+                contentDescription = stringResource(prasad.vennam.moneypilot.R.string.share_conversion)
             )
         }
 
@@ -872,7 +812,7 @@ fun QuickActionsRow(
         ) {
             Icon(
                 imageVector = Icons.Rounded.NotificationsActive,
-                contentDescription = "Set Rate Alert"
+                contentDescription = stringResource(prasad.vennam.moneypilot.R.string.set_rate_alert)
             )
         }
     }
@@ -956,14 +896,14 @@ fun ExchangeRateInfoCard(
 
             Column {
                 Text(
-                    text = "Exchange rates sourced from Frankfurter API.",
+                    text = stringResource(prasad.vennam.moneypilot.R.string.exchange_rates_sourced_from_frankfurter),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSecondaryContainer,
                     fontWeight = FontWeight.SemiBold
                 )
                 if (lastUpdated.isNotEmpty()) {
                     Text(
-                        text = "Last updated: $lastUpdated",
+                        text = stringResource(prasad.vennam.moneypilot.R.string.last_updated, lastUpdated),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
                     )
@@ -1021,12 +961,16 @@ fun TravelModeLocationButton(
             Spacer(modifier = Modifier.width(10.dp))
             Column {
                 Text(
-                    text = "Travel Mode (GPS Prefill)",
+                    text = stringResource(prasad.vennam.moneypilot.R.string.travel_mode_gps_prefill),
                     style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
                     color = MaterialTheme.colorScheme.onPrimaryContainer
                 )
                 Text(
-                    text = if (detectedCountry != null) "Detected Country Code: $detectedCountry. Currency updated!" else "Auto-set local currency based on your GPS location",
+                    text = if (detectedCountry != null) {
+                        stringResource(prasad.vennam.moneypilot.R.string.detected_country_code, detectedCountry)
+                    } else {
+                        stringResource(prasad.vennam.moneypilot.R.string.travel_mode_gps_desc)
+                    },
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -1059,13 +1003,13 @@ fun BasketComparisonList(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Multi-Currency Basket",
+                    text = stringResource(prasad.vennam.moneypilot.R.string.multi_currency_basket),
                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
                 )
                 TextButton(onClick = onAddCurrencyClick) {
-                    Icon(Icons.Rounded.Add, contentDescription = "Add Currency", modifier = Modifier.size(16.dp))
+                    Icon(Icons.Rounded.Add, contentDescription = stringResource(prasad.vennam.moneypilot.R.string.add_currency), modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("Add Currency")
+                    Text(stringResource(prasad.vennam.moneypilot.R.string.add_currency))
                 }
             }
 
@@ -1078,7 +1022,7 @@ fun BasketComparisonList(
                         .padding(vertical = 32.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text("Basket is empty. Add currencies to compare.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(stringResource(prasad.vennam.moneypilot.R.string.basket_is_empty), color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             } else {
                 basketCurrencies.forEach { code ->
@@ -1113,7 +1057,7 @@ fun BasketComparisonList(
                         ) {
                             Icon(
                                 imageVector = Icons.Rounded.DeleteOutline,
-                                contentDescription = "Remove",
+                                contentDescription = stringResource(prasad.vennam.moneypilot.R.string.remove),
                                 tint = MaterialTheme.colorScheme.error.copy(alpha = 0.8f)
                             )
                         }
@@ -1146,7 +1090,7 @@ fun SparklineChart(
                     .height(180.dp),
                 contentAlignment = Alignment.Center
             ) {
-                Text("Historical trend loading or unavailable", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(stringResource(prasad.vennam.moneypilot.R.string.historical_trend_loading_or_unavailable), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
         return
@@ -1175,14 +1119,14 @@ fun SparklineChart(
             ) {
                 Column {
                     Text(
-                        text = "30-Day Rate Trend",
+                        text = stringResource(prasad.vennam.moneypilot.R.string.trend_30_day),
                         style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold)
                     )
                     Text(
                         text = if (activeIndex in rates.indices) {
-                            "Rate on ${dates[activeIndex]}: ${String.format(Locale.US, "%.5f", rates[activeIndex])}"
+                            stringResource(prasad.vennam.moneypilot.R.string.rate_on_date, dates[activeIndex], String.format(Locale.US, "%.5f", rates[activeIndex]))
                         } else {
-                            "Hold/drag chart to inspect rate history"
+                            stringResource(prasad.vennam.moneypilot.R.string.hold_drag_chart_to_inspect)
                         },
                         style = MaterialTheme.typography.bodySmall,
                         color = if (activeIndex != -1) primaryColor else onSurfaceVariant
@@ -1191,12 +1135,12 @@ fun SparklineChart(
 
                 Column(horizontalAlignment = Alignment.End) {
                     Text(
-                        text = "Max: ${String.format(Locale.US, "%.4f", maxRate)}",
+                        text = stringResource(prasad.vennam.moneypilot.R.string.max_rate_label, String.format(Locale.US, "%.4f", maxRate)),
                         style = MaterialTheme.typography.labelSmall,
                         color = Color(0xFF4CAF50)
                     )
                     Text(
-                        text = "Min: ${String.format(Locale.US, "%.4f", minRate)}",
+                        text = stringResource(prasad.vennam.moneypilot.R.string.min_rate_label, String.format(Locale.US, "%.4f", minRate)),
                         style = MaterialTheme.typography.labelSmall,
                         color = Color(0xFFF44336)
                     )
@@ -1328,13 +1272,13 @@ fun RateAlertSheet(
                 .navigationBarsPadding()
         ) {
             Text(
-                text = "Set Exchange Rate Alert 🚨",
+                text = stringResource(prasad.vennam.moneypilot.R.string.set_exchange_rate_alert),
                 style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
                 modifier = Modifier.padding(bottom = 8.dp)
             )
 
             Text(
-                text = "Get notified when 1 $fromCurrency matches your target rate.",
+                text = stringResource(prasad.vennam.moneypilot.R.string.get_notified_on_match, fromCurrency),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(bottom = 16.dp)
@@ -1343,7 +1287,7 @@ fun RateAlertSheet(
             OutlinedTextField(
                 value = targetRateInput,
                 onValueChange = { targetRateInput = it },
-                label = { Text("Target Rate ($toCurrency)") },
+                label = { Text(stringResource(prasad.vennam.moneypilot.R.string.target_rate_label, toCurrency)) },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                 modifier = Modifier.fillMaxWidth(),
                 shape = PremiumShapes.medium,
@@ -1352,7 +1296,7 @@ fun RateAlertSheet(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            Text("Trigger Alert When Rate Is:", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(stringResource(prasad.vennam.moneypilot.R.string.trigger_alert_when_rate_is), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -1362,7 +1306,7 @@ fun RateAlertSheet(
                 FilterChip(
                     selected = isAbove,
                     onClick = { isAbove = true },
-                    label = { Text("Above Target (≥)") },
+                    label = { Text(stringResource(prasad.vennam.moneypilot.R.string.above_target)) },
                     leadingIcon = if (isAbove) {
                         { Icon(Icons.Rounded.ArrowUpward, contentDescription = null, modifier = Modifier.size(16.dp)) }
                     } else null
@@ -1370,7 +1314,7 @@ fun RateAlertSheet(
                 FilterChip(
                     selected = !isAbove,
                     onClick = { isAbove = false },
-                    label = { Text("Below Target (≤)") },
+                    label = { Text(stringResource(prasad.vennam.moneypilot.R.string.below_target)) },
                     leadingIcon = if (!isAbove) {
                         { Icon(Icons.Rounded.ArrowDownward, contentDescription = null, modifier = Modifier.size(16.dp)) }
                     } else null
@@ -1392,14 +1336,14 @@ fun RateAlertSheet(
             ) {
                 Icon(Icons.Rounded.NotificationsActive, contentDescription = null)
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Set Alert Trigger")
+                Text(stringResource(prasad.vennam.moneypilot.R.string.set_alert_trigger))
             }
 
             Spacer(modifier = Modifier.height(20.dp))
 
             val pairAlerts = activeAlerts.filter { it.from == fromCurrency && it.to == toCurrency }
             if (pairAlerts.isNotEmpty()) {
-                Text("Active Alerts for $fromCurrency/$toCurrency", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold))
+                Text(stringResource(prasad.vennam.moneypilot.R.string.active_alerts_for_pair, fromCurrency, toCurrency), style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold))
                 Spacer(modifier = Modifier.height(8.dp))
                 LazyColumn(
                     modifier = Modifier
@@ -1425,7 +1369,12 @@ fun RateAlertSheet(
                                     modifier = Modifier.padding(end = 8.dp)
                                 )
                                 Text(
-                                    text = "Trigger ${if (alert.isAbove) "≥" else "≤"} ${String.format(Locale.US, "%.4f", alert.targetRate)} $toCurrency",
+                                    text = stringResource(
+                                        prasad.vennam.moneypilot.R.string.alert_trigger_value,
+                                        if (alert.isAbove) "≥" else "≤",
+                                        alert.targetRate,
+                                        toCurrency
+                                    ),
                                     style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold)
                                 )
                             }
@@ -1435,7 +1384,7 @@ fun RateAlertSheet(
                             ) {
                                 Icon(
                                     imageVector = Icons.Rounded.Close,
-                                    contentDescription = "Cancel Alert",
+                                    contentDescription = stringResource(prasad.vennam.moneypilot.R.string.cancel_alert),
                                     tint = MaterialTheme.colorScheme.error
                                 )
                             }
