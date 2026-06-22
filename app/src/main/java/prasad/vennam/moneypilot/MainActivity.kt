@@ -40,35 +40,16 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.fragment.app.FragmentActivity
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.ui.NavDisplay
 import com.google.android.gms.ads.MobileAds
 import dagger.hilt.android.AndroidEntryPoint
 import prasad.vennam.moneypilot.billing.BillingManager
-import prasad.vennam.moneypilot.data.AppLinks
 import prasad.vennam.moneypilot.data.UserPreferences
-import prasad.vennam.moneypilot.feature.ai.presentation.AiChatScreen
-import prasad.vennam.moneypilot.ui.ai.InsightsScreen
-import prasad.vennam.moneypilot.ui.budget.ReportsTabScreen
-import prasad.vennam.moneypilot.ui.categories.CategoryListScreen
-import prasad.vennam.moneypilot.ui.dashboard.DashboardScreen
 import prasad.vennam.moneypilot.ui.dashboard.SyncState
-import prasad.vennam.moneypilot.ui.emergencyfund.EmergencyFundScreen
-import prasad.vennam.moneypilot.ui.faq.FaqScreen
-import prasad.vennam.moneypilot.ui.investments.InvestmentScreen
-import prasad.vennam.moneypilot.ui.learnfinance.ArticleDetailScreen
-import prasad.vennam.moneypilot.ui.learnfinance.LearnFinanceScreen
-import prasad.vennam.moneypilot.ui.loans.EmiCalculatorScreen
-import prasad.vennam.moneypilot.ui.loans.LoanScreen
 import prasad.vennam.moneypilot.ui.navigation.Destination
-import prasad.vennam.moneypilot.ui.news.NewsScreen
-import prasad.vennam.moneypilot.ui.news.NewsWebViewScreen
-import prasad.vennam.moneypilot.ui.scanner.ReceiptScannerScreen
-import prasad.vennam.moneypilot.ui.settings.SettingsScreen
+import prasad.vennam.moneypilot.ui.navigation.MoneyPilotNavEntry
 import prasad.vennam.moneypilot.ui.theme.MoneyPilotTheme
-import prasad.vennam.moneypilot.ui.transactions.AddEditTransactionScreen
-import prasad.vennam.moneypilot.ui.transactions.HistoryScreen
 import prasad.vennam.moneypilot.ui.viewmodel.AnalyticsViewModel
 import prasad.vennam.moneypilot.ui.viewmodel.BudgetViewModel
 import prasad.vennam.moneypilot.ui.viewmodel.InvestmentViewModel
@@ -122,24 +103,33 @@ class MainActivity : FragmentActivity() {
             }
             val themeMode by mainViewModel.themeMode.collectAsState()
             val isBiometricEnabled by mainViewModel.isBiometricEnabled.collectAsState()
-            // isAuthenticated is reset only on ON_STOP (app backgrounded), NOT on ON_PAUSE
-            // This prevents the biometric prompt itself (which pauses the activity) from re-locking.
+            // isAuthenticated tracks whether user passed biometric check.
             var isAuthenticated by remember { mutableStateOf(false) }
+            var lastBackgroundTime by remember { mutableStateOf(0L) }
 
             val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
             DisposableEffect(lifecycleOwner) {
                 val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
                     if (event == androidx.lifecycle.Lifecycle.Event.ON_STOP) {
-                        // Only lock when the app goes fully to background, not for overlays/dialogs
-                        isAuthenticated = false
+                        // Store the timestamp when the app is backgrounded
+                        lastBackgroundTime = System.currentTimeMillis()
+                    } else if (event == androidx.lifecycle.Lifecycle.Event.ON_START) {
+                        // Require re-authentication only if the app has been in the background for > 1 minute (60s)
+                        if (lastBackgroundTime != 0L) {
+                            val elapsed = System.currentTimeMillis() - lastBackgroundTime
+                            if (elapsed > 60_000L) {
+                                isAuthenticated = false
+                            }
+                            lastBackgroundTime = 0L // Reset
+                        }
                     }
                 }
                 lifecycleOwner.lifecycle.addObserver(observer)
                 onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
             }
 
-            // Auto-show biometric prompt once when the screen comes into focus and is not yet authenticated
-            LaunchedEffect(isBiometricEnabled) {
+            // Auto-show biometric prompt when the screen comes into focus or authentication state changes
+            LaunchedEffect(isBiometricEnabled, isAuthenticated) {
                 if (isBiometricEnabled && !isAuthenticated) {
                     prasad.vennam.moneypilot.util.BiometricHelper.authenticate(
                         activity = this@MainActivity,
@@ -160,26 +150,31 @@ class MainActivity : FragmentActivity() {
                     else -> androidx.compose.foundation.isSystemInDarkTheme()
                 }
             MoneyPilotTheme(darkTheme = darkTheme) {
-                if (isBiometricEnabled && !isAuthenticated) {
-                    BiometricLockScreen(
-                        onUnlockClick = {
-                            prasad.vennam.moneypilot.util.BiometricHelper.authenticate(
-                                activity = this@MainActivity,
-                                title = "Unlock MoneyPilot",
-                                subtitle = "Verify your identity to open the app",
-                                onSuccess = { isAuthenticated = true },
-                                onError = {
-                                    android.widget.Toast.makeText(
-                                        this@MainActivity,
-                                        "Authentication failed. Please try again.",
-                                        android.widget.Toast.LENGTH_SHORT
-                                    ).show()
-                                }
-                            )
-                        }
-                    )
-                } else {
+                // Wrap the main app and the biometric lock screen in a Box overlay structure.
+                // This keeps MoneyPilotApp composed in memory, preserving navigation backstack and screen state
+                // instead of resetting it back to the home/first screen when locking.
+                androidx.compose.foundation.layout.Box(modifier = Modifier.fillMaxSize()) {
                     MoneyPilotApp(analyticsHelper, mainViewModel, userPreferences)
+
+                    if (isBiometricEnabled && !isAuthenticated) {
+                        BiometricLockScreen(
+                            onUnlockClick = {
+                                prasad.vennam.moneypilot.util.BiometricHelper.authenticate(
+                                    activity = this@MainActivity,
+                                    title = "Unlock MoneyPilot",
+                                    subtitle = "Verify your identity to open the app",
+                                    onSuccess = { isAuthenticated = true },
+                                    onError = {
+                                        android.widget.Toast.makeText(
+                                            this@MainActivity,
+                                            "Authentication failed. Please try again.",
+                                            android.widget.Toast.LENGTH_SHORT
+                                        ).show()
+                                    }
+                                )
+                            }
+                        )
+                    }
                 }
             }
         }
@@ -391,371 +386,23 @@ fun MoneyPilotApp(
                 onBack = { if (backStack.size > 1) backStack.removeLastOrNull() },
                 modifier = Modifier,
                 entryProvider = { key ->
-                    when (key) {
-                        is Destination.Auth ->
-                            NavEntry(key) {
-                                prasad.vennam.moneypilot.ui.login.AuthScreen(
-                                    mainViewModel = mainViewModel,
-                                    analyticsHelper = analyticsHelper,
-                                    skipSplash = key.skipSplash,
-                                    onNavigateToTerms = {
-                                        backStack.add(Destination.TermsOfService)
-                                    },
-                                    onNavigateToPrivacy = {
-                                        backStack.add(Destination.PrivacyPolicy)
-                                    },
-                                    onAuthSuccess = {
-                                        backStack.clear()
-                                        backStack.add(Destination.Dashboard)
-                                    },
-                                )
-                            }
-
-                        is Destination.Dashboard ->
-                            NavEntry(key) {
-                                DashboardScreen(
-                                    mainViewModel = mainViewModel,
-                                    onNavigateToAddTransaction = { type ->
-                                        backStack.add(Destination.AddEditTransaction(initialType = type))
-                                    },
-                                    onNavigateToAddInvestment = {
-                                        backStack.add(Destination.Investments)
-                                    },
-                                    onNavigateToHistory = {
-                                        backStack.add(Destination.History)
-                                    },
-                                    onNavigateToBudgets = {
-                                        backStack.add(Destination.Reports)
-                                    },
-                                    onNavigateToSettings = {
-                                        backStack.add(Destination.Settings)
-                                    },
-                                    onNavigateToScanner = {
-                                        backStack.add(Destination.ReceiptScanner)
-                                    },
-                                    onNavigateToNotifications = {
-                                        backStack.add(Destination.Notifications)
-                                    },
-                                    onNavigateToLoans = {
-                                        backStack.add(Destination.Loans())
-                                    },
-                                    onNavigateToInsights = {
-                                        backStack.add(Destination.Insights)
-                                    },
-                                    onNavigateToAiChat = {
-                                        backStack.add(Destination.AiChat)
-                                    },
-                                    onNavigateToEmergencyFund = {
-                                        backStack.add(Destination.EmergencyFund)
-                                    },
-                                    onNavigateToNews = {
-                                        backStack.add(Destination.FinancialNews)
-                                    },
-                                    onNavigateToSandbox = {
-                                        backStack.add(Destination.FinancialSandbox)
-                                    },
-                                    onNavigateToEmiCalculator = {
-                                        if (isPremium) {
-                                            backStack.add(Destination.EmiCalculator)
-                                        } else {
-                                            (context as? android.app.Activity)?.let { activity ->
-                                                interstitialAdManager.showAd(activity) {
-                                                    backStack.add(Destination.EmiCalculator)
-                                                }
-                                            } ?: backStack.add(Destination.EmiCalculator)
-                                        }
-                                    },
-                                    onNavigateToLearnFinance = {
-                                        backStack.add(Destination.LearnFinance)
-                                    },
-                                    onNavigateToCurrencyConverter = {
-                                        backStack.add(Destination.CurrencyConverter)
-                                    },
-                                    analyticsHelper = analyticsHelper,
-                                )
-                            }
-
-                        is Destination.Insights ->
-                            NavEntry(key) {
-                                InsightsScreen(
-                                    userData = userData,
-                                    syncState = syncState,
-                                    onProfileClick = { backStack.add(Destination.Settings) },
-                                    onBackClick = { backStack.removeLastOrNull() },
-                                    onNavigateToAiChat = { backStack.add(Destination.AiChat) },
-                                )
-                            }
-
-                        is Destination.AiChat ->
-                            NavEntry(key) {
-                                AiChatScreen(
-                                    onBackClick = { backStack.removeLastOrNull() },
-                                )
-                            }
-
-                        is Destination.History ->
-                            NavEntry(key) {
-                                HistoryScreen(
-                                    viewModel = transactionViewModel,
-                                    onAddTransaction = { type ->
-                                        backStack.add(Destination.AddEditTransaction(initialType = type))
-                                    },
-                                    onEditTransaction = { id, type ->
-                                        backStack.add(Destination.AddEditTransaction(id, type))
-                                    },
-                                    userData = userData,
-                                    syncState = syncState,
-                                    isPremium = isPremium,
-                                    onProfileClick = { backStack.add(Destination.Settings) },
-                                    fixedType = null,
-                                )
-                            }
-
-                        is Destination.AddEditTransaction ->
-                            NavEntry(key) {
-                                AddEditTransactionScreen(
-                                    transactionId = key.transactionId,
-                                    initialType = key.initialType,
-                                    viewModel = transactionViewModel,
-                                    analyticsHelper = analyticsHelper,
-                                    interstitialAdManager = interstitialAdManager,
-                                    isPremium = isPremium,
-                                    onNavigateBack = { backStack.removeLastOrNull() },
-                                )
-                            }
-
-                        is Destination.Investments ->
-                            NavEntry(key) {
-                                InvestmentScreen(
-                                    viewModel = investmentViewModel,
-                                    userData = userData,
-                                    syncState = syncState,
-                                    isPremium = isPremium,
-                                    onProfileClick = { backStack.add(Destination.Settings) },
-                                )
-                            }
-
-                        is Destination.Loans ->
-                            NavEntry(key) {
-                                LoanScreen(
-                                    userData = userData,
-                                    syncState = syncState,
-                                    isPremium = isPremium,
-                                    onProfileClick = { backStack.add(Destination.Settings) },
-                                    onNavigateToEmiCalculator = {
-                                        if (isPremium) {
-                                            backStack.add(Destination.EmiCalculator)
-                                        } else {
-                                            (context as? android.app.Activity)?.let { activity ->
-                                                interstitialAdManager.showAd(activity) {
-                                                    backStack.add(Destination.EmiCalculator)
-                                                }
-                                            } ?: backStack.add(Destination.EmiCalculator)
-                                        }
-                                    },
-                                    prefillAmount = key.prefillAmount,
-                                    prefillRate = key.prefillRate,
-                                    prefillTenureMonths = key.prefillTenureMonths,
-                                    prefillEmi = key.prefillEmi,
-                                )
-                            }
-
-                        is Destination.Reports ->
-                            NavEntry(key) {
-                                ReportsTabScreen(
-                                    budgetViewModel = budgetViewModel,
-                                    transactionViewModel = transactionViewModel,
-                                    analyticsViewModel = analyticsViewModel,
-                                    userData = userData,
-                                    syncState = syncState,
-                                    isPremium = isPremium,
-                                    onProfileClick = { backStack.add(Destination.Settings) },
-                                )
-                            }
-
-                        is Destination.Settings ->
-                            NavEntry(key) {
-                                SettingsScreen(
-                                    transactionViewModel = transactionViewModel,
-                                    mainViewModel = mainViewModel,
-                                    analyticsHelper = analyticsHelper,
-                                    onLogout = {
-                                        backStack.clear()
-                                        backStack.add(Destination.Auth(skipSplash = true))
-                                    },
-                                    onNavigateToCategories = {
-                                        backStack.add(Destination.ManageCategories)
-                                    },
-                                    onNavigateToNotifications = {
-                                        backStack.add(Destination.Notifications)
-                                    },
-                                    onNavigateToFAQ = {
-                                        backStack.add(Destination.FAQ)
-                                    },
-                                    onNavigateToTerms = {
-                                        backStack.add(Destination.TermsOfService)
-                                    },
-                                    onNavigateToPrivacy = {
-                                        backStack.add(Destination.PrivacyPolicy)
-                                    },
-                                    onNavigateToPremium = {
-                                        backStack.add(Destination.PremiumScreen)
-                                    },
-                                    onAccountDeleted = {
-                                        backStack.clear()
-                                        backStack.add(Destination.Auth(skipSplash = false))
-                                    },
-                                )
-                            }
-
-                        is Destination.ManageCategories ->
-                            NavEntry(key) {
-                                CategoryListScreen(
-                                    viewModel = transactionViewModel,
-                                    onNavigateBack = { backStack.removeLastOrNull() },
-                                )
-                            }
-
-                        is Destination.ReceiptScanner ->
-                            NavEntry(key) {
-                                ReceiptScannerScreen(
-                                    onNavigateBack = { backStack.removeLastOrNull() },
-                                    transactionViewModel = transactionViewModel,
-                                    analyticsHelper = analyticsHelper,
-                                )
-                            }
-
-                        is Destination.Notifications ->
-                            NavEntry(key) {
-                                prasad.vennam.moneypilot.ui.notifications.NotificationsScreen(
-                                    onNavigateBack = { backStack.removeLastOrNull() },
-                                    onNavigateToWeb = { url, title ->
-                                        backStack.add(Destination.NewsWebFrame(url = url, title = title))
-                                    },
-                                )
-                            }
-
-                        is Destination.FAQ ->
-                            NavEntry(key) {
-                                FaqScreen(
-                                    onNavigateBack = { backStack.removeLastOrNull() },
-                                )
-                            }
-
-                        is Destination.EmergencyFund ->
-                            NavEntry(key) {
-                                EmergencyFundScreen(
-                                    userPreferences = userPreferences,
-                                    onNavigateBack = { backStack.removeLastOrNull() },
-                                )
-                            }
-
-                        is Destination.TermsOfService ->
-                            NavEntry(key) {
-                                NewsWebViewScreen(
-                                    url = AppLinks.TERMS,
-                                    title = "Terms of Service",
-                                    showBookmark = false,
-                                    onBack = { backStack.removeLastOrNull() },
-                                )
-                            }
-
-                        is Destination.PrivacyPolicy ->
-                            NavEntry(key) {
-                                NewsWebViewScreen(
-                                    url = AppLinks.PRIVACY_POLICY,
-                                    title = "Privacy Policy",
-                                    showBookmark = false,
-                                    onBack = { backStack.removeLastOrNull() },
-                                )
-                            }
-
-                        is Destination.FinancialNews ->
-                            NavEntry(key) {
-                                NewsScreen(
-                                    onBack = { backStack.removeLastOrNull() },
-                                    onNavigateToWeb = { url, title ->
-                                        backStack.add(Destination.NewsWebFrame(url = url, title = title))
-                                    },
-                                )
-                            }
-
-                        is Destination.NewsWebFrame ->
-                            NavEntry(key) {
-                                NewsWebViewScreen(
-                                    url = key.url,
-                                    title = key.title,
-                                    onBack = { backStack.removeLastOrNull() },
-                                )
-                            }
-
-                        is Destination.FinancialSandbox ->
-                            NavEntry(key) {
-                                prasad.vennam.moneypilot.ui.sandbox.FinancialSandboxScreen(
-                                    onBack = { backStack.removeLastOrNull() },
-                                )
-                            }
-
-                        is Destination.EmiCalculator ->
-                            NavEntry(key) {
-                                EmiCalculatorScreen(
-                                    onBack = { backStack.removeLastOrNull() },
-                                    isPremium = isPremium,
-                                    onNavigateToSaveLoan = { amount, rate, months, emi ->
-                                        backStack.add(
-                                            Destination.Loans(
-                                                prefillAmount = amount,
-                                                prefillRate = rate,
-                                                prefillTenureMonths = months,
-                                                prefillEmi = emi,
-                                            ),
-                                        )
-                                    },
-                                    onNavigateToCompare = {
-                                    },
-                                )
-                            }
-
-                        is Destination.LearnFinance ->
-                            NavEntry(key) {
-                                LearnFinanceScreen(
-                                    viewModel = learnFinanceViewModel,
-                                    onBack = { backStack.removeLastOrNull() },
-                                    onArticleClick = { articleId ->
-                                        backStack.add(Destination.ArticleDetail(articleId))
-                                    },
-                                    isPremium = isPremium
-                                )
-                            }
-
-                        is Destination.ArticleDetail ->
-                            NavEntry(key) {
-                                ArticleDetailScreen(
-                                    articleId = key.articleId,
-                                    viewModel = learnFinanceViewModel,
-                                    onBack = { backStack.removeLastOrNull() },
-                                    onArticleClick = { articleId ->
-                                        backStack.add(Destination.ArticleDetail(articleId))
-                                    }
-                                )
-                            }
-
-                        is Destination.PremiumScreen ->
-                            NavEntry(key) {
-                                prasad.vennam.moneypilot.ui.premium.PremiumScreen(
-                                    onBackClick = { backStack.removeLastOrNull() },
-                                )
-                            }
-
-                        is Destination.CurrencyConverter ->
-                            NavEntry(key) {
-                                prasad.vennam.moneypilot.ui.currency.CurrencyConverterScreen(
-                                    onNavigateBack = { backStack.removeLastOrNull() }
-                                )
-                            }
-
-                        else -> error("Unknown destination: $key")
-                    }
+                   MoneyPilotNavEntry(
+                        key = key,
+                        backStack = backStack,
+                        analyticsHelper = analyticsHelper,
+                        mainViewModel = mainViewModel,
+                        transactionViewModel = transactionViewModel,
+                        budgetViewModel = budgetViewModel,
+                        investmentViewModel = investmentViewModel,
+                        analyticsViewModel = analyticsViewModel,
+                        learnFinanceViewModel = learnFinanceViewModel,
+                        userPreferences = userPreferences,
+                        isPremium = isPremium,
+                        userData = userData,
+                        syncState = syncState,
+                        interstitialAdManager = interstitialAdManager,
+                        onBack = { if (backStack.size > 1) backStack.removeLastOrNull() }
+                    )
                 },
             )
         }

@@ -70,6 +70,8 @@ MoneyPilot is a premium, client-first personal finance tracking and investment m
   - Designed public legal documentation templates (`privacy.html`, `terms.html`, `style.css`) inside the `docs/` folder for GitHub Pages hosting.
   - Standardized the Google Login button design according to Google Branding Guidelines.
   - Configured in-app redirect links pointing to the hosted policy URLs.
+  - Fixed biometric lock screen resetting screen states by wrapping the app contents in a Box overlay to preserve backstack.
+  - Introduced a 1-minute background grace period for biometric re-prompts to prevent excessive locking on brief background actions.
 - **Iteration 5**: Timezone-Aware Daily News Notifications
   - Created background `DailyNewsWorker` to fetch CNBC/Economic Times RSS XML feeds.
   - Dynamically parsed base currency selections for target wealth feeds.
