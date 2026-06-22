@@ -380,4 +380,115 @@ class ParserTests {
         // Verify decrement was NOT called
         org.mockito.Mockito.verify(mockUserPreferences, org.mockito.Mockito.never()).decrementAiScans()
     }
+
+    @Test
+    fun testAiRepository_modelResolution_usesRemoteConfigValues() {
+        runBlocking {
+            val mockContext = mock(android.content.Context::class.java)
+            whenever(mockContext.applicationContext).thenReturn(mockContext)
+
+            val mockLlmService = mock(prasad.vennam.moneypilot.feature.ai.service.LlmService::class.java)
+            val mockRepository = mock(prasad.vennam.moneypilot.data.repository.MoneyPilotRepository::class.java)
+            val mockWorkManager = mock(androidx.work.impl.WorkManagerImpl::class.java)
+
+            whenever(mockLlmService.partialResponses).thenReturn(
+                kotlinx.coroutines.flow.MutableSharedFlow()
+            )
+
+            androidx.work.impl.WorkManagerImpl.setDelegate(mockWorkManager)
+            whenever(mockWorkManager.getWorkInfosForUniqueWorkFlow("llm_model_download_work")).thenReturn(
+                kotlinx.coroutines.flow.emptyFlow()
+            )
+
+            val tempDir = java.nio.file.Files.createTempDirectory("temp_model_dir_remote").toFile()
+            whenever(mockContext.getExternalFilesDir(null)).thenReturn(tempDir)
+            whenever(mockContext.filesDir).thenReturn(tempDir)
+
+            // Mock RemoteConfigHelper returning custom values
+            val mockRemoteConfigHelper = mock(prasad.vennam.moneypilot.util.RemoteConfigHelper::class.java)
+            whenever(mockRemoteConfigHelper.getDeviceModelFile()).thenReturn("custom-device-model.litertlm")
+            whenever(mockRemoteConfigHelper.getDeviceModelUrl()).thenReturn("https://example.com/custom-device-model.litertlm")
+            whenever(mockRemoteConfigHelper.getEmulatorModelFile()).thenReturn("custom-emulator-model.litertlm")
+            whenever(mockRemoteConfigHelper.getEmulatorModelUrl()).thenReturn("https://example.com/custom-emulator-model.litertlm")
+
+            val repository = prasad.vennam.moneypilot.feature.ai.data.AiRepositoryImpl(
+                context = mockContext,
+                llmService = mockLlmService,
+                moneyPilotRepository = mockRepository,
+                remoteConfigHelper = mockRemoteConfigHelper
+            )
+
+            // Use reflection to inspect the private getters
+            val modelFileNameMethod = repository.javaClass.getDeclaredMethod("getModelFileName")
+            modelFileNameMethod.isAccessible = true
+            val resolvedFileName = modelFileNameMethod.invoke(repository) as String
+
+            val modelUrlMethod = repository.javaClass.getDeclaredMethod("getModelUrl")
+            modelUrlMethod.isAccessible = true
+            val resolvedUrl = modelUrlMethod.invoke(repository) as String
+
+            assertEquals("custom-device-model.litertlm", resolvedFileName)
+            assertEquals("https://example.com/custom-device-model.litertlm", resolvedUrl)
+
+            // Cleanup
+            androidx.work.impl.WorkManagerImpl.setDelegate(null)
+            tempDir.delete()
+        }
+    }
+
+    @Test
+    fun testAiRepository_modelResolution_fallsBackToConstants() {
+        runBlocking {
+            val mockContext = mock(android.content.Context::class.java)
+            whenever(mockContext.applicationContext).thenReturn(mockContext)
+
+            val mockLlmService = mock(prasad.vennam.moneypilot.feature.ai.service.LlmService::class.java)
+            val mockRepository = mock(prasad.vennam.moneypilot.data.repository.MoneyPilotRepository::class.java)
+            val mockWorkManager = mock(androidx.work.impl.WorkManagerImpl::class.java)
+
+            whenever(mockLlmService.partialResponses).thenReturn(
+                kotlinx.coroutines.flow.MutableSharedFlow()
+            )
+
+            androidx.work.impl.WorkManagerImpl.setDelegate(mockWorkManager)
+            whenever(mockWorkManager.getWorkInfosForUniqueWorkFlow("llm_model_download_work")).thenReturn(
+                kotlinx.coroutines.flow.emptyFlow()
+            )
+
+            val tempDir = java.nio.file.Files.createTempDirectory("temp_model_dir_fallback").toFile()
+            whenever(mockContext.getExternalFilesDir(null)).thenReturn(tempDir)
+            whenever(mockContext.filesDir).thenReturn(tempDir)
+
+            // Mock RemoteConfigHelper returning empty strings (trigger fallback)
+            val mockRemoteConfigHelper = mock(prasad.vennam.moneypilot.util.RemoteConfigHelper::class.java)
+            whenever(mockRemoteConfigHelper.getDeviceModelFile()).thenReturn("")
+            whenever(mockRemoteConfigHelper.getDeviceModelUrl()).thenReturn("")
+            whenever(mockRemoteConfigHelper.getEmulatorModelFile()).thenReturn("")
+            whenever(mockRemoteConfigHelper.getEmulatorModelUrl()).thenReturn("")
+
+            val repository = prasad.vennam.moneypilot.feature.ai.data.AiRepositoryImpl(
+                context = mockContext,
+                llmService = mockLlmService,
+                moneyPilotRepository = mockRepository,
+                remoteConfigHelper = mockRemoteConfigHelper
+            )
+
+            // Use reflection to inspect the private getters
+            val modelFileNameMethod = repository.javaClass.getDeclaredMethod("getModelFileName")
+            modelFileNameMethod.isAccessible = true
+            val resolvedFileName = modelFileNameMethod.invoke(repository) as String
+
+            val modelUrlMethod = repository.javaClass.getDeclaredMethod("getModelUrl")
+            modelUrlMethod.isAccessible = true
+            val resolvedUrl = modelUrlMethod.invoke(repository) as String
+
+            assertEquals(prasad.vennam.moneypilot.feature.ai.data.AiRepositoryImpl.DEVICE_MODEL_FILE, resolvedFileName)
+            assertEquals(prasad.vennam.moneypilot.feature.ai.data.AiRepositoryImpl.DEVICE_MODEL_URL, resolvedUrl)
+
+            // Cleanup
+            androidx.work.impl.WorkManagerImpl.setDelegate(null)
+            tempDir.delete()
+        }
+    }
 }
+

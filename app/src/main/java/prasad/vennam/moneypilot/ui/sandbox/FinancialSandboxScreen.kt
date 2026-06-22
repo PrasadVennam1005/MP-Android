@@ -409,6 +409,36 @@ fun FinancialSandboxScreen(
                     val gridColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
                     val labelColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
 
+                    val density = androidx.compose.ui.platform.LocalDensity.current
+                    val labelColorArgb = labelColor.toArgb()
+                    val textPaintY = remember(density, labelColorArgb) {
+                        android.graphics.Paint().apply {
+                            color = labelColorArgb
+                            textSize = with(density) { 10.sp.toPx() }
+                            textAlign = android.graphics.Paint.Align.RIGHT
+                        }
+                    }
+                    val textPaintX = remember(density, labelColorArgb) {
+                        android.graphics.Paint().apply {
+                            color = labelColorArgb
+                            textSize = with(density) { 10.sp.toPx() }
+                            textAlign = android.graphics.Paint.Align.CENTER
+                        }
+                    }
+
+                    val currentPath = remember { Path() }
+                    val optimizedPath = remember { Path() }
+                    val currentFillPath = remember { Path() }
+                    val optimizedFillPath = remember { Path() }
+
+                    val lineStroke = remember(density) {
+                        Stroke(width = with(density) { 3.dp.toPx() }, cap = StrokeCap.Round)
+                    }
+
+                    val dashPathEffect = remember {
+                        PathEffect.dashPathEffect(floatArrayOf(10f, 10f), 0f)
+                    }
+
                     Canvas(
                         modifier =
                             Modifier
@@ -438,12 +468,6 @@ fun FinancialSandboxScreen(
                         }
 
                         // Draw Y Axis labels
-                        val paint =
-                            android.graphics.Paint().apply {
-                                color = labelColor.toArgb()
-                                textSize = 10.sp.toPx()
-                                textAlign = android.graphics.Paint.Align.RIGHT
-                            }
                         for (i in 0..gridCount) {
                             val y = chartHeight - (chartHeight * (i.toFloat() / gridCount))
                             val value = maxVal * (i.toFloat() / gridCount)
@@ -452,12 +476,11 @@ fun FinancialSandboxScreen(
                                 label,
                                 paddingLeft - 6.dp.toPx(),
                                 y + 4.dp.toPx(),
-                                paint,
+                                textPaintY,
                             )
                         }
 
                         // Draw X Axis labels (Years 0, 2, 4, 6, 8, 10)
-                        paint.textAlign = android.graphics.Paint.Align.CENTER
                         val yearSteps = 5
                         for (i in 0..yearSteps) {
                             val year = i * 2
@@ -467,13 +490,13 @@ fun FinancialSandboxScreen(
                                 label,
                                 x,
                                 height - 4.dp.toPx(),
-                                paint,
+                                textPaintX,
                             )
                         }
 
                         // Generate Paths for plotting
-                        val currentPath = Path()
-                        val optimizedPath = Path()
+                        currentPath.reset()
+                        optimizedPath.reset()
 
                         currentProjection.forEachIndexed { index, balance ->
                             val x = paddingLeft + (chartWidth * (index.toFloat() / (currentProjection.size - 1)))
@@ -496,13 +519,12 @@ fun FinancialSandboxScreen(
                         }
 
                         // 1. Draw gradient filled paths under curves (premium shading)
-                        val currentFillPath =
-                            Path().apply {
-                                addPath(currentPath)
-                                lineTo(paddingLeft + chartWidth, chartHeight)
-                                lineTo(paddingLeft, chartHeight)
-                                close()
-                            }
+                        currentFillPath.reset()
+                        currentFillPath.addPath(currentPath)
+                        currentFillPath.lineTo(paddingLeft + chartWidth, chartHeight)
+                        currentFillPath.lineTo(paddingLeft, chartHeight)
+                        currentFillPath.close()
+
                         drawPath(
                             path = currentFillPath,
                             brush =
@@ -513,13 +535,12 @@ fun FinancialSandboxScreen(
                                 ),
                         )
 
-                        val optimizedFillPath =
-                            Path().apply {
-                                addPath(optimizedPath)
-                                lineTo(paddingLeft + chartWidth, chartHeight)
-                                lineTo(paddingLeft, chartHeight)
-                                close()
-                            }
+                        optimizedFillPath.reset()
+                        optimizedFillPath.addPath(optimizedPath)
+                        optimizedFillPath.lineTo(paddingLeft + chartWidth, chartHeight)
+                        optimizedFillPath.lineTo(paddingLeft, chartHeight)
+                        optimizedFillPath.close()
+
                         drawPath(
                             path = optimizedFillPath,
                             brush =
@@ -534,12 +555,12 @@ fun FinancialSandboxScreen(
                         drawPath(
                             path = currentPath,
                             color = primaryColor,
-                            style = Stroke(width = 3.dp.toPx(), cap = StrokeCap.Round),
+                            style = lineStroke,
                         )
                         drawPath(
                             path = optimizedPath,
                             color = secondaryColor,
-                            style = Stroke(width = 3.dp.toPx(), cap = StrokeCap.Round),
+                            style = lineStroke,
                         )
 
                         // Draw Target savings goal dashed line
@@ -549,7 +570,7 @@ fun FinancialSandboxScreen(
                             start = Offset(paddingLeft, targetY),
                             end = Offset(width, targetY),
                             strokeWidth = 1.5.dp.toPx(),
-                            pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 10f), 0f),
+                            pathEffect = dashPathEffect,
                         )
                     }
                 }

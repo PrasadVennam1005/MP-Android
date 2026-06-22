@@ -30,6 +30,10 @@ import prasad.vennam.moneypilot.ui.viewmodel.state.AllocationProfile
 import prasad.vennam.moneypilot.util.CurrencyFormatter
 import kotlin.math.abs
 
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
+
 @OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun AssetAllocationCard(
@@ -52,6 +56,11 @@ fun AssetAllocationCard(
             targetValue = 1f,
             animationSpec = tween(durationMillis = 800, easing = FastOutSlowInEasing),
         )
+    }
+
+    val density = LocalDensity.current
+    val stroke = remember(density) {
+        Stroke(width = with(density) { 14.dp.toPx() }, cap = StrokeCap.Round)
     }
 
     Card(
@@ -143,7 +152,6 @@ fun AssetAllocationCard(
                         modifier = Modifier.size(140.dp),
                     ) {
                         Canvas(modifier = Modifier.fillMaxSize()) {
-                            val strokeWidth = 14.dp.toPx()
                             var currentAngle = -90f
 
                             allocationDetails.forEach { detail ->
@@ -156,7 +164,7 @@ fun AssetAllocationCard(
                                         startAngle = currentAngle + (gap / 2f),
                                         sweepAngle = adjustedSweep,
                                         useCenter = false,
-                                        style = Stroke(width = strokeWidth, cap = StrokeCap.Round),
+                                        style = stroke,
                                     )
                                 }
                                 currentAngle += (detail.currentPercent.toFloat() / 100f) * 360f

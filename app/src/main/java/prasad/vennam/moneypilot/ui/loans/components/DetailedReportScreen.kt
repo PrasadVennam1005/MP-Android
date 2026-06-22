@@ -138,12 +138,16 @@ private fun SummaryChartCard(
             val primaryColor = MaterialTheme.colorScheme.primary
             val tertiaryColor = MaterialTheme.colorScheme.tertiary
 
+            val density = androidx.compose.ui.platform.LocalDensity.current
+            val stroke = remember(density) {
+                Stroke(width = with(density) { 16.dp.toPx() }, cap = StrokeCap.Round)
+            }
+
             Box(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier.size(160.dp),
             ) {
                 Canvas(modifier = Modifier.size(140.dp)) {
-                    val strokeWidth = 16.dp.toPx()
                     val principalSweep = if (totalPayable > 0) (principal / totalPayable * 360).toFloat() else 0f
                     val interestSweep = 360f - principalSweep
 
@@ -152,14 +156,14 @@ private fun SummaryChartCard(
                         startAngle = -90f,
                         sweepAngle = principalSweep,
                         useCenter = false,
-                        style = Stroke(width = strokeWidth, cap = StrokeCap.Round),
+                        style = stroke,
                     )
                     drawArc(
                         color = tertiaryColor,
                         startAngle = -90f + principalSweep,
                         sweepAngle = interestSweep,
                         useCenter = false,
-                        style = Stroke(width = strokeWidth, cap = StrokeCap.Round),
+                        style = stroke,
                     )
                 }
                 Column(

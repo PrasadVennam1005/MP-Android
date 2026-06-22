@@ -23,6 +23,8 @@ import androidx.compose.ui.unit.dp
 import prasad.vennam.moneypilot.R
 import kotlin.math.roundToInt
 
+import androidx.compose.ui.platform.LocalDensity
+
 @Composable
 fun PaymentBreakdownCard(
     principal: Double,
@@ -63,26 +65,29 @@ fun PaymentBreakdownCard(
                 animationSpec = tween(1000),
             )
 
+            val density = LocalDensity.current
+            val stroke = remember(density) {
+                Stroke(width = with(density) { 20.dp.toPx() }, cap = StrokeCap.Round)
+            }
+
             Box(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier.size(180.dp),
             ) {
                 Canvas(modifier = Modifier.size(160.dp)) {
-                    val strokeWidth = 20.dp.toPx()
-
                     drawArc(
                         color = primaryColor,
                         startAngle = -90f,
                         sweepAngle = animatedPrincipalSweep,
                         useCenter = false,
-                        style = Stroke(width = strokeWidth, cap = StrokeCap.Round),
+                        style = stroke,
                     )
                     drawArc(
                         color = tertiaryColor,
                         startAngle = -90f + animatedPrincipalSweep,
                         sweepAngle = 360f - animatedPrincipalSweep,
                         useCenter = false,
-                        style = Stroke(width = strokeWidth, cap = StrokeCap.Round),
+                        style = stroke,
                     )
                 }
                 Column(

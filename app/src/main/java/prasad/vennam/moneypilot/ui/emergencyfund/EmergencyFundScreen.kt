@@ -350,30 +350,36 @@ fun EmergencyFundScreen(
                                     animationSpec = tween(durationMillis = 1000),
                                 )
 
-                                val trackColor =
-                                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f)
+                                val trackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f)
                                 val sweepColor = MaterialTheme.colorScheme.secondary
+
+                                val density = androidx.compose.ui.platform.LocalDensity.current
+                                val gaugeStroke = remember(density) {
+                                    Stroke(width = with(density) { 16.dp.toPx() }, cap = StrokeCap.Round)
+                                }
+                                val sweepGradientBrush = remember(sweepColor) {
+                                    Brush.sweepGradient(
+                                        listOf(
+                                            sweepColor.copy(alpha = 0.6f),
+                                            sweepColor,
+                                        )
+                                    )
+                                }
 
                                 // Circular Gauge Canvas
                                 Canvas(modifier = Modifier.size(170.dp)) {
                                     // Track circle
                                     drawCircle(
                                         color = trackColor,
-                                        style = Stroke(width = 16.dp.toPx(), cap = StrokeCap.Round),
+                                        style = gaugeStroke,
                                     )
                                     // Progress sweep arc
                                     drawArc(
-                                        brush =
-                                            Brush.sweepGradient(
-                                                listOf(
-                                                    sweepColor.copy(alpha = 0.6f),
-                                                    sweepColor,
-                                                ),
-                                            ),
+                                        brush = sweepGradientBrush,
                                         startAngle = -90f,
                                         sweepAngle = (animatedPercent / 100f) * 360f,
                                         useCenter = false,
-                                        style = Stroke(width = 16.dp.toPx(), cap = StrokeCap.Round),
+                                        style = gaugeStroke,
                                     )
                                 }
 

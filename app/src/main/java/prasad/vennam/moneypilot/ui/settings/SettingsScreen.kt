@@ -162,6 +162,7 @@ fun SettingsScreen(
     var showLogoutWarning by remember { mutableStateOf(false) }
     var showExportFormatDialog by remember { mutableStateOf(false) }
     var showCurrencySheet by remember { mutableStateOf(false) }
+    var showGoalSheet by remember { mutableStateOf(false) }
     val currencySheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     var showThemeDialog by remember { mutableStateOf(false) }
@@ -390,6 +391,17 @@ fun SettingsScreen(
         )
     }
 
+    if (showGoalSheet) {
+        FinancialGoalBottomSheet(
+            currentGoal = currentGoal,
+            currentTarget = currentTarget,
+            onSave = { goal, target ->
+                mainViewModel.savePreferences(goal, target, currentCurrencyCode)
+            },
+            onDismiss = { showGoalSheet = false }
+        )
+    }
+
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
@@ -460,7 +472,7 @@ fun SettingsScreen(
                                 currentTarget,
                             ),
                         onClick = {
-                            mainViewModel.resetOnboarding()
+                            showGoalSheet = true
                         },
                     )
                     SettingsItem(
@@ -601,12 +613,14 @@ fun SettingsScreen(
                             checked = isDevToolEnabled,
                             onCheckedChange = { mainViewModel.setDevToolEnabled(it) }
                         )
-                        SettingsItem(
-                            icon = Icons.Rounded.PlayArrow,
-                            title = "Load Demo Data (INR)",
-                            subtitle = "Seeds rich Indian currency datasets for screenshots",
-                            onClick = { showDemoConfirmDialog = true },
-                        )
+                        if (isGuest) {
+                            SettingsItem(
+                                icon = Icons.Rounded.PlayArrow,
+                                title = "Load Demo Data (INR)",
+                                subtitle = "Seeds rich Indian currency datasets for screenshots",
+                                onClick = { showDemoConfirmDialog = true },
+                            )
+                        }
                     }
                 }
             }

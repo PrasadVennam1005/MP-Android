@@ -32,6 +32,8 @@ fun SpendingDonutChart(
         )
     }
 
+    val donutStroke = remember { Stroke(width = 40f, cap = StrokeCap.Round) }
+
     Box(modifier = modifier, contentAlignment = Alignment.Center) {
         Canvas(modifier = Modifier.fillMaxSize()) {
             var startAngle = -90f
@@ -42,7 +44,7 @@ fun SpendingDonutChart(
                     startAngle = 0f,
                     sweepAngle = 360f,
                     useCenter = false,
-                    style = Stroke(width = 40f, cap = StrokeCap.Round),
+                    style = donutStroke,
                 )
             } else {
                 sortedSpending.forEachIndexed { index, pair ->
@@ -55,7 +57,7 @@ fun SpendingDonutChart(
                         startAngle = startAngle,
                         sweepAngle = sweepAngle,
                         useCenter = false,
-                        style = Stroke(width = 40f, cap = StrokeCap.Round),
+                        style = donutStroke,
                     )
                     startAngle += sweepAngle
                 }

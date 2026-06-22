@@ -2,6 +2,7 @@ package prasad.vennam.moneypilot.util
 
 import com.google.firebase.remoteconfig.FirebaseRemoteConfig
 import com.google.firebase.remoteconfig.FirebaseRemoteConfigSettings
+import org.json.JSONObject
 import prasad.vennam.moneypilot.R
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -11,17 +12,15 @@ class RemoteConfigHelper @Inject constructor() {
     private val remoteConfig: FirebaseRemoteConfig = FirebaseRemoteConfig.getInstance()
 
     init {
+        val fetchInterval = if (prasad.vennam.moneypilot.BuildConfig.DEBUG) 0L else 3600L
         val configSettings = FirebaseRemoteConfigSettings.Builder()
-            .setMinimumFetchIntervalInSeconds(3600)
+            .setMinimumFetchIntervalInSeconds(fetchInterval)
             .build()
         remoteConfig.setConfigSettingsAsync(configSettings)
         remoteConfig.setDefaultsAsync(mapOf(
             FEATURE_LEARN_FINANCE_ENABLED to false,
             FINANCE_ARTICLES_JSON to "",
-            MODEL_EMULATOR_FILE to "",
-            MODEL_EMULATOR_URL to "",
-            MODEL_DEVICE_FILE to "",
-            MODEL_DEVICE_URL to ""
+            AI_MODEL_CONFIG to ""
         ))
         fetchAndActivate()
     }
@@ -38,28 +37,38 @@ class RemoteConfigHelper @Inject constructor() {
         return remoteConfig.getString(FINANCE_ARTICLES_JSON)
     }
 
+    private fun getAiModelConfig(): JSONObject? {
+        val json = remoteConfig.getString(AI_MODEL_CONFIG)
+        return if (json.isNotBlank()) {
+            try {
+                JSONObject(json)
+            } catch (e: Exception) {
+                null
+            }
+        } else {
+            null
+        }
+    }
+
     fun getEmulatorModelFile(): String {
-        return remoteConfig.getString(MODEL_EMULATOR_FILE)
+        return getAiModelConfig()?.optString("model_emulator_file") ?: ""
     }
 
     fun getEmulatorModelUrl(): String {
-        return remoteConfig.getString(MODEL_EMULATOR_URL)
+        return getAiModelConfig()?.optString("model_emulator_url") ?: ""
     }
 
     fun getDeviceModelFile(): String {
-        return remoteConfig.getString(MODEL_DEVICE_FILE)
+        return getAiModelConfig()?.optString("model_device_file") ?: ""
     }
 
     fun getDeviceModelUrl(): String {
-        return remoteConfig.getString(MODEL_DEVICE_URL)
+        return getAiModelConfig()?.optString("model_device_url") ?: ""
     }
 
     companion object {
         private const val FEATURE_LEARN_FINANCE_ENABLED = "feature_learn_finance_enabled"
         private const val FINANCE_ARTICLES_JSON = "finance_articles_json"
-        private const val MODEL_EMULATOR_FILE = "model_emulator_file"
-        private const val MODEL_EMULATOR_URL = "model_emulator_url"
-        private const val MODEL_DEVICE_FILE = "model_device_file"
-        private const val MODEL_DEVICE_URL = "model_device_url"
+        private const val AI_MODEL_CONFIG = "ai_model_config"
     }
 }
