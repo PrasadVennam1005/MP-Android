@@ -95,4 +95,8 @@ sealed interface Destination : NavKey {
     data class ArticleDetail(
         val articleId: String,
     ) : Destination
+
+    @Serializable
+    data object CurrencyConverter : Destination
 }
+

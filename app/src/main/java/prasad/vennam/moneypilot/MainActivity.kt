@@ -468,6 +468,9 @@ fun MoneyPilotApp(
                                     onNavigateToLearnFinance = {
                                         backStack.add(Destination.LearnFinance)
                                     },
+                                    onNavigateToCurrencyConverter = {
+                                        backStack.add(Destination.CurrencyConverter)
+                                    },
                                     analyticsHelper = analyticsHelper,
                                 )
                             }
@@ -741,6 +744,13 @@ fun MoneyPilotApp(
                             NavEntry(key) {
                                 prasad.vennam.moneypilot.ui.premium.PremiumScreen(
                                     onBackClick = { backStack.removeLastOrNull() },
+                                )
+                            }
+
+                        is Destination.CurrencyConverter ->
+                            NavEntry(key) {
+                                prasad.vennam.moneypilot.ui.currency.CurrencyConverterScreen(
+                                    onNavigateBack = { backStack.removeLastOrNull() }
                                 )
                             }
 

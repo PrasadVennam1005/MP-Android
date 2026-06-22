@@ -9,7 +9,9 @@ import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import prasad.vennam.moneypilot.util.WorkManagerSyncScheduler
+import prasad.vennam.moneypilot.data.model.RateAlert
 import javax.inject.Inject
+
 import javax.inject.Singleton
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "user_prefs")
@@ -70,6 +72,20 @@ class UserPreferences
             androidx.datastore.preferences.core
                 .stringPreferencesKey("last_ai_scan_reset_date")
         private val isDevToolEnabledKey = booleanPreferencesKey("is_dev_tool_enabled")
+        private val recentCurrencyPairsKey =
+            androidx.datastore.preferences.core
+                .stringPreferencesKey("recent_currency_pairs")
+        private val favoriteCurrencyPairsKey =
+            androidx.datastore.preferences.core
+                .stringPreferencesKey("favorite_currency_pairs")
+        private val currencyBasketKey =
+            androidx.datastore.preferences.core
+                .stringPreferencesKey("currency_basket")
+        private val rateAlertsKey =
+            androidx.datastore.preferences.core
+                .stringPreferencesKey("currency_rate_alerts")
+
+
 
         val isLoggedIn: Flow<Boolean> =
             context.dataStore.data
@@ -136,6 +152,64 @@ class UserPreferences
                 .map { preferences ->
                     preferences[isDevToolEnabledKey] ?: false
                 }
+
+        val recentCurrencyPairs: Flow<List<Pair<String, String>>> =
+            context.dataStore.data
+                .map { preferences ->
+                    val raw = preferences[recentCurrencyPairsKey] ?: ""
+                    parseCurrencyPairs(raw)
+                }
+
+        val favoriteCurrencyPairs: Flow<List<Pair<String, String>>> =
+            context.dataStore.data
+                .map { preferences ->
+                    val raw = preferences[favoriteCurrencyPairsKey] ?: ""
+                    parseCurrencyPairs(raw)
+                }
+
+        val currencyBasket: Flow<List<String>> =
+            context.dataStore.data
+                .map { preferences ->
+                    val raw = preferences[currencyBasketKey] ?: "EUR,GBP,INR,JPY"
+                    if (raw.isEmpty()) emptyList() else raw.split(",")
+                }
+
+        val rateAlerts: Flow<List<RateAlert>> =
+            context.dataStore.data
+                .map { preferences ->
+                    val raw = preferences[rateAlertsKey] ?: ""
+                    parseRateAlerts(raw)
+                }
+
+        private fun parseRateAlerts(raw: String): List<RateAlert> {
+            if (raw.isEmpty()) return emptyList()
+            return raw.split(";").mapNotNull {
+                val parts = it.split(",")
+                if (parts.size == 4) {
+                    val from = parts[0]
+                    val to = parts[1]
+                    val rate = parts[2].toDoubleOrNull() ?: return@mapNotNull null
+                    val isAbove = parts[3] == "above"
+                    RateAlert(from, to, rate, isAbove)
+                } else {
+                    null
+                }
+            }
+        }
+
+
+        private fun parseCurrencyPairs(raw: String): List<Pair<String, String>> {
+            if (raw.isEmpty()) return emptyList()
+            return raw.split(";").mapNotNull {
+                val parts = it.split(",")
+                if (parts.size == 2) {
+                    Pair(parts[0], parts[1])
+                } else {
+                    null
+                }
+            }
+        }
+
 
         val isSynced: Flow<Boolean> =
             context.dataStore.data
@@ -302,4 +376,62 @@ class UserPreferences
                 preferences[remainingAiScansKey] = current + amount
             }
         }
+
+        suspend fun saveRecentCurrencyPair(from: String, to: String) {
+            context.dataStore.edit { preferences ->
+                val raw = preferences[recentCurrencyPairsKey] ?: ""
+                val current = parseCurrencyPairs(raw).toMutableList()
+                val pair = Pair(from, to)
+                current.remove(pair)
+                current.add(0, pair)
+                val limited = current.take(8)
+                preferences[recentCurrencyPairsKey] = limited.joinToString(";") { "${it.first},${it.second}" }
+            }
+        }
+
+        suspend fun toggleFavoriteCurrencyPair(from: String, to: String) {
+            context.dataStore.edit { preferences ->
+                val raw = preferences[favoriteCurrencyPairsKey] ?: ""
+                val current = parseCurrencyPairs(raw).toMutableList()
+                val pair = Pair(from, to)
+                if (current.contains(pair)) {
+                    current.remove(pair)
+                } else {
+                    current.add(pair)
+                }
+                preferences[favoriteCurrencyPairsKey] = current.joinToString(";") { "${it.first},${it.second}" }
+            }
+        }
+
+        suspend fun addRateAlert(alert: RateAlert) {
+            context.dataStore.edit { preferences ->
+                val raw = preferences[rateAlertsKey] ?: ""
+                val current = parseRateAlerts(raw).toMutableList()
+                if (!current.contains(alert)) {
+                    current.add(alert)
+                }
+                preferences[rateAlertsKey] = current.joinToString(";") {
+                    "${it.from},${it.to},${it.targetRate},${if (it.isAbove) "above" else "below"}"
+                }
+            }
+        }
+
+        suspend fun removeRateAlert(alert: RateAlert) {
+            context.dataStore.edit { preferences ->
+                val raw = preferences[rateAlertsKey] ?: ""
+                val current = parseRateAlerts(raw).toMutableList()
+                current.remove(alert)
+                preferences[rateAlertsKey] = current.joinToString(";") {
+                    "${it.from},${it.to},${it.targetRate},${if (it.isAbove) "above" else "below"}"
+                }
+            }
+        }
+
+        suspend fun saveCurrencyBasket(basket: List<String>) {
+            context.dataStore.edit { preferences ->
+                preferences[currencyBasketKey] = basket.joinToString(",")
+            }
+        }
     }
+
+

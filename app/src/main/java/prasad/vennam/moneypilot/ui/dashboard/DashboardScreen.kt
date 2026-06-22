@@ -144,6 +144,7 @@ fun DashboardScreen(
     onNavigateToSandbox: () -> Unit,
     onNavigateToEmiCalculator: () -> Unit,
     onNavigateToLearnFinance: () -> Unit,
+    onNavigateToCurrencyConverter: () -> Unit,
 ) {
     val dashboardState by dashboardViewModel.uiState.collectAsState()
     val userData by mainViewModel.userData.collectAsState()
@@ -532,6 +533,7 @@ fun DashboardScreen(
                                 onNavigateToNews = onNavigateToNews,
                                 onNavigateToSandbox = onNavigateToSandbox,
                                 onNavigateToEmiCalculator = onNavigateToEmiCalculator,
+                                onNavigateToCurrencyConverter = onNavigateToCurrencyConverter,
                                 isGuest = isGuest && !prasad.vennam.moneypilot.BuildConfig.DEBUG && !isDevToolEnabled,
                             )
                         }

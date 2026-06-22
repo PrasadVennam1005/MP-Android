@@ -20,7 +20,9 @@ import androidx.compose.material.icons.rounded.Camera
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.RemoveCircleOutline
 import androidx.compose.material.icons.rounded.Shield
+import androidx.compose.material.icons.rounded.CurrencyExchange
 import androidx.compose.material3.CardDefaults
+
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -59,6 +61,7 @@ fun QuickActionSection(
     onNavigateToNews: () -> Unit,
     onNavigateToSandbox: () -> Unit,
     onNavigateToEmiCalculator: () -> Unit,
+    onNavigateToCurrencyConverter: () -> Unit,
     isGuest: Boolean,
 ) {
     Column {
@@ -150,6 +153,23 @@ fun QuickActionSection(
                 onNavigateToEmiCalculator,
                 Modifier.weight(1f),
             )
+        }
+        Row(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            QuickActionButton(
+                "Converter",
+                Icons.Rounded.CurrencyExchange,
+                MaterialTheme.colorScheme.primary,
+                onNavigateToCurrencyConverter,
+                Modifier.weight(1f),
+            )
+            Spacer(modifier = Modifier.weight(1f))
+            Spacer(modifier = Modifier.weight(1f))
         }
     }
 }
