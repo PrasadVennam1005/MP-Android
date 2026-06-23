@@ -56,6 +56,12 @@ object DatabaseModule {
         secureStorageHelper: SecureStorageHelper,
         categoryDaoProvider: Provider<CategoryDao>,
     ): MoneyPilotDatabase {
+        try {
+            System.loadLibrary("sqlcipher")
+        } catch (t: Throwable) {
+            android.util.Log.e("DatabaseModule", "Failed to load sqlcipher native library", t)
+        }
+
         val dbName = "money_pilot_database"
         val dbFile = context.getDatabasePath(dbName)
         val passphraseStr = secureStorageHelper.getOrGenerateDatabasePassphraseString()
@@ -64,7 +70,6 @@ object DatabaseModule {
 
         if (dbFile.exists()) {
             try {
-                System.loadLibrary("sqlcipher")
                 val db =
                     SQLiteDatabase.openDatabase(
                         dbFile.absolutePath,
@@ -79,6 +84,7 @@ object DatabaseModule {
                 context.deleteDatabase(dbName)
             }
         }
+
 
         return Room
             .databaseBuilder(

@@ -48,6 +48,12 @@ class AiRepositoryImpl
 
         internal var geminiApiKeyProvider: () -> String = { prasad.vennam.moneypilot.BuildConfig.GEMINI_API_KEY }
 
+        private val isCloudEnabled: Boolean
+            get() {
+                val apiKey = geminiApiKeyProvider()
+                return apiKey.isNotBlank() && apiKey != "\"\""
+            }
+
         // Emulator detection: use a small, CPU-compatible model
         private val isEmulator: Boolean by lazy {
             val fingerprint = android.os.Build.FINGERPRINT ?: ""
@@ -144,13 +150,21 @@ class AiRepositoryImpl
                         androidx.work.WorkInfo.State.FAILED -> {
                             if (_state.value is LlmState.Downloading) {
                                 Log.e(TAG, "Background download failed.")
-                                _state.value = LlmState.Error("Background model download failed. Please try again.")
+                                if (isCloudEnabled) {
+                                    _state.value = LlmState.Ready
+                                } else {
+                                    _state.value = LlmState.Error("Background model download failed. Please try again.")
+                                }
                             }
                         }
                         androidx.work.WorkInfo.State.CANCELLED -> {
                             if (_state.value is LlmState.Downloading) {
                                 Log.w(TAG, "Background download cancelled.")
-                                _state.value = LlmState.Idle
+                                if (isCloudEnabled) {
+                                    _state.value = LlmState.Ready
+                                } else {
+                                    _state.value = LlmState.Idle
+                                }
                             }
                         }
                         else -> {
@@ -175,8 +189,13 @@ class AiRepositoryImpl
             Log.d(TAG, "Initializing with model: ${modelFile.absolutePath} (exists=${modelFile.exists()}, size=${modelFile.length()})")
 
             if (!modelFile.exists() || modelFile.length() == 0L) {
-                Log.d(TAG, "Model file not found — staying Idle so UI can prompt download.")
-                _state.value = LlmState.Idle
+                if (isCloudEnabled) {
+                    Log.d(TAG, "Model file not found, but cloud is enabled. Transitioning to Ready.")
+                    _state.value = LlmState.Ready
+                } else {
+                    Log.d(TAG, "Model file not found — staying Idle so UI can prompt download.")
+                    _state.value = LlmState.Idle
+                }
                 return
             }
 
@@ -187,19 +206,24 @@ class AiRepositoryImpl
                 _state.value = LlmState.Ready
                 Log.d(TAG, "Model initialized successfully. State → Ready")
             } catch (e: Exception) {
-                val friendlyMsg =
-                    when {
-                        e.message?.contains("OOM", ignoreCase = true) == true ||
-                            e.message?.contains("out of memory", ignoreCase = true) == true ->
-                            "Not enough RAM to load this model. Try restarting the app or device."
-                        e.message?.contains("No such file", ignoreCase = true) == true ->
-                            "Model file not found. Please re-download the model."
-                        e.message?.contains("Incompatible", ignoreCase = true) == true ->
-                            "Model format incompatible with this device. Please contact support."
-                        else -> "AI engine failed to start. ${e.message ?: "Unknown error"}"
-                    }
                 Log.e(TAG, "Model initialization failed: ${e.message}", e)
-                _state.value = LlmState.Error(friendlyMsg)
+                if (isCloudEnabled) {
+                    Log.w(TAG, "Local model initialization failed, but cloud is enabled. Transitioning to Ready.")
+                    _state.value = LlmState.Ready
+                } else {
+                    val friendlyMsg =
+                        when {
+                            e.message?.contains("OOM", ignoreCase = true) == true ||
+                                e.message?.contains("out of memory", ignoreCase = true) == true ->
+                                "Not enough RAM to load this model. Try restarting the app or device."
+                            e.message?.contains("No such file", ignoreCase = true) == true ->
+                                "Model file not found. Please re-download the model."
+                            e.message?.contains("Incompatible", ignoreCase = true) == true ->
+                                "Model format incompatible with this device. Please contact support."
+                            else -> "AI engine failed to start. ${e.message ?: "Unknown error"}"
+                        }
+                    _state.value = LlmState.Error(friendlyMsg)
+                }
             }
         }
 
@@ -211,8 +235,8 @@ class AiRepositoryImpl
                         Log.d(TAG, "Download ignored — Model download already in progress.")
                         return@withContext
                     }
-                    if (_state.value is LlmState.Initializing || _state.value is LlmState.Ready) {
-                        Log.d(TAG, "Download ignored — Model already initializing or ready.")
+                    if (_state.value is LlmState.Initializing || (_state.value is LlmState.Ready && getModelFile().exists() && getModelFile().length() > 0L)) {
+                        Log.d(TAG, "Download ignored — Model already initializing or ready locally.")
                         return@withContext
                     }
 
@@ -385,7 +409,7 @@ class AiRepositoryImpl
                 // Complete the Gemma chat template:
                 // <start_of_turn>user\n{system_message}\n\n{question}<end_of_turn>\n<start_of_turn>model\n
                 val contextPrompt = buildFinancialContext(prompt) + prompt + "<end_of_turn>\n<start_of_turn>model\n"
-                if (isReady) {
+                if (isReady && getModelFile().exists()) {
                     llmService.generateResponseStreaming(contextPrompt)
                 } else {
                     llmService.generateCloudResponseStreaming(contextPrompt)

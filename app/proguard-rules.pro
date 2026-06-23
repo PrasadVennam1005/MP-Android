@@ -38,6 +38,9 @@
 -keep class net.sqlcipher.** { *; }
 -keep interface net.sqlcipher.** { *; }
 -dontwarn net.sqlcipher.**
+-keep class net.zetetic.** { *; }
+-keep interface net.zetetic.** { *; }
+-dontwarn net.zetetic.**
 
 # Kotlinx Serialization
 -keepattributes *Annotation*,Signature,InnerClasses,EnclosingMethod

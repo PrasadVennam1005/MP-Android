@@ -214,13 +214,18 @@ class LlmService(
                 if (response != null) {
                     accumulated.clear()
                     accumulated.append(response)
+                    _partialResponses.tryEmit(LlmResponse(accumulated.toString(), false))
                     _partialResponses.tryEmit(LlmResponse(accumulated.toString(), true))
                 } else {
-                    _partialResponses.tryEmit(LlmResponse("Cloud AI is currently unavailable. Please check your internet connection or try again later.", true))
+                    val errMsg = "Cloud AI is currently unavailable. Please check your internet connection or try again later."
+                    _partialResponses.tryEmit(LlmResponse(errMsg, false))
+                    _partialResponses.tryEmit(LlmResponse(errMsg, true))
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Error during cloud streaming generation", e)
-                _partialResponses.tryEmit(LlmResponse("Error during cloud generation: ${e.message}", true))
+                val errMsg = "Error during cloud generation: ${e.message}"
+                _partialResponses.tryEmit(LlmResponse(errMsg, false))
+                _partialResponses.tryEmit(LlmResponse(errMsg, true))
             }
         }
     }
@@ -234,7 +239,7 @@ class LlmService(
             }
 
             Log.d(TAG, "generateCloudResponse: Sending query to Gemini API Cloud")
-            val url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=$apiKey"
+            val url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=$apiKey"
 
             val escapedPrompt = prompt
                 .replace("\\", "\\\\")

@@ -19,4 +19,13 @@ class MoneyPilotApplication :
                 .Builder()
                 .setWorkerFactory(workerFactory)
                 .build()
+
+    override fun onCreate() {
+        super.onCreate()
+        try {
+            System.loadLibrary("sqlcipher")
+        } catch (t: Throwable) {
+            android.util.Log.e("MoneyPilotApplication", "Failed to load sqlcipher native library", t)
+        }
+    }
 }
