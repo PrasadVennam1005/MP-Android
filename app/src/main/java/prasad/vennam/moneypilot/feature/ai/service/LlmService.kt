@@ -3,6 +3,9 @@ package prasad.vennam.moneypilot.feature.ai.service
 import android.content.Context
 import android.util.Log
 import com.google.ai.edge.litertlm.*
+import com.squareup.moshi.JsonClass
+import com.squareup.moshi.Moshi
+import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.channels.BufferOverflow
@@ -11,6 +14,11 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
 import prasad.vennam.moneypilot.feature.ai.model.LlmResponse
 
 /**
@@ -29,6 +37,7 @@ class LlmService(
 ) {
     private var engine: Engine? = null
     private var conversation: Conversation? = null
+    private val client = OkHttpClient()
 
     private val _partialResponses =
         MutableSharedFlow<LlmResponse>(
@@ -193,6 +202,87 @@ class LlmService(
         }
     }
 
+    @OptIn(kotlinx.coroutines.DelicateCoroutinesApi::class)
+    fun generateCloudResponseStreaming(prompt: String) {
+        Log.d(TAG, "generateCloudResponseStreaming called. Prompt length: ${prompt.length}")
+        accumulated.clear()
+        _partialResponses.tryEmit(LlmResponse("Thinking...", false))
+
+        GlobalScope.launch(Dispatchers.Default) {
+            try {
+                val response = generateCloudResponse(prompt)
+                if (response != null) {
+                    accumulated.clear()
+                    accumulated.append(response)
+                    _partialResponses.tryEmit(LlmResponse(accumulated.toString(), true))
+                } else {
+                    _partialResponses.tryEmit(LlmResponse("Cloud AI is currently unavailable. Please check your internet connection or try again later.", true))
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error during cloud streaming generation", e)
+                _partialResponses.tryEmit(LlmResponse("Error during cloud generation: ${e.message}", true))
+            }
+        }
+    }
+
+    suspend fun generateCloudResponse(prompt: String): String? =
+        withContext(Dispatchers.IO) {
+            val apiKey = prasad.vennam.moneypilot.BuildConfig.GEMINI_API_KEY
+            if (apiKey.isBlank() || apiKey == "\"\"") {
+                Log.d(TAG, "generateCloudResponse: GEMINI_API_KEY is empty/placeholder, skipping cloud fallback")
+                return@withContext null
+            }
+
+            Log.d(TAG, "generateCloudResponse: Sending query to Gemini API Cloud")
+            val url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=$apiKey"
+
+            val escapedPrompt = prompt
+                .replace("\\", "\\\\")
+                .replace("\"", "\\\"")
+                .replace("\n", "\\n")
+                .replace("\r", "\\r")
+                .replace("\t", "\\t")
+
+            val requestBodyJson = """
+                {
+                  "contents": [
+                    {
+                      "parts": [
+                        {
+                          "text": "$escapedPrompt"
+                        }
+                      ]
+                    }
+                  ]
+                }
+            """.trimIndent()
+
+            val mediaType = "application/json; charset=utf-8".toMediaType()
+            val request = Request.Builder()
+                .url(url)
+                .post(requestBodyJson.toRequestBody(mediaType))
+                .build()
+
+            try {
+                client.newCall(request).execute().use { response ->
+                    val body = response.body?.string()
+                    Log.d(TAG, "generateCloudResponse: HTTP code = ${response.code}")
+                    if (!response.isSuccessful || body.isNullOrEmpty()) {
+                        Log.e(TAG, "generateCloudResponse failed: code=${response.code}, body=$body")
+                        return@withContext null
+                    }
+                    val moshi = Moshi.Builder().addLast(KotlinJsonAdapterFactory()).build()
+                    val geminiResponse = moshi.adapter(GeminiResponse::class.java).fromJson(body)
+                    val responseText = geminiResponse?.candidates?.firstOrNull()?.content?.parts?.firstOrNull()?.text
+                    Log.d(TAG, "generateCloudResponse: Successfully parsed response of length: ${responseText?.length ?: 0}")
+                    responseText
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "generateCloudResponse Exception: ${e.message}", e)
+                null
+            }
+        }
+
     fun close() {
         safeCloseEngine()
     }
@@ -218,3 +308,23 @@ class LlmService(
         private const val TAG = "LlmService"
     }
 }
+
+@JsonClass(generateAdapter = true)
+data class GeminiResponse(
+    val candidates: List<GeminiCandidate>?
+)
+
+@JsonClass(generateAdapter = true)
+data class GeminiCandidate(
+    val content: GeminiContent?
+)
+
+@JsonClass(generateAdapter = true)
+data class GeminiContent(
+    val parts: List<GeminiPart>?
+)
+
+@JsonClass(generateAdapter = true)
+data class GeminiPart(
+    val text: String?
+)

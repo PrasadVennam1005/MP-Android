@@ -370,8 +370,12 @@ class AiRepositoryImpl
         }
 
         override suspend fun sendMessage(prompt: String) {
-            if (_state.value !is LlmState.Ready && _state.value !is LlmState.Generating) {
-                _state.value = LlmState.Error("AI not ready")
+            val isReady = _state.value is LlmState.Ready || _state.value is LlmState.Generating
+            val apiKey = prasad.vennam.moneypilot.BuildConfig.GEMINI_API_KEY
+            val isCloudEnabled = apiKey.isNotBlank() && apiKey != "\"\""
+
+            if (!isReady && !isCloudEnabled) {
+                _state.value = LlmState.Error("AI not ready and no API Key configured.")
                 return
             }
 
@@ -379,7 +383,11 @@ class AiRepositoryImpl
                 // Complete the Gemma chat template:
                 // <start_of_turn>user\n{system_message}\n\n{question}<end_of_turn>\n<start_of_turn>model\n
                 val contextPrompt = buildFinancialContext(prompt) + prompt + "<end_of_turn>\n<start_of_turn>model\n"
-                llmService.generateResponseStreaming(contextPrompt)
+                if (isReady) {
+                    llmService.generateResponseStreaming(contextPrompt)
+                } else {
+                    llmService.generateCloudResponseStreaming(contextPrompt)
+                }
             } catch (e: Exception) {
                 _state.value = LlmState.Error("Generation failed: ${e.message}")
             }
@@ -529,7 +537,11 @@ class AiRepositoryImpl
 
         override suspend fun generateShortAdvice(summary: String): String =
             kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
-                if (_state.value !is LlmState.Ready) {
+                val isReady = _state.value is LlmState.Ready
+                val apiKey = prasad.vennam.moneypilot.BuildConfig.GEMINI_API_KEY
+                val isCloudEnabled = apiKey.isNotBlank() && apiKey != "\"\""
+
+                if (!isReady && !isCloudEnabled) {
                     return@withContext ""
                 }
                 try {
@@ -541,7 +553,11 @@ class AiRepositoryImpl
                             "Keep it direct and action-oriented. Do not include tags or markup.<end_of_turn>\n" +
                             "<start_of_turn>model\n"
 
-                    val response = llmService.generateResponse(contextPrompt).trim()
+                    val response = if (isReady) {
+                        llmService.generateResponse(contextPrompt).trim()
+                    } else {
+                        llmService.generateCloudResponse(contextPrompt)?.trim() ?: ""
+                    }
                     Log.d(TAG, "AI Advice generated: $response")
                     response
                 } catch (e: Exception) {
@@ -552,8 +568,12 @@ class AiRepositoryImpl
 
         override suspend fun parseReceiptText(ocrText: String): ParsedReceipt? =
             withContext(Dispatchers.Default) {
-                if (_state.value !is LlmState.Ready) {
-                    Log.d(TAG, "parseReceiptText ignored: LLM is not ready.")
+                val isReady = _state.value is LlmState.Ready
+                val apiKey = prasad.vennam.moneypilot.BuildConfig.GEMINI_API_KEY
+                val isCloudEnabled = apiKey.isNotBlank() && apiKey != "\"\""
+
+                if (!isReady && !isCloudEnabled) {
+                    Log.d(TAG, "parseReceiptText ignored: LLM is not ready and no Cloud Fallback key available.")
                     return@withContext null
                 }
                 try {
@@ -568,7 +588,19 @@ class AiRepositoryImpl
                         append(ocrText)
                         append("<end_of_turn>\n<start_of_turn>model\n")
                     }
-                    val response = llmService.generateResponse(prompt).trim()
+                    val response = if (isReady) {
+                        Log.d(TAG, "Running parseReceiptText locally via LiteRT")
+                        llmService.generateResponse(prompt).trim()
+                    } else {
+                        Log.d(TAG, "Running parseReceiptText via Cloud Fallback")
+                        llmService.generateCloudResponse(prompt)?.trim()
+                    }
+
+                    if (response.isNullOrEmpty()) {
+                        Log.w(TAG, "Received empty response from LLM")
+                        return@withContext null
+                    }
+
                     Log.d(TAG, "OCR LLM Response: $response")
                     val (action, _) = AiActionParser.parse(response)
                     if (action is AiAction.AddTransaction) {

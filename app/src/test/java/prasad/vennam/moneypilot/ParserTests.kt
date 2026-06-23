@@ -520,5 +520,146 @@ class ParserTests {
         // It should correct "22O.OO" to "220.00" and match it
         assertEquals(220.0, parsed.amount ?: 0.0, 0.0)
     }
+
+    @Test
+    fun testAiRepository_parseReceiptText_cloudFallbackSuccess() {
+        runBlocking {
+            val mockContext = mock(android.content.Context::class.java)
+            whenever(mockContext.applicationContext).thenReturn(mockContext)
+
+            val mockLlmService = mock(prasad.vennam.moneypilot.feature.ai.service.LlmService::class.java)
+            val mockRepository = mock(prasad.vennam.moneypilot.data.repository.MoneyPilotRepository::class.java)
+            val mockWorkManager = mock(androidx.work.impl.WorkManagerImpl::class.java)
+
+            whenever(mockLlmService.partialResponses).thenReturn(
+                kotlinx.coroutines.flow.MutableSharedFlow()
+            )
+
+            androidx.work.impl.WorkManagerImpl.setDelegate(mockWorkManager)
+            whenever(mockWorkManager.getWorkInfosForUniqueWorkFlow("llm_model_download_work")).thenReturn(
+                kotlinx.coroutines.flow.emptyFlow()
+            )
+
+            val tempDir = java.nio.file.Files.createTempDirectory("temp_model_dir_cloud").toFile()
+            whenever(mockContext.getExternalFilesDir(null)).thenReturn(tempDir)
+            whenever(mockContext.filesDir).thenReturn(tempDir)
+
+            val mockRemoteConfigHelper = mock(prasad.vennam.moneypilot.util.RemoteConfigHelper::class.java)
+            whenever(mockRemoteConfigHelper.getEmulatorModelFile()).thenReturn("")
+            whenever(mockRemoteConfigHelper.getEmulatorModelUrl()).thenReturn("")
+            whenever(mockRemoteConfigHelper.getDeviceModelFile()).thenReturn("")
+            whenever(mockRemoteConfigHelper.getDeviceModelUrl()).thenReturn("")
+
+            val repository = prasad.vennam.moneypilot.feature.ai.data.AiRepositoryImpl(
+                context = mockContext,
+                llmService = mockLlmService,
+                moneyPilotRepository = mockRepository,
+                remoteConfigHelper = mockRemoteConfigHelper
+            )
+
+            val ocrText = "Starbucks\nTotal: 250"
+            val expectedPrompt = buildString {
+                append("<start_of_turn>user\n")
+                append("Analyze the following OCR text from a transaction receipt and extract:\n")
+                append("1. The merchant name (e.g. Starbucks, Walmart, Swiggy).\n")
+                append("2. The total transaction amount paid as a numeric value.\n")
+                append("Format your response as an action tag with NO other text or explanation:\n")
+                append("[ACTION:ADD_EXPENSE|amount=VALUE|category=Other|note=MERCHANT_NAME|date=today]\n\n")
+                append("OCR Text:\n")
+                append(ocrText)
+                append("<end_of_turn>\n<start_of_turn>model\n")
+            }
+
+            whenever(mockLlmService.generateCloudResponse(expectedPrompt)).thenReturn(
+                "[ACTION:ADD_EXPENSE|amount=250|category=Other|note=Starbucks|date=today]"
+            )
+
+            val result = repository.parseReceiptText(ocrText)
+
+            assertNotNull(result)
+            assertEquals("Starbucks", result?.merchant)
+            assertEquals(250.0, result?.amount ?: 0.0, 0.0)
+
+            // Cleanup
+            androidx.work.impl.WorkManagerImpl.setDelegate(null)
+            tempDir.delete()
+        }
+    }
+
+    @Test
+    fun testAiRepository_parseReceiptText_cloudFallbackFailureReturnsNull() {
+        runBlocking {
+            val mockContext = mock(android.content.Context::class.java)
+            whenever(mockContext.applicationContext).thenReturn(mockContext)
+
+            val mockLlmService = mock(prasad.vennam.moneypilot.feature.ai.service.LlmService::class.java)
+            val mockRepository = mock(prasad.vennam.moneypilot.data.repository.MoneyPilotRepository::class.java)
+            val mockWorkManager = mock(androidx.work.impl.WorkManagerImpl::class.java)
+
+            whenever(mockLlmService.partialResponses).thenReturn(
+                kotlinx.coroutines.flow.MutableSharedFlow()
+            )
+
+            androidx.work.impl.WorkManagerImpl.setDelegate(mockWorkManager)
+            whenever(mockWorkManager.getWorkInfosForUniqueWorkFlow("llm_model_download_work")).thenReturn(
+                kotlinx.coroutines.flow.emptyFlow()
+            )
+
+            val tempDir = java.nio.file.Files.createTempDirectory("temp_model_dir_cloud_fail").toFile()
+            whenever(mockContext.getExternalFilesDir(null)).thenReturn(tempDir)
+            whenever(mockContext.filesDir).thenReturn(tempDir)
+
+            val mockRemoteConfigHelper = mock(prasad.vennam.moneypilot.util.RemoteConfigHelper::class.java)
+            whenever(mockRemoteConfigHelper.getEmulatorModelFile()).thenReturn("")
+            whenever(mockRemoteConfigHelper.getEmulatorModelUrl()).thenReturn("")
+            whenever(mockRemoteConfigHelper.getDeviceModelFile()).thenReturn("")
+            whenever(mockRemoteConfigHelper.getDeviceModelUrl()).thenReturn("")
+
+            val repository = prasad.vennam.moneypilot.feature.ai.data.AiRepositoryImpl(
+                context = mockContext,
+                llmService = mockLlmService,
+                moneyPilotRepository = mockRepository,
+                remoteConfigHelper = mockRemoteConfigHelper
+            )
+
+            val ocrText = "Starbucks\nTotal: 250"
+            whenever(mockLlmService.generateCloudResponse(org.mockito.Mockito.anyString())).thenReturn(null)
+
+            val result = repository.parseReceiptText(ocrText)
+
+            assertNull(result)
+
+            // Cleanup
+            androidx.work.impl.WorkManagerImpl.setDelegate(null)
+            tempDir.delete()
+        }
+    }
+
+    @Test
+    fun testGeminiResponse_jsonParsing() {
+        val json = """
+            {
+              "candidates": [
+                {
+                  "content": {
+                    "parts": [
+                      {
+                        "text": "Hello, this is a response from cloud Gemini API!"
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+        """.trimIndent()
+        val moshi = com.squareup.moshi.Moshi.Builder()
+            .addLast(com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory())
+            .build()
+        val geminiResponse = moshi.adapter(prasad.vennam.moneypilot.feature.ai.service.GeminiResponse::class.java).fromJson(json)
+        assertNotNull(geminiResponse)
+        val text = geminiResponse?.candidates?.firstOrNull()?.content?.parts?.firstOrNull()?.text
+        assertEquals("Hello, this is a response from cloud Gemini API!", text)
+    }
 }
+
 

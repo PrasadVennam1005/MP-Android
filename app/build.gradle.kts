@@ -49,6 +49,9 @@ android {
         val rewardedProdId = localProperties.getProperty("REWARDED_PROD_ID", "\"\"")
         buildConfigField("String", "REWARDED_PROD_ID", rewardedProdId)
 
+        val geminiApiKey = localProperties.getProperty("GEMINI_API_KEY", "\"\"")
+        buildConfigField("String", "GEMINI_API_KEY", geminiApiKey)
+
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         manifestPlaceholders["admobAppId"] = "ca-app-pub-3940256099942544~3347511713" // Default to Test ID
     }
