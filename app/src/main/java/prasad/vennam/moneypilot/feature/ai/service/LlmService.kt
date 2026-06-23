@@ -232,8 +232,8 @@ class LlmService(
 
     suspend fun generateCloudResponse(prompt: String): String? =
         withContext(Dispatchers.IO) {
-            val apiKey = prasad.vennam.moneypilot.BuildConfig.GEMINI_API_KEY
-            if (apiKey.isBlank() || apiKey == "\"\"") {
+            val apiKey = prasad.vennam.moneypilot.BuildConfig.GEMINI_API_KEY.trim().removeSurrounding("\"")
+            if (apiKey.isBlank()) {
                 Log.d(TAG, "generateCloudResponse: GEMINI_API_KEY is empty/placeholder, skipping cloud fallback")
                 return@withContext null
             }

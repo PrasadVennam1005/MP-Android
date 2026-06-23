@@ -50,8 +50,8 @@ class AiRepositoryImpl
 
         private val isCloudEnabled: Boolean
             get() {
-                val apiKey = geminiApiKeyProvider()
-                return apiKey.isNotBlank() && apiKey != "\"\""
+                val apiKey = geminiApiKeyProvider().trim().removeSurrounding("\"")
+                return apiKey.isNotBlank()
             }
 
         // Emulator detection: use a small, CPU-compatible model
@@ -397,8 +397,6 @@ class AiRepositoryImpl
 
         override suspend fun sendMessage(prompt: String) {
             val isReady = _state.value is LlmState.Ready || _state.value is LlmState.Generating
-            val apiKey = geminiApiKeyProvider()
-            val isCloudEnabled = apiKey.isNotBlank() && apiKey != "\"\""
 
             if (!isReady && !isCloudEnabled) {
                 _state.value = LlmState.Error("AI not ready and no API Key configured.")
@@ -564,8 +562,6 @@ class AiRepositoryImpl
         override suspend fun generateShortAdvice(summary: String): String =
             kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
                 val isReady = _state.value is LlmState.Ready
-                val apiKey = geminiApiKeyProvider()
-                val isCloudEnabled = apiKey.isNotBlank() && apiKey != "\"\""
 
                 if (!isReady && !isCloudEnabled) {
                     return@withContext ""
@@ -595,8 +591,6 @@ class AiRepositoryImpl
         override suspend fun parseReceiptText(ocrText: String): ParsedReceipt? =
             withContext(Dispatchers.Default) {
                 val isReady = _state.value is LlmState.Ready
-                val apiKey = geminiApiKeyProvider()
-                val isCloudEnabled = apiKey.isNotBlank() && apiKey != "\"\""
 
                 if (!isReady && !isCloudEnabled) {
                     Log.d(TAG, "parseReceiptText ignored: LLM is not ready and no Cloud Fallback key available.")
