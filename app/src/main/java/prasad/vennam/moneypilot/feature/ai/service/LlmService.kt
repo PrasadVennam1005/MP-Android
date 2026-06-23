@@ -265,9 +265,9 @@ class LlmService(
 
             try {
                 client.newCall(request).execute().use { response ->
-                    val body = response.body?.string()
+                    val body = response.body.string()
                     Log.d(TAG, "generateCloudResponse: HTTP code = ${response.code}")
-                    if (!response.isSuccessful || body.isNullOrEmpty()) {
+                    if (!response.isSuccessful || body.isEmpty()) {
                         Log.e(TAG, "generateCloudResponse failed: code=${response.code}, body=$body")
                         return@withContext null
                     }
