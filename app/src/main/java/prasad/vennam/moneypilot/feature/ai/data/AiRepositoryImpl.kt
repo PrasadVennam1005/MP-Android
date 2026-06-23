@@ -46,6 +46,8 @@ class AiRepositoryImpl
 
         private val downloadMutex = Mutex()
 
+        internal var geminiApiKeyProvider: () -> String = { prasad.vennam.moneypilot.BuildConfig.GEMINI_API_KEY }
+
         // Emulator detection: use a small, CPU-compatible model
         private val isEmulator: Boolean by lazy {
             val fingerprint = android.os.Build.FINGERPRINT ?: ""
@@ -371,7 +373,7 @@ class AiRepositoryImpl
 
         override suspend fun sendMessage(prompt: String) {
             val isReady = _state.value is LlmState.Ready || _state.value is LlmState.Generating
-            val apiKey = prasad.vennam.moneypilot.BuildConfig.GEMINI_API_KEY
+            val apiKey = geminiApiKeyProvider()
             val isCloudEnabled = apiKey.isNotBlank() && apiKey != "\"\""
 
             if (!isReady && !isCloudEnabled) {
@@ -538,7 +540,7 @@ class AiRepositoryImpl
         override suspend fun generateShortAdvice(summary: String): String =
             kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
                 val isReady = _state.value is LlmState.Ready
-                val apiKey = prasad.vennam.moneypilot.BuildConfig.GEMINI_API_KEY
+                val apiKey = geminiApiKeyProvider()
                 val isCloudEnabled = apiKey.isNotBlank() && apiKey != "\"\""
 
                 if (!isReady && !isCloudEnabled) {
@@ -569,7 +571,7 @@ class AiRepositoryImpl
         override suspend fun parseReceiptText(ocrText: String): ParsedReceipt? =
             withContext(Dispatchers.Default) {
                 val isReady = _state.value is LlmState.Ready
-                val apiKey = prasad.vennam.moneypilot.BuildConfig.GEMINI_API_KEY
+                val apiKey = geminiApiKeyProvider()
                 val isCloudEnabled = apiKey.isNotBlank() && apiKey != "\"\""
 
                 if (!isReady && !isCloudEnabled) {

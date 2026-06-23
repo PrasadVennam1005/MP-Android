@@ -555,7 +555,9 @@ class ParserTests {
                 llmService = mockLlmService,
                 moneyPilotRepository = mockRepository,
                 remoteConfigHelper = mockRemoteConfigHelper
-            )
+            ).apply {
+                geminiApiKeyProvider = { "fake_api_key" }
+            }
 
             val ocrText = "Starbucks\nTotal: 250"
             val expectedPrompt = buildString {
@@ -620,7 +622,9 @@ class ParserTests {
                 llmService = mockLlmService,
                 moneyPilotRepository = mockRepository,
                 remoteConfigHelper = mockRemoteConfigHelper
-            )
+            ).apply {
+                geminiApiKeyProvider = { "fake_api_key" }
+            }
 
             val ocrText = "Starbucks\nTotal: 250"
             whenever(mockLlmService.generateCloudResponse(org.mockito.Mockito.anyString())).thenReturn(null)
