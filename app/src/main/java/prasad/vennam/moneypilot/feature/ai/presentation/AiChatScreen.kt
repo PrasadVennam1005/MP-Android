@@ -35,7 +35,25 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import com.google.android.gms.ads.AdRequest
+import com.google.android.gms.ads.AdSize
+import com.google.android.gms.ads.AdView
+import com.google.android.gms.ads.nativead.NativeAd
+import com.google.android.gms.ads.nativead.NativeAdView
+import com.google.android.gms.ads.AdLoader
+import android.widget.FrameLayout
+import android.widget.LinearLayout
+import android.widget.TextView
+import android.widget.ImageView
+import android.view.Gravity
+import android.view.ViewGroup
+import android.graphics.drawable.GradientDrawable
+import prasad.vennam.moneypilot.ui.components.BannerPlaceholder
+import kotlinx.coroutines.launch
 import prasad.vennam.moneypilot.R
 import prasad.vennam.moneypilot.feature.ai.model.AiAction
 import prasad.vennam.moneypilot.feature.ai.model.Author
@@ -57,6 +75,7 @@ fun AiChatScreen(
     val listState = rememberLazyListState()
     val snackbarHostState = remember { SnackbarHostState() }
     val focusRequester = remember { FocusRequester() }
+    val scope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
         viewModel.actionFeedback.collect { feedback ->
@@ -411,7 +430,7 @@ fun AiChatScreen(
                             } catch (e: Exception) {
                                 // Focus request might fail if node is not attached yet
                             }
-                        },
+                        }
                     )
                 } else {
                     LazyColumn(
@@ -676,6 +695,36 @@ fun WelcomeScreen(onSuggestionClick: (String) -> Unit) {
     val categories = listOf("Transactions", "Wealth", "Loans")
     var selectedCategoryIndex by remember { mutableIntStateOf(0) }
 
+    // Load AdMob Native Ad
+    val context = LocalContext.current
+    var nativeAd by remember { mutableStateOf<NativeAd?>(null) }
+    var adLoading by remember { mutableStateOf(true) }
+
+    LaunchedEffect(Unit) {
+        try {
+            val adLoader = AdLoader.Builder(context, "ca-app-pub-3940256099942544/2247696110") // Test Native ID
+                .forNativeAd { ad ->
+                    nativeAd = ad
+                    adLoading = false
+                }
+                .withAdListener(object : com.google.android.gms.ads.AdListener() {
+                    override fun onAdFailedToLoad(error: com.google.android.gms.ads.LoadAdError) {
+                        adLoading = false
+                    }
+                })
+                .build()
+            adLoader.loadAd(AdRequest.Builder().build())
+        } catch (e: Exception) {
+            adLoading = false
+        }
+    }
+
+    DisposableEffect(nativeAd) {
+        onDispose {
+            nativeAd?.destroy()
+        }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -778,7 +827,11 @@ fun WelcomeScreen(onSuggestionClick: (String) -> Unit) {
             }
         }
 
-        Spacer(modifier = Modifier.height(12.dp))
+        if (adLoading) {
+            BannerPlaceholder(modifier = Modifier.padding(vertical = 12.dp))
+        } else if (nativeAd != null) {
+            AdmobNativeAd(nativeAd = nativeAd!!, modifier = Modifier.padding(vertical = 12.dp))
+        }
 
         val currentSuggestions = when (selectedCategoryIndex) {
             0 -> listOf(
@@ -1062,4 +1115,181 @@ fun DetailRow(
             color = MaterialTheme.colorScheme.onSurface,
         )
     }
+}
+
+private fun Int.dpToPx(context: android.content.Context): Int {
+    return (this * context.resources.displayMetrics.density).toInt()
+}
+
+@Composable
+fun AdmobNativeAd(nativeAd: NativeAd, modifier: Modifier = Modifier) {
+    val context = LocalContext.current
+    
+    // Resolve theme colors
+    val primaryColor = MaterialTheme.colorScheme.primary.toArgb()
+    val tertiaryColor = MaterialTheme.colorScheme.tertiary.toArgb()
+
+    AndroidView(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
+        factory = { ctx ->
+            NativeAdView(ctx).apply {
+                val rootLayout = FrameLayout(ctx).apply {
+                    layoutParams = FrameLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.WRAP_CONTENT
+                    )
+                }
+
+                // Main card container
+                val cardContainer = LinearLayout(ctx).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.CENTER_VERTICAL
+                    setPadding(
+                        16.dpToPx(ctx),
+                        20.dpToPx(ctx), // overlapping badge clearance
+                        16.dpToPx(ctx),
+                        16.dpToPx(ctx)
+                    )
+                    
+                    // Linear Gradient matching primary/tertiary colors of the app theme
+                    val gradient = GradientDrawable(
+                        GradientDrawable.Orientation.LEFT_RIGHT,
+                        intArrayOf(primaryColor, tertiaryColor)
+                    ).apply {
+                        cornerRadius = 20.dpToPx(ctx).toFloat()
+                    }
+                    background = gradient
+                    
+                    layoutParams = FrameLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.WRAP_CONTENT
+                    ).apply {
+                        topMargin = 8.dpToPx(ctx)
+                    }
+                }
+
+                // Icon (ImageView)
+                val iconView = ImageView(ctx).apply {
+                    layoutParams = LinearLayout.LayoutParams(
+                        44.dpToPx(ctx),
+                        44.dpToPx(ctx)
+                    )
+                    scaleType = ImageView.ScaleType.CENTER_CROP
+                    val iconBg = GradientDrawable().apply {
+                        setColor(0x26FFFFFF.toInt()) // 15% opacity white
+                        cornerRadius = 12.dpToPx(ctx).toFloat()
+                    }
+                    background = iconBg
+                    setPadding(4.dpToPx(ctx), 4.dpToPx(ctx), 4.dpToPx(ctx), 4.dpToPx(ctx))
+                }
+                cardContainer.addView(iconView)
+
+                // Text Container (Headline & Body)
+                val textContainer = LinearLayout(ctx).apply {
+                    orientation = LinearLayout.VERTICAL
+                    layoutParams = LinearLayout.LayoutParams(
+                        0,
+                        ViewGroup.LayoutParams.WRAP_CONTENT,
+                        1f
+                    ).apply {
+                        leftMargin = 12.dpToPx(ctx)
+                        rightMargin = 12.dpToPx(ctx)
+                    }
+                }
+
+                val headlineView = TextView(ctx).apply {
+                    textSize = 14f
+                    setTextColor(android.graphics.Color.WHITE)
+                    typeface = android.graphics.Typeface.create("sans-serif", android.graphics.Typeface.BOLD)
+                    maxLines = 1
+                    ellipsize = android.text.TextUtils.TruncateAt.END
+                }
+                textContainer.addView(headlineView)
+
+                val bodyView = TextView(ctx).apply {
+                    textSize = 11f
+                    setTextColor(0xC7FFFFFF.toInt()) // 78% opacity white
+                    maxLines = 2
+                    ellipsize = android.text.TextUtils.TruncateAt.END
+                    setPadding(0, 2.dpToPx(ctx), 0, 0)
+                }
+                textContainer.addView(bodyView)
+
+                cardContainer.addView(textContainer)
+
+                // Call to Action View
+                val ctaView = TextView(ctx).apply {
+                    textSize = 12f
+                    setTextColor(android.graphics.Color.parseColor("#1A237E"))
+                    typeface = android.graphics.Typeface.create("sans-serif", android.graphics.Typeface.BOLD)
+                    gravity = Gravity.CENTER
+                    setPadding(14.dpToPx(ctx), 8.dpToPx(ctx), 14.dpToPx(ctx), 8.dpToPx(ctx))
+                    
+                    val ctaBg = GradientDrawable().apply {
+                        setColor(android.graphics.Color.parseColor("#FFD54F")) // Gold color to match LearnFinance CTA
+                        cornerRadius = 10.dpToPx(ctx).toFloat()
+                    }
+                    background = ctaBg
+                }
+                cardContainer.addView(ctaView)
+
+                rootLayout.addView(cardContainer)
+
+                // SPONSORED badge
+                val adBadge = TextView(ctx).apply {
+                    text = "SPONSORED"
+                    textSize = 9f
+                    setTextColor(android.graphics.Color.WHITE)
+                    typeface = android.graphics.Typeface.create("sans-serif", android.graphics.Typeface.BOLD)
+                    gravity = Gravity.CENTER
+                    setPadding(6.dpToPx(ctx), 2.dpToPx(ctx), 6.dpToPx(ctx), 2.dpToPx(ctx))
+                    
+                    val badgeBg = GradientDrawable().apply {
+                        setColor(tertiaryColor)
+                        cornerRadius = 4.dpToPx(ctx).toFloat()
+                    }
+                    background = badgeBg
+                    
+                    layoutParams = FrameLayout.LayoutParams(
+                        ViewGroup.LayoutParams.WRAP_CONTENT,
+                        ViewGroup.LayoutParams.WRAP_CONTENT
+                    ).apply {
+                        gravity = Gravity.TOP or Gravity.START
+                        leftMargin = 16.dpToPx(ctx)
+                    }
+                }
+                rootLayout.addView(adBadge)
+
+                addView(rootLayout)
+
+                // Register asset views
+                this.headlineView = headlineView
+                this.bodyView = bodyView
+                this.iconView = iconView
+                this.callToActionView = ctaView
+
+                // Bind Native Ad assets
+                headlineView.text = nativeAd.headline
+                bodyView.text = nativeAd.body
+
+                if (nativeAd.icon != null) {
+                    iconView.setImageDrawable(nativeAd.icon?.drawable)
+                    iconView.visibility = android.view.View.VISIBLE
+                } else {
+                    iconView.visibility = android.view.View.GONE
+                }
+
+                if (nativeAd.callToAction != null) {
+                    ctaView.text = nativeAd.callToAction
+                    ctaView.visibility = android.view.View.VISIBLE
+                } else {
+                    ctaView.visibility = android.view.View.GONE
+                }
+
+                setNativeAd(nativeAd)
+            }
+        }
+    )
 }
