@@ -54,6 +54,7 @@ import prasad.vennam.moneypilot.ui.viewmodel.EmiCalculatorUiState
 import prasad.vennam.moneypilot.ui.viewmodel.EmiCalculatorViewModel
 import prasad.vennam.moneypilot.util.CurrencyFormatter
 import prasad.vennam.moneypilot.util.LocalCurrencyCode
+import prasad.vennam.moneypilot.util.AnalyticsConstants
 import prasad.vennam.moneypilot.util.AnalyticsHelper
 import prasad.vennam.moneypilot.util.TrackScreen
 import java.util.Currency
@@ -68,7 +69,7 @@ fun EmiCalculatorScreen(
     analyticsHelper: AnalyticsHelper,
     viewModel: EmiCalculatorViewModel = hiltViewModel(),
 ) {
-    TrackScreen(analyticsHelper, "EmiCalculator")
+    TrackScreen(analyticsHelper, AnalyticsConstants.Screen.EMI_CALCULATOR)
     val currencyCode = LocalCurrencyCode.current
     val context = LocalContext.current
     val currencySymbol =

@@ -71,6 +71,7 @@ import prasad.vennam.moneypilot.data.entity.Transaction
 import prasad.vennam.moneypilot.data.entity.TransactionType
 import prasad.vennam.moneypilot.ui.budget.utils.getCategoryIcon
 import prasad.vennam.moneypilot.ui.viewmodel.TransactionViewModel
+import prasad.vennam.moneypilot.util.AnalyticsConstants
 import prasad.vennam.moneypilot.util.AnalyticsHelper
 import prasad.vennam.moneypilot.util.LocalCurrencyCode
 import prasad.vennam.moneypilot.util.TrackScreen
@@ -88,7 +89,10 @@ fun AddEditTransactionScreen(
     isPremium: Boolean,
     onNavigateBack: () -> Unit,
 ) {
-    TrackScreen(analyticsHelper, if (transactionId == null) "AddTransaction" else "EditTransaction")
+    TrackScreen(
+        analyticsHelper,
+        if (transactionId == null) AnalyticsConstants.Screen.ADD_TRANSACTION else AnalyticsConstants.Screen.EDIT_TRANSACTION
+    )
     val formState by viewModel.formState.collectAsStateWithLifecycle()
 
     val currencyCode = LocalCurrencyCode.current
@@ -252,12 +256,12 @@ fun AddEditTransactionScreen(
 
                     // Analytics: Track successful add/edit only after validation passes
                     analyticsHelper.logEvent(
-                        "transaction_added",
+                        AnalyticsConstants.Event.TRANSACTION_ADDED,
                         mapOf(
-                            "type" to formState.type.name,
-                            "category" to categoryName,
-                            "payment_mode" to formState.paymentMode,
-                            "is_edit" to (transactionId != null),
+                            AnalyticsConstants.Param.TYPE to formState.type.name,
+                            AnalyticsConstants.Param.CATEGORY to categoryName,
+                            AnalyticsConstants.Param.PAYMENT_MODE to formState.paymentMode,
+                            AnalyticsConstants.Param.IS_EDIT to (transactionId != null),
                         ),
                     )
 

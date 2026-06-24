@@ -107,6 +107,7 @@ import prasad.vennam.moneypilot.data.UserPreferences
 import prasad.vennam.moneypilot.ui.viewmodel.MainViewModel
 import prasad.vennam.moneypilot.ui.viewmodel.RestoreState
 import prasad.vennam.moneypilot.ui.viewmodel.TransactionViewModel
+import prasad.vennam.moneypilot.util.AnalyticsConstants
 import prasad.vennam.moneypilot.util.AnalyticsHelper
 import prasad.vennam.moneypilot.util.ExportHelper
 import android.Manifest
@@ -135,7 +136,7 @@ fun SettingsScreen(
     onAccountDeleted: () -> Unit,
     onBackClick: () -> Unit,
 ) {
-    TrackScreen(analyticsHelper, "Settings")
+    TrackScreen(analyticsHelper, AnalyticsConstants.Screen.SETTINGS)
     val userData by mainViewModel.userData.collectAsState()
     val isSynced by mainViewModel.isSynced.collectAsState()
     val spreadsheetId by mainViewModel.spreadsheetId.collectAsState()
@@ -281,7 +282,7 @@ fun SettingsScreen(
                     }
 
                 if (googleIdTokenCredential != null) {
-                    analyticsHelper.logEvent("login", mapOf("method" to "google"))
+                    analyticsHelper.logEvent(AnalyticsConstants.Event.LOGIN, mapOf(AnalyticsConstants.Param.METHOD to "google"))
                     mainViewModel.saveUserData(
                         UserPreferences.UserData(
                             name = googleIdTokenCredential.displayName ?: "User",
@@ -410,10 +411,10 @@ fun SettingsScreen(
             selectedCurrencyCode = currentCurrency.code,
             onCurrencySelect = {
                 analyticsHelper.logEvent(
-                    "currency_changed",
+                    AnalyticsConstants.Event.CURRENCY_CHANGED,
                     mapOf(
-                        "from" to currentCurrencyCode,
-                        "to" to it,
+                        AnalyticsConstants.Param.FROM to currentCurrencyCode,
+                        AnalyticsConstants.Param.TO to it,
                     ),
                 )
                 mainViewModel.setCurrency(it)
@@ -555,7 +556,7 @@ fun SettingsScreen(
                         subtitle = "Require fingerprint/face to open app",
                         checked = isBiometricEnabled,
                         onCheckedChange = { checked ->
-                            analyticsHelper.logEvent("settings_biometric_toggled", mapOf("enabled" to checked))
+                             analyticsHelper.logEvent(AnalyticsConstants.Event.SETTINGS_BIOMETRIC_TOGGLED, mapOf(AnalyticsConstants.Param.ENABLED to checked))
                             if (activity != null) {
                                 if (checked) {
                                     prasad.vennam.moneypilot.util.BiometricHelper.authenticate(
@@ -599,7 +600,7 @@ fun SettingsScreen(
                         subtitle = "Parse notifications to auto-add expenses",
                         checked = isNotificationTrackingEnabled,
                         onCheckedChange = {
-                            analyticsHelper.logEvent("settings_notification_tracking_toggled")
+                             analyticsHelper.logEvent(AnalyticsConstants.Event.SETTINGS_NOTIFICATION_TRACKING_TOGGLED)
                             val intent = android.content.Intent(android.provider.Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)
                             context.startActivity(intent)
                         },
@@ -611,7 +612,7 @@ fun SettingsScreen(
                         subtitle = "Parse debit/credit SMS to auto-add expenses",
                         checked = isSmsTrackingEnabled,
                         onCheckedChange = { checked ->
-                            analyticsHelper.logEvent("settings_sms_tracking_toggled", mapOf("enabled" to checked))
+                             analyticsHelper.logEvent(AnalyticsConstants.Event.SETTINGS_SMS_TRACKING_TOGGLED, mapOf(AnalyticsConstants.Param.ENABLED to checked))
                             if (checked) {
                                 smsPermissionLauncher.launch(Manifest.permission.RECEIVE_SMS)
                             } else {

@@ -37,6 +37,7 @@ import prasad.vennam.moneypilot.R
 import prasad.vennam.moneypilot.data.entity.BookmarkedArticle
 import prasad.vennam.moneypilot.ui.viewmodel.NewsPortal
 import prasad.vennam.moneypilot.ui.viewmodel.NewsViewModel
+import prasad.vennam.moneypilot.util.AnalyticsConstants
 import prasad.vennam.moneypilot.util.AnalyticsHelper
 import prasad.vennam.moneypilot.util.TrackScreen
 import java.net.URI
@@ -51,7 +52,7 @@ fun NewsScreen(
     analyticsHelper: AnalyticsHelper,
     viewModel: NewsViewModel = hiltViewModel(),
 ) {
-    TrackScreen(analyticsHelper, "FinancialNews")
+    TrackScreen(analyticsHelper, AnalyticsConstants.Screen.FINANCIAL_NEWS)
     val uiState by viewModel.uiState.collectAsState()
     var selectedCategory by remember { mutableStateOf("All") }
     var selectedTab by remember { mutableIntStateOf(0) } // 0 = Portals, 1 = Bookmarks
@@ -105,7 +106,10 @@ fun NewsScreen(
                 Tab(
                     selected = selectedTab == 0,
                     onClick = {
-                        analyticsHelper.logEvent("news_tab_switched", mapOf("tab" to "feeds"))
+                        analyticsHelper.logEvent(
+                            AnalyticsConstants.Event.NEWS_TAB_SWITCHED,
+                            mapOf(AnalyticsConstants.Param.TAB to "feeds")
+                        )
                         selectedTab = 0
                     },
                     text = {
@@ -122,7 +126,10 @@ fun NewsScreen(
                 Tab(
                     selected = selectedTab == 1,
                     onClick = {
-                        analyticsHelper.logEvent("news_tab_switched", mapOf("tab" to "bookmarks"))
+                        analyticsHelper.logEvent(
+                            AnalyticsConstants.Event.NEWS_TAB_SWITCHED,
+                            mapOf(AnalyticsConstants.Param.TAB to "bookmarks")
+                        )
                         selectedTab = 1
                     },
                     text = {
@@ -179,7 +186,10 @@ fun NewsScreen(
                         FilterChip(
                             selected = isSelected,
                             onClick = {
-                                analyticsHelper.logEvent("news_category_clicked", mapOf("category" to category))
+                                analyticsHelper.logEvent(
+                                    AnalyticsConstants.Event.NEWS_CATEGORY_CLICKED,
+                                    mapOf(AnalyticsConstants.Param.CATEGORY to category)
+                                )
                                 selectedCategory = category
                             },
                             label = { Text(stringResource(categoryResId)) },

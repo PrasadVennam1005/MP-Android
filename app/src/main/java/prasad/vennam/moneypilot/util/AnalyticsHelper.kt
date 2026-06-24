@@ -49,10 +49,10 @@ class FirebaseAnalyticsHelper
             engagementTimeSeconds: Long,
         ) {
             logEvent(
-                "screen_engagement_time",
+                AnalyticsConstants.Event.SCREEN_ENGAGEMENT_TIME,
                 mapOf(
-                    "screen_name" to screenName,
-                    "engagement_time_sec" to engagementTimeSeconds,
+                    AnalyticsConstants.Param.SCREEN_NAME to screenName,
+                    AnalyticsConstants.Param.ENGAGEMENT_TIME_SEC to engagementTimeSeconds,
                 ),
             )
         }

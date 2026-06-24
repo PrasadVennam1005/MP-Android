@@ -71,6 +71,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import prasad.vennam.moneypilot.R
 import prasad.vennam.moneypilot.data.UserPreferences
 import prasad.vennam.moneypilot.ui.viewmodel.EmergencyFundViewModel
+import prasad.vennam.moneypilot.util.AnalyticsConstants
 import prasad.vennam.moneypilot.util.AnalyticsHelper
 import prasad.vennam.moneypilot.util.CurrencyFormatter
 import prasad.vennam.moneypilot.util.LocalCurrencyCode
@@ -84,7 +85,7 @@ fun EmergencyFundScreen(
     onNavigateBack: () -> Unit,
     viewModel: EmergencyFundViewModel = hiltViewModel(),
 ) {
-    TrackScreen(analyticsHelper, "EmergencyFund")
+    TrackScreen(analyticsHelper, AnalyticsConstants.Screen.EMERGENCY_FUND)
     val coroutineScope = rememberCoroutineScope()
     val currencyCode = LocalCurrencyCode.current
 
@@ -1028,7 +1029,10 @@ fun EmergencyFundScreen(
                             onClick = {
                                 val additional = addAmountStr.toDoubleOrNull() ?: 0.0
                                 if (additional > 0.0) {
-                                    analyticsHelper.logEvent("emergency_fund_deposit", mapOf("amount" to additional))
+                                    analyticsHelper.logEvent(
+                                        AnalyticsConstants.Event.EMERGENCY_FUND_DEPOSIT,
+                                        mapOf(AnalyticsConstants.Param.AMOUNT to additional)
+                                    )
                                     viewModel.updateEmergencySaved(currentSaved + additional)
                                     showDepositSheet = false
                                 }
@@ -1168,7 +1172,10 @@ fun EmergencyFundScreen(
                             onClick = {
                                 val amount = withdrawAmountStr.toDoubleOrNull() ?: 0.0
                                 if (amount > 0.0 && amount <= currentSaved) {
-                                    analyticsHelper.logEvent("emergency_fund_withdraw", mapOf("amount" to amount))
+                                    analyticsHelper.logEvent(
+                                        AnalyticsConstants.Event.EMERGENCY_FUND_WITHDRAW,
+                                        mapOf(AnalyticsConstants.Param.AMOUNT to amount)
+                                    )
                                     viewModel.updateEmergencySaved(
                                         (currentSaved - amount).coerceAtLeast(
                                             0.0,

@@ -42,6 +42,7 @@ import prasad.vennam.moneypilot.util.AnalyticsHelper
 import prasad.vennam.moneypilot.util.TrackScreen
 import prasad.vennam.moneypilot.util.CurrencyFormatter
 import prasad.vennam.moneypilot.util.LocalCurrencyCode
+import prasad.vennam.moneypilot.util.AnalyticsConstants
 import prasad.vennam.moneypilot.util.inRupees
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -54,7 +55,7 @@ fun SubscriptionScreen(
     analyticsHelper: AnalyticsHelper,
     viewModel: SubscriptionViewModel = hiltViewModel()
 ) {
-    TrackScreen(analyticsHelper, "Subscriptions")
+    TrackScreen(analyticsHelper, AnalyticsConstants.Screen.SUBSCRIPTIONS)
     val subscriptions by viewModel.allSubscriptions.collectAsState()
     val categories by viewModel.allCategories.collectAsState()
     val currencyCode = LocalCurrencyCode.current
@@ -122,10 +123,13 @@ fun SubscriptionScreen(
                                 showFormSheet = true
                             },
                             onDelete = {
-                                analyticsHelper.logEvent("subscription_deleted", mapOf(
-                                    "subscription_name" to subscription.name,
-                                    "subscription_amount" to subscription.amount.inRupees
-                                ))
+                                analyticsHelper.logEvent(
+                                    AnalyticsConstants.Event.SUBSCRIPTION_DELETED,
+                                    mapOf(
+                                        AnalyticsConstants.Param.SUBSCRIPTION_NAME to subscription.name,
+                                        AnalyticsConstants.Param.SUBSCRIPTION_AMOUNT to subscription.amount.inRupees
+                                    )
+                                )
                                 viewModel.deleteSubscription(subscription)
                             }
                         )
@@ -142,13 +146,17 @@ fun SubscriptionScreen(
             onDismiss = { showFormSheet = false },
             onSave = { name, amount, cycle, date, mode, categoryId, notify ->
                 val id = selectedSubscriptionForEdit?.id ?: 0L
-                val eventName = if (id == 0L) "subscription_added" else "subscription_updated"
+                val eventName = if (id == 0L) {
+                    AnalyticsConstants.Event.SUBSCRIPTION_ADDED
+                } else {
+                    AnalyticsConstants.Event.SUBSCRIPTION_UPDATED
+                }
                 analyticsHelper.logEvent(eventName, mapOf(
-                    "subscription_name" to name,
-                    "subscription_amount" to amount.inRupees,
-                    "subscription_cycle" to cycle,
-                    "subscription_mode" to mode,
-                    "subscription_notify" to notify
+                    AnalyticsConstants.Param.SUBSCRIPTION_NAME to name,
+                    AnalyticsConstants.Param.SUBSCRIPTION_AMOUNT to amount.inRupees,
+                    AnalyticsConstants.Param.SUBSCRIPTION_CYCLE to cycle,
+                    AnalyticsConstants.Param.SUBSCRIPTION_MODE to mode,
+                    AnalyticsConstants.Param.SUBSCRIPTION_NOTIFY to notify
                 ))
                 val sub = Subscription(
                     id = id,

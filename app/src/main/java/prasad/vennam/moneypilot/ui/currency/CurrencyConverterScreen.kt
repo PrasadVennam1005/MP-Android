@@ -58,6 +58,7 @@ import kotlinx.coroutines.launch
 import prasad.vennam.moneypilot.data.model.RateAlert
 import prasad.vennam.moneypilot.ui.theme.MoneyPilotTheme
 import prasad.vennam.moneypilot.ui.theme.PremiumShapes
+import prasad.vennam.moneypilot.util.AnalyticsConstants
 import prasad.vennam.moneypilot.util.AnalyticsHelper
 import prasad.vennam.moneypilot.util.TrackScreen
 import java.util.Locale
@@ -69,7 +70,7 @@ fun CurrencyConverterScreen(
     analyticsHelper: AnalyticsHelper,
     viewModel: CurrencyConverterViewModel = hiltViewModel()
 ) {
-    TrackScreen(analyticsHelper, "CurrencyConverter")
+    TrackScreen(analyticsHelper, AnalyticsConstants.Screen.CURRENCY_CONVERTER)
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
 
@@ -111,7 +112,7 @@ fun CurrencyConverterScreen(
                 actions = {
                     IconButton(
                         onClick = {
-                            analyticsHelper.logEvent("currency_refresh_clicked")
+                            analyticsHelper.logEvent(AnalyticsConstants.Event.CURRENCY_REFRESH_CLICKED)
                             viewModel.refreshRates()
                         }
                     ) {
@@ -165,7 +166,10 @@ fun CurrencyConverterScreen(
                             Tab(
                                 selected = !uiState.isComparisonMode,
                                 onClick = {
-                                    analyticsHelper.logEvent("currency_mode_switched", mapOf("mode" to "standard"))
+                                    analyticsHelper.logEvent(
+                                        AnalyticsConstants.Event.CURRENCY_MODE_SWITCHED,
+                                        mapOf(AnalyticsConstants.Param.MODE to "standard")
+                                    )
                                     viewModel.setComparisonMode(false)
                                 },
                                 text = { Text(stringResource(prasad.vennam.moneypilot.R.string.standard_mode), fontWeight = FontWeight.Bold) },
@@ -174,7 +178,10 @@ fun CurrencyConverterScreen(
                             Tab(
                                 selected = uiState.isComparisonMode,
                                 onClick = {
-                                    analyticsHelper.logEvent("currency_mode_switched", mapOf("mode" to "basket"))
+                                    analyticsHelper.logEvent(
+                                        AnalyticsConstants.Event.CURRENCY_MODE_SWITCHED,
+                                        mapOf(AnalyticsConstants.Param.MODE to "basket")
+                                    )
                                     viewModel.setComparisonMode(true)
                                 },
                                 text = { Text(stringResource(prasad.vennam.moneypilot.R.string.comparison_basket), fontWeight = FontWeight.Bold) },
@@ -241,7 +248,7 @@ fun CurrencyConverterScreen(
                                             rotationZ = animatedRotation,
                                             isVertical = false,
                                             onClick = {
-                                                analyticsHelper.logEvent("currency_swapped")
+                                                analyticsHelper.logEvent(AnalyticsConstants.Event.CURRENCY_SWAPPED)
                                                 rotationAngle += 180f
                                                 viewModel.swapCurrencies()
                                             }

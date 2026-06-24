@@ -37,6 +37,7 @@ import prasad.vennam.moneypilot.ui.viewmodel.AssetAllocation
 import prasad.vennam.moneypilot.ui.viewmodel.FinancialInsight
 import prasad.vennam.moneypilot.ui.viewmodel.InsightType
 import prasad.vennam.moneypilot.ui.viewmodel.TimeFilter
+import prasad.vennam.moneypilot.util.AnalyticsConstants
 import prasad.vennam.moneypilot.util.AnalyticsHelper
 import prasad.vennam.moneypilot.util.CurrencyFormatter
 import prasad.vennam.moneypilot.util.TrackScreen
@@ -48,7 +49,7 @@ fun AnalyticsScreen(
     isPremium: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
-    TrackScreen(analyticsHelper, "AnalyticsTab")
+    TrackScreen(analyticsHelper, AnalyticsConstants.Screen.ANALYTICS_TAB)
     val state by viewModel.uiState.collectAsState()
     val currencyCode = prasad.vennam.moneypilot.util.LocalCurrencyCode.current
 

@@ -43,6 +43,7 @@ import prasad.vennam.moneypilot.ui.viewmodel.SavingGoalViewModel
 import prasad.vennam.moneypilot.util.AnalyticsHelper
 import prasad.vennam.moneypilot.util.TrackScreen
 import prasad.vennam.moneypilot.util.CurrencyFormatter
+import prasad.vennam.moneypilot.util.AnalyticsConstants
 import prasad.vennam.moneypilot.util.LocalCurrencyCode
 import prasad.vennam.moneypilot.util.inRupees
 import java.text.SimpleDateFormat
@@ -56,7 +57,7 @@ fun SavingGoalsScreen(
     analyticsHelper: AnalyticsHelper,
     viewModel: SavingGoalViewModel = hiltViewModel()
 ) {
-    TrackScreen(analyticsHelper, "SavingGoals")
+    TrackScreen(analyticsHelper, AnalyticsConstants.Screen.SAVING_GOALS)
     val goals by viewModel.allSavingGoals.collectAsState()
     val currencyCode = LocalCurrencyCode.current
 
@@ -137,12 +138,16 @@ fun SavingGoalsScreen(
             onDismiss = { showFormSheet = false },
             onSave = { name, target, currentSaved, deadline, color, icon ->
                 val id = selectedGoalForEdit?.id ?: 0L
-                val eventName = if (id == 0L) "saving_goal_added" else "saving_goal_updated"
+                val eventName = if (id == 0L) {
+                    AnalyticsConstants.Event.SAVING_GOAL_ADDED
+                } else {
+                    AnalyticsConstants.Event.SAVING_GOAL_UPDATED
+                }
                 analyticsHelper.logEvent(eventName, mapOf(
-                    "goal_name" to name,
-                    "goal_target" to target.inRupees,
-                    "goal_saved" to currentSaved.inRupees,
-                    "goal_deadline" to deadline
+                    AnalyticsConstants.Param.GOAL_NAME to name,
+                    AnalyticsConstants.Param.GOAL_TARGET to target.inRupees,
+                    AnalyticsConstants.Param.GOAL_SAVED to currentSaved.inRupees,
+                    AnalyticsConstants.Param.GOAL_DEADLINE to deadline
                 ))
                 val updated = SavingGoal(
                     id = id,
@@ -173,32 +178,44 @@ fun SavingGoalsScreen(
                 showFormSheet = true
             },
             onDelete = {
-                analyticsHelper.logEvent("saving_goal_deleted", mapOf(
-                    "goal_name" to currentGoal.name,
-                    "goal_target" to currentGoal.targetAmount.inRupees
-                ))
+                analyticsHelper.logEvent(
+                    AnalyticsConstants.Event.SAVING_GOAL_DELETED,
+                    mapOf(
+                        AnalyticsConstants.Param.GOAL_NAME to currentGoal.name,
+                        AnalyticsConstants.Param.GOAL_TARGET to currentGoal.targetAmount.inRupees
+                    )
+                )
                 viewModel.deleteSavingGoal(currentGoal)
                 showGoalDetailSheet = false
             },
             onDeposit = { amount ->
-                analyticsHelper.logEvent("saving_goal_deposit", mapOf(
-                    "goal_name" to currentGoal.name,
-                    "deposit_amount" to amount.inRupees
-                ))
+                analyticsHelper.logEvent(
+                    AnalyticsConstants.Event.SAVING_GOAL_DEPOSIT,
+                    mapOf(
+                        AnalyticsConstants.Param.GOAL_NAME to currentGoal.name,
+                        AnalyticsConstants.Param.DEPOSIT_AMOUNT to amount.inRupees
+                    )
+                )
                 val newSaved = currentGoal.currentSavedAmount + amount
                 if (newSaved >= currentGoal.targetAmount && !currentGoal.isCompleted) {
-                    analyticsHelper.logEvent("saving_goal_completed", mapOf(
-                        "goal_name" to currentGoal.name,
-                        "goal_target" to currentGoal.targetAmount.inRupees
-                    ))
+                    analyticsHelper.logEvent(
+                        AnalyticsConstants.Event.SAVING_GOAL_COMPLETED,
+                        mapOf(
+                            AnalyticsConstants.Param.GOAL_NAME to currentGoal.name,
+                            AnalyticsConstants.Param.GOAL_TARGET to currentGoal.targetAmount.inRupees
+                        )
+                    )
                 }
                 viewModel.depositToGoal(currentGoal, amount)
             },
             onWithdraw = { amount ->
-                analyticsHelper.logEvent("saving_goal_withdrawal", mapOf(
-                    "goal_name" to currentGoal.name,
-                    "withdrawal_amount" to amount.inRupees
-                ))
+                analyticsHelper.logEvent(
+                    AnalyticsConstants.Event.SAVING_GOAL_WITHDRAWAL,
+                    mapOf(
+                        AnalyticsConstants.Param.GOAL_NAME to currentGoal.name,
+                        AnalyticsConstants.Param.WITHDRAWAL_AMOUNT to amount.inRupees
+                    )
+                )
                 viewModel.withdrawFromGoal(currentGoal, amount)
             }
         )

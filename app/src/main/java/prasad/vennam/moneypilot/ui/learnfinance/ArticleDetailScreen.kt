@@ -32,6 +32,7 @@ import androidx.compose.ui.unit.dp
 import prasad.vennam.moneypilot.R
 import prasad.vennam.moneypilot.data.model.FinanceArticle
 import prasad.vennam.moneypilot.ui.viewmodel.LearnFinanceViewModel
+import prasad.vennam.moneypilot.util.AnalyticsConstants
 import prasad.vennam.moneypilot.util.AnalyticsHelper
 import prasad.vennam.moneypilot.util.TrackScreen
 
@@ -45,7 +46,7 @@ fun ArticleDetailScreen(
     onArticleClick: (String) -> Unit
 ) {
     val article = viewModel.getArticleById(articleId) ?: return
-    TrackScreen(analyticsHelper, "ArticleDetail_${article.title}")
+    TrackScreen(analyticsHelper, "${AnalyticsConstants.Screen.ARTICLE_DETAIL}_${article.title}")
     val bookmarkedIds by viewModel.bookmarkedIds.collectAsState()
     val isBookmarked = bookmarkedIds.contains(articleId)
 

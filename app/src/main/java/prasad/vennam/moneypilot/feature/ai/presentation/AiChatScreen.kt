@@ -62,6 +62,7 @@ import prasad.vennam.moneypilot.feature.ai.model.ChatMessage
 import prasad.vennam.moneypilot.feature.ai.model.LlmState
 import prasad.vennam.moneypilot.data.entity.TransactionType
 import androidx.core.graphics.toColorInt
+import prasad.vennam.moneypilot.util.AnalyticsConstants
 import prasad.vennam.moneypilot.util.AnalyticsHelper
 import prasad.vennam.moneypilot.util.TrackScreen
 
@@ -72,7 +73,7 @@ fun AiChatScreen(
     analyticsHelper: AnalyticsHelper,
     viewModel: AiViewModel = hiltViewModel(),
 ) {
-    TrackScreen(analyticsHelper, "AiChat")
+    TrackScreen(analyticsHelper, AnalyticsConstants.Screen.AI_CHAT)
     val messages by viewModel.messages.collectAsState()
     val aiState by viewModel.aiState.collectAsState(LlmState.Idle)
     val downloadProgress by viewModel.downloadProgress.collectAsState(0f)
@@ -140,7 +141,7 @@ fun AiChatScreen(
                 },
                 actions = {
                     IconButton(onClick = {
-                        analyticsHelper.logEvent("ai_chat_suggestions_icon_clicked")
+                        analyticsHelper.logEvent(AnalyticsConstants.Event.AI_CHAT_SUGGESTIONS_ICON_CLICKED)
                         showSuggestionsBottomSheet = true
                     }) {
                         Icon(
@@ -201,11 +202,14 @@ fun AiChatScreen(
                         ActionConfirmationCard(
                             action = pendingAction!!,
                             onConfirm = { editedAction ->
-                                analyticsHelper.logEvent("ai_chat_action_confirmed", mapOf("type" to editedAction::class.java.simpleName))
+                                analyticsHelper.logEvent(
+                                    AnalyticsConstants.Event.AI_CHAT_ACTION_CONFIRMED,
+                                    mapOf(AnalyticsConstants.Param.TYPE to editedAction::class.java.simpleName)
+                                )
                                 viewModel.confirmAction(editedAction)
                             },
                             onDismiss = {
-                                analyticsHelper.logEvent("ai_chat_action_dismissed")
+                                analyticsHelper.logEvent(AnalyticsConstants.Event.AI_CHAT_ACTION_DISMISSED)
                                 viewModel.dismissAction()
                             },
                         )
@@ -374,7 +378,7 @@ fun AiChatScreen(
                                         )
                                     )
                                     .clickable {
-                                        analyticsHelper.logEvent("ai_chat_model_download_clicked")
+                                        analyticsHelper.logEvent(AnalyticsConstants.Event.AI_CHAT_MODEL_DOWNLOAD_CLICKED)
                                         viewModel.downloadModel()
                                     },
                                 contentAlignment = Alignment.Center
@@ -924,7 +928,10 @@ fun WelcomeScreen(
                         .clip(RoundedCornerShape(16.dp))
                         .clickable {
                             clicked = true
-                            analyticsHelper.logEvent("ai_chat_welcome_suggestion_clicked", mapOf("text" to text))
+                            analyticsHelper.logEvent(
+                                AnalyticsConstants.Event.AI_CHAT_WELCOME_SUGGESTION_CLICKED,
+                                mapOf(AnalyticsConstants.Param.TEXT to text)
+                            )
                             onSuggestionClick(text)
                             clicked = false
                         },
@@ -1830,7 +1837,10 @@ fun SampleQueriesBottomSheet(
                             .clip(RoundedCornerShape(16.dp))
                         .clickable {
                             clicked = true
-                            analyticsHelper.logEvent("ai_chat_bottomsheet_suggestion_clicked", mapOf("text" to text))
+                            analyticsHelper.logEvent(
+                                AnalyticsConstants.Event.AI_CHAT_BOTTOMSHEET_SUGGESTION_CLICKED,
+                                mapOf(AnalyticsConstants.Param.TEXT to text)
+                            )
                             onSuggestionClick(text)
                             clicked = false
                         },

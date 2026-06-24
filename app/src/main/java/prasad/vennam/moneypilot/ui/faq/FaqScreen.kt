@@ -36,6 +36,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import prasad.vennam.moneypilot.util.AnalyticsConstants
 import prasad.vennam.moneypilot.util.AnalyticsHelper
 import prasad.vennam.moneypilot.util.TrackScreen
 
@@ -157,7 +158,7 @@ fun FaqScreen(
     analyticsHelper: AnalyticsHelper,
     onNavigateBack: () -> Unit
 ) {
-    TrackScreen(analyticsHelper, "FAQ")
+    TrackScreen(analyticsHelper, AnalyticsConstants.Screen.FAQ)
     val context = LocalContext.current
     var showContactSheet by remember { mutableStateOf(false) }
 
@@ -186,7 +187,7 @@ fun FaqScreen(
         floatingActionButton = {
             ExtendedFloatingActionButton(
                 onClick = {
-                    analyticsHelper.logEvent("faq_ask_question_clicked")
+                    analyticsHelper.logEvent(AnalyticsConstants.Event.FAQ_ASK_QUESTION_CLICKED)
                     showContactSheet = true
                 },
                 icon = { Icon(Icons.Rounded.Email, contentDescription = null) },
@@ -333,7 +334,10 @@ private fun FaqCategorySection(
                 isExpanded = isExpanded,
                 onToggle = {
                     if (!isExpanded) {
-                        analyticsHelper.logEvent("faq_item_expanded", mapOf("question" to item.question))
+                        analyticsHelper.logEvent(
+                            AnalyticsConstants.Event.FAQ_ITEM_EXPANDED,
+                            mapOf(AnalyticsConstants.Param.QUESTION to item.question)
+                        )
                     }
                     expandedStates[key] = !isExpanded
                 },

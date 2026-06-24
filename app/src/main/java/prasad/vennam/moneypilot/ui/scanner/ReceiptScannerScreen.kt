@@ -60,6 +60,7 @@ import prasad.vennam.moneypilot.util.AnalyticsHelper
 import prasad.vennam.moneypilot.util.LocalCurrencyCode
 import prasad.vennam.moneypilot.util.ParsedReceipt
 import prasad.vennam.moneypilot.util.PermissionGate
+import prasad.vennam.moneypilot.util.AnalyticsConstants
 import prasad.vennam.moneypilot.util.ReceiptParser
 import prasad.vennam.moneypilot.util.TrackScreen
 import prasad.vennam.moneypilot.util.inPaisa
@@ -81,7 +82,7 @@ fun ReceiptScannerScreen(
     transactionViewModel: TransactionViewModel,
     analyticsHelper: AnalyticsHelper,
 ) {
-    TrackScreen(analyticsHelper, "ReceiptScanner")
+    TrackScreen(analyticsHelper, AnalyticsConstants.Screen.RECEIPT_SCANNER)
     val categories by transactionViewModel.allCategories.collectAsState()
     PermissionGate(
         permission = Manifest.permission.CAMERA,
@@ -178,13 +179,17 @@ fun ReceiptScannerContent(
     }
 
     fun logScanEvent(result: ParsedReceipt, isGallery: Boolean) {
-        val eventName = if (isGallery) "scanner_gallery_upload" else "scanner_picture_captured"
+        val eventName = if (isGallery) {
+            AnalyticsConstants.Event.SCANNER_GALLERY_UPLOAD
+        } else {
+            AnalyticsConstants.Event.SCANNER_PICTURE_CAPTURED
+        }
         analyticsHelper.logEvent(
             eventName,
             mapOf(
-                "success" to (result.amount != null),
-                "merchant_found" to (result.merchant != null),
-                "parsed_by_ai" to transactionViewModel.isAiReady,
+                AnalyticsConstants.Param.SUCCESS to (result.amount != null),
+                AnalyticsConstants.Param.MERCHANT_FOUND to (result.merchant != null),
+                AnalyticsConstants.Param.PARSED_BY_AI to transactionViewModel.isAiReady,
             )
         )
     }
@@ -316,7 +321,10 @@ fun ReceiptScannerContent(
                 actions = {
                     IconButton(onClick = {
                         isTorchOn = !isTorchOn
-                        analyticsHelper.logEvent("scanner_flash_toggled", mapOf("is_on" to isTorchOn))
+                        analyticsHelper.logEvent(
+                            AnalyticsConstants.Event.SCANNER_FLASH_TOGGLED,
+                            mapOf(AnalyticsConstants.Param.IS_ON to isTorchOn)
+                        )
                     }) {
                         Icon(
                             imageVector = if (isTorchOn) Icons.Rounded.FlashOn else Icons.Rounded.FlashOff,
@@ -325,7 +333,7 @@ fun ReceiptScannerContent(
                         )
                     }
                     IconButton(onClick = {
-                        analyticsHelper.logEvent("scanner_gallery_opened")
+                        analyticsHelper.logEvent(AnalyticsConstants.Event.SCANNER_GALLERY_OPENED)
                         galleryLauncher.launch("image/*")
                     }) {
                         Icon(Icons.Rounded.Collections, contentDescription = stringResource(R.string.gallery), tint = Color.White)
@@ -398,7 +406,7 @@ fun ReceiptScannerContent(
                             .padding(6.dp)
                             .background(Color.White, CircleShape)
                             .clickable {
-                                analyticsHelper.logEvent("scanner_shutter_clicked")
+                                analyticsHelper.logEvent(AnalyticsConstants.Event.SCANNER_SHUTTER_CLICKED)
                                 isProcessing = true
                                 showShutter = true
                                 scope.launch {
@@ -481,7 +489,7 @@ fun ReceiptScannerContent(
                 isScanning = true
             },
             onSave = { transaction ->
-                analyticsHelper.logEvent("scanner_expense_saved")
+                analyticsHelper.logEvent(AnalyticsConstants.Event.SCANNER_EXPENSE_SAVED)
                 onSaveTransaction(transaction)
                 showResultsSheet = false
                 showSuccessDialog = true

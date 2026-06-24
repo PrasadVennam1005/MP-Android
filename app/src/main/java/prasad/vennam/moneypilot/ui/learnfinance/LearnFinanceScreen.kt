@@ -59,6 +59,7 @@ import prasad.vennam.moneypilot.R
 import prasad.vennam.moneypilot.data.model.FinanceArticle
 import prasad.vennam.moneypilot.ui.components.AdBannerView
 import prasad.vennam.moneypilot.ui.viewmodel.LearnFinanceViewModel
+import prasad.vennam.moneypilot.util.AnalyticsConstants
 import prasad.vennam.moneypilot.util.AnalyticsHelper
 import prasad.vennam.moneypilot.util.TrackScreen
 
@@ -71,7 +72,7 @@ fun LearnFinanceScreen(
     onArticleClick: (String) -> Unit,
     isPremium: Boolean = false
 ) {
-    TrackScreen(analyticsHelper, "LearnFinance")
+    TrackScreen(analyticsHelper, AnalyticsConstants.Screen.LEARN_FINANCE)
     val uiState by viewModel.uiState.collectAsState()
     var isSearchActive by remember { mutableStateOf(false) }
     val focusRequester = remember { FocusRequester() }

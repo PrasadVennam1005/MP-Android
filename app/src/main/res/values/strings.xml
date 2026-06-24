@@ -625,4 +625,14 @@
     <string name="could_not_resolve_country">Could not resolve country from coordinates.</string>
     <string name="geocoder_error">Geocoder error: %1$s</string>
     <string name="share_conversion_template">Currency Conversion:\n%1$s %2$s = %3$s %4$s\nExchange Rate: %5$s</string>
+
+    <!-- Auth Screen Error and Policy Strings -->
+    <string name="login_error_no_accounts">No Google accounts found on this device. Please sign in to a Google account in Settings and try again.</string>
+    <string name="login_error_cancelled">Sign-in cancelled.</string>
+    <string name="login_error_failed">Sign-in failed. Please verify your Google account setup or try again.</string>
+    <string name="login_error_generic">Something went wrong. Please try again.</string>
+    <string name="agree_to_policy_prefix">By continuing, you agree to our </string>
+    <string name="terms_of_service">Terms of Service</string>
+    <string name="agree_to_policy_and"> and </string>
+    <string name="privacy_policy">Privacy Policy</string>
 </resources>

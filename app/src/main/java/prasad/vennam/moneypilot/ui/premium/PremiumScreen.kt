@@ -20,6 +20,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.android.billingclient.api.BillingClient
 import com.android.billingclient.api.ProductDetails
+import prasad.vennam.moneypilot.util.AnalyticsConstants
 import prasad.vennam.moneypilot.util.AnalyticsHelper
 import prasad.vennam.moneypilot.util.TrackScreen
 
@@ -30,7 +31,7 @@ fun PremiumScreen(
     analyticsHelper: AnalyticsHelper,
     viewModel: PremiumViewModel = hiltViewModel(),
 ) {
-    TrackScreen(analyticsHelper, "Premium")
+    TrackScreen(analyticsHelper, AnalyticsConstants.Screen.PREMIUM)
     val products by viewModel.products.collectAsState()
     val isPremium by viewModel.isPremium.collectAsState()
     val context = LocalContext.current
@@ -118,7 +119,10 @@ fun PremiumScreen(
                         ProductCard(
                             product = product,
                             onPurchaseClick = {
-                                analyticsHelper.logEvent("purchase_attempted", mapOf("product_id" to product.productId))
+                                analyticsHelper.logEvent(
+                                    AnalyticsConstants.Event.PURCHASE_ATTEMPTED,
+                                    mapOf(AnalyticsConstants.Param.PRODUCT_ID to product.productId)
+                                )
                                 viewModel.launchBillingFlow(context as Activity, product)
                             },
                         )

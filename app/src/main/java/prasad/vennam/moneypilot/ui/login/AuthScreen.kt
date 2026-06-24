@@ -78,6 +78,7 @@ import kotlinx.coroutines.launch
 import prasad.vennam.moneypilot.R
 import prasad.vennam.moneypilot.data.UserPreferences
 import prasad.vennam.moneypilot.ui.viewmodel.MainViewModel
+import prasad.vennam.moneypilot.util.AnalyticsConstants
 import prasad.vennam.moneypilot.util.AnalyticsHelper
 import prasad.vennam.moneypilot.util.TrackScreen
 import kotlin.time.Duration.Companion.milliseconds
@@ -91,7 +92,7 @@ fun AuthScreen(
     onNavigateToPrivacy: () -> Unit,
     onAuthSuccess: () -> Unit,
 ) {
-    TrackScreen(analyticsHelper, "Auth")
+    TrackScreen(analyticsHelper, AnalyticsConstants.Screen.AUTH)
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val uriHandler = LocalUriHandler.current
@@ -296,7 +297,10 @@ fun AuthScreen(
                                                 }
 
                                             if (googleIdTokenCredential != null) {
-                                                analyticsHelper.logEvent("login", mapOf("method" to "google"))
+                                                analyticsHelper.logEvent(
+                                                    AnalyticsConstants.Event.LOGIN,
+                                                    mapOf(AnalyticsConstants.Param.METHOD to "google")
+                                                )
                                                 mainViewModel.saveUserData(
                                                     UserPreferences.UserData(
                                                         name = googleIdTokenCredential.displayName ?: "User",
@@ -309,16 +313,16 @@ fun AuthScreen(
                                             }
                                         } catch (e: NoCredentialException) {
                                             Log.e("AuthScreen", "Login failed: No credentials available", e)
-                                            loginError = "No Google accounts found on this device. Please sign in to a Google account in Settings and try again."
+                                            loginError = context.getString(R.string.login_error_no_accounts)
                                         } catch (e: GetCredentialCancellationException) {
                                             Log.d("AuthScreen", "Login cancelled by user")
-                                            loginError = "Sign-in cancelled."
+                                            loginError = context.getString(R.string.login_error_cancelled)
                                         } catch (e: GetCredentialException) {
                                             Log.e("AuthScreen", "Login failed: ${e.message}")
-                                            loginError = "Sign-in failed. Please verify your Google account setup or try again."
+                                            loginError = context.getString(R.string.login_error_failed)
                                         } catch (e: Exception) {
                                             Log.e("AuthScreen", "Error: ${e.message}")
-                                            loginError = "Something went wrong. Please try again."
+                                            loginError = context.getString(R.string.login_error_generic)
                                         } finally {
                                             isLoading = false
                                         }
@@ -363,7 +367,10 @@ fun AuthScreen(
 
                             OutlinedButton(
                                 onClick = {
-                                    analyticsHelper.logEvent("login", mapOf("method" to "guest"))
+                                    analyticsHelper.logEvent(
+                                        AnalyticsConstants.Event.LOGIN,
+                                        mapOf(AnalyticsConstants.Param.METHOD to "guest")
+                                    )
                                     scope.launch {
                                         mainViewModel.saveUserData(
                                             UserPreferences.UserData(
@@ -422,7 +429,7 @@ fun AuthScreen(
                         // Privacy Policy Text
                         val annotatedText =
                             buildAnnotatedString {
-                                append("By continuing, you agree to our ")
+                                append(stringResource(R.string.agree_to_policy_prefix))
                                 withLink(
                                     LinkAnnotation.Clickable(
                                         tag = "terms",
@@ -439,9 +446,9 @@ fun AuthScreen(
                                         onNavigateToTerms()
                                     },
                                 ) {
-                                    append("Terms of Service")
+                                    append(stringResource(R.string.terms_of_service))
                                 }
-                                append(" and ")
+                                append(stringResource(R.string.agree_to_policy_and))
                                 withLink(
                                     LinkAnnotation.Clickable(
                                         tag = "privacy",
@@ -458,7 +465,7 @@ fun AuthScreen(
                                         onNavigateToPrivacy()
                                     },
                                 ) {
-                                    append("Privacy Policy")
+                                    append(stringResource(R.string.privacy_policy))
                                 }
                                 append(".")
                             }

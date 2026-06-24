@@ -43,6 +43,7 @@ import kotlinx.coroutines.launch
 import prasad.vennam.moneypilot.R
 import prasad.vennam.moneypilot.data.entity.Notification
 import prasad.vennam.moneypilot.ui.viewmodel.NotificationViewModel
+import prasad.vennam.moneypilot.util.AnalyticsConstants
 import prasad.vennam.moneypilot.util.AnalyticsHelper
 import prasad.vennam.moneypilot.util.TrackScreen
 import java.text.SimpleDateFormat
@@ -56,7 +57,7 @@ fun NotificationsScreen(
     analyticsHelper: AnalyticsHelper,
     viewModel: NotificationViewModel = hiltViewModel(),
 ) {
-    TrackScreen(analyticsHelper, "Notifications")
+    TrackScreen(analyticsHelper, AnalyticsConstants.Screen.NOTIFICATIONS)
     val notifications by viewModel.notifications.collectAsState()
     val context = LocalContext.current
 
@@ -229,7 +230,10 @@ fun NotificationsScreen(
                     FilterChip(
                         selected = isSelected,
                         onClick = {
-                            analyticsHelper.logEvent("notifications_filter_clicked", mapOf("category" to category))
+                            analyticsHelper.logEvent(
+                                AnalyticsConstants.Event.NOTIFICATIONS_FILTER_CLICKED,
+                                mapOf(AnalyticsConstants.Param.CATEGORY to category)
+                            )
                             selectedCategory = category
                         },
                         label = {
@@ -304,7 +308,7 @@ fun NotificationsScreen(
             confirmButton = {
                 TextButton(
                     onClick = {
-                        analyticsHelper.logEvent("notifications_cleared_all")
+                        analyticsHelper.logEvent(AnalyticsConstants.Event.NOTIFICATIONS_CLEARED_ALL)
                         viewModel.clearAll()
                         showClearAllConfirmation = false
                         Toast.makeText(context, with(context) { getString(R.string.all_notifications_cleared) }, Toast.LENGTH_SHORT).show()

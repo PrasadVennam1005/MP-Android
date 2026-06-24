@@ -122,6 +122,7 @@ import prasad.vennam.moneypilot.ui.viewmodel.NotificationViewModel
 import prasad.vennam.moneypilot.ui.viewmodel.SavingGoalViewModel
 import androidx.compose.material.icons.rounded.TrackChanges
 import prasad.vennam.moneypilot.ui.viewmodel.RestoreState
+import prasad.vennam.moneypilot.util.AnalyticsConstants
 import prasad.vennam.moneypilot.util.AnalyticsHelper
 import prasad.vennam.moneypilot.util.CurrencyFormatter
 import prasad.vennam.moneypilot.util.GoogleSheetsSyncHelper
@@ -153,7 +154,7 @@ fun DashboardScreen(
     onNavigateToLearnFinance: () -> Unit,
     onNavigateToCurrencyConverter: () -> Unit,
 ) {
-    TrackScreen(analyticsHelper, "Dashboard")
+    TrackScreen(analyticsHelper, AnalyticsConstants.Screen.DASHBOARD)
 
     val dashboardState by dashboardViewModel.uiState.collectAsState()
     val savingGoalViewModel: SavingGoalViewModel = hiltViewModel()
@@ -269,7 +270,7 @@ fun DashboardScreen(
                             }
 
                         if (googleIdTokenCredential != null) {
-                            analyticsHelper.logEvent("login", mapOf("method" to "google"))
+                            analyticsHelper.logEvent(AnalyticsConstants.Event.LOGIN, mapOf(AnalyticsConstants.Param.METHOD to "google"))
                             mainViewModel.saveUserData(
                                 prasad.vennam.moneypilot.data.UserPreferences.UserData(
                                     name = googleIdTokenCredential.displayName ?: "User",
@@ -336,10 +337,10 @@ fun DashboardScreen(
             if (progressItem.budget.amount > 0 && progressItem.progress >= 0.9f) {
                 val categoryName = progressItem.category?.name ?: unknownString
                 analyticsHelper.logEvent(
-                    "budget_warning_viewed",
+                    AnalyticsConstants.Event.BUDGET_WARNING_VIEWED,
                     mapOf(
-                        "category" to categoryName,
-                        "percent" to (progressItem.progress * 100).toInt(),
+                        AnalyticsConstants.Param.CATEGORY to categoryName,
+                        AnalyticsConstants.Param.PERCENT to (progressItem.progress * 100).toInt(),
                     ),
                 )
             }
@@ -412,11 +413,11 @@ fun DashboardScreen(
                     syncState = syncState,
                     unreadCount = unreadCount,
                     onProfileClick = {
-                        analyticsHelper.logEvent("profile_clicked")
+                        analyticsHelper.logEvent(AnalyticsConstants.Event.PROFILE_CLICKED)
                         onNavigateToSettings()
                     },
                     onNotificationClick = {
-                        analyticsHelper.logEvent("notification_icon_clicked")
+                        analyticsHelper.logEvent(AnalyticsConstants.Event.NOTIFICATION_ICON_CLICKED)
                         if (isGuest) {
                             showLoginRequiredDialog = true
                         } else {
@@ -425,7 +426,7 @@ fun DashboardScreen(
                     },
                     showAiChat = !isFabVisible,
                     onAiChatClick = {
-                        analyticsHelper.logEvent("ai_chat_topbar_clicked")
+                        analyticsHelper.logEvent(AnalyticsConstants.Event.AI_CHAT_TOPBAR_CLICKED)
                         onNavigateToAiChat()
                     },
                 )
@@ -547,43 +548,43 @@ fun DashboardScreen(
                         item {
                             QuickActionSection(
                                 onAddExpense = {
-                                    analyticsHelper.logEvent("quick_action_clicked", mapOf("action" to "add_expense"))
+                                    analyticsHelper.logEvent(AnalyticsConstants.Event.QUICK_ACTION_CLICKED, mapOf(AnalyticsConstants.Param.ACTION to "add_expense"))
                                     onNavigateToAddTransaction(TransactionType.EXPENSE)
                                 },
                                 onAddIncome = {
-                                    analyticsHelper.logEvent("quick_action_clicked", mapOf("action" to "add_income"))
+                                    analyticsHelper.logEvent(AnalyticsConstants.Event.QUICK_ACTION_CLICKED, mapOf(AnalyticsConstants.Param.ACTION to "add_income"))
                                     onNavigateToAddTransaction(TransactionType.INCOME)
                                 },
                                 onAddInvestment = {
-                                    analyticsHelper.logEvent("quick_action_clicked", mapOf("action" to "add_investment"))
+                                    analyticsHelper.logEvent(AnalyticsConstants.Event.QUICK_ACTION_CLICKED, mapOf(AnalyticsConstants.Param.ACTION to "add_investment"))
                                     onNavigateToAddInvestment()
                                 },
                                 onAddLoan = {
-                                    analyticsHelper.logEvent("quick_action_clicked", mapOf("action" to "add_loan"))
+                                    analyticsHelper.logEvent(AnalyticsConstants.Event.QUICK_ACTION_CLICKED, mapOf(AnalyticsConstants.Param.ACTION to "add_loan"))
                                     onNavigateToLoans()
                                 },
                                 onScanReceipt = {
-                                    analyticsHelper.logEvent("quick_action_clicked", mapOf("action" to "scan_receipt"))
+                                    analyticsHelper.logEvent(AnalyticsConstants.Event.QUICK_ACTION_CLICKED, mapOf(AnalyticsConstants.Param.ACTION to "scan_receipt"))
                                     onNavigateToScanner()
                                 },
                                 onNavigateToEmergencyFund = {
-                                    analyticsHelper.logEvent("quick_action_clicked", mapOf("action" to "emergency_fund"))
+                                    analyticsHelper.logEvent(AnalyticsConstants.Event.QUICK_ACTION_CLICKED, mapOf(AnalyticsConstants.Param.ACTION to "emergency_fund"))
                                     onNavigateToEmergencyFund()
                                 },
                                 onNavigateToNews = {
-                                    analyticsHelper.logEvent("quick_action_clicked", mapOf("action" to "news"))
+                                    analyticsHelper.logEvent(AnalyticsConstants.Event.QUICK_ACTION_CLICKED, mapOf(AnalyticsConstants.Param.ACTION to "news"))
                                     onNavigateToNews()
                                 },
                                 onNavigateToSandbox = {
-                                    analyticsHelper.logEvent("quick_action_clicked", mapOf("action" to "sandbox"))
+                                    analyticsHelper.logEvent(AnalyticsConstants.Event.QUICK_ACTION_CLICKED, mapOf(AnalyticsConstants.Param.ACTION to "sandbox"))
                                     onNavigateToSandbox()
                                 },
                                 onNavigateToEmiCalculator = {
-                                    analyticsHelper.logEvent("quick_action_clicked", mapOf("action" to "emi_calculator"))
+                                    analyticsHelper.logEvent(AnalyticsConstants.Event.QUICK_ACTION_CLICKED, mapOf(AnalyticsConstants.Param.ACTION to "emi_calculator"))
                                     onNavigateToEmiCalculator()
                                 },
                                 onNavigateToCurrencyConverter = {
-                                    analyticsHelper.logEvent("quick_action_clicked", mapOf("action" to "currency_converter"))
+                                    analyticsHelper.logEvent(AnalyticsConstants.Event.QUICK_ACTION_CLICKED, mapOf(AnalyticsConstants.Param.ACTION to "currency_converter"))
                                     onNavigateToCurrencyConverter()
                                 },
                                 isGuest = isGuest && !prasad.vennam.moneypilot.BuildConfig.DEBUG && !isDevToolEnabled,
@@ -592,7 +593,7 @@ fun DashboardScreen(
 
                         item {
                             SmartInsightsCard(onClick = {
-                                analyticsHelper.logEvent("insights_card_clicked")
+                                analyticsHelper.logEvent(AnalyticsConstants.Event.INSIGHTS_CARD_CLICKED)
                                 onNavigateToInsights()
                             })
                         }
@@ -601,7 +602,7 @@ fun DashboardScreen(
                         if (dashboardState.isLearnFinanceEnabled) {
                             item {
                                 LearnFinancePromoCard(onClick = {
-                                    analyticsHelper.logEvent("learn_finance_promo_clicked")
+                                    analyticsHelper.logEvent(AnalyticsConstants.Event.LEARN_FINANCE_PROMO_CLICKED)
                                     onNavigateToLearnFinance()
                                 })
                             }
@@ -612,7 +613,7 @@ fun DashboardScreen(
                                 emergencyFund = dashboardState.emergencyFund,
                                 currencyCode = currencyCode,
                                 onClick = {
-                                    analyticsHelper.logEvent("emergency_fund_card_clicked")
+                                    analyticsHelper.logEvent(AnalyticsConstants.Event.EMERGENCY_FUND_CARD_CLICKED)
                                     onNavigateToEmergencyFund()
                                 },
                             )
@@ -623,7 +624,7 @@ fun DashboardScreen(
                                 savingGoals = savingGoals,
                                 currencyCode = currencyCode,
                                 onClick = {
-                                    analyticsHelper.logEvent("saving_goals_card_clicked")
+                                    analyticsHelper.logEvent(AnalyticsConstants.Event.SAVING_GOALS_CARD_CLICKED)
                                     onNavigateToSavingGoals()
                                 }
                             )
@@ -664,7 +665,7 @@ fun DashboardScreen(
                                 SectionHeader(
                                     title = stringResource(R.string.budget_progress),
                                     onActionClick = {
-                                        analyticsHelper.logEvent("budget_see_all_clicked")
+                                        analyticsHelper.logEvent(AnalyticsConstants.Event.BUDGET_SEE_ALL_CLICKED)
                                         onNavigateToBudgets()
                                     }
                                 )
@@ -677,7 +678,7 @@ fun DashboardScreen(
                                 SectionHeader(
                                     title = stringResource(R.string.recent_transactions),
                                     onActionClick = {
-                                        analyticsHelper.logEvent("history_see_all_clicked")
+                                        analyticsHelper.logEvent(AnalyticsConstants.Event.HISTORY_SEE_ALL_CLICKED)
                                         onNavigateToHistory()
                                     }
                                 )
@@ -705,7 +706,7 @@ fun DashboardScreen(
             FloatingAiBot(
                 modifier = Modifier,
                 onClick = {
-                    analyticsHelper.logEvent("floating_ai_bot_clicked")
+                    analyticsHelper.logEvent(AnalyticsConstants.Event.FLOATING_AI_BOT_CLICKED)
                     onNavigateToAiChat()
                 },
             )

@@ -41,6 +41,7 @@ import prasad.vennam.moneypilot.ui.viewmodel.AnalyticsViewModel
 import prasad.vennam.moneypilot.ui.viewmodel.BudgetProgress
 import prasad.vennam.moneypilot.ui.viewmodel.BudgetViewModel
 import prasad.vennam.moneypilot.ui.viewmodel.TransactionViewModel
+import prasad.vennam.moneypilot.util.AnalyticsConstants
 import prasad.vennam.moneypilot.util.AnalyticsHelper
 import prasad.vennam.moneypilot.util.TrackScreen
 import prasad.vennam.moneypilot.util.inPaisa
@@ -59,7 +60,7 @@ fun ReportsTabScreen(
     onProfileClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    TrackScreen(analyticsHelper, "Reports")
+    TrackScreen(analyticsHelper, AnalyticsConstants.Screen.REPORTS)
     var selectedTab by remember { mutableStateOf(0) }
     var showFormSheet by remember { mutableStateOf(false) }
     var budgetToEdit by remember { mutableStateOf<Budget?>(null) }
@@ -170,7 +171,10 @@ fun ReportsTabScreen(
                 Tab(
                     selected = selectedTab == 0,
                     onClick = {
-                        analyticsHelper.logEvent("reports_tab_switched", mapOf("tab" to "budgets"))
+                        analyticsHelper.logEvent(
+                            AnalyticsConstants.Event.REPORTS_TAB_SWITCHED,
+                            mapOf(AnalyticsConstants.Param.TAB to "budgets")
+                        )
                         selectedTab = 0
                     },
                     text = { Text(stringResource(R.string.budgets), fontWeight = FontWeight.Bold) },
@@ -178,7 +182,10 @@ fun ReportsTabScreen(
                 Tab(
                     selected = selectedTab == 1,
                     onClick = {
-                        analyticsHelper.logEvent("reports_tab_switched", mapOf("tab" to "analytics"))
+                        analyticsHelper.logEvent(
+                            AnalyticsConstants.Event.REPORTS_TAB_SWITCHED,
+                            mapOf(AnalyticsConstants.Param.TAB to "analytics")
+                        )
                         selectedTab = 1
                     },
                     text = { Text(stringResource(R.string.analytics), fontWeight = FontWeight.Bold) },

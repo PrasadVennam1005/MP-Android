@@ -32,6 +32,7 @@ import prasad.vennam.moneypilot.ui.viewmodel.InvestmentViewModel
 import prasad.vennam.moneypilot.util.LocalCurrencyCode
 import prasad.vennam.moneypilot.util.inPaisa
 import prasad.vennam.moneypilot.util.AnalyticsHelper
+import prasad.vennam.moneypilot.util.AnalyticsConstants
 import prasad.vennam.moneypilot.util.TrackScreen
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -44,7 +45,7 @@ fun InvestmentScreen(
     analyticsHelper: AnalyticsHelper,
     onProfileClick: () -> Unit,
 ) {
-    TrackScreen(analyticsHelper, "Investments")
+    TrackScreen(analyticsHelper, AnalyticsConstants.Screen.INVESTMENTS)
     val investments by viewModel.allInvestments.collectAsState()
     val allocationDetails by viewModel.allocationDetails.collectAsState()
     val selectedProfile by viewModel.selectedProfile.collectAsState()
@@ -129,7 +130,7 @@ fun InvestmentScreen(
                         )
                     } else {
                         IconButton(onClick = {
-                            analyticsHelper.logEvent("investments_refresh_clicked")
+                            analyticsHelper.logEvent(AnalyticsConstants.Event.INVESTMENTS_REFRESH_CLICKED)
                             viewModel.refreshAllPrices()
                         }) {
                             Icon(
@@ -185,7 +186,10 @@ fun InvestmentScreen(
                     Tab(
                         selected = selectedTab == index,
                         onClick = {
-                            analyticsHelper.logEvent("investments_tab_switched", mapOf("tab" to title))
+                            analyticsHelper.logEvent(
+                                AnalyticsConstants.Event.INVESTMENTS_TAB_SWITCHED,
+                                mapOf(AnalyticsConstants.Param.TAB to title)
+                            )
                             selectedTab = index
                         },
                         text = { Text(title, fontWeight = FontWeight.Bold) },

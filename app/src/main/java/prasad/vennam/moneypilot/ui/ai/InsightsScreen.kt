@@ -34,6 +34,7 @@ import prasad.vennam.moneypilot.ui.dashboard.SyncState
 import prasad.vennam.moneypilot.ui.viewmodel.AiRecommendationState
 import prasad.vennam.moneypilot.ui.viewmodel.AnalyticsState
 import prasad.vennam.moneypilot.ui.viewmodel.AnalyticsViewModel
+import prasad.vennam.moneypilot.util.AnalyticsConstants
 import prasad.vennam.moneypilot.util.AnalyticsHelper
 import prasad.vennam.moneypilot.util.CurrencyFormatter
 import prasad.vennam.moneypilot.util.LocalCurrencyCode
@@ -51,7 +52,7 @@ fun InsightsScreen(
     onNavigateToAiChat: () -> Unit = {},
     viewModel: AnalyticsViewModel = hiltViewModel(),
 ) {
-    TrackScreen(analyticsHelper, "Insights")
+    TrackScreen(analyticsHelper, AnalyticsConstants.Screen.INSIGHTS)
     val uiState by viewModel.uiState.collectAsState()
     val aiRecState by viewModel.aiRecommendation.collectAsState()
     val currencyCode = LocalCurrencyCode.current
@@ -119,7 +120,7 @@ fun InsightsScreen(
                     AiRecommendationCard(
                         state = aiRecState,
                         onNavigateToAiChat = {
-                            analyticsHelper.logEvent("insights_ai_recommendation_clicked")
+                            analyticsHelper.logEvent(AnalyticsConstants.Event.INSIGHTS_AI_RECOMMENDATION_CLICKED)
                             onNavigateToAiChat()
                         }
                     )

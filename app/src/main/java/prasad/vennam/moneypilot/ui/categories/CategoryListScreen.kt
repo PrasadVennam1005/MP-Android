@@ -23,6 +23,7 @@ import prasad.vennam.moneypilot.R
 import prasad.vennam.moneypilot.data.entity.Category
 import prasad.vennam.moneypilot.ui.budget.utils.getCategoryIcon
 import prasad.vennam.moneypilot.ui.viewmodel.TransactionViewModel
+import prasad.vennam.moneypilot.util.AnalyticsConstants
 import prasad.vennam.moneypilot.util.AnalyticsHelper
 import prasad.vennam.moneypilot.util.TrackScreen
 
@@ -33,7 +34,7 @@ fun CategoryListScreen(
     analyticsHelper: AnalyticsHelper,
     onNavigateBack: () -> Unit,
 ) {
-    TrackScreen(analyticsHelper, "ManageCategories")
+    TrackScreen(analyticsHelper, AnalyticsConstants.Screen.MANAGE_CATEGORIES)
     val categories by viewModel.allCategories.collectAsState()
     var showAddSheet by remember { mutableStateOf(false) }
     var editingCategory by remember { mutableStateOf<Category?>(null) }
@@ -137,10 +138,13 @@ fun CategoryListScreen(
             AddCategorySheetContent(
                 initialCategory = editingCategory,
                 onSave = { newCategory ->
-                    analyticsHelper.logEvent("category_saved", mapOf(
-                        "is_edit" to (editingCategory != null),
-                        "is_expense" to newCategory.isExpense
-                    ))
+                    analyticsHelper.logEvent(
+                        AnalyticsConstants.Event.CATEGORY_SAVED,
+                        mapOf(
+                            AnalyticsConstants.Param.IS_EDIT to (editingCategory != null),
+                            AnalyticsConstants.Param.IS_EXPENSE to newCategory.isExpense
+                        )
+                    )
                     viewModel.saveCategory(newCategory)
                     scope.launch { sheetState.hide() }.invokeOnCompletion {
                         if (!sheetState.isVisible) {
@@ -173,7 +177,10 @@ fun CategoryListScreen(
             confirmButton = {
                 Button(
                     onClick = {
-                        analyticsHelper.logEvent("category_deleted", mapOf("name" to cat.name))
+                        analyticsHelper.logEvent(
+                            AnalyticsConstants.Event.CATEGORY_DELETED,
+                            mapOf(AnalyticsConstants.Param.NAME to cat.name)
+                        )
                         viewModel.deleteCategory(cat)
                         categoryToDelete = null
                     },

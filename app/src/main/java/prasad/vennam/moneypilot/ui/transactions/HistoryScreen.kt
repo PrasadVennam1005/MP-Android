@@ -91,6 +91,7 @@ import prasad.vennam.moneypilot.ui.viewmodel.TransactionViewModel
 import prasad.vennam.moneypilot.util.CurrencyFormatter
 import prasad.vennam.moneypilot.util.LocalCurrencyCode
 import prasad.vennam.moneypilot.util.inRupees
+import prasad.vennam.moneypilot.util.AnalyticsConstants
 import prasad.vennam.moneypilot.util.AnalyticsHelper
 import prasad.vennam.moneypilot.util.TrackScreen
 import java.text.SimpleDateFormat
@@ -114,7 +115,7 @@ fun HistoryScreen(
     analyticsHelper: AnalyticsHelper,
     fixedType: TransactionType? = null,
 ) {
-    TrackScreen(analyticsHelper, "History")
+    TrackScreen(analyticsHelper, AnalyticsConstants.Screen.HISTORY)
     val transactions by viewModel.allTransactions.collectAsState()
     val categories by viewModel.allCategories.collectAsState()
 
@@ -236,7 +237,10 @@ fun HistoryScreen(
                                 selected = selectedTab == index,
                                 onClick = {
                                     val newType = if (index == 0) TransactionType.EXPENSE else TransactionType.INCOME
-                                    analyticsHelper.logEvent("history_tab_switched", mapOf("type" to newType.name))
+                                    analyticsHelper.logEvent(
+                                        AnalyticsConstants.Event.HISTORY_TAB_SWITCHED,
+                                        mapOf(AnalyticsConstants.Param.TYPE to newType.name)
+                                    )
                                     selectedTabType = newType
                                     selectedCategoryId = null // Reset category filter on tab switch
                                 },
@@ -327,16 +331,19 @@ fun HistoryScreen(
             onCategorySelect = { selectedCategoryId = it },
             onPaymentModeSelect = { selectedPaymentMode = it },
             onReset = {
-                analyticsHelper.logEvent("history_filters_reset")
+                analyticsHelper.logEvent(AnalyticsConstants.Event.HISTORY_FILTERS_RESET)
                 selectedCategoryId = null
                 selectedPaymentMode = null
                 showFilterSheet = false
             },
             onDismiss = {
-                analyticsHelper.logEvent("history_filters_applied", mapOf(
-                    "category_filtered" to (selectedCategoryId != null),
-                    "payment_mode_filtered" to (selectedPaymentMode != null)
-                ))
+                analyticsHelper.logEvent(
+                    AnalyticsConstants.Event.HISTORY_FILTERS_APPLIED,
+                    mapOf(
+                        AnalyticsConstants.Param.CATEGORY_FILTERED to (selectedCategoryId != null),
+                        AnalyticsConstants.Param.PAYMENT_MODE_FILTERED to (selectedPaymentMode != null)
+                    )
+                )
                 showFilterSheet = false
             },
         )
