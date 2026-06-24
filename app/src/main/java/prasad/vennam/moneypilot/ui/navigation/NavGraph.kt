@@ -30,8 +30,10 @@ import prasad.vennam.moneypilot.ui.news.NewsWebViewScreen
 import prasad.vennam.moneypilot.ui.notifications.NotificationsScreen
 import prasad.vennam.moneypilot.ui.premium.PremiumScreen
 import prasad.vennam.moneypilot.ui.sandbox.FinancialSandboxScreen
+import prasad.vennam.moneypilot.ui.savinggoal.SavingGoalsScreen
 import prasad.vennam.moneypilot.ui.scanner.ReceiptScannerScreen
 import prasad.vennam.moneypilot.ui.settings.SettingsScreen
+import prasad.vennam.moneypilot.ui.subscription.SubscriptionScreen
 import prasad.vennam.moneypilot.ui.transactions.AddEditTransactionScreen
 import prasad.vennam.moneypilot.ui.transactions.HistoryScreen
 import prasad.vennam.moneypilot.ui.viewmodel.AnalyticsViewModel
@@ -116,6 +118,9 @@ fun moneyPilotNavEntry(
                     },
                     onNavigateToEmergencyFund = {
                         backStack.add(Destination.EmergencyFund)
+                    },
+                    onNavigateToSavingGoals = {
+                        backStack.add(Destination.SavingGoals)
                     },
                     onNavigateToNews = {
                         backStack.add(Destination.FinancialNews)
@@ -255,12 +260,16 @@ fun moneyPilotNavEntry(
                     transactionViewModel = transactionViewModel,
                     mainViewModel = mainViewModel,
                     analyticsHelper = analyticsHelper,
+                    onBackClick = onBack,
                     onLogout = {
                         backStack.clear()
                         backStack.add(Destination.Auth(skipSplash = true))
                     },
                     onNavigateToCategories = {
                         backStack.add(Destination.ManageCategories)
+                    },
+                    onNavigateToSubscriptions = {
+                        backStack.add(Destination.Subscriptions)
                     },
                     onNavigateToNotifications = {
                         backStack.add(Destination.Notifications)
@@ -327,6 +336,22 @@ fun moneyPilotNavEntry(
                     userPreferences = userPreferences,
                     analyticsHelper = analyticsHelper,
                     onNavigateBack = onBack,
+                )
+            }
+
+        is Destination.Subscriptions ->
+            NavEntry(key) {
+                SubscriptionScreen(
+                    onBackClick = onBack,
+                    analyticsHelper = analyticsHelper,
+                )
+            }
+
+        is Destination.SavingGoals ->
+            NavEntry(key) {
+                SavingGoalsScreen(
+                    onBackClick = onBack,
+                    analyticsHelper = analyticsHelper,
                 )
             }
 

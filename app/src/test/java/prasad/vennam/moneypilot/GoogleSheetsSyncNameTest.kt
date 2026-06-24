@@ -19,6 +19,8 @@ import prasad.vennam.moneypilot.data.dao.LoanDao
 import prasad.vennam.moneypilot.data.dao.LoanPaymentDao
 import prasad.vennam.moneypilot.data.dao.NotificationDao
 import prasad.vennam.moneypilot.data.dao.PendingTransactionDao
+import prasad.vennam.moneypilot.data.dao.SubscriptionDao
+import prasad.vennam.moneypilot.data.dao.SavingGoalDao
 import prasad.vennam.moneypilot.data.dao.TransactionDao
 import prasad.vennam.moneypilot.data.entity.Category
 import prasad.vennam.moneypilot.data.entity.Transaction
@@ -261,6 +263,12 @@ class GoogleSheetsSyncNameTest {
         val notificationDao = mock(NotificationDao::class.java)
         whenever(notificationDao.getAllNotifications()).thenReturn(emptyFlow())
 
+        val subscriptionDao = mock(SubscriptionDao::class.java)
+        whenever(subscriptionDao.getAllSubscriptions()).thenReturn(emptyFlow())
+
+        val savingGoalDao = mock(SavingGoalDao::class.java)
+        whenever(savingGoalDao.getAllSavingGoals()).thenReturn(emptyFlow())
+
         val database = mock(MoneyPilotDatabase::class.java)
 
         val fakes = FakeDaos(
@@ -270,7 +278,7 @@ class GoogleSheetsSyncNameTest {
         val repository = MoneyPilotRepository(
             categoryDao, transactionDao, budgetDao, investmentDao,
             loanDao, loanPaymentDao, emergencyFundDao, pendingTransactionDao,
-            bookmarkedArticleDao, notificationDao, database
+            bookmarkedArticleDao, notificationDao, subscriptionDao, savingGoalDao, database
         )
 
         return Pair(repository, fakes)

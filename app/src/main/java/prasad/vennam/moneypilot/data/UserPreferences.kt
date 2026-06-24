@@ -247,6 +247,7 @@ class UserPreferences
                 }
                 preferences[userEmailKey] = userData.email
                 userData.photoUrl?.let { preferences[userPhotoUrlKey] = it }
+                preferences[isOnboardingCompletedKey] = true
             }
         }
 

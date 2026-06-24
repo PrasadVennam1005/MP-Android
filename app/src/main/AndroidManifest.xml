@@ -98,6 +98,14 @@
             </intent-filter>
         </receiver>
 
+        <receiver
+            android:name=".receiver.SubscriptionActionReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="prasad.vennam.moneypilot.action.APPROVE_AND_LOG" />
+            </intent-filter>
+        </receiver>
+
         <service
             android:name="androidx.work.impl.foreground.SystemForegroundService"
             android:foregroundServiceType="dataSync"

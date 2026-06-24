@@ -98,5 +98,11 @@ sealed interface Destination : NavKey {
 
     @Serializable
     data object CurrencyConverter : Destination
+
+    @Serializable
+    data object Subscriptions : Destination
+
+    @Serializable
+    data object SavingGoals : Destination
 }
 

@@ -30,6 +30,8 @@ import prasad.vennam.moneypilot.data.dao.LoanPaymentDao
 import prasad.vennam.moneypilot.data.dao.NotificationDao
 import prasad.vennam.moneypilot.data.dao.PendingTransactionDao
 import prasad.vennam.moneypilot.data.dao.TransactionDao
+import prasad.vennam.moneypilot.data.dao.SubscriptionDao
+import prasad.vennam.moneypilot.data.dao.SavingGoalDao
 import prasad.vennam.moneypilot.data.entity.Category
 import prasad.vennam.moneypilot.data.repository.MoneyPilotRepository
 import prasad.vennam.moneypilot.domain.usecase.BackupSyncManager
@@ -92,7 +94,11 @@ object DatabaseModule {
                 MoneyPilotDatabase::class.java,
                 dbName,
             ).openHelperFactory(factory)
-            .addMigrations(MoneyPilotDatabase.MIGRATION_1_2, MoneyPilotDatabase.MIGRATION_2_3)
+            .addMigrations(
+                MoneyPilotDatabase.MIGRATION_1_2,
+                MoneyPilotDatabase.MIGRATION_2_3,
+                MoneyPilotDatabase.MIGRATION_3_4
+            )
             .fallbackToDestructiveMigration(true)
             .addCallback(
                 object : RoomDatabase.Callback() {
@@ -157,6 +163,14 @@ object DatabaseModule {
 
     @Provides
     @Singleton
+    fun provideSubscriptionDao(database: MoneyPilotDatabase): SubscriptionDao = database.subscriptionDao()
+
+    @Provides
+    @Singleton
+    fun provideSavingGoalDao(database: MoneyPilotDatabase): SavingGoalDao = database.savingGoalDao()
+
+    @Provides
+    @Singleton
     fun provideUserPreferences(
         @ApplicationContext context: Context,
     ): UserPreferences = UserPreferences(context)
@@ -174,6 +188,8 @@ object DatabaseModule {
         pendingTransactionDao: PendingTransactionDao,
         bookmarkedArticleDao: BookmarkedArticleDao,
         notificationDao: NotificationDao,
+        subscriptionDao: SubscriptionDao,
+        savingGoalDao: SavingGoalDao,
         database: MoneyPilotDatabase,
     ): MoneyPilotRepository =
         MoneyPilotRepository(
@@ -187,6 +203,8 @@ object DatabaseModule {
             pendingTransactionDao = pendingTransactionDao,
             bookmarkedArticleDao = bookmarkedArticleDao,
             notificationDao = notificationDao,
+            subscriptionDao = subscriptionDao,
+            savingGoalDao = savingGoalDao,
             database = database,
         )
 

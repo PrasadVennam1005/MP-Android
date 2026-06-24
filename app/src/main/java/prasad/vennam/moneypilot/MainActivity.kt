@@ -82,10 +82,17 @@ class MainActivity : FragmentActivity() {
         prasad.vennam.moneypilot.worker.DailyNewsWorker
             .schedule(applicationContext)
 
+        // Schedule timezone-based Daily Subscription Notifications
+        prasad.vennam.moneypilot.worker.SubscriptionReminderWorker
+            .schedule(applicationContext)
+
         // Trigger immediate run for development testing ONLY in debug builds
         if (BuildConfig.DEBUG) {
             androidx.work.WorkManager.getInstance(applicationContext).enqueue(
                 androidx.work.OneTimeWorkRequestBuilder<prasad.vennam.moneypilot.worker.DailyNewsWorker>().build(),
+            )
+            androidx.work.WorkManager.getInstance(applicationContext).enqueue(
+                androidx.work.OneTimeWorkRequestBuilder<prasad.vennam.moneypilot.worker.SubscriptionReminderWorker>().build(),
             )
         }
 
@@ -279,15 +286,13 @@ fun MoneyPilotApp(
 
     CompositionLocalProvider(LocalCurrencyCode provides currencyCode) {
         val showNavigation =
-            isLoggedIn &&
-                    currentDestination !is Destination.Auth &&
-                    currentDestination !is Destination.ReceiptScanner &&
-                    currentDestination !is Destination.AiChat &&
-                    currentDestination !is Destination.Insights &&
-                    currentDestination !is Destination.TermsOfService &&
-                    currentDestination !is Destination.PrivacyPolicy &&
-                    currentDestination !is Destination.EmiCalculator &&
-                    currentDestination !is Destination.LearnFinance
+            isLoggedIn && (
+                currentDestination is Destination.Dashboard ||
+                currentDestination is Destination.History ||
+                currentDestination is Destination.Loans ||
+                currentDestination is Destination.Investments ||
+                currentDestination is Destination.Reports
+            )
 
         NavigationSuiteScaffold(
             layoutType =

@@ -24,6 +24,10 @@ import prasad.vennam.moneypilot.data.entity.Notification
 import prasad.vennam.moneypilot.data.entity.PendingTransaction
 import prasad.vennam.moneypilot.data.entity.Transaction
 import prasad.vennam.moneypilot.data.entity.TransactionType
+import prasad.vennam.moneypilot.data.dao.SubscriptionDao
+import prasad.vennam.moneypilot.data.dao.SavingGoalDao
+import prasad.vennam.moneypilot.data.entity.Subscription
+import prasad.vennam.moneypilot.data.entity.SavingGoal
 
 class MoneyPilotRepository(
     val categoryDao: CategoryDao,
@@ -36,6 +40,8 @@ class MoneyPilotRepository(
     val pendingTransactionDao: PendingTransactionDao,
     val bookmarkedArticleDao: BookmarkedArticleDao,
     val notificationDao: NotificationDao,
+    val subscriptionDao: SubscriptionDao,
+    val savingGoalDao: SavingGoalDao,
     private val database: MoneyPilotDatabase,
 ) {
     // Bookmarked Articles
@@ -223,4 +229,26 @@ class MoneyPilotRepository(
             database.clearAllTables()
         }
     }
+
+    // Subscriptions
+    val allSubscriptions: Flow<List<Subscription>> = subscriptionDao.getAllSubscriptions()
+
+    suspend fun insertSubscription(subscription: Subscription) = subscriptionDao.insertSubscription(subscription)
+
+    suspend fun updateSubscription(subscription: Subscription) = subscriptionDao.updateSubscription(subscription)
+
+    suspend fun deleteSubscription(subscription: Subscription) = subscriptionDao.deleteSubscription(subscription)
+
+    suspend fun getSubscriptionById(id: Long): Subscription? = subscriptionDao.getSubscriptionById(id)
+
+    // Saving Goals
+    val allSavingGoals: Flow<List<SavingGoal>> = savingGoalDao.getAllSavingGoals()
+
+    suspend fun insertSavingGoal(savingGoal: SavingGoal) = savingGoalDao.insertSavingGoal(savingGoal)
+
+    suspend fun updateSavingGoal(savingGoal: SavingGoal) = savingGoalDao.updateSavingGoal(savingGoal)
+
+    suspend fun deleteSavingGoal(savingGoal: SavingGoal) = savingGoalDao.deleteSavingGoal(savingGoal)
+
+    suspend fun getSavingGoalById(id: Long): SavingGoal? = savingGoalDao.getSavingGoalById(id)
 }

@@ -69,6 +69,8 @@ import androidx.compose.ui.unit.sp
 import androidx.credentials.CredentialManager
 import androidx.credentials.GetCredentialRequest
 import androidx.credentials.exceptions.GetCredentialException
+import androidx.credentials.exceptions.NoCredentialException
+import androidx.credentials.exceptions.GetCredentialCancellationException
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import kotlinx.coroutines.delay
@@ -305,9 +307,15 @@ fun AuthScreen(
                                                     onAuthSuccess()
                                                 }
                                             }
+                                        } catch (e: NoCredentialException) {
+                                            Log.e("AuthScreen", "Login failed: No credentials available", e)
+                                            loginError = "No Google accounts found on this device. Please sign in to a Google account in Settings and try again."
+                                        } catch (e: GetCredentialCancellationException) {
+                                            Log.d("AuthScreen", "Login cancelled by user")
+                                            loginError = "Sign-in cancelled."
                                         } catch (e: GetCredentialException) {
                                             Log.e("AuthScreen", "Login failed: ${e.message}")
-                                            loginError = "Sign-in cancelled or unavailable. Please try again."
+                                            loginError = "Sign-in failed. Please verify your Google account setup or try again."
                                         } catch (e: Exception) {
                                             Log.e("AuthScreen", "Error: ${e.message}")
                                             loginError = "Something went wrong. Please try again."

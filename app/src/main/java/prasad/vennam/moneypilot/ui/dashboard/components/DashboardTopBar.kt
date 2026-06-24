@@ -132,7 +132,7 @@ fun DashboardTopBar(
                         Box(contentAlignment = Alignment.Center) {
                             Icon(
                                 imageVector = Icons.Rounded.Person,
-                                contentDescription = null,
+                                contentDescription = stringResource(R.string.profile),
                                 tint = MaterialTheme.colorScheme.onPrimaryContainer,
                             )
                         }

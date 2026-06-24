@@ -89,6 +89,8 @@ import androidx.compose.ui.unit.dp
 import androidx.credentials.CredentialManager
 import androidx.credentials.GetCredentialRequest
 import androidx.credentials.exceptions.GetCredentialException
+import androidx.credentials.exceptions.NoCredentialException
+import androidx.credentials.exceptions.GetCredentialCancellationException
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
@@ -117,11 +119,14 @@ import prasad.vennam.moneypilot.ui.settings.LoginRequiredDialog
 import prasad.vennam.moneypilot.ui.viewmodel.DashboardViewModel
 import prasad.vennam.moneypilot.ui.viewmodel.MainViewModel
 import prasad.vennam.moneypilot.ui.viewmodel.NotificationViewModel
+import prasad.vennam.moneypilot.ui.viewmodel.SavingGoalViewModel
+import androidx.compose.material.icons.rounded.TrackChanges
 import prasad.vennam.moneypilot.ui.viewmodel.RestoreState
 import prasad.vennam.moneypilot.util.AnalyticsHelper
 import prasad.vennam.moneypilot.util.CurrencyFormatter
 import prasad.vennam.moneypilot.util.GoogleSheetsSyncHelper
 import prasad.vennam.moneypilot.util.TrackScreen
+import prasad.vennam.moneypilot.util.inRupees
 import java.util.Calendar
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -141,6 +146,7 @@ fun DashboardScreen(
     onNavigateToInsights: () -> Unit,
     onNavigateToAiChat: () -> Unit,
     onNavigateToEmergencyFund: () -> Unit,
+    onNavigateToSavingGoals: () -> Unit,
     onNavigateToNews: () -> Unit,
     onNavigateToSandbox: () -> Unit,
     onNavigateToEmiCalculator: () -> Unit,
@@ -150,6 +156,8 @@ fun DashboardScreen(
     TrackScreen(analyticsHelper, "Dashboard")
 
     val dashboardState by dashboardViewModel.uiState.collectAsState()
+    val savingGoalViewModel: SavingGoalViewModel = hiltViewModel()
+    val savingGoals by savingGoalViewModel.allSavingGoals.collectAsState()
     val userData by mainViewModel.userData.collectAsState()
     val isPremium by mainViewModel.isPremium.collectAsState()
     val isDevToolEnabled by mainViewModel.isDevToolEnabled.collectAsState()
@@ -181,7 +189,6 @@ fun DashboardScreen(
     var showLoginRequiredDialog by remember { mutableStateOf(false) }
 
     val restoreState by mainViewModel.restoreState.collectAsState()
-    val isOnboardingCompleted by mainViewModel.isOnboardingCompleted.collectAsState()
     val currencyCode by mainViewModel.currency.collectAsState()
 
     val notificationViewModel: NotificationViewModel = hiltViewModel()
@@ -274,6 +281,11 @@ fun DashboardScreen(
                                 showLoginRequiredDialog = false
                             }
                         }
+                    } catch (e: NoCredentialException) {
+                        Log.e("DashboardScreen", "Login failed: No credentials available", e)
+                        Toast.makeText(context, "No Google accounts found on this device. Please sign in to a Google account in Settings.", Toast.LENGTH_LONG).show()
+                    } catch (e: GetCredentialCancellationException) {
+                        Log.d("DashboardScreen", "Login cancelled by user")
                     } catch (e: GetCredentialException) {
                         Log.e("DashboardScreen", "Login failed: ${e.message}")
                         Toast.makeText(context, with(context) { getString(R.string.login_failed_formatted, e.message) }, Toast.LENGTH_LONG).show()
@@ -607,6 +619,17 @@ fun DashboardScreen(
                         }
 
                         item {
+                            DashboardSavingGoalsCard(
+                                savingGoals = savingGoals,
+                                currencyCode = currencyCode,
+                                onClick = {
+                                    analyticsHelper.logEvent("saving_goals_card_clicked")
+                                    onNavigateToSavingGoals()
+                                }
+                            )
+                        }
+
+                        item {
                             PaymentAppsSection(currencyCode = currencyCode)
                         }
 
@@ -713,14 +736,6 @@ fun DashboardScreen(
         )
     }
 
-    if (!isOnboardingCompleted) {
-        prasad.vennam.moneypilot.ui.components.OnboardingDialog(
-            initialCurrency = currencyCode,
-            onSavePreferences = { goal, target, currency ->
-                mainViewModel.savePreferences(goal, target, currency)
-            },
-        )
-    }
 }
 
 @Composable
@@ -967,6 +982,143 @@ fun DashboardEmergencyFundCard(
                     )
                     Text(
                         text = stringResource(R.string.goal_with_value, targetGoalFormatted),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun DashboardSavingGoalsCard(
+    savingGoals: List<prasad.vennam.moneypilot.data.entity.SavingGoal>,
+    currencyCode: String,
+    onClick: () -> Unit,
+) {
+    val totalGoals = savingGoals.size
+    val completedGoals = savingGoals.count { it.isCompleted }
+    
+    val totalSaved = savingGoals.sumOf { it.currentSavedAmount }
+    val totalTarget = savingGoals.sumOf { it.targetAmount }
+    
+    val progress = remember(totalSaved, totalTarget) {
+        if (totalTarget > 0L) (totalSaved.toDouble() / totalTarget.toDouble()).toFloat().coerceIn(0f, 1f) else 0f
+    }
+    val percent = remember(progress) { (progress * 100).toInt() }
+    
+    val savedFormatted = remember(totalSaved, currencyCode) {
+        CurrencyFormatter.format(totalSaved.inRupees, currencyCode)
+    }
+    val targetFormatted = remember(totalTarget, currencyCode) {
+        CurrencyFormatter.format(totalTarget.inRupees, currencyCode)
+    }
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() },
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface,
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+    ) {
+        if (totalGoals == 0) {
+            Row(
+                modifier = Modifier.padding(20.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.secondaryContainer),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.TrackChanges,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                    )
+                }
+                Spacer(modifier = Modifier.width(16.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Create Savings Goals",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    Text(
+                        text = "Set custom milestones with rich metrics",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Icon(
+                    imageVector = Icons.Rounded.ChevronRight,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(20.dp),
+                )
+            }
+        } else {
+            Column(modifier = Modifier.padding(20.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Rounded.TrackChanges,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(20.dp),
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Savings Goals ($completedGoals/$totalGoals)",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                        )
+                    }
+                    Text(
+                        text = "$percent%",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                LinearProgressIndicator(
+                    progress = { progress },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(8.dp)
+                        .clip(RoundedCornerShape(4.dp)),
+                    color = MaterialTheme.colorScheme.primary,
+                    trackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f),
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = "Saved: $savedFormatted",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    Text(
+                        text = "Target: $targetFormatted",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )

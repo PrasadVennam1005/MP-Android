@@ -56,6 +56,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
@@ -91,6 +92,8 @@ import androidx.compose.ui.unit.dp
 import androidx.credentials.CredentialManager
 import androidx.credentials.GetCredentialRequest
 import androidx.credentials.exceptions.GetCredentialException
+import androidx.credentials.exceptions.NoCredentialException
+import androidx.credentials.exceptions.GetCredentialCancellationException
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -111,6 +114,7 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.provider.Settings
 import androidx.core.content.ContextCompat
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.NotificationsActive
 import prasad.vennam.moneypilot.util.TrackScreen
 
@@ -122,12 +126,14 @@ fun SettingsScreen(
     analyticsHelper: AnalyticsHelper,
     onLogout: () -> Unit,
     onNavigateToCategories: () -> Unit,
+    onNavigateToSubscriptions: () -> Unit,
     onNavigateToNotifications: () -> Unit,
     onNavigateToFAQ: () -> Unit,
     onNavigateToTerms: () -> Unit,
     onNavigateToPrivacy: () -> Unit,
     onNavigateToPremium: () -> Unit,
     onAccountDeleted: () -> Unit,
+    onBackClick: () -> Unit,
 ) {
     TrackScreen(analyticsHelper, "Settings")
     val userData by mainViewModel.userData.collectAsState()
@@ -287,6 +293,11 @@ fun SettingsScreen(
                         showLoginRequiredDialog = false
                     }
                 }
+            } catch (e: NoCredentialException) {
+                Log.e("SettingsScreen", "Login failed: No credentials available", e)
+                Toast.makeText(context, "No Google accounts found on this device. Please sign in to a Google account in Settings.", Toast.LENGTH_LONG).show()
+            } catch (e: GetCredentialCancellationException) {
+                Log.d("SettingsScreen", "Login cancelled by user")
             } catch (e: GetCredentialException) {
                 Log.e("SettingsScreen", "Login failed: ${e.message}")
                 Toast.makeText(context, "Login failed: ${e.message}", Toast.LENGTH_LONG).show()
@@ -432,6 +443,14 @@ fun SettingsScreen(
                         style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
                     )
                 },
+                navigationIcon = {
+                    IconButton(onClick = onBackClick) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
+                            contentDescription = stringResource(R.string.back),
+                        )
+                    }
+                },
                 colors =
                     TopAppBarDefaults.topAppBarColors(
                         containerColor = MaterialTheme.colorScheme.background,
@@ -505,6 +524,14 @@ fun SettingsScreen(
                             checkGuestAction("Manage Categories") {
                                 onNavigateToCategories()
                             }
+                        },
+                    )
+                    SettingsItem(
+                        icon = Icons.Rounded.NotificationsActive,
+                        title = "Recurring Subscriptions",
+                        subtitle = "Track Netflix, Rent, utilities & billing alerts",
+                        onClick = {
+                            onNavigateToSubscriptions()
                         },
                     )
                     SettingsItem(

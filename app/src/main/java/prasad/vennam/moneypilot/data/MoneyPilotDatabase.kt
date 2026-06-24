@@ -15,6 +15,8 @@ import prasad.vennam.moneypilot.data.dao.LoanPaymentDao
 import prasad.vennam.moneypilot.data.dao.NotificationDao
 import prasad.vennam.moneypilot.data.dao.PendingTransactionDao
 import prasad.vennam.moneypilot.data.dao.TransactionDao
+import prasad.vennam.moneypilot.data.dao.SubscriptionDao
+import prasad.vennam.moneypilot.data.dao.SavingGoalDao
 import prasad.vennam.moneypilot.data.entity.BookmarkedArticle
 import prasad.vennam.moneypilot.data.entity.BookmarkedFinanceArticle
 import prasad.vennam.moneypilot.data.entity.Budget
@@ -27,10 +29,27 @@ import prasad.vennam.moneypilot.data.entity.LoanPayment
 import prasad.vennam.moneypilot.data.entity.Notification
 import prasad.vennam.moneypilot.data.entity.PendingTransaction
 import prasad.vennam.moneypilot.data.entity.Transaction
+import prasad.vennam.moneypilot.data.entity.Subscription
+import prasad.vennam.moneypilot.data.entity.SavingGoal
 
 @Database(
-    entities = [Category::class, Transaction::class, Budget::class, Investment::class, ExchangeRate::class, Notification::class, Loan::class, LoanPayment::class, EmergencyFund::class, PendingTransaction::class, BookmarkedArticle::class, BookmarkedFinanceArticle::class],
-    version = 3,
+    entities = [
+        Category::class,
+        Transaction::class,
+        Budget::class,
+        Investment::class,
+        ExchangeRate::class,
+        Notification::class,
+        Loan::class,
+        LoanPayment::class,
+        EmergencyFund::class,
+        PendingTransaction::class,
+        BookmarkedArticle::class,
+        BookmarkedFinanceArticle::class,
+        Subscription::class,
+        SavingGoal::class
+    ],
+    version = 4,
     exportSchema = true,
 )
 @TypeConverters(Converters::class)
@@ -59,6 +78,10 @@ abstract class MoneyPilotDatabase : RoomDatabase() {
 
     abstract fun bookmarkedFinanceArticleDao(): BookmarkedFinanceArticleDao
 
+    abstract fun subscriptionDao(): SubscriptionDao
+
+    abstract fun savingGoalDao(): SavingGoalDao
+
     companion object {
         val MIGRATION_1_2 = object : androidx.room.migration.Migration(1, 2) {
             override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
@@ -72,6 +95,40 @@ abstract class MoneyPilotDatabase : RoomDatabase() {
                 db.execSQL("ALTER TABLE `categories` ADD COLUMN `lastUpdated` INTEGER NOT NULL DEFAULT 0")
                 db.execSQL("ALTER TABLE `budgets` ADD COLUMN `lastUpdated` INTEGER NOT NULL DEFAULT 0")
                 db.execSQL("ALTER TABLE `investments` ADD COLUMN `lastUpdated` INTEGER NOT NULL DEFAULT 0")
+            }
+        }
+
+        val MIGRATION_3_4 = object : androidx.room.migration.Migration(3, 4) {
+            override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS `subscriptions` (
+                        `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, 
+                        `name` TEXT NOT NULL, 
+                        `amount` INTEGER NOT NULL, 
+                        `billingCycle` TEXT NOT NULL, 
+                        `nextPaymentDate` INTEGER NOT NULL, 
+                        `paymentMode` TEXT NOT NULL DEFAULT 'UPI', 
+                        `categoryId` INTEGER, 
+                        `isNotificationEnabled` INTEGER NOT NULL DEFAULT 1, 
+                        `lastUpdated` INTEGER NOT NULL DEFAULT 0,
+                        FOREIGN KEY(`categoryId`) REFERENCES `categories`(`id`) ON UPDATE NO ACTION ON DELETE SET NULL
+                    )
+                """)
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_subscriptions_categoryId` ON `subscriptions` (`categoryId`)")
+
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS `saving_goals` (
+                        `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, 
+                        `name` TEXT NOT NULL, 
+                        `targetAmount` INTEGER NOT NULL, 
+                        `currentSavedAmount` INTEGER NOT NULL, 
+                        `deadline` INTEGER NOT NULL, 
+                        `colorHex` TEXT NOT NULL DEFAULT '#3F51B5', 
+                        `iconName` TEXT NOT NULL DEFAULT 'Savings', 
+                        `isCompleted` INTEGER NOT NULL DEFAULT 0, 
+                        `lastUpdated` INTEGER NOT NULL DEFAULT 0
+                    )
+                """)
             }
         }
     }
