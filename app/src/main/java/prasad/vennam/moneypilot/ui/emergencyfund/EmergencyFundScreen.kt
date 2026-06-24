@@ -71,16 +71,20 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import prasad.vennam.moneypilot.R
 import prasad.vennam.moneypilot.data.UserPreferences
 import prasad.vennam.moneypilot.ui.viewmodel.EmergencyFundViewModel
+import prasad.vennam.moneypilot.util.AnalyticsHelper
 import prasad.vennam.moneypilot.util.CurrencyFormatter
 import prasad.vennam.moneypilot.util.LocalCurrencyCode
+import prasad.vennam.moneypilot.util.TrackScreen
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EmergencyFundScreen(
     userPreferences: UserPreferences,
+    analyticsHelper: AnalyticsHelper,
     onNavigateBack: () -> Unit,
     viewModel: EmergencyFundViewModel = hiltViewModel(),
 ) {
+    TrackScreen(analyticsHelper, "EmergencyFund")
     val coroutineScope = rememberCoroutineScope()
     val currencyCode = LocalCurrencyCode.current
 
@@ -1024,6 +1028,7 @@ fun EmergencyFundScreen(
                             onClick = {
                                 val additional = addAmountStr.toDoubleOrNull() ?: 0.0
                                 if (additional > 0.0) {
+                                    analyticsHelper.logEvent("emergency_fund_deposit", mapOf("amount" to additional))
                                     viewModel.updateEmergencySaved(currentSaved + additional)
                                     showDepositSheet = false
                                 }
@@ -1163,6 +1168,7 @@ fun EmergencyFundScreen(
                             onClick = {
                                 val amount = withdrawAmountStr.toDoubleOrNull() ?: 0.0
                                 if (amount > 0.0 && amount <= currentSaved) {
+                                    analyticsHelper.logEvent("emergency_fund_withdraw", mapOf("amount" to amount))
                                     viewModel.updateEmergencySaved(
                                         (currentSaved - amount).coerceAtLeast(
                                             0.0,

@@ -31,6 +31,8 @@ import prasad.vennam.moneypilot.ui.investments.components.*
 import prasad.vennam.moneypilot.ui.viewmodel.InvestmentViewModel
 import prasad.vennam.moneypilot.util.LocalCurrencyCode
 import prasad.vennam.moneypilot.util.inPaisa
+import prasad.vennam.moneypilot.util.AnalyticsHelper
+import prasad.vennam.moneypilot.util.TrackScreen
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -39,8 +41,10 @@ fun InvestmentScreen(
     userData: UserPreferences.UserData?,
     syncState: SyncState?,
     isPremium: Boolean,
+    analyticsHelper: AnalyticsHelper,
     onProfileClick: () -> Unit,
 ) {
+    TrackScreen(analyticsHelper, "Investments")
     val investments by viewModel.allInvestments.collectAsState()
     val allocationDetails by viewModel.allocationDetails.collectAsState()
     val selectedProfile by viewModel.selectedProfile.collectAsState()
@@ -124,7 +128,10 @@ fun InvestmentScreen(
                             color = MaterialTheme.colorScheme.primary,
                         )
                     } else {
-                        IconButton(onClick = { viewModel.refreshAllPrices() }) {
+                        IconButton(onClick = {
+                            analyticsHelper.logEvent("investments_refresh_clicked")
+                            viewModel.refreshAllPrices()
+                        }) {
                             Icon(
                                 imageVector = Icons.Rounded.Refresh,
                                 contentDescription = stringResource(R.string.refresh_prices),
@@ -177,7 +184,10 @@ fun InvestmentScreen(
                 tabs.forEachIndexed { index, title ->
                     Tab(
                         selected = selectedTab == index,
-                        onClick = { selectedTab = index },
+                        onClick = {
+                            analyticsHelper.logEvent("investments_tab_switched", mapOf("tab" to title))
+                            selectedTab = index
+                        },
                         text = { Text(title, fontWeight = FontWeight.Bold) },
                     )
                 }

@@ -59,15 +59,19 @@ import prasad.vennam.moneypilot.R
 import prasad.vennam.moneypilot.data.model.FinanceArticle
 import prasad.vennam.moneypilot.ui.components.AdBannerView
 import prasad.vennam.moneypilot.ui.viewmodel.LearnFinanceViewModel
+import prasad.vennam.moneypilot.util.AnalyticsHelper
+import prasad.vennam.moneypilot.util.TrackScreen
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LearnFinanceScreen(
     viewModel: LearnFinanceViewModel,
+    analyticsHelper: AnalyticsHelper,
     onBack: () -> Unit,
     onArticleClick: (String) -> Unit,
     isPremium: Boolean = false
 ) {
+    TrackScreen(analyticsHelper, "LearnFinance")
     val uiState by viewModel.uiState.collectAsState()
     var isSearchActive by remember { mutableStateOf(false) }
     val focusRequester = remember { FocusRequester() }

@@ -35,6 +35,8 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import prasad.vennam.moneypilot.R
 import prasad.vennam.moneypilot.ui.viewmodel.SandboxViewModel
+import prasad.vennam.moneypilot.util.AnalyticsHelper
+import prasad.vennam.moneypilot.util.TrackScreen
 import java.util.Locale
 import kotlin.math.roundToInt
 
@@ -42,8 +44,10 @@ import kotlin.math.roundToInt
 @Composable
 fun FinancialSandboxScreen(
     onBack: () -> Unit,
+    analyticsHelper: AnalyticsHelper,
     viewModel: SandboxViewModel = hiltViewModel(),
 ) {
+    TrackScreen(analyticsHelper, "FinancialSandbox")
     val defaultsState by viewModel.defaults.collectAsState()
 
     var incomeInput by remember { mutableStateOf("") }

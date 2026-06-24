@@ -121,6 +121,7 @@ import prasad.vennam.moneypilot.ui.viewmodel.RestoreState
 import prasad.vennam.moneypilot.util.AnalyticsHelper
 import prasad.vennam.moneypilot.util.CurrencyFormatter
 import prasad.vennam.moneypilot.util.GoogleSheetsSyncHelper
+import prasad.vennam.moneypilot.util.TrackScreen
 import java.util.Calendar
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -146,6 +147,8 @@ fun DashboardScreen(
     onNavigateToLearnFinance: () -> Unit,
     onNavigateToCurrencyConverter: () -> Unit,
 ) {
+    TrackScreen(analyticsHelper, "Dashboard")
+
     val dashboardState by dashboardViewModel.uiState.collectAsState()
     val userData by mainViewModel.userData.collectAsState()
     val isPremium by mainViewModel.isPremium.collectAsState()
@@ -396,8 +399,12 @@ fun DashboardScreen(
                     userData = userData,
                     syncState = syncState,
                     unreadCount = unreadCount,
-                    onProfileClick = onNavigateToSettings,
+                    onProfileClick = {
+                        analyticsHelper.logEvent("profile_clicked")
+                        onNavigateToSettings()
+                    },
                     onNotificationClick = {
+                        analyticsHelper.logEvent("notification_icon_clicked")
                         if (isGuest) {
                             showLoginRequiredDialog = true
                         } else {
@@ -405,7 +412,10 @@ fun DashboardScreen(
                         }
                     },
                     showAiChat = !isFabVisible,
-                    onAiChatClick = onNavigateToAiChat,
+                    onAiChatClick = {
+                        analyticsHelper.logEvent("ai_chat_topbar_clicked")
+                        onNavigateToAiChat()
+                    },
                 )
             },
         ) { innerPadding ->
@@ -524,28 +534,64 @@ fun DashboardScreen(
 
                         item {
                             QuickActionSection(
-                                onAddExpense = { onNavigateToAddTransaction(TransactionType.EXPENSE) },
-                                onAddIncome = { onNavigateToAddTransaction(TransactionType.INCOME) },
-                                onAddInvestment = onNavigateToAddInvestment,
-                                onAddLoan = onNavigateToLoans,
-                                onScanReceipt = onNavigateToScanner,
-                                onNavigateToEmergencyFund = onNavigateToEmergencyFund,
-                                onNavigateToNews = onNavigateToNews,
-                                onNavigateToSandbox = onNavigateToSandbox,
-                                onNavigateToEmiCalculator = onNavigateToEmiCalculator,
-                                onNavigateToCurrencyConverter = onNavigateToCurrencyConverter,
+                                onAddExpense = {
+                                    analyticsHelper.logEvent("quick_action_clicked", mapOf("action" to "add_expense"))
+                                    onNavigateToAddTransaction(TransactionType.EXPENSE)
+                                },
+                                onAddIncome = {
+                                    analyticsHelper.logEvent("quick_action_clicked", mapOf("action" to "add_income"))
+                                    onNavigateToAddTransaction(TransactionType.INCOME)
+                                },
+                                onAddInvestment = {
+                                    analyticsHelper.logEvent("quick_action_clicked", mapOf("action" to "add_investment"))
+                                    onNavigateToAddInvestment()
+                                },
+                                onAddLoan = {
+                                    analyticsHelper.logEvent("quick_action_clicked", mapOf("action" to "add_loan"))
+                                    onNavigateToLoans()
+                                },
+                                onScanReceipt = {
+                                    analyticsHelper.logEvent("quick_action_clicked", mapOf("action" to "scan_receipt"))
+                                    onNavigateToScanner()
+                                },
+                                onNavigateToEmergencyFund = {
+                                    analyticsHelper.logEvent("quick_action_clicked", mapOf("action" to "emergency_fund"))
+                                    onNavigateToEmergencyFund()
+                                },
+                                onNavigateToNews = {
+                                    analyticsHelper.logEvent("quick_action_clicked", mapOf("action" to "news"))
+                                    onNavigateToNews()
+                                },
+                                onNavigateToSandbox = {
+                                    analyticsHelper.logEvent("quick_action_clicked", mapOf("action" to "sandbox"))
+                                    onNavigateToSandbox()
+                                },
+                                onNavigateToEmiCalculator = {
+                                    analyticsHelper.logEvent("quick_action_clicked", mapOf("action" to "emi_calculator"))
+                                    onNavigateToEmiCalculator()
+                                },
+                                onNavigateToCurrencyConverter = {
+                                    analyticsHelper.logEvent("quick_action_clicked", mapOf("action" to "currency_converter"))
+                                    onNavigateToCurrencyConverter()
+                                },
                                 isGuest = isGuest && !prasad.vennam.moneypilot.BuildConfig.DEBUG && !isDevToolEnabled,
                             )
                         }
 
                         item {
-                            SmartInsightsCard(onClick = onNavigateToInsights)
+                            SmartInsightsCard(onClick = {
+                                analyticsHelper.logEvent("insights_card_clicked")
+                                onNavigateToInsights()
+                            })
                         }
 
                         // Learn Finance promotional banner — shown after Smart Insights
                         if (dashboardState.isLearnFinanceEnabled) {
                             item {
-                                LearnFinancePromoCard(onClick = onNavigateToLearnFinance)
+                                LearnFinancePromoCard(onClick = {
+                                    analyticsHelper.logEvent("learn_finance_promo_clicked")
+                                    onNavigateToLearnFinance()
+                                })
                             }
                         }
 
@@ -553,7 +599,10 @@ fun DashboardScreen(
                             DashboardEmergencyFundCard(
                                 emergencyFund = dashboardState.emergencyFund,
                                 currencyCode = currencyCode,
-                                onClick = onNavigateToEmergencyFund,
+                                onClick = {
+                                    analyticsHelper.logEvent("emergency_fund_card_clicked")
+                                    onNavigateToEmergencyFund()
+                                },
                             )
                         }
 
@@ -589,14 +638,26 @@ fun DashboardScreen(
 
                         if (dashboardState.budgetProgresses.isNotEmpty()) {
                             item {
-                                SectionHeader(stringResource(R.string.budget_progress), onActionClick = onNavigateToBudgets)
+                                SectionHeader(
+                                    title = stringResource(R.string.budget_progress),
+                                    onActionClick = {
+                                        analyticsHelper.logEvent("budget_see_all_clicked")
+                                        onNavigateToBudgets()
+                                    }
+                                )
                                 BudgetProgressSection(dashboardState.budgetProgresses, unknownString)
                             }
                         }
 
                         if (dashboardState.recentTransactions.isNotEmpty()) {
                             item {
-                                SectionHeader(stringResource(R.string.recent_transactions), onActionClick = onNavigateToHistory)
+                                SectionHeader(
+                                    title = stringResource(R.string.recent_transactions),
+                                    onActionClick = {
+                                        analyticsHelper.logEvent("history_see_all_clicked")
+                                        onNavigateToHistory()
+                                    }
+                                )
                                 RecentTransactionsCard(dashboardState.recentTransactions, dashboardState.categories)
                             }
                         }
@@ -620,7 +681,10 @@ fun DashboardScreen(
         ) {
             FloatingAiBot(
                 modifier = Modifier,
-                onClick = onNavigateToAiChat,
+                onClick = {
+                    analyticsHelper.logEvent("floating_ai_bot_clicked")
+                    onNavigateToAiChat()
+                },
             )
         }
     }

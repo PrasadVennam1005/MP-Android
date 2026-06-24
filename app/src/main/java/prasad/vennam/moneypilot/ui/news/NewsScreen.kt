@@ -37,6 +37,8 @@ import prasad.vennam.moneypilot.R
 import prasad.vennam.moneypilot.data.entity.BookmarkedArticle
 import prasad.vennam.moneypilot.ui.viewmodel.NewsPortal
 import prasad.vennam.moneypilot.ui.viewmodel.NewsViewModel
+import prasad.vennam.moneypilot.util.AnalyticsHelper
+import prasad.vennam.moneypilot.util.TrackScreen
 import java.net.URI
 import java.text.SimpleDateFormat
 import java.util.*
@@ -46,8 +48,10 @@ import java.util.*
 fun NewsScreen(
     onBack: () -> Unit,
     onNavigateToWeb: (url: String, title: String) -> Unit,
+    analyticsHelper: AnalyticsHelper,
     viewModel: NewsViewModel = hiltViewModel(),
 ) {
+    TrackScreen(analyticsHelper, "FinancialNews")
     val uiState by viewModel.uiState.collectAsState()
     var selectedCategory by remember { mutableStateOf("All") }
     var selectedTab by remember { mutableIntStateOf(0) } // 0 = Portals, 1 = Bookmarks
@@ -100,7 +104,10 @@ fun NewsScreen(
             ) {
                 Tab(
                     selected = selectedTab == 0,
-                    onClick = { selectedTab = 0 },
+                    onClick = {
+                        analyticsHelper.logEvent("news_tab_switched", mapOf("tab" to "feeds"))
+                        selectedTab = 0
+                    },
                     text = {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
@@ -114,7 +121,10 @@ fun NewsScreen(
                 )
                 Tab(
                     selected = selectedTab == 1,
-                    onClick = { selectedTab = 1 },
+                    onClick = {
+                        analyticsHelper.logEvent("news_tab_switched", mapOf("tab" to "bookmarks"))
+                        selectedTab = 1
+                    },
                     text = {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
@@ -168,7 +178,10 @@ fun NewsScreen(
                             }
                         FilterChip(
                             selected = isSelected,
-                            onClick = { selectedCategory = category },
+                            onClick = {
+                                analyticsHelper.logEvent("news_category_clicked", mapOf("category" to category))
+                                selectedCategory = category
+                            },
                             label = { Text(stringResource(categoryResId)) },
                             colors = chipColor,
                             border = null,

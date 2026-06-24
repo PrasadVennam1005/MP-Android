@@ -41,6 +41,8 @@ import prasad.vennam.moneypilot.ui.viewmodel.AnalyticsViewModel
 import prasad.vennam.moneypilot.ui.viewmodel.BudgetProgress
 import prasad.vennam.moneypilot.ui.viewmodel.BudgetViewModel
 import prasad.vennam.moneypilot.ui.viewmodel.TransactionViewModel
+import prasad.vennam.moneypilot.util.AnalyticsHelper
+import prasad.vennam.moneypilot.util.TrackScreen
 import prasad.vennam.moneypilot.util.inPaisa
 import java.util.Calendar
 
@@ -53,9 +55,11 @@ fun ReportsTabScreen(
     userData: UserPreferences.UserData?,
     syncState: SyncState?,
     isPremium: Boolean,
+    analyticsHelper: AnalyticsHelper,
     onProfileClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    TrackScreen(analyticsHelper, "Reports")
     var selectedTab by remember { mutableStateOf(0) }
     var showFormSheet by remember { mutableStateOf(false) }
     var budgetToEdit by remember { mutableStateOf<Budget?>(null) }
@@ -165,12 +169,18 @@ fun ReportsTabScreen(
             ) {
                 Tab(
                     selected = selectedTab == 0,
-                    onClick = { selectedTab = 0 },
+                    onClick = {
+                        analyticsHelper.logEvent("reports_tab_switched", mapOf("tab" to "budgets"))
+                        selectedTab = 0
+                    },
                     text = { Text(stringResource(R.string.budgets), fontWeight = FontWeight.Bold) },
                 )
                 Tab(
                     selected = selectedTab == 1,
-                    onClick = { selectedTab = 1 },
+                    onClick = {
+                        analyticsHelper.logEvent("reports_tab_switched", mapOf("tab" to "analytics"))
+                        selectedTab = 1
+                    },
                     text = { Text(stringResource(R.string.analytics), fontWeight = FontWeight.Bold) },
                 )
             }
@@ -205,7 +215,11 @@ fun ReportsTabScreen(
                     )
                 }
                 1 -> {
-                    AnalyticsScreen(viewModel = analyticsViewModel, isPremium = isPremium)
+                    AnalyticsScreen(
+                        viewModel = analyticsViewModel,
+                        analyticsHelper = analyticsHelper,
+                        isPremium = isPremium
+                    )
                 }
             }
         }

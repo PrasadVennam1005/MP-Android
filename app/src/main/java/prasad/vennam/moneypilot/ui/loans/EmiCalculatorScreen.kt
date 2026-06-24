@@ -54,6 +54,8 @@ import prasad.vennam.moneypilot.ui.viewmodel.EmiCalculatorUiState
 import prasad.vennam.moneypilot.ui.viewmodel.EmiCalculatorViewModel
 import prasad.vennam.moneypilot.util.CurrencyFormatter
 import prasad.vennam.moneypilot.util.LocalCurrencyCode
+import prasad.vennam.moneypilot.util.AnalyticsHelper
+import prasad.vennam.moneypilot.util.TrackScreen
 import java.util.Currency
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -63,8 +65,10 @@ fun EmiCalculatorScreen(
     onNavigateToSaveLoan: (Double, Double, Int, Double) -> Unit,
     onNavigateToCompare: () -> Unit,
     isPremium: Boolean,
+    analyticsHelper: AnalyticsHelper,
     viewModel: EmiCalculatorViewModel = hiltViewModel(),
 ) {
+    TrackScreen(analyticsHelper, "EmiCalculator")
     val currencyCode = LocalCurrencyCode.current
     val context = LocalContext.current
     val currencySymbol =

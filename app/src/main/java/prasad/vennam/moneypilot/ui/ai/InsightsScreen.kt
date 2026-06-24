@@ -34,8 +34,10 @@ import prasad.vennam.moneypilot.ui.dashboard.SyncState
 import prasad.vennam.moneypilot.ui.viewmodel.AiRecommendationState
 import prasad.vennam.moneypilot.ui.viewmodel.AnalyticsState
 import prasad.vennam.moneypilot.ui.viewmodel.AnalyticsViewModel
+import prasad.vennam.moneypilot.util.AnalyticsHelper
 import prasad.vennam.moneypilot.util.CurrencyFormatter
 import prasad.vennam.moneypilot.util.LocalCurrencyCode
+import prasad.vennam.moneypilot.util.TrackScreen
 import kotlin.math.abs
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -43,11 +45,13 @@ import kotlin.math.abs
 fun InsightsScreen(
     userData: UserPreferences.UserData?,
     syncState: SyncState?,
+    analyticsHelper: AnalyticsHelper,
     onProfileClick: () -> Unit,
     onBackClick: () -> Unit,
     onNavigateToAiChat: () -> Unit = {},
     viewModel: AnalyticsViewModel = hiltViewModel(),
 ) {
+    TrackScreen(analyticsHelper, "Insights")
     val uiState by viewModel.uiState.collectAsState()
     val aiRecState by viewModel.aiRecommendation.collectAsState()
     val currencyCode = LocalCurrencyCode.current
@@ -112,7 +116,13 @@ fun InsightsScreen(
                 }
 
                 item {
-                    AiRecommendationCard(aiRecState, onNavigateToAiChat)
+                    AiRecommendationCard(
+                        state = aiRecState,
+                        onNavigateToAiChat = {
+                            analyticsHelper.logEvent("insights_ai_recommendation_clicked")
+                            onNavigateToAiChat()
+                        }
+                    )
                 }
 
                 if (insights.isEmpty()) {

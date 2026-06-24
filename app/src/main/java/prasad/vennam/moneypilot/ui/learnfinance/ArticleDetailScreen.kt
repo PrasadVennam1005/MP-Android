@@ -32,16 +32,20 @@ import androidx.compose.ui.unit.dp
 import prasad.vennam.moneypilot.R
 import prasad.vennam.moneypilot.data.model.FinanceArticle
 import prasad.vennam.moneypilot.ui.viewmodel.LearnFinanceViewModel
+import prasad.vennam.moneypilot.util.AnalyticsHelper
+import prasad.vennam.moneypilot.util.TrackScreen
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ArticleDetailScreen(
     articleId: String,
     viewModel: LearnFinanceViewModel,
+    analyticsHelper: AnalyticsHelper,
     onBack: () -> Unit,
     onArticleClick: (String) -> Unit
 ) {
     val article = viewModel.getArticleById(articleId) ?: return
+    TrackScreen(analyticsHelper, "ArticleDetail_${article.title}")
     val bookmarkedIds by viewModel.bookmarkedIds.collectAsState()
     val isBookmarked = bookmarkedIds.contains(articleId)
 

@@ -73,6 +73,7 @@ import prasad.vennam.moneypilot.ui.budget.utils.getCategoryIcon
 import prasad.vennam.moneypilot.ui.viewmodel.TransactionViewModel
 import prasad.vennam.moneypilot.util.AnalyticsHelper
 import prasad.vennam.moneypilot.util.LocalCurrencyCode
+import prasad.vennam.moneypilot.util.TrackScreen
 import java.text.SimpleDateFormat
 import java.util.Date
 
@@ -87,6 +88,7 @@ fun AddEditTransactionScreen(
     isPremium: Boolean,
     onNavigateBack: () -> Unit,
 ) {
+    TrackScreen(analyticsHelper, if (transactionId == null) "AddTransaction" else "EditTransaction")
     val formState by viewModel.formState.collectAsStateWithLifecycle()
 
     val currencyCode = LocalCurrencyCode.current

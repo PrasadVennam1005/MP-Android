@@ -22,7 +22,9 @@ sealed interface LlmState {
 
     object Downloading : LlmState
 
-    object Ready : LlmState
+    data class Ready(
+        val finalResponse: String? = null,
+    ) : LlmState
 
     data class Error(
         val message: String,

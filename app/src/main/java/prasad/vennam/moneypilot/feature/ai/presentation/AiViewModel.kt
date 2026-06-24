@@ -44,6 +44,9 @@ class AiViewModel
                             updateLastAiMessage(state.displayText)
                             _pendingAction.value = state.action
                         }
+                        is LlmState.Ready -> {
+                            state.finalResponse?.let { updateLastAiMessage(it) }
+                        }
                         else -> {}
                     }
                 }.launchIn(viewModelScope)

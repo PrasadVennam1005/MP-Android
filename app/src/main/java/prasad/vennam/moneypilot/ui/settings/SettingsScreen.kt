@@ -112,6 +112,7 @@ import android.net.Uri
 import android.provider.Settings
 import androidx.core.content.ContextCompat
 import androidx.compose.material.icons.rounded.NotificationsActive
+import prasad.vennam.moneypilot.util.TrackScreen
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -128,6 +129,7 @@ fun SettingsScreen(
     onNavigateToPremium: () -> Unit,
     onAccountDeleted: () -> Unit,
 ) {
+    TrackScreen(analyticsHelper, "Settings")
     val userData by mainViewModel.userData.collectAsState()
     val isSynced by mainViewModel.isSynced.collectAsState()
     val spreadsheetId by mainViewModel.spreadsheetId.collectAsState()
@@ -526,6 +528,7 @@ fun SettingsScreen(
                         subtitle = "Require fingerprint/face to open app",
                         checked = isBiometricEnabled,
                         onCheckedChange = { checked ->
+                            analyticsHelper.logEvent("settings_biometric_toggled", mapOf("enabled" to checked))
                             if (activity != null) {
                                 if (checked) {
                                     prasad.vennam.moneypilot.util.BiometricHelper.authenticate(
@@ -569,6 +572,7 @@ fun SettingsScreen(
                         subtitle = "Parse notifications to auto-add expenses",
                         checked = isNotificationTrackingEnabled,
                         onCheckedChange = {
+                            analyticsHelper.logEvent("settings_notification_tracking_toggled")
                             val intent = android.content.Intent(android.provider.Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)
                             context.startActivity(intent)
                         },
@@ -580,6 +584,7 @@ fun SettingsScreen(
                         subtitle = "Parse debit/credit SMS to auto-add expenses",
                         checked = isSmsTrackingEnabled,
                         onCheckedChange = { checked ->
+                            analyticsHelper.logEvent("settings_sms_tracking_toggled", mapOf("enabled" to checked))
                             if (checked) {
                                 smsPermissionLauncher.launch(Manifest.permission.RECEIVE_SMS)
                             } else {

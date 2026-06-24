@@ -14,6 +14,7 @@ import prasad.vennam.moneypilot.feature.ai.presentation.AiChatScreen
 import prasad.vennam.moneypilot.ui.ai.InsightsScreen
 import prasad.vennam.moneypilot.ui.budget.ReportsTabScreen
 import prasad.vennam.moneypilot.ui.categories.CategoryListScreen
+import prasad.vennam.moneypilot.ui.currency.CurrencyConverterScreen
 import prasad.vennam.moneypilot.ui.dashboard.DashboardScreen
 import prasad.vennam.moneypilot.ui.dashboard.SyncState
 import prasad.vennam.moneypilot.ui.emergencyfund.EmergencyFundScreen
@@ -23,8 +24,12 @@ import prasad.vennam.moneypilot.ui.learnfinance.ArticleDetailScreen
 import prasad.vennam.moneypilot.ui.learnfinance.LearnFinanceScreen
 import prasad.vennam.moneypilot.ui.loans.EmiCalculatorScreen
 import prasad.vennam.moneypilot.ui.loans.LoanScreen
+import prasad.vennam.moneypilot.ui.login.AuthScreen
 import prasad.vennam.moneypilot.ui.news.NewsScreen
 import prasad.vennam.moneypilot.ui.news.NewsWebViewScreen
+import prasad.vennam.moneypilot.ui.notifications.NotificationsScreen
+import prasad.vennam.moneypilot.ui.premium.PremiumScreen
+import prasad.vennam.moneypilot.ui.sandbox.FinancialSandboxScreen
 import prasad.vennam.moneypilot.ui.scanner.ReceiptScannerScreen
 import prasad.vennam.moneypilot.ui.settings.SettingsScreen
 import prasad.vennam.moneypilot.ui.transactions.AddEditTransactionScreen
@@ -37,7 +42,7 @@ import prasad.vennam.moneypilot.ui.viewmodel.MainViewModel
 import prasad.vennam.moneypilot.ui.viewmodel.TransactionViewModel
 import prasad.vennam.moneypilot.util.AnalyticsHelper
 
-fun MoneyPilotNavEntry(
+fun moneyPilotNavEntry(
     key: NavKey,
     backStack: NavBackStack<NavKey>,
     analyticsHelper: AnalyticsHelper,
@@ -56,8 +61,8 @@ fun MoneyPilotNavEntry(
 ): NavEntry<NavKey> {
     return when (key) {
         is Destination.Auth ->
-            NavEntry<NavKey>(key) {
-                prasad.vennam.moneypilot.ui.login.AuthScreen(
+            NavEntry(key) {
+                AuthScreen(
                     mainViewModel = mainViewModel,
                     analyticsHelper = analyticsHelper,
                     skipSplash = key.skipSplash,
@@ -75,7 +80,7 @@ fun MoneyPilotNavEntry(
             }
 
         is Destination.Dashboard ->
-            NavEntry<NavKey>(key) {
+            NavEntry(key) {
                 val context = LocalContext.current
                 DashboardScreen(
                     mainViewModel = mainViewModel,
@@ -140,10 +145,11 @@ fun MoneyPilotNavEntry(
             }
 
         is Destination.Insights ->
-            NavEntry<NavKey>(key) {
+            NavEntry(key) {
                 InsightsScreen(
                     userData = userData,
                     syncState = syncState,
+                    analyticsHelper = analyticsHelper,
                     onProfileClick = { backStack.add(Destination.Settings) },
                     onBackClick = onBack,
                     onNavigateToAiChat = { backStack.add(Destination.AiChat) },
@@ -151,16 +157,18 @@ fun MoneyPilotNavEntry(
             }
 
         is Destination.AiChat ->
-            NavEntry<NavKey>(key) {
+            NavEntry(key) {
                 AiChatScreen(
+                    analyticsHelper = analyticsHelper,
                     onBackClick = onBack,
                 )
             }
 
         is Destination.History ->
-            NavEntry<NavKey>(key) {
+            NavEntry(key) {
                 HistoryScreen(
                     viewModel = transactionViewModel,
+                    analyticsHelper = analyticsHelper,
                     onAddTransaction = { type ->
                         backStack.add(Destination.AddEditTransaction(initialType = type))
                     },
@@ -176,7 +184,7 @@ fun MoneyPilotNavEntry(
             }
 
         is Destination.AddEditTransaction ->
-            NavEntry<NavKey>(key) {
+            NavEntry(key) {
                 AddEditTransactionScreen(
                     transactionId = key.transactionId,
                     initialType = key.initialType,
@@ -189,18 +197,19 @@ fun MoneyPilotNavEntry(
             }
 
         is Destination.Investments ->
-            NavEntry<NavKey>(key) {
+            NavEntry(key) {
                 InvestmentScreen(
                     viewModel = investmentViewModel,
                     userData = userData,
                     syncState = syncState,
                     isPremium = isPremium,
                     onProfileClick = { backStack.add(Destination.Settings) },
+                    analyticsHelper = analyticsHelper,
                 )
             }
 
         is Destination.Loans ->
-            NavEntry<NavKey>(key) {
+            NavEntry(key) {
                 val context = LocalContext.current
                 LoanScreen(
                     userData = userData,
@@ -222,11 +231,12 @@ fun MoneyPilotNavEntry(
                     prefillRate = key.prefillRate,
                     prefillTenureMonths = key.prefillTenureMonths,
                     prefillEmi = key.prefillEmi,
+                    analyticsHelper = analyticsHelper
                 )
             }
 
         is Destination.Reports ->
-            NavEntry<NavKey>(key) {
+            NavEntry(key) {
                 ReportsTabScreen(
                     budgetViewModel = budgetViewModel,
                     transactionViewModel = transactionViewModel,
@@ -235,11 +245,12 @@ fun MoneyPilotNavEntry(
                     syncState = syncState,
                     isPremium = isPremium,
                     onProfileClick = { backStack.add(Destination.Settings) },
+                    analyticsHelper = analyticsHelper
                 )
             }
 
         is Destination.Settings ->
-            NavEntry<NavKey>(key) {
+            NavEntry(key) {
                 SettingsScreen(
                     transactionViewModel = transactionViewModel,
                     mainViewModel = mainViewModel,
@@ -274,15 +285,16 @@ fun MoneyPilotNavEntry(
             }
 
         is Destination.ManageCategories ->
-            NavEntry<NavKey>(key) {
+            NavEntry(key) {
                 CategoryListScreen(
                     viewModel = transactionViewModel,
+                    analyticsHelper = analyticsHelper,
                     onNavigateBack = onBack,
                 )
             }
 
         is Destination.ReceiptScanner ->
-            NavEntry<NavKey>(key) {
+            NavEntry(key) {
                 ReceiptScannerScreen(
                     onNavigateBack = onBack,
                     transactionViewModel = transactionViewModel,
@@ -291,81 +303,92 @@ fun MoneyPilotNavEntry(
             }
 
         is Destination.Notifications ->
-            NavEntry<NavKey>(key) {
-                prasad.vennam.moneypilot.ui.notifications.NotificationsScreen(
+            NavEntry(key) {
+                NotificationsScreen(
                     onNavigateBack = onBack,
                     onNavigateToWeb = { url, title ->
                         backStack.add(Destination.NewsWebFrame(url = url, title = title))
                     },
+                    analyticsHelper = analyticsHelper,
                 )
             }
 
         is Destination.FAQ ->
-            NavEntry<NavKey>(key) {
+            NavEntry(key) {
                 FaqScreen(
+                    analyticsHelper = analyticsHelper,
                     onNavigateBack = onBack,
                 )
             }
 
         is Destination.EmergencyFund ->
-            NavEntry<NavKey>(key) {
+            NavEntry(key) {
                 EmergencyFundScreen(
                     userPreferences = userPreferences,
+                    analyticsHelper = analyticsHelper,
                     onNavigateBack = onBack,
                 )
             }
 
         is Destination.TermsOfService ->
-            NavEntry<NavKey>(key) {
+            NavEntry(key) {
                 NewsWebViewScreen(
                     url = AppLinks.TERMS,
                     title = "Terms of Service",
+                    analyticsHelper = analyticsHelper,
                     showBookmark = false,
+                    screenName = "TermsOfService",
                     onBack = onBack,
                 )
             }
 
         is Destination.PrivacyPolicy ->
-            NavEntry<NavKey>(key) {
+            NavEntry(key) {
                 NewsWebViewScreen(
                     url = AppLinks.PRIVACY_POLICY,
                     title = "Privacy Policy",
+                    analyticsHelper = analyticsHelper,
                     showBookmark = false,
+                    screenName = "PrivacyPolicy",
                     onBack = onBack,
                 )
             }
 
         is Destination.FinancialNews ->
-            NavEntry<NavKey>(key) {
+            NavEntry(key) {
                 NewsScreen(
                     onBack = onBack,
                     onNavigateToWeb = { url, title ->
                         backStack.add(Destination.NewsWebFrame(url = url, title = title))
                     },
+                    analyticsHelper = analyticsHelper,
                 )
             }
 
         is Destination.NewsWebFrame ->
-            NavEntry<NavKey>(key) {
+            NavEntry(key) {
                 NewsWebViewScreen(
                     url = key.url,
                     title = key.title,
+                    analyticsHelper = analyticsHelper,
                     onBack = onBack,
                 )
             }
 
         is Destination.FinancialSandbox ->
-            NavEntry<NavKey>(key) {
-                prasad.vennam.moneypilot.ui.sandbox.FinancialSandboxScreen(
+            NavEntry(key) {
+                FinancialSandboxScreen(
                     onBack = onBack,
+                    analyticsHelper = analyticsHelper,
                 )
             }
 
         is Destination.EmiCalculator ->
-            NavEntry<NavKey>(key) {
+            NavEntry(key) {
                 EmiCalculatorScreen(
                     onBack = onBack,
                     isPremium = isPremium,
+                    analyticsHelper = analyticsHelper,
                     onNavigateToSaveLoan = { amount, rate, months, emi ->
                         backStack.add(
                             Destination.Loans(
@@ -382,9 +405,10 @@ fun MoneyPilotNavEntry(
             }
 
         is Destination.LearnFinance ->
-            NavEntry<NavKey>(key) {
+            NavEntry(key) {
                 LearnFinanceScreen(
                     viewModel = learnFinanceViewModel,
+                    analyticsHelper = analyticsHelper,
                     onBack = onBack,
                     onArticleClick = { articleId ->
                         backStack.add(Destination.ArticleDetail(articleId))
@@ -394,10 +418,11 @@ fun MoneyPilotNavEntry(
             }
 
         is Destination.ArticleDetail ->
-            NavEntry<NavKey>(key) {
+            NavEntry(key) {
                 ArticleDetailScreen(
                     articleId = key.articleId,
                     viewModel = learnFinanceViewModel,
+                    analyticsHelper = analyticsHelper,
                     onBack = onBack,
                     onArticleClick = { articleId ->
                         backStack.add(Destination.ArticleDetail(articleId))
@@ -406,16 +431,18 @@ fun MoneyPilotNavEntry(
             }
 
         is Destination.PremiumScreen ->
-            NavEntry<NavKey>(key) {
-                prasad.vennam.moneypilot.ui.premium.PremiumScreen(
+            NavEntry(key) {
+                PremiumScreen(
                     onBackClick = onBack,
+                    analyticsHelper = analyticsHelper,
                 )
             }
 
         is Destination.CurrencyConverter ->
-            NavEntry<NavKey>(key) {
-                prasad.vennam.moneypilot.ui.currency.CurrencyConverterScreen(
-                    onNavigateBack = onBack
+            NavEntry(key) {
+                CurrencyConverterScreen(
+                    onNavigateBack = onBack,
+                    analyticsHelper = analyticsHelper
                 )
             }
 

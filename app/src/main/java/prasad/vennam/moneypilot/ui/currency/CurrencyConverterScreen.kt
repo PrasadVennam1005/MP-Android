@@ -58,14 +58,18 @@ import kotlinx.coroutines.launch
 import prasad.vennam.moneypilot.data.model.RateAlert
 import prasad.vennam.moneypilot.ui.theme.MoneyPilotTheme
 import prasad.vennam.moneypilot.ui.theme.PremiumShapes
+import prasad.vennam.moneypilot.util.AnalyticsHelper
+import prasad.vennam.moneypilot.util.TrackScreen
 import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CurrencyConverterScreen(
     onNavigateBack: () -> Unit,
+    analyticsHelper: AnalyticsHelper,
     viewModel: CurrencyConverterViewModel = hiltViewModel()
 ) {
+    TrackScreen(analyticsHelper, "CurrencyConverter")
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
 
@@ -106,7 +110,10 @@ fun CurrencyConverterScreen(
                 },
                 actions = {
                     IconButton(
-                        onClick = { viewModel.refreshRates() }
+                        onClick = {
+                            analyticsHelper.logEvent("currency_refresh_clicked")
+                            viewModel.refreshRates()
+                        }
                     ) {
                         Icon(
                             imageVector = Icons.Rounded.Refresh,
@@ -157,13 +164,19 @@ fun CurrencyConverterScreen(
                         ) {
                             Tab(
                                 selected = !uiState.isComparisonMode,
-                                onClick = { viewModel.setComparisonMode(false) },
+                                onClick = {
+                                    analyticsHelper.logEvent("currency_mode_switched", mapOf("mode" to "standard"))
+                                    viewModel.setComparisonMode(false)
+                                },
                                 text = { Text(stringResource(prasad.vennam.moneypilot.R.string.standard_mode), fontWeight = FontWeight.Bold) },
                                 icon = { Icon(Icons.Rounded.SwapHoriz, contentDescription = null) }
                             )
                             Tab(
                                 selected = uiState.isComparisonMode,
-                                onClick = { viewModel.setComparisonMode(true) },
+                                onClick = {
+                                    analyticsHelper.logEvent("currency_mode_switched", mapOf("mode" to "basket"))
+                                    viewModel.setComparisonMode(true)
+                                },
                                 text = { Text(stringResource(prasad.vennam.moneypilot.R.string.comparison_basket), fontWeight = FontWeight.Bold) },
                                 icon = { Icon(Icons.Rounded.GridView, contentDescription = null) }
                             )
@@ -228,6 +241,7 @@ fun CurrencyConverterScreen(
                                             rotationZ = animatedRotation,
                                             isVertical = false,
                                             onClick = {
+                                                analyticsHelper.logEvent("currency_swapped")
                                                 rotationAngle += 180f
                                                 viewModel.swapCurrencies()
                                             }

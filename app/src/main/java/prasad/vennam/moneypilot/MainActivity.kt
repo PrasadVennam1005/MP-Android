@@ -48,7 +48,7 @@ import prasad.vennam.moneypilot.billing.BillingManager
 import prasad.vennam.moneypilot.data.UserPreferences
 import prasad.vennam.moneypilot.ui.dashboard.SyncState
 import prasad.vennam.moneypilot.ui.navigation.Destination
-import prasad.vennam.moneypilot.ui.navigation.MoneyPilotNavEntry
+import prasad.vennam.moneypilot.ui.navigation.moneyPilotNavEntry
 import prasad.vennam.moneypilot.ui.theme.MoneyPilotTheme
 import prasad.vennam.moneypilot.ui.viewmodel.AnalyticsViewModel
 import prasad.vennam.moneypilot.ui.viewmodel.BudgetViewModel
@@ -278,13 +278,6 @@ fun MoneyPilotApp(
         }
 
     CompositionLocalProvider(LocalCurrencyCode provides currencyCode) {
-        // 1. Navigation Analytics: Track screen transitions
-        LaunchedEffect(currentDestination) {
-            currentDestination?.let {
-                analyticsHelper.logScreenView(it::class.java.simpleName)
-            }
-        }
-
         val showNavigation =
             isLoggedIn &&
                     currentDestination !is Destination.Auth &&
@@ -379,7 +372,7 @@ fun MoneyPilotApp(
                 onBack = { if (backStack.size > 1) backStack.removeLastOrNull() },
                 modifier = Modifier,
                 entryProvider = { key ->
-                   MoneyPilotNavEntry(
+                   moneyPilotNavEntry(
                         key = key,
                         backStack = backStack,
                         analyticsHelper = analyticsHelper,

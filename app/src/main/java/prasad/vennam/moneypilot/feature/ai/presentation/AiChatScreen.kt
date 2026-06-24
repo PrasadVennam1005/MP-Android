@@ -60,14 +60,19 @@ import prasad.vennam.moneypilot.feature.ai.model.AiAction
 import prasad.vennam.moneypilot.feature.ai.model.Author
 import prasad.vennam.moneypilot.feature.ai.model.ChatMessage
 import prasad.vennam.moneypilot.feature.ai.model.LlmState
+import prasad.vennam.moneypilot.data.entity.TransactionType
 import androidx.core.graphics.toColorInt
+import prasad.vennam.moneypilot.util.AnalyticsHelper
+import prasad.vennam.moneypilot.util.TrackScreen
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AiChatScreen(
     onBackClick: () -> Unit,
+    analyticsHelper: AnalyticsHelper,
     viewModel: AiViewModel = hiltViewModel(),
 ) {
+    TrackScreen(analyticsHelper, "AiChat")
     val messages by viewModel.messages.collectAsState()
     val aiState by viewModel.aiState.collectAsState(LlmState.Idle)
     val downloadProgress by viewModel.downloadProgress.collectAsState(0f)
@@ -78,6 +83,7 @@ fun AiChatScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val focusRequester = remember { FocusRequester() }
     val scope = rememberCoroutineScope()
+    var showSuggestionsBottomSheet by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         viewModel.actionFeedback.collect { feedback ->
@@ -132,6 +138,18 @@ fun AiChatScreen(
                         Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 },
+                actions = {
+                    IconButton(onClick = {
+                        analyticsHelper.logEvent("ai_chat_suggestions_icon_clicked")
+                        showSuggestionsBottomSheet = true
+                    }) {
+                        Icon(
+                            imageVector = Icons.Rounded.Lightbulb,
+                            contentDescription = "Suggestions",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                },
                 colors =
                     TopAppBarDefaults.topAppBarColors(
                         containerColor = MaterialTheme.colorScheme.surface,
@@ -182,8 +200,14 @@ fun AiChatScreen(
                     if (pendingAction != null) {
                         ActionConfirmationCard(
                             action = pendingAction!!,
-                            onConfirm = { viewModel.confirmAction(pendingAction!!) },
-                            onDismiss = { viewModel.dismissAction() },
+                            onConfirm = { editedAction ->
+                                analyticsHelper.logEvent("ai_chat_action_confirmed", mapOf("type" to editedAction::class.java.simpleName))
+                                viewModel.confirmAction(editedAction)
+                            },
+                            onDismiss = {
+                                analyticsHelper.logEvent("ai_chat_action_dismissed")
+                                viewModel.dismissAction()
+                            },
                         )
                     }
 
@@ -264,6 +288,22 @@ fun AiChatScreen(
             }
         },
     ) { padding ->
+        if (showSuggestionsBottomSheet) {
+            SampleQueriesBottomSheet(
+                analyticsHelper = analyticsHelper,
+                onDismissRequest = { showSuggestionsBottomSheet = false },
+                onSuggestionClick = { text ->
+                    inputText = text
+                    showSuggestionsBottomSheet = false
+                    try {
+                        focusRequester.requestFocus()
+                    } catch (e: Exception) {
+                        // Focus request might fail if node is not attached yet
+                    }
+                }
+            )
+        }
+
         Column(
             modifier =
                 Modifier
@@ -333,7 +373,10 @@ fun AiChatScreen(
                                             listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.tertiary)
                                         )
                                     )
-                                    .clickable { viewModel.downloadModel() },
+                                    .clickable {
+                                        analyticsHelper.logEvent("ai_chat_model_download_clicked")
+                                        viewModel.downloadModel()
+                                    },
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
@@ -425,6 +468,7 @@ fun AiChatScreen(
             } else {
                 if (messages.isEmpty()) {
                     WelcomeScreen(
+                        analyticsHelper = analyticsHelper,
                         onSuggestionClick = { text ->
                             inputText = text
                             try {
@@ -469,7 +513,7 @@ fun StatusIndicator(state: LlmState) {
         when (state) {
             LlmState.Idle -> stringResource(R.string.status_offline)
             LlmState.Initializing -> stringResource(R.string.status_initializing)
-            LlmState.Ready -> stringResource(R.string.status_ready)
+            is LlmState.Ready -> stringResource(R.string.status_ready)
             is LlmState.Error -> stringResource(R.string.status_error)
             is LlmState.Generating -> stringResource(R.string.status_processing)
             LlmState.Downloading -> stringResource(R.string.status_downloading)
@@ -479,7 +523,7 @@ fun StatusIndicator(state: LlmState) {
         when (state) {
             LlmState.Idle -> Color.Gray
             LlmState.Initializing -> Color(0xFFFFA500)
-            LlmState.Ready -> Color(0xFF4CAF50)
+            is LlmState.Ready -> Color(0xFF4CAF50)
             is LlmState.Error -> MaterialTheme.colorScheme.error
             is LlmState.Generating -> MaterialTheme.colorScheme.primary
             LlmState.Downloading -> MaterialTheme.colorScheme.primary
@@ -693,7 +737,10 @@ fun TypingDotsIndicator(tint: Color) {
 }
 
 @Composable
-fun WelcomeScreen(onSuggestionClick: (String) -> Unit) {
+fun WelcomeScreen(
+    analyticsHelper: AnalyticsHelper,
+    onSuggestionClick: (String) -> Unit
+) {
     val categories = listOf("Transactions", "Wealth", "Loans")
     var selectedCategoryIndex by remember { mutableIntStateOf(0) }
 
@@ -877,6 +924,7 @@ fun WelcomeScreen(onSuggestionClick: (String) -> Unit) {
                         .clip(RoundedCornerShape(16.dp))
                         .clickable {
                             clicked = true
+                            analyticsHelper.logEvent("ai_chat_welcome_suggestion_clicked", mapOf("text" to text))
                             onSuggestionClick(text)
                             clicked = false
                         },
@@ -927,9 +975,133 @@ fun WelcomeScreen(onSuggestionClick: (String) -> Unit) {
 @Composable
 fun ActionConfirmationCard(
     action: AiAction,
-    onConfirm: () -> Unit,
+    onConfirm: (AiAction) -> Unit,
     onDismiss: () -> Unit,
 ) {
+    var isEditing by remember { mutableStateOf(false) }
+    var currentAction by remember(action) { mutableStateOf(action) }
+
+    // local field states for AddTransaction
+    var amountState by remember(action) {
+        mutableStateOf(if (action is AiAction.AddTransaction) action.amount.toString() else "")
+    }
+    var typeState by remember(action) {
+        mutableStateOf(if (action is AiAction.AddTransaction) action.type else TransactionType.EXPENSE)
+    }
+    var categoryState by remember(action) {
+        mutableStateOf(if (action is AiAction.AddTransaction) action.categoryName else "")
+    }
+    var noteState by remember(action) {
+        mutableStateOf(if (action is AiAction.AddTransaction) action.note else "")
+    }
+    var dateOffsetState by remember(action) {
+        mutableStateOf(if (action is AiAction.AddTransaction) action.dateOffset.toString() else "0")
+    }
+
+    // local field states for AddInvestment
+    var investmentNameState by remember(action) {
+        mutableStateOf(if (action is AiAction.AddInvestment) action.name else "")
+    }
+    var investmentTypeState by remember(action) {
+        mutableStateOf(if (action is AiAction.AddInvestment) action.type else "")
+    }
+    var investedAmountState by remember(action) {
+        mutableStateOf(if (action is AiAction.AddInvestment) action.investedAmount.toString() else "")
+    }
+    var currentValueState by remember(action) {
+        mutableStateOf(if (action is AiAction.AddInvestment) action.currentValue.toString() else "")
+    }
+
+    // local field states for AddLoan
+    var loanNameState by remember(action) {
+        mutableStateOf(if (action is AiAction.AddLoan) action.name else "")
+    }
+    var loanTotalAmountState by remember(action) {
+        mutableStateOf(if (action is AiAction.AddLoan) action.totalAmount.toString() else "")
+    }
+    var loanEmiAmountState by remember(action) {
+        mutableStateOf(if (action is AiAction.AddLoan) action.emiAmount.toString() else "")
+    }
+    var loanInterestRateState by remember(action) {
+        mutableStateOf(if (action is AiAction.AddLoan) action.interestRate.toString() else "")
+    }
+    var loanTenureMonthsState by remember(action) {
+        mutableStateOf(if (action is AiAction.AddLoan) action.tenureMonths.toString() else "")
+    }
+    var loanNextEmiDaysState by remember(action) {
+        mutableStateOf(if (action is AiAction.AddLoan) action.nextEmiDays.toString() else "30")
+    }
+
+    fun saveChanges() {
+        when (action) {
+            is AiAction.AddTransaction -> {
+                val amount = amountState.toLongOrNull() ?: action.amount
+                val dateOffset = dateOffsetState.toIntOrNull() ?: action.dateOffset
+                currentAction = AiAction.AddTransaction(
+                    amount = amount,
+                    type = typeState,
+                    categoryName = categoryState,
+                    note = noteState,
+                    dateOffset = dateOffset
+                )
+            }
+            is AiAction.AddInvestment -> {
+                val invested = investedAmountState.toLongOrNull() ?: action.investedAmount
+                val current = currentValueState.toLongOrNull() ?: action.currentValue
+                currentAction = AiAction.AddInvestment(
+                    name = investmentNameState,
+                    type = investmentTypeState,
+                    investedAmount = invested,
+                    currentValue = current
+                )
+            }
+            is AiAction.AddLoan -> {
+                val total = loanTotalAmountState.toLongOrNull() ?: action.totalAmount
+                val emi = loanEmiAmountState.toLongOrNull() ?: action.emiAmount
+                val interest = loanInterestRateState.toDoubleOrNull() ?: action.interestRate
+                val tenure = loanTenureMonthsState.toIntOrNull() ?: action.tenureMonths
+                val nextEmi = loanNextEmiDaysState.toIntOrNull() ?: action.nextEmiDays
+                currentAction = AiAction.AddLoan(
+                    name = loanNameState,
+                    totalAmount = total,
+                    emiAmount = emi,
+                    interestRate = interest,
+                    tenureMonths = tenure,
+                    nextEmiDays = nextEmi
+                )
+            }
+        }
+        isEditing = false
+    }
+
+    fun cancelChanges() {
+        val current = currentAction
+        when (current) {
+            is AiAction.AddTransaction -> {
+                amountState = current.amount.toString()
+                typeState = current.type
+                categoryState = current.categoryName
+                noteState = current.note
+                dateOffsetState = current.dateOffset.toString()
+            }
+            is AiAction.AddInvestment -> {
+                investmentNameState = current.name
+                investmentTypeState = current.type
+                investedAmountState = current.investedAmount.toString()
+                currentValueState = current.currentValue.toString()
+            }
+            is AiAction.AddLoan -> {
+                loanNameState = current.name
+                loanTotalAmountState = current.totalAmount.toString()
+                loanEmiAmountState = current.emiAmount.toString()
+                loanInterestRateState = current.interestRate.toString()
+                loanTenureMonthsState = current.tenureMonths.toString()
+                loanNextEmiDaysState = current.nextEmiDays.toString()
+            }
+        }
+        isEditing = false
+    }
+
     Card(
         modifier =
             Modifier
@@ -955,11 +1127,11 @@ fun ActionConfirmationCard(
         elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
     ) {
         val (icon, titleRes, color) =
-            when (action) {
+            when (currentAction) {
                 is AiAction.AddTransaction ->
                     Triple(
                         Icons.Rounded.AccountBalanceWallet,
-                        if (action.type.name == "EXPENSE") R.string.log_expense else R.string.log_income,
+                        if ((currentAction as AiAction.AddTransaction).type.name == "EXPENSE") R.string.log_expense else R.string.log_income,
                         MaterialTheme.colorScheme.primary,
                     )
                 is AiAction.AddInvestment ->
@@ -999,51 +1171,233 @@ fun ActionConfirmationCard(
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    modifier = Modifier.weight(1f),
                 )
+                if (!isEditing) {
+                    IconButton(onClick = { isEditing = true }) {
+                        Icon(
+                            imageVector = Icons.Rounded.Edit,
+                            contentDescription = "Edit details",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
             }
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            Column(
-                modifier =
-                    Modifier
+            if (isEditing) {
+                Column(
+                    modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
-                        .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.08f), RoundedCornerShape(12.dp))
-                        .padding(12.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                when (action) {
-                    is AiAction.AddTransaction -> {
-                        DetailRow(stringResource(R.string.amount), "₹${action.amount}")
-                        DetailRow(stringResource(R.string.category), action.categoryName)
-                        DetailRow(stringResource(R.string.detail_note), action.note.ifBlank { "N/A" })
-                        val dateLabel =
-                            when (action.dateOffset) {
-                                0 -> "Today"
-                                -1 -> "Yesterday"
-                                else -> "${kotlin.math.abs(action.dateOffset)} days ago"
+                        .padding(vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    when (action) {
+                        is AiAction.AddTransaction -> {
+                            OutlinedTextField(
+                                value = amountState,
+                                onValueChange = { amountState = it },
+                                label = { Text(stringResource(R.string.amount)) },
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth(),
+                                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                                    keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
+                                )
+                            )
+
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                FilterChip(
+                                    selected = typeState == TransactionType.EXPENSE,
+                                    onClick = { typeState = TransactionType.EXPENSE },
+                                    label = { Text("Expense") },
+                                    modifier = Modifier.weight(1f)
+                                )
+                                FilterChip(
+                                    selected = typeState == TransactionType.INCOME,
+                                    onClick = { typeState = TransactionType.INCOME },
+                                    label = { Text("Income") },
+                                    modifier = Modifier.weight(1f)
+                                )
                             }
-                        DetailRow(stringResource(R.string.detail_date), dateLabel)
-                    }
-                    is AiAction.AddInvestment -> {
-                        DetailRow(stringResource(R.string.detail_asset_name), action.name)
-                        DetailRow(stringResource(R.string.detail_asset_type), action.type)
-                        DetailRow(stringResource(R.string.detail_invested), "₹${action.investedAmount}")
-                        DetailRow(stringResource(R.string.detail_current_value), "₹${action.currentValue}")
-                    }
-                    is AiAction.AddLoan -> {
-                        DetailRow(stringResource(R.string.detail_loan_name), action.name)
-                        DetailRow(stringResource(R.string.detail_principal), "₹${action.totalAmount}")
-                        DetailRow(stringResource(R.string.detail_emi_amount), "₹${action.emiAmount}")
-                        if (action.interestRate > 0) {
-                            DetailRow("Interest", "${action.interestRate}% p.a.")
+
+                            OutlinedTextField(
+                                value = categoryState,
+                                onValueChange = { categoryState = it },
+                                label = { Text(stringResource(R.string.category)) },
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+
+                            OutlinedTextField(
+                                value = noteState,
+                                onValueChange = { noteState = it },
+                                label = { Text(stringResource(R.string.detail_note)) },
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+
+                            OutlinedTextField(
+                                value = dateOffsetState,
+                                onValueChange = { dateOffsetState = it },
+                                label = { Text("Date Offset (0=Today, -1=Yesterday)") },
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth(),
+                                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                                    keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
+                                )
+                            )
                         }
-                        if (action.tenureMonths > 0) {
-                            DetailRow("Tenure", "${action.tenureMonths} months")
+                        is AiAction.AddInvestment -> {
+                            OutlinedTextField(
+                                value = investmentNameState,
+                                onValueChange = { investmentNameState = it },
+                                label = { Text(stringResource(R.string.detail_asset_name)) },
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+
+                            OutlinedTextField(
+                                value = investmentTypeState,
+                                onValueChange = { investmentTypeState = it },
+                                label = { Text(stringResource(R.string.detail_asset_type)) },
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+
+                            OutlinedTextField(
+                                value = investedAmountState,
+                                onValueChange = { investedAmountState = it },
+                                label = { Text(stringResource(R.string.detail_invested)) },
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth(),
+                                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                                    keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
+                                )
+                            )
+
+                            OutlinedTextField(
+                                value = currentValueState,
+                                onValueChange = { currentValueState = it },
+                                label = { Text(stringResource(R.string.detail_current_value)) },
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth(),
+                                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                                    keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
+                                )
+                            )
                         }
-                        DetailRow(stringResource(R.string.detail_first_emi_due), "In ${action.nextEmiDays} days")
+                        is AiAction.AddLoan -> {
+                            OutlinedTextField(
+                                value = loanNameState,
+                                onValueChange = { loanNameState = it },
+                                label = { Text(stringResource(R.string.detail_loan_name)) },
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+
+                            OutlinedTextField(
+                                value = loanTotalAmountState,
+                                onValueChange = { loanTotalAmountState = it },
+                                label = { Text(stringResource(R.string.detail_principal)) },
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth(),
+                                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                                    keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
+                                )
+                            )
+
+                            OutlinedTextField(
+                                value = loanEmiAmountState,
+                                onValueChange = { loanEmiAmountState = it },
+                                label = { Text(stringResource(R.string.detail_emi_amount)) },
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth(),
+                                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                                    keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
+                                )
+                            )
+
+                            OutlinedTextField(
+                                value = loanInterestRateState,
+                                onValueChange = { loanInterestRateState = it },
+                                label = { Text("Interest Rate (% p.a.)") },
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth(),
+                                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                                    keyboardType = androidx.compose.ui.text.input.KeyboardType.Decimal
+                                )
+                            )
+
+                            OutlinedTextField(
+                                value = loanTenureMonthsState,
+                                onValueChange = { loanTenureMonthsState = it },
+                                label = { Text("Tenure (Months)") },
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth(),
+                                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                                    keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
+                                )
+                            )
+
+                            OutlinedTextField(
+                                value = loanNextEmiDaysState,
+                                onValueChange = { loanNextEmiDaysState = it },
+                                label = { Text("First EMI Due (Days)") },
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth(),
+                                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                                    keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
+                                )
+                            )
+                        }
+                    }
+                }
+            } else {
+                Column(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+                            .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.08f), RoundedCornerShape(12.dp))
+                            .padding(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    when (val current = currentAction) {
+                        is AiAction.AddTransaction -> {
+                            DetailRow(stringResource(R.string.amount), "₹${current.amount}")
+                            DetailRow(stringResource(R.string.category), current.categoryName)
+                            DetailRow(stringResource(R.string.detail_note), current.note.ifBlank { "N/A" })
+                            val dateLabel =
+                                when (current.dateOffset) {
+                                    0 -> "Today"
+                                    -1 -> "Yesterday"
+                                    else -> "${kotlin.math.abs(current.dateOffset)} days ago"
+                                }
+                            DetailRow(stringResource(R.string.detail_date), dateLabel)
+                        }
+                        is AiAction.AddInvestment -> {
+                            DetailRow(stringResource(R.string.detail_asset_name), current.name)
+                            DetailRow(stringResource(R.string.detail_asset_type), current.type)
+                            DetailRow(stringResource(R.string.detail_invested), "₹${current.investedAmount}")
+                            DetailRow(stringResource(R.string.detail_current_value), "₹${current.currentValue}")
+                        }
+                        is AiAction.AddLoan -> {
+                            DetailRow(stringResource(R.string.detail_loan_name), current.name)
+                            DetailRow(stringResource(R.string.detail_principal), "₹${current.totalAmount}")
+                            DetailRow(stringResource(R.string.detail_emi_amount), "₹${current.emiAmount}")
+                            if (current.interestRate > 0) {
+                                DetailRow("Interest", "${current.interestRate}% p.a.")
+                            }
+                            if (current.tenureMonths > 0) {
+                                DetailRow("Tenure", "${current.tenureMonths} months")
+                            }
+                            DetailRow(stringResource(R.string.detail_first_emi_due), "In ${current.nextEmiDays} days")
+                        }
                     }
                 }
             }
@@ -1055,40 +1409,79 @@ fun ActionConfirmationCard(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                OutlinedButton(
-                    onClick = onDismiss,
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(44.dp),
-                    colors =
-                        ButtonDefaults.outlinedButtonColors(
-                            contentColor = MaterialTheme.colorScheme.error,
-                        ),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.4f)),
-                    shape = RoundedCornerShape(12.dp),
-                ) {
-                    Icon(Icons.Rounded.Cancel, contentDescription = null, modifier = Modifier.size(16.dp))
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(stringResource(R.string.dismiss), fontWeight = FontWeight.SemiBold)
-                }
-
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(44.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(
-                            Brush.linearGradient(
-                                listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.tertiary)
-                            )
-                        )
-                        .clickable(onClick = onConfirm),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Rounded.CheckCircle, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
+                if (isEditing) {
+                    OutlinedButton(
+                        onClick = { cancelChanges() },
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(44.dp),
+                        colors =
+                            ButtonDefaults.outlinedButtonColors(
+                                contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            ),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)),
+                        shape = RoundedCornerShape(12.dp),
+                    ) {
+                        Icon(Icons.Rounded.Close, contentDescription = null, modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text(stringResource(R.string.confirm), color = Color.White, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelLarge)
+                        Text(stringResource(R.string.cancel), fontWeight = FontWeight.SemiBold)
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(44.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(
+                                Brush.linearGradient(
+                                    listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.tertiary)
+                                )
+                            )
+                            .clickable { saveChanges() },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Rounded.Save, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(stringResource(R.string.save), color = Color.White, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelLarge)
+                        }
+                    }
+                } else {
+                    OutlinedButton(
+                        onClick = onDismiss,
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(44.dp),
+                        colors =
+                            ButtonDefaults.outlinedButtonColors(
+                                contentColor = MaterialTheme.colorScheme.error,
+                            ),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.4f)),
+                        shape = RoundedCornerShape(12.dp),
+                    ) {
+                        Icon(Icons.Rounded.Cancel, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(stringResource(R.string.dismiss), fontWeight = FontWeight.SemiBold)
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(44.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(
+                                Brush.linearGradient(
+                                    listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.tertiary)
+                                )
+                            )
+                            .clickable { onConfirm(currentAction) },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Rounded.CheckCircle, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(stringResource(R.string.confirm), color = Color.White, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelLarge)
+                        }
                     }
                 }
             }
@@ -1295,3 +1688,193 @@ fun AdmobNativeAd(nativeAd: NativeAd, modifier: Modifier = Modifier) {
         }
     )
 }
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SampleQueriesBottomSheet(
+    analyticsHelper: AnalyticsHelper,
+    onDismissRequest: () -> Unit,
+    onSuggestionClick: (String) -> Unit
+) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val categories = listOf("Transactions", "Wealth", "Loans")
+    var selectedCategoryIndex by remember { mutableIntStateOf(0) }
+
+    ModalBottomSheet(
+        onDismissRequest = onDismissRequest,
+        sheetState = sheetState,
+        containerColor = MaterialTheme.colorScheme.surface,
+        tonalElevation = 8.dp,
+        dragHandle = { BottomSheetDefaults.DragHandle() }
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .navigationBarsPadding()
+                .padding(horizontal = 20.dp, vertical = 8.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(bottom = 16.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(CircleShape)
+                        .background(
+                            Brush.linearGradient(
+                                listOf(
+                                    MaterialTheme.colorScheme.primary,
+                                    MaterialTheme.colorScheme.tertiary
+                                )
+                            )
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.Rounded.Lightbulb,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.width(12.dp))
+                Column {
+                    Text(
+                        text = "Explore Suggestions",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = "Tap a prompt to insert it into the chat input",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                    )
+                }
+            }
+
+            // Category tag selection row
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp)
+            ) {
+                categories.forEachIndexed { index, name ->
+                    val isSelected = index == selectedCategoryIndex
+                    val chipBg = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
+                    val chipTextColor = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(chipBg)
+                            .clickable { selectedCategoryIndex = index }
+                            .padding(vertical = 10.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = name,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = chipTextColor,
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            val currentSuggestions = when (selectedCategoryIndex) {
+                0 -> listOf(
+                    Pair("Add food expense of 500 from Swiggy", Icons.Rounded.Fastfood),
+                    Pair("Spent 1200 on petrol today", Icons.Rounded.LocalGasStation),
+                    Pair("Received salary of 75000", Icons.Rounded.Payments),
+                    Pair("Log shopping expense of 3500 on Amazon", Icons.Rounded.ShoppingBag)
+                )
+                1 -> listOf(
+                    Pair("Invested 25000 in FD today", Icons.Rounded.Savings),
+                    Pair("Bought HDFC stock for 15k", Icons.AutoMirrored.Rounded.TrendingUp),
+                    Pair("Invested 10000 in Mutual Fund", Icons.Rounded.Analytics),
+                    Pair("Bought Gold for 5000 today", Icons.Rounded.MonetizationOn)
+                )
+                else -> listOf(
+                    Pair("Add SBI Home Loan of 30L, EMI 45000", Icons.Rounded.Home),
+                    Pair("Add personal loan of 50k", Icons.Rounded.Person),
+                    Pair("Add car loan of 12L, EMI 22000", Icons.Rounded.DirectionsCar),
+                    Pair("Show active loans summary", Icons.Rounded.Summarize)
+                )
+            }
+
+            Column(
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 24.dp)
+            ) {
+                currentSuggestions.forEach { (text, icon) ->
+                    var clicked by remember { mutableStateOf(false) }
+                    val scaleFactor by animateFloatAsState(
+                        targetValue = if (clicked) 0.97f else 1f,
+                        animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy),
+                        label = "suggestion_click"
+                    )
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .graphicsLayer {
+                                scaleX = scaleFactor
+                                scaleY = scaleFactor
+                            }
+                            .clip(RoundedCornerShape(16.dp))
+                        .clickable {
+                            clicked = true
+                            analyticsHelper.logEvent("ai_chat_bottomsheet_suggestion_clicked", mapOf("text" to text))
+                            onSuggestionClick(text)
+                            clicked = false
+                        },
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f)
+                        ),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.08f))
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(14.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .clip(CircleShape)
+                                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = icon,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(14.dp))
+                            Text(
+                                text = text,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.weight(1f)
+                            )
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Rounded.ArrowForward,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+

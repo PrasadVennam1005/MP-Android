@@ -32,6 +32,8 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import prasad.vennam.moneypilot.R
 import prasad.vennam.moneypilot.ui.viewmodel.NewsViewModel
+import prasad.vennam.moneypilot.util.AnalyticsHelper
+import prasad.vennam.moneypilot.util.TrackScreen
 
 @SuppressLint("SetJavaScriptEnabled")
 @OptIn(ExperimentalMaterial3Api::class)
@@ -39,10 +41,13 @@ import prasad.vennam.moneypilot.ui.viewmodel.NewsViewModel
 fun NewsWebViewScreen(
     url: String,
     title: String,
+    analyticsHelper: AnalyticsHelper,
     onBack: () -> Unit,
     showBookmark: Boolean = true,
+    screenName: String = "NewsWebView",
     viewModel: NewsViewModel = hiltViewModel(),
 ) {
+    TrackScreen(analyticsHelper, screenName)
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsState()
 
@@ -87,8 +92,10 @@ fun NewsWebViewScreen(
                         IconButton(
                             onClick = {
                                 if (isBookmarked) {
+                                    analyticsHelper.logEvent("news_bookmark_removed", mapOf("url" to currentUrl))
                                     viewModel.removeBookmarkByUrl(currentUrl)
                                 } else {
+                                    analyticsHelper.logEvent("news_bookmark_added", mapOf("url" to currentUrl))
                                     viewModel.addBookmark(
                                         title = currentTitle,
                                         url = currentUrl,
@@ -108,6 +115,7 @@ fun NewsWebViewScreen(
                     // Share button
                     IconButton(
                         onClick = {
+                            analyticsHelper.logEvent("news_shared", mapOf("url" to currentUrl))
                             try {
                                 val sendIntent =
                                     Intent().apply {

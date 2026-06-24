@@ -2,6 +2,7 @@ package prasad.vennam.moneypilot.util
 
 import android.content.Context
 import android.os.Bundle
+import androidx.compose.runtime.DisposableEffect
 import com.google.firebase.analytics.FirebaseAnalytics
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
@@ -9,6 +10,11 @@ import javax.inject.Singleton
 
 interface AnalyticsHelper {
     fun logScreenView(screenName: String)
+
+    fun logScreenEngagement(
+        screenName: String,
+        engagementTimeSeconds: Long,
+    )
 
     fun logEvent(
         event: String,
@@ -38,6 +44,19 @@ class FirebaseAnalyticsHelper
             firebaseAnalytics.logEvent(FirebaseAnalytics.Event.SCREEN_VIEW, bundle)
         }
 
+        override fun logScreenEngagement(
+            screenName: String,
+            engagementTimeSeconds: Long,
+        ) {
+            logEvent(
+                "screen_engagement_time",
+                mapOf(
+                    "screen_name" to screenName,
+                    "engagement_time_sec" to engagementTimeSeconds,
+                ),
+            )
+        }
+
         override fun logEvent(
             event: String,
             params: Map<String, Any>,
@@ -64,3 +83,22 @@ class FirebaseAnalyticsHelper
             firebaseAnalytics.setUserProperty(name, value)
         }
     }
+
+@androidx.compose.runtime.Composable
+fun TrackScreen(
+    analyticsHelper: AnalyticsHelper,
+    screenName: String,
+) {
+    DisposableEffect(screenName) {
+        val startTime = System.currentTimeMillis()
+        analyticsHelper.logScreenView(screenName)
+
+        onDispose {
+            val endTime = System.currentTimeMillis()
+            val engagementTimeSeconds = (endTime - startTime) / 1000
+            if (engagementTimeSeconds > 0) {
+                analyticsHelper.logScreenEngagement(screenName, engagementTimeSeconds)
+            }
+        }
+    }
+}

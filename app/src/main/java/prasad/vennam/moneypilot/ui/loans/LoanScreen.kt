@@ -59,6 +59,8 @@ import prasad.vennam.moneypilot.ui.viewmodel.DashboardViewModel
 import prasad.vennam.moneypilot.util.CurrencyFormatter
 import prasad.vennam.moneypilot.util.LocalCurrencyCode
 import prasad.vennam.moneypilot.util.inRupees
+import prasad.vennam.moneypilot.util.AnalyticsHelper
+import prasad.vennam.moneypilot.util.TrackScreen
 import java.text.SimpleDateFormat
 import java.util.Currency
 import java.util.Date
@@ -71,6 +73,7 @@ fun LoanScreen(
     userData: UserPreferences.UserData?,
     syncState: SyncState?,
     isPremium: Boolean,
+    analyticsHelper: AnalyticsHelper,
     onProfileClick: () -> Unit,
     onNavigateToEmiCalculator: () -> Unit,
     prefillAmount: Double? = null,
@@ -78,6 +81,7 @@ fun LoanScreen(
     prefillTenureMonths: Int? = null,
     prefillEmi: Double? = null,
 ) {
+    TrackScreen(analyticsHelper, "Loans")
     val currencyCode = LocalCurrencyCode.current
     val state by viewModel.uiState.collectAsState()
     var selectedLoan by remember { mutableStateOf<Loan?>(null) }
@@ -155,7 +159,10 @@ fun LoanScreen(
                             )
                         }
                     }
-                    IconButton(onClick = onNavigateToEmiCalculator) {
+                    IconButton(onClick = {
+                        analyticsHelper.logEvent("loan_emi_calculator_clicked")
+                        onNavigateToEmiCalculator()
+                    }) {
                         Icon(
                             imageVector = Icons.Rounded.Calculate,
                             contentDescription = stringResource(R.string.emi_calculator),

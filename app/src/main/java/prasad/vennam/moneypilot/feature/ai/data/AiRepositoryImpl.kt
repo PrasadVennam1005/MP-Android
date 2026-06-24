@@ -124,7 +124,7 @@ class AiRepositoryImpl
                             Log.d(TAG, "Action detected: $action")
                             _state.value = LlmState.ActionConfirm(action, cleanedText)
                         } else {
-                            _state.value = LlmState.Ready
+                            _state.value = LlmState.Ready(cleanedText)
                         }
                     }
                 }.launchIn(kotlinx.coroutines.GlobalScope)
@@ -151,7 +151,7 @@ class AiRepositoryImpl
                             if (_state.value is LlmState.Downloading) {
                                 Log.e(TAG, "Background download failed.")
                                 if (isCloudEnabled) {
-                                    _state.value = LlmState.Ready
+                                    _state.value = LlmState.Ready()
                                 } else {
                                     _state.value = LlmState.Error("Background model download failed. Please try again.")
                                 }
@@ -161,7 +161,7 @@ class AiRepositoryImpl
                             if (_state.value is LlmState.Downloading) {
                                 Log.w(TAG, "Background download cancelled.")
                                 if (isCloudEnabled) {
-                                    _state.value = LlmState.Ready
+                                    _state.value = LlmState.Ready()
                                 } else {
                                     _state.value = LlmState.Idle
                                 }
@@ -191,7 +191,7 @@ class AiRepositoryImpl
             if (!modelFile.exists() || modelFile.length() == 0L) {
                 if (isCloudEnabled) {
                     Log.d(TAG, "Model file not found, but cloud is enabled. Transitioning to Ready.")
-                    _state.value = LlmState.Ready
+                    _state.value = LlmState.Ready()
                 } else {
                     Log.d(TAG, "Model file not found — staying Idle so UI can prompt download.")
                     _state.value = LlmState.Idle
@@ -203,13 +203,13 @@ class AiRepositoryImpl
             try {
                 Log.d(TAG, "Calling LlmService.initialize...")
                 llmService.initialize(modelFile.absolutePath)
-                _state.value = LlmState.Ready
+                _state.value = LlmState.Ready()
                 Log.d(TAG, "Model initialized successfully. State → Ready")
             } catch (e: Exception) {
                 Log.e(TAG, "Model initialization failed: ${e.message}", e)
                 if (isCloudEnabled) {
                     Log.w(TAG, "Local model initialization failed, but cloud is enabled. Transitioning to Ready.")
-                    _state.value = LlmState.Ready
+                    _state.value = LlmState.Ready()
                 } else {
                     val friendlyMsg =
                         when {
@@ -448,7 +448,7 @@ class AiRepositoryImpl
                                 ),
                             )
                             val typeLabel = if (action.type == TransactionType.EXPENSE) "Expense" else "Income"
-                            _state.value = LlmState.Ready
+                            _state.value = LlmState.Ready()
                             Result.success("\u20b9${action.amount} $typeLabel added successfully!")
                         }
 
@@ -463,7 +463,7 @@ class AiRepositoryImpl
                                     currencyCode = "INR",
                                 ),
                             )
-                            _state.value = LlmState.Ready
+                            _state.value = LlmState.Ready()
                             Result.success("Investment \"${action.name}\" added successfully!")
                         }
 
@@ -481,7 +481,7 @@ class AiRepositoryImpl
                                     currencyCode = "INR",
                                 ),
                             )
-                            _state.value = LlmState.Ready
+                            _state.value = LlmState.Ready()
                             Result.success("Loan \"${action.name}\" added successfully!")
                         }
                     }

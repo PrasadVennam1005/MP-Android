@@ -77,6 +77,7 @@ import prasad.vennam.moneypilot.R
 import prasad.vennam.moneypilot.data.UserPreferences
 import prasad.vennam.moneypilot.ui.viewmodel.MainViewModel
 import prasad.vennam.moneypilot.util.AnalyticsHelper
+import prasad.vennam.moneypilot.util.TrackScreen
 import kotlin.time.Duration.Companion.milliseconds
 
 @Composable
@@ -88,6 +89,7 @@ fun AuthScreen(
     onNavigateToPrivacy: () -> Unit,
     onAuthSuccess: () -> Unit,
 ) {
+    TrackScreen(analyticsHelper, "Auth")
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val uriHandler = LocalUriHandler.current
@@ -353,6 +355,7 @@ fun AuthScreen(
 
                             OutlinedButton(
                                 onClick = {
+                                    analyticsHelper.logEvent("login", mapOf("method" to "guest"))
                                     scope.launch {
                                         mainViewModel.saveUserData(
                                             UserPreferences.UserData(

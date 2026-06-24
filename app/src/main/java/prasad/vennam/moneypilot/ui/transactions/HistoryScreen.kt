@@ -91,6 +91,8 @@ import prasad.vennam.moneypilot.ui.viewmodel.TransactionViewModel
 import prasad.vennam.moneypilot.util.CurrencyFormatter
 import prasad.vennam.moneypilot.util.LocalCurrencyCode
 import prasad.vennam.moneypilot.util.inRupees
+import prasad.vennam.moneypilot.util.AnalyticsHelper
+import prasad.vennam.moneypilot.util.TrackScreen
 import java.text.SimpleDateFormat
 import java.util.Date
 
@@ -109,8 +111,10 @@ fun HistoryScreen(
     syncState: SyncState?,
     onProfileClick: () -> Unit,
     isPremium: Boolean,
+    analyticsHelper: AnalyticsHelper,
     fixedType: TransactionType? = null,
 ) {
+    TrackScreen(analyticsHelper, "History")
     val transactions by viewModel.allTransactions.collectAsState()
     val categories by viewModel.allCategories.collectAsState()
 
@@ -231,7 +235,9 @@ fun HistoryScreen(
                             Tab(
                                 selected = selectedTab == index,
                                 onClick = {
-                                    selectedTabType = if (index == 0) TransactionType.EXPENSE else TransactionType.INCOME
+                                    val newType = if (index == 0) TransactionType.EXPENSE else TransactionType.INCOME
+                                    analyticsHelper.logEvent("history_tab_switched", mapOf("type" to newType.name))
+                                    selectedTabType = newType
                                     selectedCategoryId = null // Reset category filter on tab switch
                                 },
                                 text = { Text(title, fontWeight = FontWeight.Bold) },
@@ -321,11 +327,18 @@ fun HistoryScreen(
             onCategorySelect = { selectedCategoryId = it },
             onPaymentModeSelect = { selectedPaymentMode = it },
             onReset = {
+                analyticsHelper.logEvent("history_filters_reset")
                 selectedCategoryId = null
                 selectedPaymentMode = null
                 showFilterSheet = false
             },
-            onDismiss = { showFilterSheet = false },
+            onDismiss = {
+                analyticsHelper.logEvent("history_filters_applied", mapOf(
+                    "category_filtered" to (selectedCategoryId != null),
+                    "payment_mode_filtered" to (selectedPaymentMode != null)
+                ))
+                showFilterSheet = false
+            },
         )
     }
 }

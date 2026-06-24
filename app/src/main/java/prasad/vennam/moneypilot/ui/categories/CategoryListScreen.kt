@@ -23,13 +23,17 @@ import prasad.vennam.moneypilot.R
 import prasad.vennam.moneypilot.data.entity.Category
 import prasad.vennam.moneypilot.ui.budget.utils.getCategoryIcon
 import prasad.vennam.moneypilot.ui.viewmodel.TransactionViewModel
+import prasad.vennam.moneypilot.util.AnalyticsHelper
+import prasad.vennam.moneypilot.util.TrackScreen
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CategoryListScreen(
     viewModel: TransactionViewModel,
+    analyticsHelper: AnalyticsHelper,
     onNavigateBack: () -> Unit,
 ) {
+    TrackScreen(analyticsHelper, "ManageCategories")
     val categories by viewModel.allCategories.collectAsState()
     var showAddSheet by remember { mutableStateOf(false) }
     var editingCategory by remember { mutableStateOf<Category?>(null) }
@@ -133,6 +137,10 @@ fun CategoryListScreen(
             AddCategorySheetContent(
                 initialCategory = editingCategory,
                 onSave = { newCategory ->
+                    analyticsHelper.logEvent("category_saved", mapOf(
+                        "is_edit" to (editingCategory != null),
+                        "is_expense" to newCategory.isExpense
+                    ))
                     viewModel.saveCategory(newCategory)
                     scope.launch { sheetState.hide() }.invokeOnCompletion {
                         if (!sheetState.isVisible) {
@@ -165,6 +173,7 @@ fun CategoryListScreen(
             confirmButton = {
                 Button(
                     onClick = {
+                        analyticsHelper.logEvent("category_deleted", mapOf("name" to cat.name))
                         viewModel.deleteCategory(cat)
                         categoryToDelete = null
                     },

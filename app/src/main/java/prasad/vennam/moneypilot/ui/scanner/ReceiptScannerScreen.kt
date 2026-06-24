@@ -61,6 +61,7 @@ import prasad.vennam.moneypilot.util.LocalCurrencyCode
 import prasad.vennam.moneypilot.util.ParsedReceipt
 import prasad.vennam.moneypilot.util.PermissionGate
 import prasad.vennam.moneypilot.util.ReceiptParser
+import prasad.vennam.moneypilot.util.TrackScreen
 import prasad.vennam.moneypilot.util.inPaisa
 import java.util.Currency
 import java.util.concurrent.Executors
@@ -72,6 +73,7 @@ import com.google.android.gms.ads.AdRequest
 import com.google.android.gms.ads.LoadAdError
 import prasad.vennam.moneypilot.ads.AdConfig
 import android.app.Activity
+import kotlin.time.Duration.Companion.milliseconds
 
 @Composable
 fun ReceiptScannerScreen(
@@ -79,6 +81,7 @@ fun ReceiptScannerScreen(
     transactionViewModel: TransactionViewModel,
     analyticsHelper: AnalyticsHelper,
 ) {
+    TrackScreen(analyticsHelper, "ReceiptScanner")
     val categories by transactionViewModel.allCategories.collectAsState()
     PermissionGate(
         permission = Manifest.permission.CAMERA,
@@ -194,7 +197,7 @@ fun ReceiptScannerContent(
         } else {
             Toast.makeText(
                 context,
-                context.getString(R.string.could_not_detect_amount_in_this_image_please_try_another),
+                with(context) { getString(R.string.could_not_detect_amount_in_this_image_please_try_another) },
                 Toast.LENGTH_LONG
             ).show()
         }
@@ -204,7 +207,7 @@ fun ReceiptScannerContent(
     fun handleOcrResult(visionText: Text, isGallery: Boolean) {
         val rawText = visionText.text
         if (rawText.isBlank()) {
-            Toast.makeText(context, context.getString(R.string.could_not_detect_amount_in_this_image_please_try_another), Toast.LENGTH_LONG).show()
+            Toast.makeText(context, with(context) { getString(R.string.could_not_detect_amount_in_this_image_please_try_another) }, Toast.LENGTH_LONG).show()
             isProcessing = false
             return
         }
@@ -255,11 +258,11 @@ fun ReceiptScannerContent(
                             }
                             .addOnFailureListener {
                                 isProcessing = false
-                                Toast.makeText(context, context.getString(R.string.scanning_failed), Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, with(context) { getString(R.string.scanning_failed) }, Toast.LENGTH_SHORT).show()
                             }
                     } else {
                         isProcessing = false
-                        Toast.makeText(context, context.getString(R.string.scanning_failed), Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, with(context) { getString(R.string.scanning_failed) }, Toast.LENGTH_SHORT).show()
                     }
                 }
             }
@@ -311,14 +314,20 @@ fun ReceiptScannerContent(
                     }
                 },
                 actions = {
-                    IconButton(onClick = { isTorchOn = !isTorchOn }) {
+                    IconButton(onClick = {
+                        isTorchOn = !isTorchOn
+                        analyticsHelper.logEvent("scanner_flash_toggled", mapOf("is_on" to isTorchOn))
+                    }) {
                         Icon(
                             imageVector = if (isTorchOn) Icons.Rounded.FlashOn else Icons.Rounded.FlashOff,
                             contentDescription = stringResource(R.string.flash),
                             tint = Color.White
                         )
                     }
-                    IconButton(onClick = { galleryLauncher.launch("image/*") }) {
+                    IconButton(onClick = {
+                        analyticsHelper.logEvent("scanner_gallery_opened")
+                        galleryLauncher.launch("image/*")
+                    }) {
                         Icon(Icons.Rounded.Collections, contentDescription = stringResource(R.string.gallery), tint = Color.White)
                     }
                 },
@@ -389,16 +398,18 @@ fun ReceiptScannerContent(
                             .padding(6.dp)
                             .background(Color.White, CircleShape)
                             .clickable {
+                                analyticsHelper.logEvent("scanner_shutter_clicked")
                                 isProcessing = true
                                 showShutter = true
                                 scope.launch {
-                                    kotlinx.coroutines.delay(100)
+                                    kotlinx.coroutines.delay(100.milliseconds)
                                     showShutter = false
                                 }
                                 val executor = ContextCompat.getMainExecutor(context)
                                 imageCapture.takePicture(
                                     executor,
                                     object : ImageCapture.OnImageCapturedCallback() {
+                                        @androidx.annotation.OptIn(ExperimentalGetImage::class)
                                         override fun onCaptureSuccess(image: ImageProxy) {
                                             val mediaImage = image.image
                                             if (mediaImage != null) {
@@ -409,7 +420,7 @@ fun ReceiptScannerContent(
                                                         handleOcrResult(visionText, isGallery = false)
                                                     }.addOnFailureListener {
                                                         isProcessing = false
-                                                        Toast.makeText(context, context.getString(R.string.scanning_failed), Toast.LENGTH_SHORT).show()
+                                                        Toast.makeText(context, with(context) { getString(R.string.scanning_failed) }, Toast.LENGTH_SHORT).show()
                                                     }.addOnCompleteListener {
                                                         image.close()
                                                     }
@@ -421,7 +432,7 @@ fun ReceiptScannerContent(
 
                                         override fun onError(exception: ImageCaptureException) {
                                             isProcessing = false
-                                            Toast.makeText(context, context.getString(R.string.capture_failed_formatted, exception.message), Toast.LENGTH_SHORT).show()
+                                            Toast.makeText(context, with(context) { getString(R.string.capture_failed_formatted, exception.message) }, Toast.LENGTH_SHORT).show()
                                         }
                                     },
                                 )
@@ -470,6 +481,7 @@ fun ReceiptScannerContent(
                 isScanning = true
             },
             onSave = { transaction ->
+                analyticsHelper.logEvent("scanner_expense_saved")
                 onSaveTransaction(transaction)
                 showResultsSheet = false
                 showSuccessDialog = true
@@ -539,7 +551,7 @@ fun ReceiptScannerContent(
                         loadAndShowAd(
                             onRewardEarned = {
                                 transactionViewModel.incrementAiScans(3)
-                                Toast.makeText(context, context.getString(R.string.unlocked_scans_toast), Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, with(context) { getString(R.string.unlocked_scans_toast) }, Toast.LENGTH_SHORT).show()
                                 pendingVisionText?.let { visionText ->
                                     isProcessing = true
                                     scope.launch {
@@ -552,7 +564,7 @@ fun ReceiptScannerContent(
                                 showUnlockDialog = false
                             },
                             onFailure = {
-                                Toast.makeText(context, context.getString(R.string.ad_failed_to_load), Toast.LENGTH_LONG).show()
+                                Toast.makeText(context, with(context) { getString(R.string.ad_failed_to_load) }, Toast.LENGTH_LONG).show()
                                 pendingVisionText?.let { visionText ->
                                     isProcessing = true
                                     scope.launch {
