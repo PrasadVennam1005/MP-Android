@@ -1,16 +1,20 @@
 package prasad.vennam.moneypilot.feature.ai.presentation
 
+import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
@@ -26,6 +30,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -118,7 +123,13 @@ fun AiChatScreen(
             Surface(
                 tonalElevation = 8.dp,
                 shadowElevation = 8.dp,
-                color = MaterialTheme.colorScheme.surface,
+                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
+                modifier = Modifier
+                    .border(
+                        width = 1.dp,
+                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.08f),
+                        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
+                    )
             ) {
                 Column {
                     if (aiState is LlmState.Error) {
@@ -179,39 +190,53 @@ fun AiChatScreen(
                                         stringResource(R.string.ask_ai_placeholder)
                                     },
                                     style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
                                 )
                             },
                             shape = RoundedCornerShape(28.dp),
                             singleLine = true,
                             colors =
                                 OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
-                                    unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f),
-                                    disabledBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.1f),
-                                    focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f),
+                                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                    unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.15f),
+                                    disabledBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.08f),
+                                    focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
                                     unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.15f),
                                 ),
                             enabled = aiState is LlmState.Ready || aiState is LlmState.Generating || aiState is LlmState.ActionConfirm,
                         )
                         Spacer(modifier = Modifier.width(8.dp))
-                        IconButton(
-                            onClick = {
-                                if (inputText.isNotBlank()) {
-                                    viewModel.sendMessage(inputText)
-                                    inputText = ""
-                                }
-                            },
-                            enabled =
-                                inputText.isNotBlank() &&
-                                    (aiState is LlmState.Ready || aiState is LlmState.Generating || aiState is LlmState.ActionConfirm),
-                            colors =
-                                IconButtonDefaults.iconButtonColors(
-                                    containerColor = MaterialTheme.colorScheme.primary,
-                                    contentColor = MaterialTheme.colorScheme.onPrimary,
+                        
+                        // Custom Gradient Send Button
+                        val buttonEnabled = inputText.isNotBlank() &&
+                            (aiState is LlmState.Ready || aiState is LlmState.Generating || aiState is LlmState.ActionConfirm)
+                        
+                        Box(
+                            modifier = Modifier
+                                .size(48.dp)
+                                .clip(CircleShape)
+                                .background(
+                                    if (buttonEnabled) {
+                                        Brush.linearGradient(listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.tertiary))
+                                    } else {
+                                        Brush.linearGradient(listOf(MaterialTheme.colorScheme.outline.copy(alpha = 0.1f), MaterialTheme.colorScheme.outline.copy(alpha = 0.15f)))
+                                    }
+                                )
+                                .clickable(
+                                    enabled = buttonEnabled,
+                                    onClick = {
+                                        viewModel.sendMessage(inputText)
+                                        inputText = ""
+                                    }
                                 ),
+                            contentAlignment = Alignment.Center
                         ) {
-                            Icon(Icons.AutoMirrored.Rounded.Send, contentDescription = stringResource(R.string.search))
+                            Icon(
+                                Icons.AutoMirrored.Rounded.Send,
+                                contentDescription = stringResource(R.string.search),
+                                tint = if (buttonEnabled) Color.White else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                                modifier = Modifier.size(20.dp)
+                            )
                         }
                     }
                 }
@@ -249,15 +274,15 @@ fun AiChatScreen(
                             Box(
                                 modifier =
                                     Modifier
-                                        .size(64.dp)
+                                        .size(72.dp)
                                         .clip(CircleShape)
-                                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)),
+                                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.08f)),
                                 contentAlignment = Alignment.Center,
                             ) {
                                 Icon(
-                                    Icons.Rounded.Download,
+                                    Icons.Rounded.CloudDownload,
                                     null,
-                                    modifier = Modifier.size(32.dp),
+                                    modifier = Modifier.size(36.dp),
                                     tint = MaterialTheme.colorScheme.primary,
                                 )
                             }
@@ -276,12 +301,26 @@ fun AiChatScreen(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
                             )
                             Spacer(modifier = Modifier.height(24.dp))
-                            Button(
-                                onClick = { viewModel.downloadModel() },
-                                shape = RoundedCornerShape(12.dp),
-                                modifier = Modifier.fillMaxWidth(),
+                            
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(48.dp)
+                                    .clip(RoundedCornerShape(16.dp))
+                                    .background(
+                                        Brush.linearGradient(
+                                            listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.tertiary)
+                                        )
+                                    )
+                                    .clickable { viewModel.downloadModel() },
+                                contentAlignment = Alignment.Center
                             ) {
-                                Text(stringResource(R.string.download_model_btn), fontWeight = FontWeight.Bold)
+                                Text(
+                                    stringResource(R.string.download_model_btn),
+                                    color = Color.White,
+                                    fontWeight = FontWeight.Bold,
+                                    style = MaterialTheme.typography.labelLarge
+                                )
                             }
                         }
                     }
@@ -378,11 +417,23 @@ fun AiChatScreen(
                     LazyColumn(
                         state = listState,
                         modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(16.dp),
+                        contentPadding = PaddingValues(top = 16.dp, bottom = 80.dp, start = 16.dp, end = 16.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
                         items(messages, key = { it.id }) { message ->
-                            ChatBubble(message)
+                            var visible by remember { mutableStateOf(false) }
+                            LaunchedEffect(Unit) {
+                                visible = true
+                            }
+                            AnimatedVisibility(
+                                visible = visible,
+                                enter = fadeIn(animationSpec = tween(400)) + slideInVertically(
+                                    initialOffsetY = { it / 3 },
+                                    animationSpec = tween(400, easing = FastOutSlowInEasing)
+                                )
+                            ) {
+                                ChatBubble(message)
+                            }
                         }
                     }
                 }
@@ -413,6 +464,18 @@ fun StatusIndicator(state: LlmState) {
             LlmState.Downloading -> MaterialTheme.colorScheme.primary
             is LlmState.ActionConfirm -> Color(0xFFFFA500)
         }
+        
+    val infiniteTransition = rememberInfiniteTransition(label = "pulse")
+    val alpha by infiniteTransition.animateFloat(
+        initialValue = 0.4f,
+        targetValue = 1.0f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1000, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "pulse_alpha"
+    )
+
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(4.dp),
@@ -422,7 +485,11 @@ fun StatusIndicator(state: LlmState) {
                 Modifier
                     .size(6.dp)
                     .clip(CircleShape)
-                    .background(color),
+                    .background(
+                        color.copy(
+                            alpha = if (state is LlmState.Generating || state is LlmState.Initializing || state is LlmState.Downloading) alpha else 1f
+                        )
+                    ),
         )
         Text(
             text = text,
@@ -435,7 +502,6 @@ fun StatusIndicator(state: LlmState) {
 @Composable
 fun ChatBubble(message: ChatMessage) {
     val isUser = message.author == Author.USER
-    val alignment = if (isUser) Alignment.CenterEnd else Alignment.CenterStart
 
     val textColor =
         if (isUser) {
@@ -478,10 +544,15 @@ fun ChatBubble(message: ChatMessage) {
                     )
                 } else {
                     Modifier
-                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f))
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f))
                         .border(
                             width = 1.dp,
-                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f),
+                            brush = Brush.linearGradient(
+                                listOf(
+                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                                    MaterialTheme.colorScheme.tertiary.copy(alpha = 0.15f)
+                                )
+                            ),
                             shape = bubbleShape,
                         )
                 },
@@ -602,159 +673,199 @@ fun TypingDotsIndicator(tint: Color) {
 
 @Composable
 fun WelcomeScreen(onSuggestionClick: (String) -> Unit) {
+    val categories = listOf("Transactions", "Wealth", "Loans")
+    var selectedCategoryIndex by remember { mutableIntStateOf(0) }
+
     Column(
-        modifier =
-            Modifier
-                .fillMaxSize()
-                .padding(16.dp),
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
+        verticalArrangement = Arrangement.Top,
     ) {
+        Spacer(modifier = Modifier.height(24.dp))
+        
+        // AI pulsing gradient icon
+        val infiniteTransition = rememberInfiniteTransition(label = "pulse_star")
+        val scale by infiniteTransition.animateFloat(
+            initialValue = 0.95f,
+            targetValue = 1.05f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(1500, easing = FastOutSlowInEasing),
+                repeatMode = RepeatMode.Reverse
+            ),
+            label = "scale"
+        )
         Box(
-            modifier =
-                Modifier
-                    .size(64.dp)
-                    .clip(CircleShape)
-                    .background(
-                        Brush.linearGradient(
-                            listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.tertiary),
-                        ),
+            modifier = Modifier
+                .size(72.dp)
+                .graphicsLayer {
+                    scaleX = scale
+                    scaleY = scale
+                }
+                .clip(CircleShape)
+                .background(
+                    Brush.linearGradient(
+                        listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.tertiary),
                     ),
+                ),
             contentAlignment = Alignment.Center,
         ) {
             Icon(
                 Icons.Rounded.AutoAwesome,
                 contentDescription = null,
                 tint = Color.White,
-                modifier = Modifier.size(32.dp),
+                modifier = Modifier.size(36.dp),
             )
         }
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(20.dp))
         Text(
             text = stringResource(R.string.meet_moneypilot_copilot),
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.ExtraBold,
             color = MaterialTheme.colorScheme.onBackground,
+            textAlign = TextAlign.Center
         )
-        Spacer(modifier = Modifier.height(6.dp))
+        Spacer(modifier = Modifier.height(8.dp))
         Text(
             text = stringResource(R.string.copilot_welcome_desc),
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
             textAlign = TextAlign.Center,
-            modifier = Modifier.padding(horizontal = 16.dp),
+            modifier = Modifier.padding(horizontal = 24.dp),
         )
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(32.dp))
 
+        // Category Tag Selection Row
         Text(
-            text = stringResource(R.string.tap_quick_action_start),
+            text = "QUICK ACTIONS",
             style = MaterialTheme.typography.labelSmall,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.padding(bottom = 12.dp),
+            modifier = Modifier
+                .align(Alignment.Start)
+                .padding(start = 8.dp, bottom = 8.dp),
         )
 
-        Column(
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-            modifier = Modifier.fillMaxWidth(),
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 4.dp)
         ) {
-            SuggestionCard(
-                category = stringResource(R.string.history),
-                icon = Icons.Rounded.AccountBalanceWallet,
-                iconColor = MaterialTheme.colorScheme.primary,
-                suggestions =
-                    listOf(
-                        "Add food expense of 500 from Swiggy",
-                        "Received freelancing payment of 12000",
-                    ),
-                onSuggestionClick = onSuggestionClick,
-            )
+            categories.forEachIndexed { index, name ->
+                val isSelected = index == selectedCategoryIndex
+                val chipBg = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
+                val chipTextColor = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(chipBg)
+                        .clickable { selectedCategoryIndex = index }
+                        .padding(vertical = 10.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = name,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = chipTextColor,
+                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                    )
+                }
+            }
+        }
 
-            SuggestionCard(
-                category = stringResource(R.string.wealth_assets),
-                icon = Icons.AutoMirrored.Rounded.TrendingUp,
-                iconColor = Color(0xFF4CAF50),
-                suggestions =
-                    listOf(
-                        "Invested 25000 in FD today",
-                        "Bought HDFC stock for 15k",
-                    ),
-                onSuggestionClick = onSuggestionClick,
-            )
+        Spacer(modifier = Modifier.height(12.dp))
 
-            SuggestionCard(
-                category = stringResource(R.string.borrowings_loans),
-                icon = Icons.Rounded.AccountBalance,
-                iconColor = Color(0xFFFFA500),
-                suggestions =
-                    listOf(
-                        "Add SBI Home Loan of 30L, EMI 45000",
-                        "Add personal loan of 50k",
-                    ),
-                onSuggestionClick = onSuggestionClick,
+        val currentSuggestions = when (selectedCategoryIndex) {
+            0 -> listOf(
+                Pair("Add food expense of 500 from Swiggy", Icons.Rounded.Fastfood),
+                Pair("Spent 1200 on petrol today", Icons.Rounded.LocalGasStation),
+                Pair("Received salary of 75000", Icons.Rounded.Payments),
+                Pair("Log shopping expense of 3500 on Amazon", Icons.Rounded.ShoppingBag)
+            )
+            1 -> listOf(
+                Pair("Invested 25000 in FD today", Icons.Rounded.Savings),
+                Pair("Bought HDFC stock for 15k", Icons.AutoMirrored.Rounded.TrendingUp),
+                Pair("Invested 10000 in Mutual Fund", Icons.Rounded.Analytics),
+                Pair("Bought Gold for 5000 today", Icons.Rounded.MonetizationOn)
+            )
+            else -> listOf(
+                Pair("Add SBI Home Loan of 30L, EMI 45000", Icons.Rounded.Home),
+                Pair("Add personal loan of 50k", Icons.Rounded.Person),
+                Pair("Add car loan of 12L, EMI 22000", Icons.Rounded.DirectionsCar),
+                Pair("Show active loans summary", Icons.Rounded.Summarize)
             )
         }
-    }
-}
 
-@Composable
-fun SuggestionCard(
-    category: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    iconColor: Color,
-    suggestions: List<String>,
-    onSuggestionClick: (String) -> Unit,
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors =
-            CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
-            ),
-        shape = RoundedCornerShape(12.dp),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.1f)),
-    ) {
-        Column(modifier = Modifier.padding(12.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(icon, contentDescription = null, tint = iconColor, modifier = Modifier.size(18.dp))
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = category,
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface,
+        Column(
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            currentSuggestions.forEach { (text, icon) ->
+                var clicked by remember { mutableStateOf(false) }
+                val scaleFactor by animateFloatAsState(
+                    targetValue = if (clicked) 0.97f else 1f,
+                    animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy),
+                    label = "suggestion_click"
                 )
-            }
-            Spacer(modifier = Modifier.height(8.dp))
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                suggestions.forEach { suggestion ->
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .graphicsLayer {
+                            scaleX = scaleFactor
+                            scaleY = scaleFactor
+                        }
+                        .clip(RoundedCornerShape(16.dp))
+                        .clickable {
+                            clicked = true
+                            onSuggestionClick(text)
+                            clicked = false
+                        },
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f)
+                    ),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.08f))
+                ) {
                     Row(
-                        modifier =
-                            Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.7f))
-                                .clickable { onSuggestionClick(suggestion) }
-                                .padding(horizontal = 12.dp, vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween,
+                        modifier = Modifier.padding(14.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.08f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                icon,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(12.dp))
                         Text(
-                            text = suggestion,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            text = text,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.weight(1f)
                         )
                         Icon(
                             Icons.AutoMirrored.Rounded.ArrowForward,
                             contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
-                            modifier = Modifier.size(14.dp),
+                            tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
+                            modifier = Modifier.size(16.dp)
                         )
                     }
                 }
             }
         }
+        Spacer(modifier = Modifier.height(24.dp))
     }
 }
 
@@ -843,7 +954,8 @@ fun ActionConfirmationCard(
                     Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(12.dp))
-                        .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.5f))
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+                        .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.08f), RoundedCornerShape(12.dp))
                         .padding(12.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
@@ -886,15 +998,18 @@ fun ActionConfirmationCard(
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 OutlinedButton(
                     onClick = onDismiss,
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(44.dp),
                     colors =
                         ButtonDefaults.outlinedButtonColors(
                             contentColor = MaterialTheme.colorScheme.error,
                         ),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.5f)),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.4f)),
                     shape = RoundedCornerShape(12.dp),
                 ) {
                     Icon(Icons.Rounded.Cancel, contentDescription = null, modifier = Modifier.size(16.dp))
@@ -902,18 +1017,24 @@ fun ActionConfirmationCard(
                     Text(stringResource(R.string.dismiss), fontWeight = FontWeight.SemiBold)
                 }
 
-                Button(
-                    onClick = onConfirm,
-                    modifier = Modifier.weight(1f),
-                    colors =
-                        ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primary,
-                        ),
-                    shape = RoundedCornerShape(12.dp),
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(44.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(
+                            Brush.linearGradient(
+                                listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.tertiary)
+                            )
+                        )
+                        .clickable(onClick = onConfirm),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Icon(Icons.Rounded.CheckCircle, contentDescription = null, modifier = Modifier.size(16.dp))
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(stringResource(R.string.confirm), fontWeight = FontWeight.SemiBold)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Rounded.CheckCircle, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(stringResource(R.string.confirm), color = Color.White, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelLarge)
+                    }
                 }
             }
         }
@@ -932,7 +1053,7 @@ fun DetailRow(
         Text(
             text = label,
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
         )
         Text(
             text = value,
