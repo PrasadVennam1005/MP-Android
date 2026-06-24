@@ -49,6 +49,9 @@ android {
         val rewardedProdId = localProperties.getProperty("REWARDED_PROD_ID", "\"\"")
         buildConfigField("String", "REWARDED_PROD_ID", rewardedProdId)
 
+        val nativeProdId = localProperties.getProperty("NATIVE_PROD_ID", "\"\"")
+        buildConfigField("String", "NATIVE_PROD_ID", nativeProdId)
+
         val geminiApiKey = localProperties.getProperty("GEMINI_API_KEY", "\"\"")
         buildConfigField("String", "GEMINI_API_KEY", geminiApiKey)
 

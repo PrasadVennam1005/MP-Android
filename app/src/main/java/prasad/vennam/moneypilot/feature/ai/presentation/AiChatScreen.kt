@@ -53,12 +53,14 @@ import android.view.Gravity
 import android.view.ViewGroup
 import android.graphics.drawable.GradientDrawable
 import prasad.vennam.moneypilot.ui.components.BannerPlaceholder
+import prasad.vennam.moneypilot.ads.AdConfig
 import kotlinx.coroutines.launch
 import prasad.vennam.moneypilot.R
 import prasad.vennam.moneypilot.feature.ai.model.AiAction
 import prasad.vennam.moneypilot.feature.ai.model.Author
 import prasad.vennam.moneypilot.feature.ai.model.ChatMessage
 import prasad.vennam.moneypilot.feature.ai.model.LlmState
+import androidx.core.graphics.toColorInt
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -702,7 +704,7 @@ fun WelcomeScreen(onSuggestionClick: (String) -> Unit) {
 
     LaunchedEffect(Unit) {
         try {
-            val adLoader = AdLoader.Builder(context, "ca-app-pub-3940256099942544/2247696110") // Test Native ID
+            val adLoader = AdLoader.Builder(context, AdConfig.nativeAdUnitId)
                 .forNativeAd { ad ->
                     nativeAd = ad
                     adLoading = false
@@ -1178,7 +1180,7 @@ fun AdmobNativeAd(nativeAd: NativeAd, modifier: Modifier = Modifier) {
                     )
                     scaleType = ImageView.ScaleType.CENTER_CROP
                     val iconBg = GradientDrawable().apply {
-                        setColor(0x26FFFFFF.toInt()) // 15% opacity white
+                        setColor(0x26FFFFFF) // 15% opacity white
                         cornerRadius = 12.dpToPx(ctx).toFloat()
                     }
                     background = iconBg
@@ -1222,13 +1224,13 @@ fun AdmobNativeAd(nativeAd: NativeAd, modifier: Modifier = Modifier) {
                 // Call to Action View
                 val ctaView = TextView(ctx).apply {
                     textSize = 12f
-                    setTextColor(android.graphics.Color.parseColor("#1A237E"))
+                    setTextColor("#1A237E".toColorInt())
                     typeface = android.graphics.Typeface.create("sans-serif", android.graphics.Typeface.BOLD)
                     gravity = Gravity.CENTER
                     setPadding(14.dpToPx(ctx), 8.dpToPx(ctx), 14.dpToPx(ctx), 8.dpToPx(ctx))
                     
                     val ctaBg = GradientDrawable().apply {
-                        setColor(android.graphics.Color.parseColor("#FFD54F")) // Gold color to match LearnFinance CTA
+                        setColor("#FFD54F".toColorInt()) // Gold color to match LearnFinance CTA
                         cornerRadius = 10.dpToPx(ctx).toFloat()
                     }
                     background = ctaBg
