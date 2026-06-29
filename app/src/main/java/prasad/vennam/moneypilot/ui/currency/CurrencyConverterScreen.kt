@@ -1,5 +1,6 @@
 package prasad.vennam.moneypilot.ui.currency
 
+import prasad.vennam.moneypilot.ui.components.BaseBottomSheet
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -44,6 +45,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -457,29 +462,27 @@ fun CurrencyConverterScreen(
     }
 
     if (showBottomSheet) {
-        ModalBottomSheet(
+        val title = if (selectingFromCurrency) {
+            stringResource(prasad.vennam.moneypilot.R.string.select_source_currency)
+        } else if (selectingBasketCurrency) {
+            stringResource(prasad.vennam.moneypilot.R.string.add_currency_to_comparison_basket)
+        } else {
+            stringResource(prasad.vennam.moneypilot.R.string.select_target_currency)
+        }
+
+        BaseBottomSheet(
             onDismissRequest = { showBottomSheet = false },
-            sheetState = rememberModalBottomSheetState(),
-            containerColor = MaterialTheme.colorScheme.surface,
+            title = title,
+            modifier = Modifier.fillMaxHeight(0.85f),
         ) {
+            val focusManager = LocalFocusManager.current
+            val keyboardController = LocalSoftwareKeyboardController.current
+
             Column(
                 modifier =
                     Modifier
-                        .fillMaxHeight(0.85f)
                         .padding(horizontal = 16.dp),
             ) {
-                Text(
-                    text =
-                        if (selectingFromCurrency) {
-                            stringResource(prasad.vennam.moneypilot.R.string.select_source_currency)
-                        } else if (selectingBasketCurrency) {
-                            stringResource(prasad.vennam.moneypilot.R.string.add_currency_to_comparison_basket)
-                        } else {
-                            stringResource(prasad.vennam.moneypilot.R.string.select_target_currency)
-                        },
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                    modifier = Modifier.padding(bottom = 12.dp),
-                )
 
                 OutlinedTextField(
                     value = searchQuery,
@@ -496,6 +499,11 @@ fun CurrencyConverterScreen(
                             focusedBorderColor = MaterialTheme.colorScheme.primary,
                             unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
                         ),
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                    keyboardActions = KeyboardActions(onSearch = {
+                        keyboardController?.hide()
+                        focusManager.clearFocus()
+                    }),
                     singleLine = true,
                 )
 
@@ -593,6 +601,8 @@ fun AmountInputCard(
         }
 
     var isFocused by remember { mutableStateOf(false) }
+    val focusManager = LocalFocusManager.current
+    val keyboardController = LocalSoftwareKeyboardController.current
 
     Card(
         modifier =
@@ -637,7 +647,11 @@ fun AmountInputCard(
                             color = MaterialTheme.colorScheme.onSurface,
                             fontWeight = FontWeight.Bold,
                         ),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Done),
+                    keyboardActions = KeyboardActions(onDone = {
+                        keyboardController?.hide()
+                        focusManager.clearFocus()
+                    }),
                     modifier =
                         Modifier
                             .fillMaxWidth()
@@ -1320,11 +1334,13 @@ fun RateAlertSheet(
     var targetRateInput by remember { mutableStateOf(String.format(Locale.US, "%.4f", currentRate)) }
     var isAbove by remember { mutableStateOf(true) }
 
-    ModalBottomSheet(
+    BaseBottomSheet(
         onDismissRequest = onDismiss,
-        sheetState = rememberModalBottomSheetState(),
-        containerColor = MaterialTheme.colorScheme.surface,
+        title = stringResource(prasad.vennam.moneypilot.R.string.set_exchange_rate_alert),
     ) {
+        val focusManager = LocalFocusManager.current
+        val keyboardController = LocalSoftwareKeyboardController.current
+
         Column(
             modifier =
                 Modifier
@@ -1332,11 +1348,6 @@ fun RateAlertSheet(
                     .padding(horizontal = 20.dp, vertical = 8.dp)
                     .navigationBarsPadding(),
         ) {
-            Text(
-                text = stringResource(prasad.vennam.moneypilot.R.string.set_exchange_rate_alert),
-                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                modifier = Modifier.padding(bottom = 8.dp),
-            )
 
             Text(
                 text = stringResource(prasad.vennam.moneypilot.R.string.get_notified_on_match, fromCurrency),
@@ -1349,7 +1360,11 @@ fun RateAlertSheet(
                 value = targetRateInput,
                 onValueChange = { targetRateInput = it },
                 label = { Text(stringResource(prasad.vennam.moneypilot.R.string.target_rate_label, toCurrency)) },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Done),
+                keyboardActions = KeyboardActions(onDone = {
+                    keyboardController?.hide()
+                    focusManager.clearFocus()
+                }),
                 modifier = Modifier.fillMaxWidth(),
                 shape = PremiumShapes.medium,
                 singleLine = true,

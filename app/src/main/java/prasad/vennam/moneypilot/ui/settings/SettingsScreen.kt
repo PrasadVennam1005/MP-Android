@@ -72,7 +72,6 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -182,7 +181,6 @@ fun SettingsScreen(
     var showExportFormatDialog by remember { mutableStateOf(false) }
     var showCurrencySheet by remember { mutableStateOf(false) }
     var showGoalSheet by remember { mutableStateOf(false) }
-    val currencySheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     var showThemeDialog by remember { mutableStateOf(false) }
     var showDeleteAccountConfirmation by remember { mutableStateOf(false) }
@@ -485,7 +483,7 @@ fun SettingsScreen(
                     SettingsItem(
                         icon = Icons.Rounded.CurrencyExchange,
                         title = stringResource(R.string.currency),
-                        subtitle = "${currentCurrency.name} (${currentCurrency.symbol}) • $liveRateText",
+                        subtitle = stringResource(R.string.currency_subtitle_format, currentCurrency.name, currentCurrency.symbol, liveRateText),
                         isLocked = isGuest,
                         onClick = {
                             checkGuestAction("Currency Change") {
@@ -495,8 +493,8 @@ fun SettingsScreen(
                     )
                     SettingsItem(
                         icon = Icons.Rounded.Star,
-                        title = "MoneyPilot Premium",
-                        subtitle = "Remove ads and support development",
+                        title = stringResource(R.string.moneypilot_premium),
+                        subtitle = stringResource(R.string.premium_subtitle),
                         isLocked = isGuest,
                         onClick = {
                             checkGuestAction("Premium") {
@@ -530,8 +528,8 @@ fun SettingsScreen(
                     )
                     SettingsItem(
                         icon = Icons.Rounded.NotificationsActive,
-                        title = "Recurring Subscriptions",
-                        subtitle = "Track Netflix, Rent, utilities & billing alerts",
+                        title = stringResource(R.string.recurring_subscriptions),
+                        subtitle = stringResource(R.string.subscriptions_subtitle),
                         onClick = {
                             onNavigateToSubscriptions()
                         },
@@ -553,8 +551,8 @@ fun SettingsScreen(
                     val activity = context as? androidx.fragment.app.FragmentActivity
                     SettingsSwitchItem(
                         icon = Icons.Rounded.Lock,
-                        title = "Biometric Authentication",
-                        subtitle = "Require fingerprint/face to open app",
+                        title = stringResource(R.string.biometric_authentication),
+                        subtitle = stringResource(R.string.biometric_subtitle),
                         checked = isBiometricEnabled,
                         onCheckedChange = { checked ->
                             analyticsHelper.logEvent(AnalyticsConstants.Event.SETTINGS_BIOMETRIC_TOGGLED, mapOf(AnalyticsConstants.Param.ENABLED to checked))
@@ -562,16 +560,16 @@ fun SettingsScreen(
                                 if (checked) {
                                     prasad.vennam.moneypilot.util.BiometricHelper.authenticate(
                                         activity = activity,
-                                        title = "Enable Biometric Lock",
-                                        subtitle = "Verify your identity to enable biometric lock",
+                                        title = context.getString(R.string.enable_biometric_lock),
+                                        subtitle = context.getString(R.string.enable_biometric_subtitle),
                                         onSuccess = { mainViewModel.setIsBiometricEnabled(true) },
-                                        onError = { Toast.makeText(context, "Authentication failed: $it", Toast.LENGTH_SHORT).show() },
+                                        onError = { Toast.makeText(context, context.getString(R.string.auth_failed, it), Toast.LENGTH_SHORT).show() },
                                     )
                                 } else {
                                     mainViewModel.setIsBiometricEnabled(false)
                                 }
                             } else {
-                                Toast.makeText(context, "Biometric authentication requires app restart to work correctly.", Toast.LENGTH_LONG).show()
+                                Toast.makeText(context, context.getString(R.string.auth_requires_restart), Toast.LENGTH_LONG).show()
                             }
                         },
                     )
@@ -597,8 +595,8 @@ fun SettingsScreen(
 
                     SettingsSwitchItem(
                         icon = Icons.Rounded.NotificationsActive,
-                        title = "Auto-Track via Notifications",
-                        subtitle = "Parse notifications to auto-add expenses",
+                        title = stringResource(R.string.auto_track_notifications),
+                        subtitle = stringResource(R.string.auto_track_notifications_subtitle),
                         checked = isNotificationTrackingEnabled,
                         onCheckedChange = {
                             analyticsHelper.logEvent(AnalyticsConstants.Event.SETTINGS_NOTIFICATION_TRACKING_TOGGLED)
@@ -609,15 +607,15 @@ fun SettingsScreen(
 
                     SettingsSwitchItem(
                         icon = Icons.Rounded.Sms,
-                        title = "Auto-Track via SMS",
-                        subtitle = "Parse debit/credit SMS to auto-add expenses",
+                        title = stringResource(R.string.auto_track_sms),
+                        subtitle = stringResource(R.string.auto_track_sms_subtitle),
                         checked = isSmsTrackingEnabled,
                         onCheckedChange = { checked ->
                             analyticsHelper.logEvent(AnalyticsConstants.Event.SETTINGS_SMS_TRACKING_TOGGLED, mapOf(AnalyticsConstants.Param.ENABLED to checked))
                             if (checked) {
                                 smsPermissionLauncher.launch(Manifest.permission.RECEIVE_SMS)
                             } else {
-                                Toast.makeText(context, "Please disable permission from app settings to stop SMS tracking.", Toast.LENGTH_LONG).show()
+                                Toast.makeText(context, context.getString(R.string.disable_sms_tracking_msg), Toast.LENGTH_LONG).show()
                                 val intent =
                                     Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
                                         data = Uri.fromParts("package", context.packageName, null)
@@ -648,20 +646,20 @@ fun SettingsScreen(
                 SettingsGroup(title = stringResource(R.string.support)) {
                     SettingsItem(
                         icon = Icons.AutoMirrored.Rounded.HelpOutline,
-                        title = "Help & FAQ",
-                        subtitle = "Browse answers or contact us",
+                        title = stringResource(R.string.help_and_faq),
+                        subtitle = stringResource(R.string.help_and_faq_subtitle),
                         onClick = { onNavigateToFAQ() },
                     )
                     SettingsItem(
                         icon = Icons.Rounded.Gavel,
-                        title = "Terms of Service",
-                        subtitle = "View our terms and conditions",
+                        title = stringResource(R.string.terms_of_service),
+                        subtitle = stringResource(R.string.terms_of_service_subtitle),
                         onClick = { onNavigateToTerms() },
                     )
                     SettingsItem(
                         icon = Icons.Rounded.PrivacyTip,
-                        title = "Privacy Policy",
-                        subtitle = "How we handle your data",
+                        title = stringResource(R.string.privacy_policy),
+                        subtitle = stringResource(R.string.privacy_policy_subtitle),
                         onClick = { onNavigateToPrivacy() },
                     )
                     SettingsItem(
@@ -677,19 +675,19 @@ fun SettingsScreen(
                 item { SectionDivider() }
 
                 item {
-                    SettingsGroup(title = "Developer Tools") {
+                    SettingsGroup(title = stringResource(R.string.developer_tools)) {
                         SettingsSwitchItem(
                             icon = Icons.Rounded.SettingsSuggest,
-                            title = "Enable DevTools",
-                            subtitle = "Unlock restricted features for testing",
+                            title = stringResource(R.string.enable_devtools),
+                            subtitle = stringResource(R.string.enable_devtools_subtitle),
                             checked = isDevToolEnabled,
                             onCheckedChange = { mainViewModel.setDevToolEnabled(it) },
                         )
                         if (isGuest) {
                             SettingsItem(
                                 icon = Icons.Rounded.PlayArrow,
-                                title = "Load Demo Data (INR)",
-                                subtitle = "Seeds rich Indian currency datasets for screenshots",
+                                title = stringResource(R.string.load_demo_data),
+                                subtitle = stringResource(R.string.load_demo_data_subtitle),
                                 onClick = { showDemoConfirmDialog = true },
                             )
                         }
@@ -764,7 +762,7 @@ fun SettingsScreen(
     if (showDemoConfirmDialog) {
         AlertDialog(
             onDismissRequest = { if (!isSeedingDemoData) showDemoConfirmDialog = false },
-            title = { Text("Load Demo Data?") },
+            title = { Text(stringResource(R.string.load_demo_data_title)) },
             text = {
                 if (isSeedingDemoData) {
                     Column(
@@ -773,10 +771,10 @@ fun SettingsScreen(
                     ) {
                         CircularProgressIndicator()
                         Spacer(modifier = Modifier.height(16.dp))
-                        Text("Seeding Indian currency demo data...", textAlign = TextAlign.Center)
+                        Text(stringResource(R.string.seeding_demo_data), textAlign = TextAlign.Center)
                     }
                 } else {
-                    Text("This will clear all your current guest data, insert a comprehensive set of Indian Rupee (₹) transaction, budget, investment, and loan history, and relaunch the app. This is perfect for generating Play Store screenshots. Do you want to proceed?")
+                    Text(stringResource(R.string.seeding_demo_data_desc))
                 }
             },
             confirmButton = {
@@ -803,7 +801,7 @@ fun SettingsScreen(
                             }
                         },
                     ) {
-                        Text("Yes, Load & Relaunch")
+                        Text(stringResource(R.string.yes_load_relaunch))
                     }
                 }
             },

@@ -6,6 +6,7 @@ import androidx.compose.material.icons.rounded.Apartment
 import androidx.compose.material.icons.rounded.CardGiftcard
 import androidx.compose.material.icons.rounded.Category
 import androidx.compose.material.icons.rounded.DirectionsCar
+import androidx.compose.material.icons.rounded.Face
 import androidx.compose.material.icons.rounded.Flight
 import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.Home
@@ -13,12 +14,16 @@ import androidx.compose.material.icons.rounded.Lightbulb
 import androidx.compose.material.icons.rounded.MedicalServices
 import androidx.compose.material.icons.rounded.Movie
 import androidx.compose.material.icons.rounded.Payments
+import androidx.compose.material.icons.rounded.Pets
 import androidx.compose.material.icons.rounded.Receipt
 import androidx.compose.material.icons.rounded.Redeem
 import androidx.compose.material.icons.rounded.Restaurant
 import androidx.compose.material.icons.rounded.School
 import androidx.compose.material.icons.rounded.Security
 import androidx.compose.material.icons.rounded.ShoppingCart
+import androidx.compose.material.icons.automirrored.rounded.ShowChart
+import androidx.compose.material.icons.rounded.Storefront
+import androidx.compose.material.icons.rounded.Subscriptions
 import androidx.compose.material.icons.rounded.Work
 import androidx.compose.ui.graphics.vector.ImageVector
 import prasad.vennam.moneypilot.data.entity.Budget
@@ -50,5 +55,10 @@ fun getCategoryIcon(name: String?): ImageVector =
         "apartment" -> Icons.Rounded.Apartment
         "redeem" -> Icons.Rounded.Redeem
         "history" -> Icons.Rounded.History
+        "subscriptions" -> Icons.Rounded.Subscriptions
+        "pets" -> Icons.Rounded.Pets
+        "face" -> Icons.Rounded.Face
+        "storefront" -> Icons.Rounded.Storefront
+        "show_chart" -> Icons.AutoMirrored.Rounded.ShowChart
         else -> Icons.Rounded.Category
     }

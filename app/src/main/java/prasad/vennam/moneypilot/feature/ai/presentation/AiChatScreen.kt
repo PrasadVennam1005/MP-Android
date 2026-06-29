@@ -58,6 +58,7 @@ import prasad.vennam.moneypilot.feature.ai.model.Author
 import prasad.vennam.moneypilot.feature.ai.model.ChatMessage
 import prasad.vennam.moneypilot.feature.ai.model.LlmState
 import prasad.vennam.moneypilot.ui.components.BannerPlaceholder
+import prasad.vennam.moneypilot.ui.components.BaseBottomSheet
 import prasad.vennam.moneypilot.util.AnalyticsConstants
 import prasad.vennam.moneypilot.util.AnalyticsHelper
 import prasad.vennam.moneypilot.util.TrackScreen
@@ -1755,16 +1756,11 @@ fun SampleQueriesBottomSheet(
     onDismissRequest: () -> Unit,
     onSuggestionClick: (String) -> Unit,
 ) {
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val categories = listOf("Transactions", "Wealth", "Loans")
     var selectedCategoryIndex by remember { mutableIntStateOf(0) }
 
-    ModalBottomSheet(
+    BaseBottomSheet(
         onDismissRequest = onDismissRequest,
-        sheetState = sheetState,
-        containerColor = MaterialTheme.colorScheme.surface,
-        tonalElevation = 8.dp,
-        dragHandle = { BottomSheetDefaults.DragHandle() },
     ) {
         Column(
             modifier =

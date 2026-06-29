@@ -80,9 +80,9 @@ fun NotificationsScreen(
         ) { isGranted: Boolean ->
             isPermissionGranted = isGranted
             if (isGranted) {
-                Toast.makeText(context, "Notification alerts enabled!", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, context.getString(R.string.notification_alerts_enabled), Toast.LENGTH_SHORT).show()
             } else {
-                Toast.makeText(context, "Notification permission denied.", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, context.getString(R.string.notification_permission_denied), Toast.LENGTH_SHORT).show()
             }
         }
 
@@ -109,11 +109,18 @@ fun NotificationsScreen(
     }
 
     var selectedCategory by remember { mutableStateOf("All") }
-    val categories = listOf("All", "Alerts", "Sync", "Budget", "System")
+    val categoryAllStr = stringResource(R.string.category_all)
+    val categories = listOf(
+        categoryAllStr,
+        stringResource(R.string.category_alerts),
+        stringResource(R.string.category_sync),
+        stringResource(R.string.budget),
+        stringResource(R.string.category_system)
+    )
 
     val filteredNotifications =
-        remember(notifications, selectedCategory) {
-            if (selectedCategory == "All") {
+        remember(notifications, selectedCategory, categoryAllStr) {
+            if (selectedCategory == categoryAllStr) {
                 notifications
             } else {
                 notifications.filter { it.category.equals(selectedCategory, ignoreCase = true) }
@@ -184,14 +191,14 @@ fun NotificationsScreen(
                         Spacer(modifier = Modifier.width(16.dp))
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "Notification alerts are off",
+                                text = stringResource(R.string.notification_alerts_off),
                                 style = MaterialTheme.typography.titleSmall,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onPrimaryContainer,
                             )
                             Spacer(modifier = Modifier.height(2.dp))
                             Text(
-                                text = "Enable them to receive daily wealth feeds, budget warnings, and loan reminders.",
+                                text = stringResource(R.string.notification_alerts_off_desc),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f),
                             )
@@ -205,7 +212,7 @@ fun NotificationsScreen(
                             contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
                             modifier = Modifier.height(36.dp),
                         ) {
-                            Text("Turn On", style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold))
+                            Text(stringResource(R.string.turn_on), style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold))
                         }
                     }
                 }
@@ -224,7 +231,7 @@ fun NotificationsScreen(
                     val isSelected = selectedCategory == category
                     val count =
                         if (category ==
-                            "All"
+                            stringResource(R.string.category_all)
                         ) {
                             notifications.size
                         } else {
@@ -404,7 +411,7 @@ fun SwipeToDismissNotification(
                             SwipeToDismissBoxValue.StartToEnd -> {
                                 Icon(
                                     imageVector = if (!item.url.isNullOrBlank()) Icons.Rounded.Bookmark else Icons.Rounded.Block,
-                                    contentDescription = if (!item.url.isNullOrBlank()) "Bookmark" else "No Link",
+                                    contentDescription = if (!item.url.isNullOrBlank()) stringResource(R.string.bookmark) else stringResource(R.string.no_link),
                                     tint = if (!item.url.isNullOrBlank()) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
@@ -435,13 +442,18 @@ fun NotificationItemCard(
     notification: Notification,
     onNavigateToWeb: (url: String, title: String) -> Unit,
 ) {
+    val categoryAlertsStr = stringResource(R.string.category_alerts)
+    val categorySyncStr = stringResource(R.string.category_sync)
+    val budgetStr = stringResource(R.string.budget)
+    val categorySystemStr = stringResource(R.string.category_system)
+
     val categoryDetails =
-        remember(notification.category) {
+        remember(notification.category, categoryAlertsStr, categorySyncStr, budgetStr, categorySystemStr) {
             when (notification.category.lowercase(Locale.ROOT)) {
-                "alerts" -> Triple(Icons.Rounded.Warning, Color(0xFFFF9800), "Alerts")
-                "sync" -> Triple(Icons.Rounded.CloudDone, Color(0xFF2196F3), "Sync")
-                "budget" -> Triple(Icons.AutoMirrored.Rounded.TrendingDown, Color(0xFF4CAF50), "Budget")
-                else -> Triple(Icons.Rounded.Info, Color(0xFF9C27B0), "System")
+                "alerts" -> Triple(Icons.Rounded.Warning, Color(0xFFFF9800), categoryAlertsStr)
+                "sync" -> Triple(Icons.Rounded.CloudDone, Color(0xFF2196F3), categorySyncStr)
+                "budget" -> Triple(Icons.AutoMirrored.Rounded.TrendingDown, Color(0xFF4CAF50), budgetStr)
+                else -> Triple(Icons.Rounded.Info, Color(0xFF9C27B0), categorySystemStr)
             }
         }
 
@@ -582,13 +594,13 @@ fun EmptyNotificationsState(category: String) {
         }
         Spacer(modifier = Modifier.height(24.dp))
         Text(
-            text = if (category == "All") "All Caught Up! ✨" else "No $category Notifications",
+            text = if (category == stringResource(R.string.category_all)) stringResource(R.string.all_caught_up) else stringResource(R.string.no_category_notifications, category),
             style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
             color = MaterialTheme.colorScheme.onSurface,
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
-            text = "When alerts, budget targets, or backups trigger, you'll see them listed here.",
+            text = stringResource(R.string.empty_notifications_desc),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
@@ -596,6 +608,7 @@ fun EmptyNotificationsState(category: String) {
     }
 }
 
+@Composable
 private fun formatTime(timestamp: Long): String {
     val date = Date(timestamp)
     val now = Calendar.getInstance()
@@ -604,7 +617,7 @@ private fun formatTime(timestamp: Long): String {
     return if (now.get(Calendar.DATE) == time.get(Calendar.DATE)) {
         SimpleDateFormat("hh:mm a", Locale.getDefault()).format(date)
     } else if (now.get(Calendar.DATE) - time.get(Calendar.DATE) == 1) {
-        "Yesterday"
+        stringResource(R.string.yesterday)
     } else {
         SimpleDateFormat("MMM dd", Locale.getDefault()).format(date)
     }

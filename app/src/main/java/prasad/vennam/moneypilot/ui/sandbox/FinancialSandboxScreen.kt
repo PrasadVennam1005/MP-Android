@@ -9,6 +9,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -29,9 +30,12 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import prasad.vennam.moneypilot.R
 import prasad.vennam.moneypilot.ui.viewmodel.SandboxViewModel
@@ -53,6 +57,9 @@ fun FinancialSandboxScreen(
 
     var incomeInput by remember { mutableStateOf("") }
     var expenseInput by remember { mutableStateOf("") }
+    
+    val focusManager = LocalFocusManager.current
+    val keyboardController = LocalSoftwareKeyboardController.current
 
     // Initialize inputs when default values are loaded
     LaunchedEffect(defaultsState) {
@@ -177,7 +184,10 @@ fun FinancialSandboxScreen(
                                 value = incomeInput,
                                 onValueChange = { incomeInput = it },
                                 label = { Text(stringResource(R.string.sandbox_monthly_income)) },
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
+                                keyboardActions = KeyboardActions(onNext = {
+                                    focusManager.moveFocus(androidx.compose.ui.focus.FocusDirection.Right)
+                                }),
                                 modifier = Modifier.weight(1f),
                                 shape = MaterialTheme.shapes.large,
                             )
@@ -185,7 +195,12 @@ fun FinancialSandboxScreen(
                                 value = expenseInput,
                                 onValueChange = { expenseInput = it },
                                 label = { Text(stringResource(R.string.sandbox_monthly_expense)) },
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
+                                keyboardActions = KeyboardActions(onDone = {
+                                    keyboardController?.hide()
+                                    focusManager.clearFocus()
+                                    isEditingBaseValues = false
+                                }),
                                 modifier = Modifier.weight(1f),
                                 shape = MaterialTheme.shapes.large,
                             )

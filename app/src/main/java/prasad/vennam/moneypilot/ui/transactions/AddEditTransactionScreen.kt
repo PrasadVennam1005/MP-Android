@@ -1,5 +1,6 @@
 package prasad.vennam.moneypilot.ui.transactions
 
+import prasad.vennam.moneypilot.ui.components.BaseBottomSheet
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,6 +14,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -36,7 +39,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -61,8 +63,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -106,6 +112,9 @@ fun AddEditTransactionScreen(
         remember(categories, formState.type) {
             categories.filter { it.isExpense == (formState.type == TransactionType.EXPENSE) }
         }
+
+    val focusManager = LocalFocusManager.current
+    val keyboardController = LocalSoftwareKeyboardController.current
 
     val locale = androidx.compose.ui.platform.LocalLocale.current.platformLocale
     val dateFormatter = remember(locale) { SimpleDateFormat("dd MMM, yyyy", locale) }
@@ -170,7 +179,6 @@ fun AddEditTransactionScreen(
             val amountVal = formState.amount.toDoubleOrNull()
             val isAmountError = formState.amount.isNotEmpty() && (amountVal == null || amountVal <= 0.0 || amountVal > 100000000.0)
 
-            // Amount Field
             PremiumAmountField(
                 value = formState.amount,
                 onValueChange = { input ->
@@ -192,20 +200,22 @@ fun AddEditTransactionScreen(
                         {
                             val text =
                                 when {
-                                    amountVal == null -> "Invalid format"
+                                    amountVal == null -> context.getString(R.string.invalid_format)
                                     amountVal <= 0.0 -> stringResource(R.string.amount_error_desc)
-                                    else -> "Amount cannot exceed 100,000,000"
+                                    else -> context.getString(R.string.amount_cannot_exceed)
                                 }
                             Text(text)
                         }
                     } else {
                         null
                     },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
+                keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(androidx.compose.ui.focus.FocusDirection.Down) }),
             )
 
             // Date Picker Field
             PremiumReadOnlyField(
-                label = "Date",
+                label = stringResource(R.string.date),
                 value = dateFormatter.format(Date(formState.timestamp)),
                 icon = Icons.Rounded.CalendarToday,
                 onClick = { showDatePicker = true },
@@ -213,35 +223,37 @@ fun AddEditTransactionScreen(
 
             // Category Field
             PremiumReadOnlyField(
-                label = "Category",
+                label = stringResource(R.string.category),
                 value = categories.find { it.id == formState.categoryId }?.name ?: stringResource(R.string.select_category),
                 icon = Icons.Rounded.Category,
                 onClick = { showCategoryMenu = true },
             )
 
-            // Sub-Category Field (Optional)
             PremiumTextField(
-                label = "Sub Category",
+                label = stringResource(R.string.sub_category),
                 value = formState.subCategory,
                 onValueChange = { viewModel.updateSubCategory(it) },
                 icon = Icons.Rounded.Subtitles,
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(androidx.compose.ui.focus.FocusDirection.Down) }),
             )
 
             // Payment Mode Field
             PremiumReadOnlyField(
-                label = "Payment Mode",
+                label = stringResource(R.string.payment_mode),
                 value = formState.paymentMode,
                 icon = Icons.Rounded.Payments,
                 onClick = { showPaymentMenu = true },
             )
 
-            // Notes Field
             PremiumTextField(
-                label = "Notes",
+                label = stringResource(R.string.notes),
                 value = formState.note,
                 onValueChange = { viewModel.updateNote(it) },
                 icon = Icons.Rounded.EditNote,
                 singleLine = false,
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                keyboardActions = KeyboardActions(onDone = { keyboardController?.hide() }),
             )
 
             Spacer(modifier = Modifier.weight(1f))
@@ -252,7 +264,7 @@ fun AddEditTransactionScreen(
                     val amountValue = formState.amount.toDoubleOrNull() ?: return@Button
                     if (amountValue <= 0) return@Button
 
-                    val categoryName = categories.find { it.id == formState.categoryId }?.name ?: "unknown"
+                    val categoryName = categories.find { it.id == formState.categoryId }?.name ?: context.getString(R.string.unknown)
 
                     // Analytics: Track successful add/edit only after validation passes
                     analyticsHelper.logEvent(
@@ -323,25 +335,26 @@ fun AddEditTransactionScreen(
     }
 
     if (showCategoryMenu) {
-        ModalBottomSheet(
+        BaseBottomSheet(
             onDismissRequest = { showCategoryMenu = false },
-            containerColor = MaterialTheme.colorScheme.surface,
+            title = stringResource(R.string.select_category),
         ) {
-            Column(modifier = Modifier.padding(bottom = 32.dp)) {
-                Text(
-                    "Select Category",
-                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                    modifier = Modifier.padding(24.dp),
-                )
-                filteredCategories.forEach { category ->
-                    DropdownMenuItem(
-                        text = { Text(category.name) },
-                        leadingIcon = { CategoryIcon(category) },
-                        onClick = {
-                            viewModel.updateCategory(category.id)
-                            showCategoryMenu = false
-                        },
-                        modifier = Modifier.padding(horizontal = 8.dp),
+            androidx.compose.foundation.lazy.LazyColumn(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 32.dp)
+            ) {
+                items(filteredCategories.size) { index ->
+                    val category = filteredCategories[index]
+                    androidx.compose.material3.ListItem(
+                        headlineContent = { Text(category.name) },
+                        leadingContent = { CategoryIcon(category) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                viewModel.updateCategory(category.id)
+                                showCategoryMenu = false
+                            }
                     )
                 }
             }
@@ -349,23 +362,26 @@ fun AddEditTransactionScreen(
     }
 
     if (showPaymentMenu) {
-        val modes = prasad.vennam.moneypilot.util.PaymentModes.ALL
-        ModalBottomSheet(
-            onDismissRequest = { showPaymentMenu = false },
-        ) {
-            Column(modifier = Modifier.padding(bottom = 32.dp)) {
-                Text(
-                    "Payment Mode",
-                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                    modifier = Modifier.padding(24.dp),
-                )
-                modes.forEach { mode ->
-                    DropdownMenuItem(
-                        text = { Text(mode) },
-                        onClick = {
-                            viewModel.updatePaymentMode(mode)
-                            showPaymentMenu = false
-                        },
+        val modes = prasad.vennam.moneypilot.util.PaymentModes.ALL_MODES
+
+        BaseBottomSheet(onDismissRequest = { showPaymentMenu = false }, title = stringResource(R.string.payment_mode)) {
+            Spacer(modifier = Modifier.height(16.dp))
+            androidx.compose.foundation.lazy.LazyColumn(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 32.dp)
+            ) {
+                items(modes.size) { index ->
+                    val mode = modes[index]
+                    androidx.compose.material3.ListItem(
+                        headlineContent = { Text(mode.name) },
+                        leadingContent = { Icon(mode.icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                viewModel.updatePaymentMode(mode.name)
+                                showPaymentMenu = false
+                            }
                     )
                 }
             }
@@ -388,7 +404,7 @@ fun PremiumToggle(
                     activeContainerColor = MaterialTheme.colorScheme.errorContainer,
                     activeContentColor = MaterialTheme.colorScheme.error,
                 ),
-        ) { Text("Expense") }
+        ) { Text(stringResource(R.string.expense)) }
         SegmentedButton(
             selected = selectedType == TransactionType.INCOME,
             onClick = { onTypeSelected(TransactionType.INCOME) },
@@ -398,7 +414,7 @@ fun PremiumToggle(
                     activeContainerColor = MaterialTheme.colorScheme.primaryContainer,
                     activeContentColor = MaterialTheme.colorScheme.primary,
                 ),
-        ) { Text("Income") }
+        ) { Text(stringResource(R.string.income)) }
     }
 }
 
@@ -409,6 +425,8 @@ fun PremiumAmountField(
     color: Color,
     isError: Boolean = false,
     supportingText: @Composable (() -> Unit)? = null,
+    keyboardOptions: KeyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+    keyboardActions: KeyboardActions = KeyboardActions.Default,
 ) {
     val displayColor = if (isError) MaterialTheme.colorScheme.error else color
     Card(
@@ -418,7 +436,7 @@ fun PremiumAmountField(
         border = androidx.compose.foundation.BorderStroke(1.dp, displayColor.copy(alpha = 0.2f)),
     ) {
         Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text("Amount", style = MaterialTheme.typography.labelMedium, color = displayColor.copy(alpha = 0.6f))
+            Text(stringResource(R.string.amount), style = MaterialTheme.typography.labelMedium, color = displayColor.copy(alpha = 0.6f))
             TextField(
                 value = value,
                 onValueChange = onValueChange,
@@ -429,7 +447,8 @@ fun PremiumAmountField(
                         color = displayColor,
                         textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                     ),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                keyboardOptions = keyboardOptions,
+                keyboardActions = keyboardActions,
                 isError = isError,
                 supportingText = supportingText,
                 colors =
@@ -497,6 +516,8 @@ fun PremiumTextField(
     onValueChange: (String) -> Unit,
     icon: ImageVector,
     singleLine: Boolean = true,
+    keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
+    keyboardActions: KeyboardActions = KeyboardActions.Default,
 ) {
     OutlinedTextField(
         value = value,
@@ -506,6 +527,8 @@ fun PremiumTextField(
         modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.large,
         singleLine = singleLine,
+        keyboardOptions = keyboardOptions,
+        keyboardActions = keyboardActions,
         colors =
             OutlinedTextFieldDefaults.colors(
                 unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),

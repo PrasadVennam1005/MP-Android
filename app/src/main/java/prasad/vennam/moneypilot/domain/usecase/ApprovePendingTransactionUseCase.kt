@@ -6,7 +6,7 @@ import prasad.vennam.moneypilot.data.entity.PendingTransaction
 import prasad.vennam.moneypilot.data.entity.Transaction
 import prasad.vennam.moneypilot.data.entity.TransactionType
 import prasad.vennam.moneypilot.data.repository.TransactionRepository
-import prasad.vennam.moneypilot.util.inPaisa
+import prasad.vennam.moneypilot.util.toMinorUnit
 import javax.inject.Inject
 
 class ApprovePendingTransactionUseCase
@@ -23,7 +23,7 @@ class ApprovePendingTransactionUseCase
             val currentCurrency = userPreferences.currency.first()
             val transaction =
                 Transaction(
-                    amount = pending.amount.inPaisa,
+                    amount = pending.amount.toMinorUnit,
                     timestamp = pending.timestamp,
                     categoryId = categoryId,
                     note = note.ifEmpty { pending.merchant },

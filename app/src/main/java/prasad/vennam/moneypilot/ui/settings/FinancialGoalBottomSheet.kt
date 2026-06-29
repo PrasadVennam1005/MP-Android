@@ -1,5 +1,6 @@
 package prasad.vennam.moneypilot.ui.settings
 
+import prasad.vennam.moneypilot.ui.components.BaseBottomSheet
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -41,10 +42,9 @@ fun FinancialGoalBottomSheet(
             Triple("Reduce Debt", "Systematically clear credit cards or loans.", Icons.Rounded.CreditCard),
         )
 
-    ModalBottomSheet(
+    BaseBottomSheet(
         onDismissRequest = onDismiss,
-        dragHandle = null,
-        containerColor = MaterialTheme.colorScheme.surface,
+        title = stringResource(R.string.financial_goal),
     ) {
         Column(
             modifier =
@@ -53,29 +53,6 @@ fun FinancialGoalBottomSheet(
                     .padding(bottom = 32.dp)
                     .verticalScroll(rememberScrollState()),
         ) {
-            // Header
-            Row(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 24.dp, vertical = 20.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    stringResource(R.string.financial_goal),
-                    style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
-                )
-                IconButton(
-                    onClick = onDismiss,
-                    modifier =
-                        Modifier
-                            .size(32.dp)
-                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f), CircleShape),
-                ) {
-                    Icon(Icons.Rounded.Close, null, modifier = Modifier.size(18.dp))
-                }
-            }
 
             Column(
                 modifier =

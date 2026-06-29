@@ -1,5 +1,6 @@
 package prasad.vennam.moneypilot.ui.loans
 
+import prasad.vennam.moneypilot.ui.components.BaseBottomSheet
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -46,7 +47,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import prasad.vennam.moneypilot.R
@@ -61,7 +66,7 @@ import prasad.vennam.moneypilot.util.AnalyticsHelper
 import prasad.vennam.moneypilot.util.CurrencyFormatter
 import prasad.vennam.moneypilot.util.LocalCurrencyCode
 import prasad.vennam.moneypilot.util.TrackScreen
-import prasad.vennam.moneypilot.util.inRupees
+import prasad.vennam.moneypilot.util.toMajorUnit
 import java.text.SimpleDateFormat
 import java.util.Currency
 import java.util.Date
@@ -91,11 +96,12 @@ fun LoanScreen(
     var loanToPay by remember { mutableStateOf<Loan?>(null) }
 
     // Use derived state or side effect to handle pre-fill
+    val newLoanStr = stringResource(R.string.new_loan)
     val initialPrefillLoan =
-        remember(prefillAmount, prefillRate, prefillTenureMonths, prefillEmi) {
+        remember(prefillAmount, prefillRate, prefillTenureMonths, prefillEmi, newLoanStr) {
             if (prefillAmount != null) {
                 Loan(
-                    name = "New Loan",
+                    name = newLoanStr,
                     totalAmount = (prefillAmount * 100).toLong(),
                     outstandingAmount = (prefillAmount * 100).toLong(),
                     emiAmount = ((prefillEmi ?: 0.0) * 100).toLong(),
@@ -530,12 +536,12 @@ fun FullWidthLoanCard(
                     horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
                     Text(
-                        text = "Paid: " + CurrencyFormatter.format((loan.totalAmount - loan.outstandingAmount).inRupees, currencyCode),
+                        text = stringResource(R.string.paid_amount, CurrencyFormatter.format((loan.totalAmount - loan.outstandingAmount).toMajorUnit, currencyCode)),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
                     )
                     Text(
-                        text = "Total: " + CurrencyFormatter.format(loan.totalAmount.inRupees, currencyCode),
+                        text = stringResource(R.string.total_amount, CurrencyFormatter.format(loan.totalAmount.toMajorUnit, currencyCode)),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
                     )
@@ -569,7 +575,7 @@ fun FullWidthLoanCard(
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = CurrencyFormatter.format(loan.emiAmount.inRupees, currencyCode),
+                        text = CurrencyFormatter.format(loan.emiAmount.toMajorUnit, currencyCode),
                         style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.ExtraBold),
                         color = MaterialTheme.colorScheme.onSurface,
                     )
@@ -583,7 +589,7 @@ fun FullWidthLoanCard(
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = CurrencyFormatter.format(loan.outstandingAmount.inRupees, currencyCode),
+                        text = CurrencyFormatter.format(loan.outstandingAmount.toMajorUnit, currencyCode),
                         style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.ExtraBold),
                         color = MaterialTheme.colorScheme.error,
                     )
@@ -663,10 +669,12 @@ fun RecordPaymentDialog(
     onDismiss: () -> Unit,
     onConfirm: (Long, Boolean, String) -> Unit,
 ) {
-    var amount by remember { mutableStateOf(loan.emiAmount.inRupees.toString()) }
+    var amount by remember { mutableStateOf(loan.emiAmount.toMajorUnit.toString()) }
     var isExtra by remember { mutableStateOf(false) }
     var note by remember { mutableStateOf("") }
     val currencyCode = LocalCurrencyCode.current
+    val focusManager = LocalFocusManager.current
+    val keyboardController = LocalSoftwareKeyboardController.current
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -677,7 +685,13 @@ fun RecordPaymentDialog(
                     value = amount,
                     onValueChange = { amount = it },
                     label = { Text(stringResource(R.string.amount)) },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Decimal,
+                        imeAction = ImeAction.Next
+                    ),
+                    keyboardActions = KeyboardActions(
+                        onNext = { focusManager.moveFocus(androidx.compose.ui.focus.FocusDirection.Next) }
+                    ),
                     modifier = Modifier.fillMaxWidth(),
                 )
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -688,6 +702,17 @@ fun RecordPaymentDialog(
                     value = note,
                     onValueChange = { note = it },
                     label = { Text(stringResource(R.string.payment_notes_optional)) },
+                    keyboardOptions = KeyboardOptions(
+                        imeAction = ImeAction.Done
+                    ),
+                    keyboardActions = KeyboardActions(
+                        onDone = {
+                            keyboardController?.hide()
+                            focusManager.clearFocus()
+                            val amt = amount.toDoubleOrNull() ?: 0.0
+                            onConfirm((amt * 100).toLong(), isExtra, note)
+                        }
+                    ),
                     modifier = Modifier.fillMaxWidth(),
                 )
             }
@@ -721,7 +746,7 @@ fun LoanFormBottomSheet(
         mutableStateOf(
             initialLoan
                 ?.totalAmount
-                ?.inRupees
+                ?.toMajorUnit
                 ?.toString()
                 ?.removeSuffix(".0") ?: "",
         )
@@ -730,7 +755,7 @@ fun LoanFormBottomSheet(
         mutableStateOf(
             initialLoan
                 ?.outstandingAmount
-                ?.inRupees
+                ?.toMajorUnit
                 ?.toString()
                 ?.removeSuffix(".0") ?: "",
         )
@@ -739,7 +764,7 @@ fun LoanFormBottomSheet(
         mutableStateOf(
             initialLoan
                 ?.emiAmount
-                ?.inRupees
+                ?.toMajorUnit
                 ?.toString()
                 ?.removeSuffix(".0") ?: "",
         )
@@ -752,7 +777,6 @@ fun LoanFormBottomSheet(
 
     val currencyCode = LocalCurrencyCode.current
     val currencySymbol = remember(currencyCode) { Currency.getInstance(currencyCode).symbol }
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     val totalVal = total.toDoubleOrNull()
     val outstandingVal = outstanding.toDoubleOrNull()
@@ -907,56 +931,22 @@ fun LoanFormBottomSheet(
             dueDayOfMonth.isNotBlank() &&
             !isDueDayError
 
-    ModalBottomSheet(
+    val focusManager = LocalFocusManager.current
+    val keyboardController = LocalSoftwareKeyboardController.current
+
+    BaseBottomSheet(
         onDismissRequest = onDismiss,
-        sheetState = sheetState,
-        containerColor = MaterialTheme.colorScheme.surface,
-        dragHandle = null,
+        title = if (initialLoan == null) stringResource(R.string.add_new_loan) else stringResource(R.string.edit_loan)
     ) {
         Column(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .navigationBarsPadding()
-                    .imePadding()
                     .padding(bottom = 32.dp)
                     .verticalScroll(rememberScrollState()),
         ) {
-            // Header with Close Icon
-            Row(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 24.dp, vertical = 20.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = if (initialLoan == null) stringResource(R.string.add_new_loan) else stringResource(R.string.edit_loan),
-                    style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
-                )
-                IconButton(
-                    onClick = onDismiss,
-                    modifier =
-                        Modifier
-                            .size(32.dp)
-                            .background(
-                                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                                CircleShape,
-                            ),
-                ) {
-                    Icon(
-                        Icons.Rounded.Close,
-                        contentDescription = stringResource(R.string.close),
-                        modifier = Modifier.size(18.dp),
-                    )
-                }
-            }
 
-            HorizontalDivider(
-                modifier = Modifier.padding(bottom = 24.dp),
-                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
-            )
+
 
             Column(
                 modifier = Modifier.padding(horizontal = 24.dp),
@@ -975,6 +965,10 @@ fun LoanFormBottomSheet(
                         )
                     },
                     placeholder = { Text(stringResource(R.string.lender_bank_placeholder)) },
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                    keyboardActions = KeyboardActions(
+                        onNext = { focusManager.moveFocus(androidx.compose.ui.focus.FocusDirection.Next) }
+                    ),
                     shape = MaterialTheme.shapes.large,
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -992,6 +986,10 @@ fun LoanFormBottomSheet(
                         )
                     },
                     placeholder = { Text(stringResource(R.string.loan_reference_placeholder)) },
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                    keyboardActions = KeyboardActions(
+                        onNext = { focusManager.moveFocus(androidx.compose.ui.focus.FocusDirection.Next) }
+                    ),
                     shape = MaterialTheme.shapes.large,
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -1027,19 +1025,25 @@ fun LoanFormBottomSheet(
                         if (isTotalError) {
                             val text =
                                 when {
-                                    totalVal == null -> "Invalid format"
+                                    totalVal == null -> stringResource(R.string.invalid_format)
                                     totalVal <= 0.0 -> stringResource(R.string.total_error_desc)
-                                    else -> "Total cannot exceed 100,000,000"
+                                    else -> stringResource(R.string.total_cannot_exceed)
                                 }
                             Text(text)
                         } else if (calcTotal != null) {
                             Text(
-                                text = "(Auto-calculated: ${CurrencyFormatter.format(calcTotal, currencyCode)})",
+                                text = stringResource(R.string.auto_calculated, CurrencyFormatter.format(calcTotal, currencyCode)),
                                 color = MaterialTheme.colorScheme.primary,
                             )
                         }
                     },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Decimal,
+                        imeAction = ImeAction.Next
+                    ),
+                    keyboardActions = KeyboardActions(
+                        onNext = { focusManager.moveFocus(androidx.compose.ui.focus.FocusDirection.Next) }
+                    ),
                     shape = MaterialTheme.shapes.large,
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -1075,18 +1079,24 @@ fun LoanFormBottomSheet(
                         if (isOutstandingError) {
                             val text =
                                 when {
-                                    outstandingVal == null -> "Invalid format"
-                                    outstandingVal < 0.0 -> "Outstanding cannot be negative"
+                                    outstandingVal == null -> stringResource(R.string.invalid_format)
+                                    outstandingVal < 0.0 -> stringResource(R.string.outstanding_cannot_be_negative)
                                     totalValFinal != null && outstandingVal > totalValFinal ->
                                         stringResource(
                                             R.string.outstanding_error_desc,
                                         )
-                                    else -> "Outstanding cannot exceed 100,000,000"
+                                    else -> stringResource(R.string.outstanding_cannot_exceed)
                                 }
                             Text(text)
                         }
                     },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Decimal,
+                        imeAction = ImeAction.Next
+                    ),
+                    keyboardActions = KeyboardActions(
+                        onNext = { focusManager.moveFocus(androidx.compose.ui.focus.FocusDirection.Next) }
+                    ),
                     shape = MaterialTheme.shapes.large,
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -1122,19 +1132,25 @@ fun LoanFormBottomSheet(
                         if (isEmiError) {
                             val text =
                                 when {
-                                    emiVal == null -> "Invalid format"
+                                    emiVal == null -> stringResource(R.string.invalid_format)
                                     emiVal <= 0.0 -> stringResource(R.string.emi_error_desc)
-                                    else -> "EMI cannot exceed 100,000,000"
+                                    else -> stringResource(R.string.emi_cannot_exceed)
                                 }
                             Text(text)
                         } else if (calcEmi != null) {
                             Text(
-                                text = "(Auto-calculated: ${CurrencyFormatter.format(calcEmi, currencyCode)})",
+                                text = stringResource(R.string.auto_calculated, CurrencyFormatter.format(calcEmi, currencyCode)),
                                 color = MaterialTheme.colorScheme.primary,
                             )
                         }
                     },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Decimal,
+                        imeAction = ImeAction.Next
+                    ),
+                    keyboardActions = KeyboardActions(
+                        onNext = { focusManager.moveFocus(androidx.compose.ui.focus.FocusDirection.Next) }
+                    ),
                     shape = MaterialTheme.shapes.large,
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -1173,19 +1189,25 @@ fun LoanFormBottomSheet(
                             if (isInterestError) {
                                 val text =
                                     when {
-                                        interestRateVal == null -> "Invalid format"
+                                        interestRateVal == null -> stringResource(R.string.invalid_format)
                                         interestRateVal < 0.0 -> stringResource(R.string.interest_error_desc)
-                                        else -> "Interest rate cannot exceed 100%"
+                                        else -> stringResource(R.string.interest_rate_cannot_exceed)
                                     }
                                 Text(text)
                             } else if (calcInterestRate != null) {
                                 Text(
-                                    text = "(Auto-calculated: ${String.format(Locale.US, "%.2f", calcInterestRate)}%)",
+                                    text = stringResource(R.string.auto_calculated, "${String.format(Locale.US, "%.2f", calcInterestRate)}%"),
                                     color = MaterialTheme.colorScheme.primary,
                                 )
                             }
                         },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Decimal,
+                            imeAction = ImeAction.Next
+                        ),
+                        keyboardActions = KeyboardActions(
+                            onNext = { focusManager.moveFocus(androidx.compose.ui.focus.FocusDirection.Next) }
+                        ),
                         shape = MaterialTheme.shapes.large,
                         modifier = Modifier.weight(1f),
                     )
@@ -1213,19 +1235,25 @@ fun LoanFormBottomSheet(
                             if (isTenureError) {
                                 val text =
                                     when {
-                                        tenureMonthsVal == null -> "Invalid format"
+                                        tenureMonthsVal == null -> stringResource(R.string.invalid_format)
                                         tenureMonthsVal <= 0 -> stringResource(R.string.tenure_error_desc)
-                                        else -> "Tenure cannot exceed 1200 months"
+                                        else -> stringResource(R.string.tenure_cannot_exceed)
                                     }
                                 Text(text)
                             } else if (calcTenureMonths != null) {
                                 Text(
-                                    text = "(Auto-calculated: $calcTenureMonths months)",
+                                    text = stringResource(R.string.auto_calculated, "$calcTenureMonths months"),
                                     color = MaterialTheme.colorScheme.primary,
                                 )
                             }
                         },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Number,
+                            imeAction = ImeAction.Next
+                        ),
+                        keyboardActions = KeyboardActions(
+                            onNext = { focusManager.moveFocus(androidx.compose.ui.focus.FocusDirection.Next) }
+                        ),
                         shape = MaterialTheme.shapes.large,
                         modifier = Modifier.weight(1f),
                     )
@@ -1251,7 +1279,16 @@ fun LoanFormBottomSheet(
                     placeholder = { Text(stringResource(R.string.emi_due_day_placeholder)) },
                     isError = isDueDayError,
                     supportingText = dueDaySupportingText,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Number,
+                        imeAction = ImeAction.Done
+                    ),
+                    keyboardActions = KeyboardActions(
+                        onDone = {
+                            keyboardController?.hide()
+                            focusManager.clearFocus()
+                        }
+                    ),
                     shape = MaterialTheme.shapes.large,
                     modifier = Modifier.fillMaxWidth(),
                 )

@@ -47,6 +47,7 @@ class MainViewModel
         private val exchangeRateRepo: ExchangeRateRepository,
         private val checkLoanRemindersUseCase: prasad.vennam.moneypilot.domain.usecase.CheckLoanRemindersUseCase,
         private val transactionRepository: TransactionRepository,
+        private val categoryRepository: CategoryRepository,
         private val budgetRepository: BudgetRepository,
         private val investmentRepository: InvestmentRepository,
         private val loanRepository: LoanRepository,
@@ -319,6 +320,7 @@ class MainViewModel
                 try {
                     DemoDataSeeder.seed(
                         transactionRepository,
+                        categoryRepository,
                         budgetRepository,
                         investmentRepository,
                         loanRepository,

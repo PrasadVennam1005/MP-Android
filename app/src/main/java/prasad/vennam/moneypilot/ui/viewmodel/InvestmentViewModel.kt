@@ -27,8 +27,8 @@ import prasad.vennam.moneypilot.domain.usecase.SaveInvestmentUseCase
 import prasad.vennam.moneypilot.domain.usecase.UpdateInvestmentUseCase
 import prasad.vennam.moneypilot.ui.viewmodel.state.*
 import prasad.vennam.moneypilot.util.FinanceMath
-import prasad.vennam.moneypilot.util.inPaisa
-import prasad.vennam.moneypilot.util.inRupees
+import prasad.vennam.moneypilot.util.toMinorUnit
+import prasad.vennam.moneypilot.util.toMajorUnit
 import javax.inject.Inject
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -343,7 +343,7 @@ class InvestmentViewModel
                                                     val start = investment.startDate ?: 0L
                                                     if (rate > 0.0 && start > 0L) {
                                                         FinanceMath.calculateCompoundedValue(
-                                                            investedAmount = investment.investedAmount.inRupees,
+                                                            investedAmount = investment.investedAmount.toMajorUnit,
                                                             annualRate = rate,
                                                             startDate = start,
                                                         )
@@ -353,8 +353,8 @@ class InvestmentViewModel
                                                 }
                                                 else -> null
                                             }
-                                        if (updatedValue != null && updatedValue.inPaisa != investment.currentValue) {
-                                            investment.copy(currentValue = updatedValue.inPaisa)
+                                        if (updatedValue != null && updatedValue.toMinorUnit != investment.currentValue) {
+                                            investment.copy(currentValue = updatedValue.toMinorUnit)
                                         } else {
                                             null
                                         }

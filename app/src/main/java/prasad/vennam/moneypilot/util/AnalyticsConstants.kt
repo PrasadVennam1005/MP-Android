@@ -47,6 +47,12 @@ object AnalyticsConstants {
         const val REPORTS_TAB_SWITCHED = "reports_tab_switched"
         const val INSIGHTS_AI_RECOMMENDATION_CLICKED = "insights_ai_recommendation_clicked"
         const val NEWS_TAB_SWITCHED = "news_tab_switched"
+        
+        // Sync Events
+        const val SYNC_STARTED = "sync_started"
+        const val SYNC_SUCCESS = "sync_success"
+        const val SYNC_FAILURE = "sync_failure"
+
         const val NEWS_CATEGORY_CLICKED = "news_category_clicked"
         const val NEWS_BOOKMARK_REMOVED = "news_bookmark_removed"
         const val NEWS_BOOKMARK_ADDED = "news_bookmark_added"

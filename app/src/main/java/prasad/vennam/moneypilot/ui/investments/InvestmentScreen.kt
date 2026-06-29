@@ -32,7 +32,7 @@ import prasad.vennam.moneypilot.util.AnalyticsConstants
 import prasad.vennam.moneypilot.util.AnalyticsHelper
 import prasad.vennam.moneypilot.util.LocalCurrencyCode
 import prasad.vennam.moneypilot.util.TrackScreen
-import prasad.vennam.moneypilot.util.inPaisa
+import prasad.vennam.moneypilot.util.toMinorUnit
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -299,8 +299,8 @@ fun InvestmentScreen(
                             Investment(
                                 name = name,
                                 type = type,
-                                investedAmount = invested.inPaisa,
-                                currentValue = current.inPaisa,
+                                investedAmount = invested.toMinorUnit,
+                                currentValue = current.toMinorUnit,
                                 symbol = symbol,
                                 quantity = qty,
                                 interestRate = rate,
@@ -313,8 +313,8 @@ fun InvestmentScreen(
                             investmentToEdit!!.copy(
                                 name = name,
                                 type = type,
-                                investedAmount = invested.inPaisa,
-                                currentValue = current.inPaisa,
+                                investedAmount = invested.toMinorUnit,
+                                currentValue = current.toMinorUnit,
                                 symbol = symbol,
                                 quantity = qty,
                                 interestRate = rate,

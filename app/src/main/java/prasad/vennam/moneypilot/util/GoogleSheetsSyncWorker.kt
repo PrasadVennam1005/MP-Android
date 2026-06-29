@@ -10,6 +10,7 @@ import dagger.assisted.AssistedInject
 import kotlinx.coroutines.flow.first
 import prasad.vennam.moneypilot.data.UserPreferences
 import prasad.vennam.moneypilot.data.repository.DataManagementRepository
+import prasad.vennam.moneypilot.util.AnalyticsHelper
 
 @HiltWorker
 class GoogleSheetsSyncWorker
@@ -19,6 +20,7 @@ class GoogleSheetsSyncWorker
         @Assisted params: WorkerParameters,
         private val repository: DataManagementRepository,
         private val userPreferences: UserPreferences,
+        private val analyticsHelper: AnalyticsHelper,
     ) : CoroutineWorker(context, params) {
         override suspend fun doWork(): Result {
             Log.d("GoogleSheetsSyncWorker", "doWork: Sync worker started")
@@ -44,6 +46,7 @@ class GoogleSheetsSyncWorker
                     email = userData.email,
                     repository = repository,
                     userPreferences = userPreferences,
+                    analyticsHelper = analyticsHelper,
                     spreadsheetId = spreadsheetId,
                     isRestore = false,
                     onSpreadsheetIdFound = { id ->

@@ -15,7 +15,6 @@ class TransactionRepository
     @Inject
     constructor(
         private val transactionDao: TransactionDao,
-        private val categoryDao: CategoryDao,
         private val pendingTransactionDao: PendingTransactionDao,
     ) {
         // Transactions
@@ -30,15 +29,6 @@ class TransactionRepository
         suspend fun getTransactionById(id: Long): Transaction? = transactionDao.getTransactionById(id)
 
         fun getTransactionsByCategory(categoryId: Long): Flow<List<Transaction>> = transactionDao.getTransactionsByCategory(categoryId)
-
-        // Categories
-        val allCategories: Flow<List<Category>> = categoryDao.getAllCategories()
-
-        suspend fun insertCategory(category: Category) = categoryDao.insertCategory(category)
-
-        suspend fun deleteCategory(category: Category) = categoryDao.deleteCategory(category)
-
-        suspend fun getCategoryById(id: Long): Category? = categoryDao.getCategoryById(id)
 
         // Pending Transactions
         val allPendingTransactions: Flow<List<PendingTransaction>> = pendingTransactionDao.getAllPendingTransactions()

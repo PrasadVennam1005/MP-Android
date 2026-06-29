@@ -33,6 +33,7 @@ class AiRepositoryImpl
         private val context: Context,
         private val llmService: LlmService,
         private val transactionRepository: TransactionRepository,
+        private val categoryRepository: CategoryRepository,
         private val budgetRepository: BudgetRepository,
         private val investmentRepository: InvestmentRepository,
         private val loanRepository: LoanRepository,
@@ -322,19 +323,19 @@ class AiRepositoryImpl
             val budgets = if (isLoggingOnly) emptyList() else budgetRepository.allBudgets.first().take(3)
             val investments = if (isLoggingOnly) emptyList() else investmentRepository.allInvestments.first().take(3)
             val loans = if (isLoggingOnly) emptyList() else loanRepository.allLoans.first().take(3)
-            val categories = transactionRepository.allCategories.first().associateBy { it.id }
+            val categories = categoryRepository.allCategories.first().associateBy { it.id }
 
             val sdf = java.text.SimpleDateFormat("dd MMM yyyy", java.util.Locale.getDefault())
 
             val expenseCategories =
-                transactionRepository.allCategories
+                categoryRepository.allCategories
                     .first()
                     .filter { it.isExpense }
                     .map { it.name }
                     .take(8)
                     .joinToString(", ")
             val incomeCategories =
-                transactionRepository.allCategories
+                categoryRepository.allCategories
                     .first()
                     .filter { !it.isExpense }
                     .map { it.name }
@@ -419,7 +420,7 @@ class AiRepositoryImpl
                 return@withContext try {
                     when (action) {
                         is AiAction.AddTransaction -> {
-                            val categories = transactionRepository.allCategories.first()
+                            val categories = categoryRepository.allCategories.first()
                             val categoryId =
                                 fuzzyMatchCategory(
                                     name = action.categoryName,

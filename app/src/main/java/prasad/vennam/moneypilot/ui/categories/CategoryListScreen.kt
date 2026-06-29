@@ -1,5 +1,6 @@
 package prasad.vennam.moneypilot.ui.categories
 
+import prasad.vennam.moneypilot.ui.components.BaseBottomSheet
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -39,7 +40,6 @@ fun CategoryListScreen(
     var showAddSheet by remember { mutableStateOf(false) }
     var editingCategory by remember { mutableStateOf<Category?>(null) }
     var categoryToDelete by remember { mutableStateOf<Category?>(null) }
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
 
     Scaffold(
@@ -94,7 +94,7 @@ fun CategoryListScreen(
 
             if (expenseCategories.isNotEmpty()) {
                 item {
-                    CategoryHeader("Expenses")
+                    CategoryHeader(stringResource(R.string.expenses))
                 }
                 items(expenseCategories, key = { it.id }) { category ->
                     CategoryItem(
@@ -110,7 +110,7 @@ fun CategoryListScreen(
 
             if (incomeCategories.isNotEmpty()) {
                 item {
-                    CategoryHeader("Income")
+                    CategoryHeader(stringResource(R.string.income))
                 }
                 items(incomeCategories, key = { it.id }) { category ->
                     CategoryItem(
@@ -127,13 +127,12 @@ fun CategoryListScreen(
     }
 
     if (showAddSheet) {
-        ModalBottomSheet(
+        BaseBottomSheet(
             onDismissRequest = {
                 showAddSheet = false
                 editingCategory = null
             },
-            sheetState = sheetState,
-            containerColor = MaterialTheme.colorScheme.surface,
+            title = if (editingCategory == null) stringResource(R.string.new_category) else stringResource(R.string.edit_category),
         ) {
             AddCategorySheetContent(
                 initialCategory = editingCategory,
@@ -146,20 +145,12 @@ fun CategoryListScreen(
                         ),
                     )
                     viewModel.saveCategory(newCategory)
-                    scope.launch { sheetState.hide() }.invokeOnCompletion {
-                        if (!sheetState.isVisible) {
-                            showAddSheet = false
-                            editingCategory = null
-                        }
-                    }
+                    showAddSheet = false
+                    editingCategory = null
                 },
                 onCancel = {
-                    scope.launch { sheetState.hide() }.invokeOnCompletion {
-                        if (!sheetState.isVisible) {
-                            showAddSheet = false
-                            editingCategory = null
-                        }
-                    }
+                    showAddSheet = false
+                    editingCategory = null
                 },
             )
         }
@@ -171,7 +162,7 @@ fun CategoryListScreen(
             title = { Text(stringResource(R.string.delete_category)) },
             text = {
                 Text(
-                    "Are you sure you want to delete '${cat.name}'? Transactions using this category will remain, but the category won't be available for new transactions.",
+                    stringResource(R.string.delete_category_confirm, cat.name),
                 )
             },
             confirmButton = {
@@ -319,11 +310,7 @@ fun AddCategorySheetContent(
                 .padding(24.dp)
                 .padding(bottom = 24.dp),
     ) {
-        Text(
-            text = if (initialCategory == null) "New Category" else "Edit Category",
-            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-        )
-        Spacer(modifier = Modifier.height(24.dp))
+
 
         // Type selection
         Row(modifier = Modifier.fillMaxWidth()) {
@@ -356,6 +343,7 @@ fun AddCategorySheetContent(
 
         val isNameError = name.isNotEmpty() && name.trim().isEmpty()
 
+        val keyboardController = androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
         OutlinedTextField(
             value = name,
             onValueChange = { name = it },
@@ -370,6 +358,25 @@ fun AddCategorySheetContent(
                 },
             singleLine = true,
             shape = MaterialTheme.shapes.large,
+            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                imeAction = androidx.compose.ui.text.input.ImeAction.Done
+            ),
+            keyboardActions = androidx.compose.foundation.text.KeyboardActions(
+                onDone = {
+                    keyboardController?.hide()
+                    if (name.isNotBlank()) {
+                        onSave(
+                            Category(
+                                id = initialCategory?.id ?: 0,
+                                name = name.trim(),
+                                iconName = selectedIcon,
+                                color = selectedColor,
+                                isExpense = isExpense,
+                            )
+                        )
+                    }
+                }
+            )
         )
 
         Spacer(modifier = Modifier.height(24.dp))

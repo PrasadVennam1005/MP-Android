@@ -428,7 +428,7 @@ fun AssetAllocationRow(
                     color = MaterialTheme.colorScheme.onSurface,
                 )
                 Text(
-                    text = "Invested: ${CurrencyFormatter.format(alloc.investedAmount, currencyCode)}",
+                    text = stringResource(R.string.invested_amount, CurrencyFormatter.format(alloc.investedAmount, currencyCode)),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

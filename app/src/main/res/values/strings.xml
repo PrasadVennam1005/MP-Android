@@ -41,7 +41,6 @@
     <string name="income">Income</string>
     <string name="expense">Expense</string>
     <string name="select_category">Select Category</string>
-    <string name="ok">OK</string>
     <string name="save_transaction">Save Transaction</string>
     <string name="back">Back</string>
     <string name="save_expense">Save Expense</string>
@@ -59,7 +58,6 @@
     <string name="icon">Icon</string>
     <string name="color">Color</string>
     <string name="category_name">Category Name</string>
-    <string name="delete">Delete</string>
     <string name="delete_category">Delete Category</string>
     <string name="add_category">Add Category</string>
     <string name="continue_as_guest">Continue as Guest</string>
@@ -635,4 +633,185 @@
     <string name="terms_of_service">Terms of Service</string>
     <string name="agree_to_policy_and"> and </string>
     <string name="privacy_policy">Privacy Policy</string>
+
+    <!-- Phase 2: Dashboard Strings -->
+    <string name="create_savings_goals">Create Savings Goals</string>
+    <string name="savings_goals_desc">Set custom milestones with rich metrics</string>
+    <string name="savings_goals_count">Savings Goals (%1$d/%2$d)</string>
+    <string name="saved_amount_format">Saved: %1$s</string>
+    <string name="target_amount_format">Target: %1$s</string>
+    <string name="grow_your_financial_iq">Grow Your Financial IQ</string>
+    <string name="learn_finance_desc">22 expert-curated lessons on budgeting, investing &amp; more</string>
+    <string name="percentage_format">%1$d%%</string>
+    <string name="start_btn">Start</string>
+    <string name="next_emi">Next EMI</string>
+    <string name="total_outstanding">Total Outstanding</string>
+
+    <!-- Phase 3: Transactions & Categories Strings -->
+    <string name="invalid_format">Invalid format</string>
+    <string name="amount_cannot_exceed">Amount cannot exceed 100,000,000</string>
+    <string name="new_category">New Category</string>
+    <string name="edit_category">Edit Category</string>
+    <string name="delete_category_confirm">Are you sure you want to delete \'%1$s\'? Transactions using this category will remain, but the category won\'t be available for new transactions.</string>
+
+    <!-- Phase 4: Budgets &amp; Savings Goals Strings -->
+    <string name="savings_goals">Savings Goals</string>
+    <string name="add_goal">Add Goal</string>
+    <string name="create_savings_goal">Create Savings Goal</string>
+    <string name="edit_savings_goal">Edit Savings Goal</string>
+    <string name="goal_name">Goal Name</string>
+    <string name="initially_saved">Initially Saved</string>
+    <string name="target_deadline">Target Deadline</string>
+    <string name="goal_theme_color">Goal Theme Color</string>
+    <string name="goal_icon">Goal Icon</string>
+    <string name="create_goal">Create Goal</string>
+    <string name="edit">Edit</string>
+    <string name="saved">Saved</string>
+    <string name="target">Target</string>
+    <string name="withdraw_action">Withdraw</string>
+    <string name="deposit_action">Deposit</string>
+    <string name="deposit_funds">Deposit Funds</string>
+    <string name="withdraw_funds">Withdraw Funds</string>
+    <string name="deposit_funds_desc">Enter the amount you want to virtually add to this goal.</string>
+    <string name="withdraw_funds_desc">Enter the amount you want to virtually retrieve from this goal.</string>
+    <string name="completed">Completed</string>
+    <string name="achieved">achieved</string>
+    <string name="goal_fully_funded">Congratulations! You have fully funded this goal!</string>
+    <string name="saved_of_target">%1$s saved of %2$s</string>
+    <!-- Phase 5: Investments &amp; Loans Strings -->
+    <string name="new_loan">New Loan</string>
+    <string name="total_cannot_exceed">Total cannot exceed 100,000,000</string>
+    <string name="auto_calculated">(Auto-calculated: %1$s)</string>
+    <string name="outstanding_cannot_be_negative">Outstanding cannot be negative</string>
+    <string name="outstanding_cannot_exceed">Outstanding cannot exceed 100,000,000</string>
+    <string name="emi_cannot_exceed">EMI cannot exceed 100,000,000</string>
+    <string name="interest_rate_cannot_exceed">Interest rate cannot exceed 100%%</string>
+    <string name="tenure_cannot_exceed">Tenure cannot exceed 1200 months</string>
+    <string name="emi_report_subject">MoneyPilot Loan EMI Report</string>
+    <string name="advanced_tools">Advanced Tools</string>
+    <string name="paid_amount">Paid: %1$s</string>
+    <string name="total_amount">Total: %1$s</string>
+    <string name="quantity_cannot_exceed">Quantity cannot exceed 100,000,000</string>
+    <string name="asset_allocation_advisor">Asset Allocation Advisor</string>
+    <string name="add_investments_to_see_allocation">Add investments to see your asset allocation breakdown.</string>
+    <string name="assets">Assets</string>
+    <string name="target_percent">Target: %1$d%%</string>
+    <string name="optimal_alignment">Optimal Alignment</string>
+    <string name="rebalancing_actions">Rebalancing Actions</string>
+    <string name="portfolio_matches_risk_allocation">Your portfolio matches the %1$s risk allocation. Great job!</string>
+    <string name="rebalance_add">Add %1$s to %2$s to meet your %3$d%% target.</string>
+    <string name="rebalance_reduce">Reduce %1$s by %2$s to return to your %3$d%% limit.</string>
+
+    <!-- Phase 6: Subscriptions &amp; Settings Strings -->
+    <string name="subscriptions">Subscriptions</string>
+    <string name="add_subscription">Add Subscription</string>
+    <string name="track_recurring_subscriptions">Track Recurring Subscriptions</string>
+    <string name="subscriptions_desc">Keep tabs on Netflix, rent, utilities, and more. Get notified and approve logging with one tap.</string>
+    <string name="due_today">Due Today</string>
+    <string name="due_tomorrow">Due Tomorrow</string>
+    <string name="in_days">In %1$d days</string>
+    <string name="subscription_name">Subscription Name</string>
+    <string name="billing_cycle">Billing Cycle</string>
+    <string name="weekly">Weekly</string>
+    <string name="next_payment_due_date">Next Payment Due Date</string>
+    <string name="category_label">Category</string>
+    <string name="enable_alert_reminder">Enable Alert Reminder</string>
+    <string name="save_subscription">Save Subscription</string>
+    <string name="next_payment">Next: %1$s (%2$s)</string>
+    <string name="edit_subscription">Edit Subscription</string>
+
+    <string name="help_and_faq">Help &amp; FAQ</string>
+    <string name="help_and_faq_subtitle">Browse answers or contact us</string>
+    <string name="terms_of_service_subtitle">View our terms and conditions</string>
+    <string name="privacy_policy_subtitle">How we handle your data</string>
+    <string name="developer_tools">Developer Tools</string>
+    <string name="enable_devtools">Enable DevTools</string>
+    <string name="enable_devtools_subtitle">Unlock restricted features for testing</string>
+    <string name="load_demo_data">Load Demo Data (INR)</string>
+    <string name="load_demo_data_subtitle">Seeds rich Indian currency datasets for screenshots</string>
+    <string name="load_demo_data_title">Load Demo Data?</string>
+    <string name="seeding_demo_data">Seeding Indian currency demo data...</string>
+    <string name="seeding_demo_data_desc">This will clear all your current guest data, insert a comprehensive set of Indian Rupee (₹) transaction, budget, investment, and loan history, and relaunch the app. This is perfect for generating Play Store screenshots. Do you want to proceed?</string>
+    <string name="yes_load_relaunch">Yes, Load &amp; Relaunch</string>
+    <string name="moneypilot_premium">MoneyPilot Premium</string>
+    <string name="premium_subtitle">Remove ads and support development</string>
+    <string name="recurring_subscriptions">Recurring Subscriptions</string>
+    <string name="subscriptions_subtitle">Track Netflix, Rent, utilities &amp; billing alerts</string>
+    <string name="biometric_authentication">Biometric Authentication</string>
+    <string name="biometric_subtitle">Require fingerprint/face to open app</string>
+    <string name="enable_biometric_lock">Enable Biometric Lock</string>
+    <string name="enable_biometric_subtitle">Verify your identity to enable biometric lock</string>
+    <string name="auth_failed">Authentication failed: %1$s</string>
+    <string name="auth_requires_restart">Biometric authentication requires app restart to work correctly.</string>
+    <string name="auto_track_notifications">Auto-Track via Notifications</string>
+    <string name="auto_track_notifications_subtitle">Parse notifications to auto-add expenses</string>
+    <string name="auto_track_sms">Auto-Track via SMS</string>
+    <string name="auto_track_sms_subtitle">Parse debit/credit SMS to auto-add expenses</string>
+    <string name="disable_sms_tracking_msg">Please disable permission from app settings to stop SMS tracking.</string>
+    <string name="currency_subtitle_format">%1$s (%2$s) • %3$s</string>
+    <string name="notification_alerts_enabled">Notification alerts enabled!</string>
+    <string name="notification_permission_denied">Notification permission denied.</string>
+    <string name="category_alerts">Alerts</string>
+    <string name="category_sync">Sync</string>
+    <string name="category_system">System</string>
+    <string name="notification_alerts_off">Notification alerts are off</string>
+    <string name="notification_alerts_off_desc">Enable them to receive daily wealth feeds, budget warnings, and loan reminders.</string>
+    <string name="turn_on">Turn On</string>
+    <string name="no_link">No Link</string>
+    <string name="all_caught_up">All Caught Up! ✨</string>
+    <string name="no_category_notifications">No %1$s Notifications</string>
+    <string name="empty_notifications_desc">When alerts, budget targets, or backups trigger, you\'ll see them listed here.</string>
+    <string name="yesterday">Yesterday</string>
+    <string name="invested_amount">Invested: %1$s</string>
+
+    <!-- Learn Finance -->
+    <string name="article">Article</string>
+    <string name="read_time_minutes">%1$d min read</string>
+    <string name="related_articles">Related Articles</string>
+    <string name="test_your_knowledge">Test Your Knowledge</string>
+    <string name="correct">Correct</string>
+    <string name="incorrect">Incorrect</string>
+    <string name="explanation">Explanation</string>
+    <string name="search_articles">Search articles...</string>
+
+    <!-- Support / FAQ -->
+    <string name="ask_a_question">Ask a Question</string>
+    <string name="subject">Subject</string>
+    <string name="subject_placeholder">e.g. Sync not working</string>
+    <string name="message">Message</string>
+    <string name="message_placeholder">Describe your issue or question in detail…</string>
+
+    <!-- More Learn Finance / FAQ -->
+    <string name="close_search">Close Search</string>
+    <string name="featured">Featured</string>
+    <string name="articles">Articles</string>
+    <string name="no_articles_found">No articles found</string>
+    <string name="read_time_minutes_quiz">%1$d min read • Quiz</string>
+    <string name="quiz_label">QUIZ</string>
+    <string name="how_can_we_help">How can we help?</string>
+    <string name="faq_description">Browse questions below or tap "Ask a Question" at the bottom to email our team.</string>
+    <string name="send_email">Send Email</string>
+    <string name="send_email_desc">Opens your email app with our address pre-filled.</string>
+    <!-- Premium Screen -->
+    <string name="premium_title">MoneyPilot Premium</string>
+    <string name="upgrade_to_premium">Upgrade to Premium</string>
+    <string name="premium_description">Get an ad-free experience and support the development of MoneyPilot.</string>
+    <string name="you_are_premium">You are Premium!</string>
+    <string name="premium_thank_you">Thank you for supporting MoneyPilot. Ads are permanently removed.</string>
+    <string name="loading_products">Loading products...</string>
+    <string name="buy_for_price">Buy for %1$s</string>
+    <!-- Subscription Screen -->
+    <!-- Detailed Report & Prepayment Calculator -->
+
+    <string name="interest_rate">Interest Rate</string>
+    <string name="delete">Delete</string>
+    <string name="ok">OK</string>
+    <string name="duration_years_format">%1$s Years</string>
+    <string name="duration_months_format">%1$s Months</string>
+    <string name="interest_rate_format">%1$s%% p.a.</string>
+    <string name="format_pdf">PDF</string>
+    <string name="format_csv">CSV</string>
+    <string name="one_time">One-time</string>
+    <string name="prepayment_amount">Prepayment Amount</string>
+    <string name="months_saved_format">%1$s Mo</string>
 </resources>

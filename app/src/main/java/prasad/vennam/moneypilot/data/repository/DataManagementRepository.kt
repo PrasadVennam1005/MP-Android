@@ -20,6 +20,9 @@ class DataManagementRepository
         val investmentDao: InvestmentDao,
         val loanDao: LoanDao,
         val emergencyFundDao: EmergencyFundDao,
+        val subscriptionDao: SubscriptionDao,
+        val savingGoalDao: SavingGoalDao,
+        val loanPaymentDao: LoanPaymentDao,
         private val database: MoneyPilotDatabase,
     ) {
         /**
@@ -32,6 +35,9 @@ class DataManagementRepository
             investments: List<Investment>,
             loans: List<Loan> = emptyList(),
             emergencyFund: EmergencyFund? = null,
+            subscriptions: List<Subscription> = emptyList(),
+            savingGoals: List<SavingGoal> = emptyList(),
+            loanPayments: List<LoanPayment> = emptyList(),
         ) {
             database.withTransaction {
                 database.clearAllTables()
@@ -41,6 +47,9 @@ class DataManagementRepository
                 investments.forEach { investmentDao.insertInvestment(it) }
                 loans.forEach { loanDao.insertLoan(it) }
                 emergencyFund?.let { emergencyFundDao.insertEmergencyFund(it) }
+                subscriptions.forEach { subscriptionDao.insertSubscription(it) }
+                savingGoals.forEach { savingGoalDao.insertSavingGoal(it) }
+                loanPayments.forEach { loanPaymentDao.insertPayment(it) }
             }
         }
 

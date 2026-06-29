@@ -58,7 +58,7 @@ fun ArticleDetailScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Article") },
+                title = { Text(stringResource(R.string.article)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.back))
@@ -68,7 +68,7 @@ fun ArticleDetailScreen(
                     IconButton(onClick = { viewModel.toggleBookmark(articleId) }) {
                         Icon(
                             if (isBookmarked) Icons.Rounded.Bookmark else Icons.Rounded.BookmarkBorder,
-                            contentDescription = "Bookmark",
+                            contentDescription = stringResource(R.string.bookmark),
                             tint = if (isBookmarked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
                         )
                     }
@@ -144,7 +144,7 @@ fun ArticleDetailScreen(
                             )
                             Spacer(modifier = Modifier.width(4.dp))
                             Text(
-                                text = "${article.readTimeMinutes} min read",
+                                text = stringResource(R.string.read_time_minutes, article.readTimeMinutes),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -171,7 +171,7 @@ fun ArticleDetailScreen(
                 if (relatedArticles.isNotEmpty()) {
                     Spacer(modifier = Modifier.height(24.dp))
                     Text(
-                        text = "Related Articles",
+                        text = stringResource(R.string.related_articles),
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                         modifier = Modifier.padding(vertical = 8.dp),
                     )
@@ -226,7 +226,7 @@ fun ArticleQuizCard(quiz: prasad.vennam.moneypilot.data.model.ArticleQuiz) {
                     tint = MaterialTheme.colorScheme.primary,
                 )
                 Text(
-                    text = "Test Your Knowledge",
+                    text = stringResource(R.string.test_your_knowledge),
                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                     color = MaterialTheme.colorScheme.primary,
                 )
@@ -296,13 +296,13 @@ fun ArticleQuizCard(quiz: prasad.vennam.moneypilot.data.model.ArticleQuiz) {
                                 if (isCorrectOption) {
                                     Icon(
                                         imageVector = Icons.Rounded.CheckCircle,
-                                        contentDescription = "Correct",
+                                        contentDescription = stringResource(R.string.correct),
                                         tint = Color(0xFF2E7D32),
                                     )
                                 } else if (isSelected) {
                                     Icon(
                                         imageVector = Icons.Rounded.Cancel,
-                                        contentDescription = "Incorrect",
+                                        contentDescription = stringResource(R.string.incorrect),
                                         tint = Color(0xFFC62828),
                                     )
                                 }
@@ -317,7 +317,7 @@ fun ArticleQuizCard(quiz: prasad.vennam.moneypilot.data.model.ArticleQuiz) {
                 HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
                 Spacer(modifier = Modifier.height(12.dp))
                 Text(
-                    text = "Explanation",
+                    text = stringResource(R.string.explanation),
                     style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

@@ -1,5 +1,6 @@
 package prasad.vennam.moneypilot.ui.subscription
 
+import prasad.vennam.moneypilot.ui.components.BaseBottomSheet
 import androidx.compose.animation.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -40,7 +41,7 @@ import prasad.vennam.moneypilot.util.AnalyticsHelper
 import prasad.vennam.moneypilot.util.CurrencyFormatter
 import prasad.vennam.moneypilot.util.LocalCurrencyCode
 import prasad.vennam.moneypilot.util.TrackScreen
-import prasad.vennam.moneypilot.util.inRupees
+import prasad.vennam.moneypilot.util.toMajorUnit
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -65,7 +66,7 @@ fun SubscriptionScreen(
             TopAppBar(
                 title = {
                     Text(
-                        text = "Subscriptions",
+                        text = stringResource(R.string.subscriptions),
                         style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
                     )
                 },
@@ -93,7 +94,7 @@ fun SubscriptionScreen(
                 contentColor = MaterialTheme.colorScheme.onPrimary,
                 shape = MaterialTheme.shapes.large,
             ) {
-                Icon(Icons.Rounded.Add, contentDescription = "Add Subscription")
+                Icon(Icons.Rounded.Add, contentDescription = stringResource(R.string.add_subscription))
             }
         },
         containerColor = MaterialTheme.colorScheme.background,
@@ -126,7 +127,7 @@ fun SubscriptionScreen(
                                     AnalyticsConstants.Event.SUBSCRIPTION_DELETED,
                                     mapOf(
                                         AnalyticsConstants.Param.SUBSCRIPTION_NAME to subscription.name,
-                                        AnalyticsConstants.Param.SUBSCRIPTION_AMOUNT to subscription.amount.inRupees,
+                                        AnalyticsConstants.Param.SUBSCRIPTION_AMOUNT to subscription.amount.toMajorUnit,
                                     ),
                                 )
                                 viewModel.deleteSubscription(subscription)
@@ -155,7 +156,7 @@ fun SubscriptionScreen(
                     eventName,
                     mapOf(
                         AnalyticsConstants.Param.SUBSCRIPTION_NAME to name,
-                        AnalyticsConstants.Param.SUBSCRIPTION_AMOUNT to amount.inRupees,
+                        AnalyticsConstants.Param.SUBSCRIPTION_AMOUNT to amount.toMajorUnit,
                         AnalyticsConstants.Param.SUBSCRIPTION_CYCLE to cycle,
                         AnalyticsConstants.Param.SUBSCRIPTION_MODE to mode,
                         AnalyticsConstants.Param.SUBSCRIPTION_NOTIFY to notify,
@@ -206,14 +207,14 @@ fun EmptySubscriptionsState() {
         }
         Spacer(modifier = Modifier.height(16.dp))
         Text(
-            text = "Track Recurring Subscriptions",
+            text = stringResource(R.string.track_recurring_subscriptions),
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onBackground,
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
-            text = "Keep tabs on Netflix, rent, utilities, and more. Get notified and approve logging with one tap.",
+            text = stringResource(R.string.subscriptions_desc),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
             textAlign = TextAlign.Center,
@@ -284,8 +285,14 @@ fun SubscriptionCard(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
+                val cycleDisplay = when (subscription.billingCycle) {
+                    "Weekly" -> stringResource(R.string.weekly)
+                    "Monthly" -> stringResource(R.string.monthly)
+                    "Yearly" -> stringResource(R.string.yearly)
+                    else -> subscription.billingCycle
+                }
                 Text(
-                    text = "Next: ${dateFormatter.format(Date(subscription.nextPaymentDate))} (${subscription.billingCycle})",
+                    text = stringResource(R.string.next_payment, dateFormatter.format(Date(subscription.nextPaymentDate)), cycleDisplay),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -315,9 +322,9 @@ fun SubscriptionCard(
                         Text(
                             text =
                                 when (daysRemaining) {
-                                    0 -> "Due Today"
-                                    1 -> "Due Tomorrow"
-                                    else -> "In $daysRemaining days"
+                                    0 -> stringResource(R.string.due_today)
+                                    1 -> stringResource(R.string.due_tomorrow)
+                                    else -> stringResource(R.string.in_days, daysRemaining)
                                 },
                             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                             style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp, fontWeight = FontWeight.Bold),
@@ -328,7 +335,7 @@ fun SubscriptionCard(
             }
 
             Column(horizontalAlignment = Alignment.End) {
-                val formattedAmount = CurrencyFormatter.format(subscription.amount.inRupees, currencyCode)
+                val formattedAmount = CurrencyFormatter.format(subscription.amount.toMajorUnit, currencyCode)
                 Text(
                     text = formattedAmount,
                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.ExtraBold),
@@ -340,7 +347,7 @@ fun SubscriptionCard(
                 ) {
                     Icon(
                         imageVector = Icons.Rounded.Delete,
-                        contentDescription = "Delete",
+                        contentDescription = stringResource(R.string.delete),
                         tint = MaterialTheme.colorScheme.error.copy(alpha = 0.6f),
                         modifier = Modifier.size(18.dp),
                     )
@@ -370,64 +377,71 @@ fun SubscriptionFormBottomSheet(
 
     var showDatePicker by remember { mutableStateOf(false) }
     val dateFormatter = remember { SimpleDateFormat("dd MMMM, yyyy", Locale.getDefault()) }
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-
-    ModalBottomSheet(
+    val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
+    val keyboardController = androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
+    BaseBottomSheet(
         onDismissRequest = onDismiss,
-        sheetState = sheetState,
+        title = if (subscription == null) stringResource(R.string.add_subscription) else stringResource(R.string.edit_subscription),
     ) {
         Column(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 24.dp, vertical = 16.dp)
+                    .padding(horizontal = 24.dp)
                     .padding(bottom = 32.dp)
                     .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            Text(
-                text = if (subscription == null) "Add Subscription" else "Edit Subscription",
-                style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
-            )
-
             OutlinedTextField(
                 value = name,
                 onValueChange = { name = it },
-                label = { Text("Subscription Name") },
+                label = { Text(stringResource(R.string.subscription_name)) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
                 shape = MaterialTheme.shapes.large,
+                keyboardOptions = KeyboardOptions(capitalization = androidx.compose.ui.text.input.KeyboardCapitalization.Words, imeAction = androidx.compose.ui.text.input.ImeAction.Next),
+                keyboardActions = androidx.compose.foundation.text.KeyboardActions(onNext = { focusManager.moveFocus(androidx.compose.ui.focus.FocusDirection.Next) }),
             )
 
             OutlinedTextField(
                 value = amountStr,
                 onValueChange = { amountStr = it },
-                label = { Text("Amount (₹)") },
+                label = { Text(stringResource(R.string.amount)) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
                 shape = MaterialTheme.shapes.large,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = androidx.compose.ui.text.input.ImeAction.Done),
+                keyboardActions = androidx.compose.foundation.text.KeyboardActions(onDone = {
+                    keyboardController?.hide()
+                    focusManager.clearFocus()
+                }),
             )
 
             // Billing Cycle Select
-            Text("Billing Cycle", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium)
+            Text(stringResource(R.string.billing_cycle), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium)
             Row(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 listOf("Weekly", "Monthly", "Yearly").forEach { cycle ->
                     val selected = billingCycle == cycle
+                    val cycleDisplay = when (cycle) {
+                        "Weekly" -> stringResource(R.string.weekly)
+                        "Monthly" -> stringResource(R.string.monthly)
+                        "Yearly" -> stringResource(R.string.yearly)
+                        else -> cycle
+                    }
                     FilterChip(
                         selected = selected,
                         onClick = { billingCycle = cycle },
-                        label = { Text(cycle) },
+                        label = { Text(cycleDisplay) },
                         modifier = Modifier.weight(1f),
                     )
                 }
             }
 
             // Next Due Date Selection Box
-            Text("Next Payment Due Date", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium)
+            Text(stringResource(R.string.next_payment_due_date), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium)
             Surface(
                 onClick = { showDatePicker = true },
                 modifier =
@@ -462,12 +476,12 @@ fun SubscriptionFormBottomSheet(
             }
 
             // Payment Mode Selection
-            Text("Payment Mode", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium)
+            Text(stringResource(R.string.payment_mode), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium)
             LazyRow(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                val modes = listOf("UPI", "Credit Card", "Debit Card", "Bank Transfer", "Cash")
+                val modes = prasad.vennam.moneypilot.util.PaymentModes.ALL
                 items(modes) { mode ->
                     val selected = paymentMode == mode
                     FilterChip(
@@ -479,7 +493,7 @@ fun SubscriptionFormBottomSheet(
             }
 
             // Category Selection
-            Text("Category", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium)
+            Text(stringResource(R.string.category_label), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium)
             LazyRow(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier.fillMaxWidth(),
@@ -500,7 +514,7 @@ fun SubscriptionFormBottomSheet(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                Text("Enable Alert Reminder", fontWeight = FontWeight.SemiBold)
+                Text(stringResource(R.string.enable_alert_reminder), fontWeight = FontWeight.SemiBold)
                 Switch(
                     checked = isNotificationEnabled,
                     onCheckedChange = { isNotificationEnabled = it },
@@ -529,7 +543,7 @@ fun SubscriptionFormBottomSheet(
                         .padding(top = 8.dp),
                 shape = MaterialTheme.shapes.large,
             ) {
-                Text("Save Subscription")
+                Text(stringResource(R.string.save_subscription))
             }
         }
     }
@@ -543,7 +557,7 @@ fun SubscriptionFormBottomSheet(
                     nextPaymentDate = datePickerState.selectedDateMillis ?: nextPaymentDate
                     showDatePicker = false
                 }) {
-                    Text("OK")
+                    Text(stringResource(R.string.ok))
                 }
             },
             dismissButton = {

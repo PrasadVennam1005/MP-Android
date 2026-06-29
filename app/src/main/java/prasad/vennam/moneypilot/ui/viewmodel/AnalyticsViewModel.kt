@@ -24,7 +24,7 @@ import prasad.vennam.moneypilot.domain.usecase.GetCategoriesUseCase
 import prasad.vennam.moneypilot.domain.usecase.GetInvestmentsUseCase
 import prasad.vennam.moneypilot.domain.usecase.GetTransactionsUseCase
 import prasad.vennam.moneypilot.feature.ai.domain.AiRepository
-import prasad.vennam.moneypilot.util.inRupees
+import prasad.vennam.moneypilot.util.toMajorUnit
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -133,10 +133,10 @@ class AnalyticsViewModel
                     amountInMinor: Long,
                     fromCurrency: String,
                 ): Double {
-                    if (fromCurrency == currentCurrency) return amountInMinor.inRupees
+                    if (fromCurrency == currentCurrency) return amountInMinor.toMajorUnit
                     val rateFrom = rates[fromCurrency] ?: 1.0
                     val rateTo = rates[currentCurrency] ?: 1.0
-                    val amountInUSD = amountInMinor.inRupees / rateFrom
+                    val amountInUSD = amountInMinor.toMajorUnit / rateFrom
                     return amountInUSD * rateTo
                 }
 

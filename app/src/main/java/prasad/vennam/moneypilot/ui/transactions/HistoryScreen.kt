@@ -1,5 +1,6 @@
 package prasad.vennam.moneypilot.ui.transactions
 
+import prasad.vennam.moneypilot.ui.components.BaseBottomSheet
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -40,7 +41,6 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
@@ -92,7 +92,7 @@ import prasad.vennam.moneypilot.util.AnalyticsHelper
 import prasad.vennam.moneypilot.util.CurrencyFormatter
 import prasad.vennam.moneypilot.util.LocalCurrencyCode
 import prasad.vennam.moneypilot.util.TrackScreen
-import prasad.vennam.moneypilot.util.inRupees
+import prasad.vennam.moneypilot.util.toMajorUnit
 import java.text.SimpleDateFormat
 import java.util.Date
 
@@ -524,7 +524,7 @@ fun FintechTransactionCard(
             }
 
             Column(horizontalAlignment = Alignment.End) {
-                val formattedAmount = CurrencyFormatter.format(transaction.amount.inRupees, currencyCode)
+                val formattedAmount = CurrencyFormatter.format(transaction.amount.toMajorUnit, currencyCode)
                 val sign = if (transaction.type == TransactionType.INCOME) "+" else "-"
                 Text(
                     text = "$sign$formattedAmount",
@@ -554,23 +554,22 @@ fun FilterBottomSheet(
     onReset: () -> Unit,
     onDismiss: () -> Unit,
 ) {
-    ModalBottomSheet(onDismissRequest = onDismiss) {
+    BaseBottomSheet(
+        onDismissRequest = onDismiss,
+        title = stringResource(R.string.filters),
+    ) {
         Column(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 24.dp, vertical = 16.dp)
+                    .padding(horizontal = 24.dp)
                     .padding(bottom = 32.dp),
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
+                horizontalArrangement = Arrangement.End,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(
-                    stringResource(R.string.filters),
-                    style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
-                )
                 TextButton(onClick = onReset) { Text(stringResource(R.string.reset)) }
             }
 
@@ -609,7 +608,7 @@ fun FilterBottomSheet(
                 stringResource(R.string.payment_mode),
                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
             )
-            val modes = prasad.vennam.moneypilot.util.PaymentModes.ALL
+            val modes = prasad.vennam.moneypilot.util.PaymentModes.ALL_MODES
             LazyRow(
                 modifier =
                     Modifier
@@ -624,11 +623,18 @@ fun FilterBottomSheet(
                         label = { Text(stringResource(R.string.all)) },
                     )
                 }
-                items(modes, key = { it }) { mode ->
+                items(modes, key = { it.name }) { mode ->
                     FilterChip(
-                        selected = selectedPaymentMode == mode,
-                        onClick = { onPaymentModeSelect(mode) },
-                        label = { Text(mode) },
+                        selected = selectedPaymentMode == mode.name,
+                        onClick = { onPaymentModeSelect(mode.name) },
+                        label = { Text(mode.name) },
+                        leadingIcon = {
+                            Icon(
+                                mode.icon,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        },
                     )
                 }
             }

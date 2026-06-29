@@ -15,7 +15,7 @@ import prasad.vennam.moneypilot.MainActivity
 import prasad.vennam.moneypilot.data.dao.LoanDao
 import prasad.vennam.moneypilot.data.dao.NotificationDao
 import prasad.vennam.moneypilot.data.entity.Notification
-import prasad.vennam.moneypilot.util.inRupees
+import prasad.vennam.moneypilot.util.toMajorUnit
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -47,7 +47,8 @@ object LoanNotificationScheduler {
                     val nextEmiDateStr = dateFormatter.format(Date(loan.nextEmiDate))
                     val lenderText = if (loan.lenderName.isNotBlank()) " (${loan.lenderName})" else ""
                     val title = "EMI Reminder: ${loan.name}"
-                    val message = "Your monthly EMI of ${loan.emiAmount.inRupees} ${loan.currencyCode} for ${loan.name}$lenderText is due on $nextEmiDateStr."
+                    val amountFormatted = prasad.vennam.moneypilot.util.CurrencyFormatter.format(loan.emiAmount.toMajorUnit, loan.currencyCode)
+                    val message = "Your monthly EMI of $amountFormatted for ${loan.name}$lenderText is due on $nextEmiDateStr."
 
                     // Check if the user has already been notified for this specific EMI due date
                     val alreadyNotified = existingNotifications.any { it.title == title && it.message == message }

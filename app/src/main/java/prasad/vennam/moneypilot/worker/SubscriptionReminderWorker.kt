@@ -26,7 +26,7 @@ import prasad.vennam.moneypilot.data.entity.Notification
 import prasad.vennam.moneypilot.data.repository.SubscriptionRepository
 import prasad.vennam.moneypilot.receiver.SubscriptionActionReceiver
 import prasad.vennam.moneypilot.util.CurrencyFormatter
-import prasad.vennam.moneypilot.util.inRupees
+import prasad.vennam.moneypilot.util.toMajorUnit
 import java.util.Calendar
 import java.util.concurrent.TimeUnit
 
@@ -66,7 +66,7 @@ class SubscriptionReminderWorker
                         // Check if next payment date is approaching (within next 24 hours or overdue)
                         if (subscription.nextPaymentDate <= oneDayFromNow) {
                             val title = "Subscription Due: ${subscription.name}"
-                            val amountFormatted = CurrencyFormatter.format(subscription.amount.inRupees, currencyCode)
+                            val amountFormatted = CurrencyFormatter.format(subscription.amount.toMajorUnit, currencyCode)
                             val message = "Your subscription ${subscription.name} of $amountFormatted is due. Tap Approve & Log to confirm."
 
                             // Check if already notified today for this subscription

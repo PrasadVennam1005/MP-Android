@@ -9,8 +9,8 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import prasad.vennam.moneypilot.data.entity.Category
 import prasad.vennam.moneypilot.data.entity.Subscription
+import prasad.vennam.moneypilot.data.repository.CategoryRepository
 import prasad.vennam.moneypilot.data.repository.SubscriptionRepository
-import prasad.vennam.moneypilot.data.repository.TransactionRepository
 import javax.inject.Inject
 
 @HiltViewModel
@@ -18,14 +18,14 @@ class SubscriptionViewModel
     @Inject
     constructor(
         private val subscriptionRepository: SubscriptionRepository,
-        private val transactionRepository: TransactionRepository,
+        private val categoryRepository: CategoryRepository,
     ) : ViewModel() {
         val allSubscriptions: StateFlow<List<Subscription>> =
             subscriptionRepository.allSubscriptions
                 .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
         val allCategories: StateFlow<List<Category>> =
-            transactionRepository.allCategories
+            categoryRepository.allCategories
                 .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
         fun saveSubscription(subscription: Subscription) {

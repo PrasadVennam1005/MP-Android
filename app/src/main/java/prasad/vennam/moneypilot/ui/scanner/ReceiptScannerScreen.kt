@@ -1,5 +1,6 @@
 package prasad.vennam.moneypilot.ui.scanner
 
+import prasad.vennam.moneypilot.ui.components.BaseBottomSheet
 import android.Manifest
 import android.app.Activity
 import android.graphics.Bitmap
@@ -21,6 +22,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -41,9 +43,12 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.google.android.gms.ads.AdRequest
@@ -70,7 +75,7 @@ import prasad.vennam.moneypilot.util.ParsedReceipt
 import prasad.vennam.moneypilot.util.PermissionGate
 import prasad.vennam.moneypilot.util.ReceiptParser
 import prasad.vennam.moneypilot.util.TrackScreen
-import prasad.vennam.moneypilot.util.inPaisa
+import prasad.vennam.moneypilot.util.toMinorUnit
 import java.util.Currency
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
@@ -677,11 +682,12 @@ fun ReceiptResultsBottomSheet(
     val amountVal = amount.toDoubleOrNull()
     val isAmountError = amount.isNotEmpty() && (amountVal == null || amountVal <= 0.0)
     val isFormValid = amount.isNotBlank() && !isAmountError && selectedCategoryId != null
+    val focusManager = LocalFocusManager.current
+    val keyboardController = LocalSoftwareKeyboardController.current
 
-    ModalBottomSheet(
+    BaseBottomSheet(
         onDismissRequest = onDismiss,
-        dragHandle = null,
-        containerColor = MaterialTheme.colorScheme.surface,
+        title = stringResource(R.string.confirm_details),
     ) {
         Column(
             modifier =
@@ -690,37 +696,6 @@ fun ReceiptResultsBottomSheet(
                     .padding(bottom = 32.dp)
                     .verticalScroll(rememberScrollState()),
         ) {
-            // Header
-            Row(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 24.dp, vertical = 20.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    stringResource(R.string.confirm_details),
-                    style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
-                )
-                IconButton(
-                    onClick = onDismiss,
-                    modifier =
-                        Modifier
-                            .size(32.dp)
-                            .background(
-                                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                                CircleShape,
-                            ),
-                ) {
-                    Icon(Icons.Rounded.Close, null, modifier = Modifier.size(18.dp))
-                }
-            }
-
-            HorizontalDivider(
-                modifier = Modifier.padding(bottom = 24.dp),
-                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
-            )
 
             Column(
                 modifier = Modifier.padding(horizontal = 24.dp),
@@ -756,7 +731,11 @@ fun ReceiptResultsBottomSheet(
                         } else {
                             null
                         },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Done),
+                    keyboardActions = KeyboardActions(onDone = {
+                        keyboardController?.hide()
+                        focusManager.clearFocus()
+                    }),
                     modifier = Modifier.fillMaxWidth(),
                     shape = MaterialTheme.shapes.large,
                 )
@@ -815,7 +794,7 @@ fun ReceiptResultsBottomSheet(
                         if (isFormValid) {
                             onSave(
                                 Transaction(
-                                    amount = (amount.toDoubleOrNull() ?: 0.0).inPaisa,
+                                    amount = (amount.toDoubleOrNull() ?: 0.0).toMinorUnit,
                                     timestamp = timestamp,
                                     categoryId = selectedCategoryId,
                                     note = merchant,

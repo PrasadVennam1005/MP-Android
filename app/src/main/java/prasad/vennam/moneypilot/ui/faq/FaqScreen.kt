@@ -1,5 +1,8 @@
 package prasad.vennam.moneypilot.ui.faq
+import androidx.compose.ui.res.stringResource
+import prasad.vennam.moneypilot.R
 
+import prasad.vennam.moneypilot.ui.components.BaseBottomSheet
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.animation.AnimatedVisibility
@@ -14,6 +17,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
@@ -35,7 +39,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import prasad.vennam.moneypilot.util.AnalyticsConstants
 import prasad.vennam.moneypilot.util.AnalyticsHelper
 import prasad.vennam.moneypilot.util.TrackScreen
@@ -170,13 +178,13 @@ fun FaqScreen(
             TopAppBar(
                 title = {
                     Text(
-                        "Help & FAQ",
+                        stringResource(R.string.help_and_faq),
                         style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
                     )
                 },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 },
                 colors =
@@ -192,7 +200,7 @@ fun FaqScreen(
                     showContactSheet = true
                 },
                 icon = { Icon(Icons.Rounded.Email, contentDescription = null) },
-                text = { Text("Ask a Question") },
+                text = { Text(stringResource(R.string.ask_a_question)) },
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary,
             )
@@ -228,8 +236,11 @@ fun FaqScreen(
 
     // Contact bottom sheet
     if (showContactSheet) {
+        val sendEmailTitle = stringResource(R.string.send_email)
+
         ContactBottomSheet(
-            onDismiss = { showContactSheet = false },
+            onDismiss = {
+                showContactSheet = false },
             onSendEmail = { subject, body ->
                 val intent =
                     Intent(Intent.ACTION_SENDTO).apply {
@@ -238,7 +249,7 @@ fun FaqScreen(
                         putExtra(Intent.EXTRA_SUBJECT, subject)
                         putExtra(Intent.EXTRA_TEXT, body)
                     }
-                context.startActivity(Intent.createChooser(intent, "Send Email"))
+                context.startActivity(Intent.createChooser(intent, sendEmailTitle))
                 showContactSheet = false
             },
         )
@@ -283,13 +294,13 @@ private fun FaqHeroCard() {
             }
             Spacer(Modifier.height(14.dp))
             Text(
-                "How can we help?",
+                stringResource(R.string.how_can_we_help),
                 style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.ExtraBold),
                 color = MaterialTheme.colorScheme.onSurface,
             )
             Spacer(Modifier.height(6.dp))
             Text(
-                "Browse questions below or tap \"Ask a Question\" at the bottom to email our team.",
+                stringResource(R.string.faq_description),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
@@ -435,19 +446,17 @@ fun ContactBottomSheet(
     onDismiss: () -> Unit,
     onSendEmail: (subject: String, body: String) -> Unit,
 ) {
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-
-    var subject by remember { mutableStateOf("") }
-    var body by remember { mutableStateOf("") }
-    val isSendEnabled = subject.isNotBlank() && body.isNotBlank()
-
-    ModalBottomSheet(
+    BaseBottomSheet(
         onDismissRequest = onDismiss,
-        sheetState = sheetState,
-        containerColor = MaterialTheme.colorScheme.surface,
-        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
-        dragHandle = { BottomSheetDefaults.DragHandle() },
+        title = stringResource(R.string.ask_a_question),
     ) {
+        var subject by remember { mutableStateOf("") }
+        var body by remember { mutableStateOf("") }
+        val isSendEnabled = subject.isNotBlank() && body.isNotBlank()
+        
+        val focusManager = LocalFocusManager.current
+        val keyboardController = LocalSoftwareKeyboardController.current
+
         Column(
             modifier =
                 Modifier
@@ -455,47 +464,14 @@ fun ContactBottomSheet(
                     .padding(horizontal = 24.dp)
                     .padding(bottom = 36.dp),
         ) {
-            // Header
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.padding(bottom = 20.dp),
-            ) {
-                Box(
-                    modifier =
-                        Modifier
-                            .size(44.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(MaterialTheme.colorScheme.primaryContainer),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        imageVector = Icons.Rounded.Email,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(22.dp),
-                    )
-                }
-                Spacer(Modifier.width(14.dp))
-                Column {
-                    Text(
-                        "Ask Our Team",
-                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                        color = MaterialTheme.colorScheme.onSurface,
-                    )
-                    Text(
-                        "We'll reply within 24 hours",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
+
 
             // Subject field
             OutlinedTextField(
                 value = subject,
                 onValueChange = { subject = it },
-                label = { Text("Subject") },
-                placeholder = { Text("e.g. Sync not working") },
+                label = { Text(stringResource(R.string.subject)) },
+                placeholder = { Text(stringResource(R.string.subject_placeholder)) },
                 leadingIcon = {
                     Icon(
                         Icons.AutoMirrored.Rounded.Subject,
@@ -506,7 +482,10 @@ fun ContactBottomSheet(
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(14.dp),
-                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
+                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences, imeAction = ImeAction.Next),
+                keyboardActions = KeyboardActions(onNext = {
+                    focusManager.moveFocus(androidx.compose.ui.focus.FocusDirection.Down)
+                }),
                 colors =
                     OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = MaterialTheme.colorScheme.primary,
@@ -520,8 +499,8 @@ fun ContactBottomSheet(
             OutlinedTextField(
                 value = body,
                 onValueChange = { body = it },
-                label = { Text("Message") },
-                placeholder = { Text("Describe your issue or question in detail…") },
+                label = { Text(stringResource(R.string.message)) },
+                placeholder = { Text(stringResource(R.string.message_placeholder)) },
                 leadingIcon = {
                     Icon(
                         Icons.AutoMirrored.Rounded.Notes,
@@ -566,7 +545,7 @@ fun ContactBottomSheet(
                 Icon(Icons.AutoMirrored.Rounded.Send, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(10.dp))
                 Text(
-                    "Send Email",
+                    stringResource(R.string.send_email),
                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
                 )
             }
@@ -574,7 +553,7 @@ fun ContactBottomSheet(
             Spacer(Modifier.height(8.dp))
 
             Text(
-                "Opens your email app with our address pre-filled.",
+                stringResource(R.string.send_email_desc),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                 textAlign = TextAlign.Center,

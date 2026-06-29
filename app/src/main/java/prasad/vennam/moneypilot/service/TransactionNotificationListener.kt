@@ -14,7 +14,7 @@ import kotlinx.coroutines.launch
 import prasad.vennam.moneypilot.data.entity.PendingTransaction
 import prasad.vennam.moneypilot.data.repository.TransactionRepository
 import prasad.vennam.moneypilot.util.NotificationParser
-import prasad.vennam.moneypilot.util.inRupees
+import prasad.vennam.moneypilot.util.toMajorUnit
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -87,7 +87,7 @@ class TransactionNotificationListener : NotificationListenerService() {
                 val isTransactionDuplicate =
                     currentTransactions.any { trans ->
                         Math.abs(trans.timestamp - now) < timeWindowMs &&
-                            Math.abs(trans.amount.inRupees - parsed.amount) < 0.01 &&
+                            Math.abs(trans.amount.toMajorUnit - parsed.amount) < 0.01 &&
                             (
                                 trans.note.equals(parsed.merchant, ignoreCase = true) ||
                                     trans.note.contains(parsed.merchant, ignoreCase = true)

@@ -8,6 +8,7 @@ import java.util.Calendar
 object DemoDataSeeder {
     suspend fun seed(
         transactionRepository: TransactionRepository,
+        categoryRepository: CategoryRepository,
         budgetRepository: BudgetRepository,
         investmentRepository: InvestmentRepository,
         loanRepository: LoanRepository,
@@ -22,10 +23,10 @@ object DemoDataSeeder {
 
         // 2. Insert default categories
         val categories = Category.DEFAULT_CATEGORIES
-        categories.forEach { transactionRepository.insertCategory(it) }
+        categories.forEach { categoryRepository.insertCategory(it) }
 
         // 3. Query all categories to map their auto-increment IDs
-        val insertedCategories = transactionRepository.allCategories.first()
+        val insertedCategories = categoryRepository.allCategories.first()
 
         val foodId = insertedCategories.find { it.name == "Food" && it.isExpense }?.id
         val salaryId = insertedCategories.find { it.name == "Salary" && !it.isExpense }?.id

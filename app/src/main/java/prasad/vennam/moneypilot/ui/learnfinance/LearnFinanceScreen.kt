@@ -98,7 +98,7 @@ fun LearnFinanceScreen(
                         TextField(
                             value = uiState.searchQuery,
                             onValueChange = { viewModel.onSearchQueryChanged(it) },
-                            placeholder = { Text("Search articles...") },
+                            placeholder = { Text(stringResource(R.string.search_articles)) },
                             modifier =
                                 Modifier
                                     .fillMaxWidth()
@@ -125,7 +125,7 @@ fun LearnFinanceScreen(
                                 }) {
                                     Icon(
                                         Icons.Rounded.Close,
-                                        contentDescription = "Close Search",
+                                        contentDescription = stringResource(R.string.close_search),
                                         tint = MaterialTheme.colorScheme.onSurface,
                                     )
                                 }
@@ -133,7 +133,7 @@ fun LearnFinanceScreen(
                         )
                     } else {
                         Text(
-                            "Learn Finance",
+                            stringResource(R.string.learn_finance),
                             style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
                         )
                     }
@@ -146,12 +146,12 @@ fun LearnFinanceScreen(
                 actions = {
                     if (!isSearchActive) {
                         IconButton(onClick = { isSearchActive = true }) {
-                            Icon(Icons.Rounded.Search, contentDescription = "Search")
+                            Icon(Icons.Rounded.Search, contentDescription = stringResource(R.string.search))
                         }
                         IconButton(onClick = { viewModel.toggleShowBookmarksOnly() }) {
                             Icon(
                                 if (uiState.showBookmarksOnly) Icons.Rounded.Bookmark else Icons.Rounded.BookmarkBorder,
-                                contentDescription = "Bookmarks",
+                                contentDescription = stringResource(R.string.bookmarks),
                                 tint = if (uiState.showBookmarksOnly) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
                             )
                         }
@@ -180,7 +180,7 @@ fun LearnFinanceScreen(
                 if (featuredArticles.isNotEmpty()) {
                     item {
                         Text(
-                            text = "Featured",
+                            text = stringResource(R.string.featured),
                             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                         )
@@ -213,7 +213,7 @@ fun LearnFinanceScreen(
 
                 item {
                     Text(
-                        text = "Articles",
+                        text = stringResource(R.string.articles),
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                     )
@@ -228,7 +228,7 @@ fun LearnFinanceScreen(
                                     .height(200.dp),
                             contentAlignment = Alignment.Center,
                         ) {
-                            Text("No articles found", style = MaterialTheme.typography.bodyLarge)
+                            Text(stringResource(R.string.no_articles_found), style = MaterialTheme.typography.bodyLarge)
                         }
                     }
                 } else {
@@ -300,7 +300,7 @@ fun FeaturedArticleCard(
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "${article.readTimeMinutes} min read" + if (article.quiz.enabled) " • Quiz" else "",
+                        text = if (article.quiz.enabled) stringResource(R.string.read_time_minutes_quiz, article.readTimeMinutes) else stringResource(R.string.read_time_minutes, article.readTimeMinutes),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.7f),
                     )
@@ -328,7 +328,7 @@ fun CategoryTabs(
             FilterChip(
                 selected = selectedCategory == null,
                 onClick = { onCategorySelected(null) },
-                label = { Text("All") },
+                label = { Text(stringResource(R.string.all)) },
             )
         }
         items(categories, key = { it }) { category ->
@@ -446,7 +446,7 @@ fun ArticleItem(
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
-                            text = "${article.readTimeMinutes} min read",
+                            text = stringResource(R.string.read_time_minutes, article.readTimeMinutes),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -459,7 +459,7 @@ fun ArticleItem(
                             shape = MaterialTheme.shapes.extraSmall,
                         ) {
                             Text(
-                                text = "QUIZ",
+                                text = stringResource(R.string.quiz_label),
                                 style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
                                 modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                             )
@@ -470,7 +470,7 @@ fun ArticleItem(
             IconButton(onClick = onBookmarkClick) {
                 Icon(
                     if (isBookmarked) Icons.Rounded.Bookmark else Icons.Rounded.BookmarkBorder,
-                    contentDescription = "Bookmark",
+                    contentDescription = stringResource(R.string.bookmark),
                     tint = if (isBookmarked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }

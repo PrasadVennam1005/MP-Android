@@ -6,6 +6,7 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 
@@ -18,6 +19,7 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -25,6 +27,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlin.time.Duration.Companion.milliseconds
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
@@ -32,6 +35,7 @@ fun BaseBottomSheet(
     onDismissRequest: () -> Unit,
     title: String? = null,
     modifier: Modifier = Modifier,
+    actions: @Composable RowScope.() -> Unit = {},
     content: @Composable ColumnScope.() -> Unit
 ) {
     var isVisible by remember { mutableStateOf(false) }
@@ -44,7 +48,7 @@ fun BaseBottomSheet(
     val dismissWithAnimation = {
         coroutineScope.launch {
             isVisible = false
-            delay(300) // wait for animation
+            delay(300.milliseconds) // wait for animation
             onDismissRequest()
         }
     }
@@ -53,18 +57,14 @@ fun BaseBottomSheet(
         onDismissRequest = { dismissWithAnimation() },
         properties = DialogProperties(
             usePlatformDefaultWidth = false,
-            decorFitsSystemWindows = false
+            decorFitsSystemWindows = false,
+            dismissOnClickOutside = false
         )
     ) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.5f))
-                .clickable(
-                    interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
-                    indication = null,
-                    onClick = { dismissWithAnimation() }
-                ),
+                .background(Color.Black.copy(alpha = 0.5f)),
             contentAlignment = Alignment.BottomCenter
         ) {
             AnimatedVisibility(
@@ -80,21 +80,19 @@ fun BaseBottomSheet(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 val screenHeight = LocalConfiguration.current.screenHeightDp.dp
-                val sheetHeight = screenHeight * 0.7f
+                val maxHeight = screenHeight * 0.9f
 
                 Column(
                     modifier = modifier
                         .fillMaxWidth()
-                        .height(sheetHeight)
+                        .heightIn(max = maxHeight)
                         .clickable(
-                            interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                            interactionSource = remember { MutableInteractionSource() },
                             indication = null,
-                            onClick = { /* consume clicks to prevent dismissing when clicking on sheet */ }
+                            onClick = { /* consume clicks */ }
                         )
                         .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
                         .background(MaterialTheme.colorScheme.surface)
-                        .imePadding() // Essential for keyboard handling
-                        .windowInsetsPadding(WindowInsets.navigationBars)
                 ) {
                     // Header
                     Row(
@@ -114,12 +112,15 @@ fun BaseBottomSheet(
                             Spacer(modifier = Modifier.weight(1f))
                         }
                         
-                        IconButton(onClick = { dismissWithAnimation() }) {
-                            Icon(
-                                imageVector = Icons.Rounded.Close,
-                                contentDescription = "Close",
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            actions()
+                            IconButton(onClick = { dismissWithAnimation() }) {
+                                Icon(
+                                    imageVector = Icons.Rounded.Close,
+                                    contentDescription = "Close",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
                         }
                     }
 
@@ -128,7 +129,8 @@ fun BaseBottomSheet(
                     // Content area (Caller handles scrolling)
                     Box(
                         modifier = Modifier
-                            .fillMaxSize()
+                            .fillMaxWidth()
+                            .weight(1f, fill = false)
                             .padding(horizontal = 16.dp, vertical = 8.dp)
                     ) {
                         this@Column.content()

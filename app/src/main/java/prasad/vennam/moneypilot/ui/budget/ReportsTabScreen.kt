@@ -44,7 +44,7 @@ import prasad.vennam.moneypilot.ui.viewmodel.TransactionViewModel
 import prasad.vennam.moneypilot.util.AnalyticsConstants
 import prasad.vennam.moneypilot.util.AnalyticsHelper
 import prasad.vennam.moneypilot.util.TrackScreen
-import prasad.vennam.moneypilot.util.inPaisa
+import prasad.vennam.moneypilot.util.toMinorUnit
 import java.util.Calendar
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -244,7 +244,7 @@ fun ReportsTabScreen(
                         budgetViewModel.saveBudget(
                             Budget(
                                 categoryId = catId,
-                                amount = amount.inPaisa,
+                                amount = amount.toMinorUnit,
                                 period = monthlyString,
                                 currencyCode = currencyCode,
                             ),
@@ -253,7 +253,7 @@ fun ReportsTabScreen(
                         budgetViewModel.saveBudget(
                             budgetToEdit!!.copy(
                                 categoryId = catId,
-                                amount = amount.inPaisa,
+                                amount = amount.toMinorUnit,
                             ),
                         )
                     }

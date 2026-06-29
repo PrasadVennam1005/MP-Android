@@ -1,5 +1,6 @@
 package prasad.vennam.moneypilot.ui.emergencyfund
 
+import prasad.vennam.moneypilot.ui.components.BaseBottomSheet
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
@@ -38,7 +39,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -47,7 +47,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -64,6 +63,11 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -622,12 +626,9 @@ fun EmergencyFundScreen(
 
     // Modal Bottom Sheet: info
     if (showInfoSheet) {
-        val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-        ModalBottomSheet(
+        BaseBottomSheet(
             onDismissRequest = { showInfoSheet = false },
-            sheetState = sheetState,
-            containerColor = MaterialTheme.colorScheme.surface,
-            shape = MaterialTheme.shapes.extraLarge,
+            title = stringResource(R.string.safety_net_info_title),
         ) {
             Column(
                 modifier =
@@ -635,11 +636,6 @@ fun EmergencyFundScreen(
                         .padding(24.dp)
                         .fillMaxWidth(),
             ) {
-                Text(
-                    text = stringResource(R.string.safety_net_info_title),
-                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
                 Spacer(modifier = Modifier.height(12.dp))
                 Text(
                     text = stringResource(R.string.safety_net_info_desc),
@@ -687,14 +683,13 @@ fun EmergencyFundScreen(
             )
         }
         val periods = remember { listOf(3, 6, 9, 12) }
-        val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-
-        ModalBottomSheet(
+        BaseBottomSheet(
             onDismissRequest = { showSetupForm = false },
-            sheetState = sheetState,
-            containerColor = MaterialTheme.colorScheme.surface,
-            dragHandle = null,
+            title = stringResource(R.string.emergency_fund_setup),
         ) {
+            val focusManager = LocalFocusManager.current
+            val keyboardController = LocalSoftwareKeyboardController.current
+            
             Column(
                 modifier =
                     Modifier
@@ -702,41 +697,6 @@ fun EmergencyFundScreen(
                         .padding(bottom = 32.dp)
                         .verticalScroll(rememberScrollState()),
             ) {
-                // Header with Close Icon
-                Row(
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 24.dp, vertical = 20.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        text = stringResource(R.string.emergency_fund_setup),
-                        style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
-                    )
-                    IconButton(
-                        onClick = { showSetupForm = false },
-                        modifier =
-                            Modifier
-                                .size(32.dp)
-                                .background(
-                                    MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                                    CircleShape,
-                                ),
-                    ) {
-                        Icon(
-                            Icons.Rounded.Close,
-                            contentDescription = stringResource(R.string.close),
-                            modifier = Modifier.size(18.dp),
-                        )
-                    }
-                }
-
-                androidx.compose.material3.HorizontalDivider(
-                    modifier = Modifier.padding(bottom = 24.dp),
-                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
-                )
 
                 val expensesVal = expensesStr.toDoubleOrNull()
                 val currentSavedVal = currentSavedStr.toDoubleOrNull()
@@ -779,7 +739,8 @@ fun EmergencyFundScreen(
                             } else {
                                 null
                             },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
+                        keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Next) }),
                         singleLine = true,
                         shape = MaterialTheme.shapes.large,
                         colors =
@@ -821,7 +782,11 @@ fun EmergencyFundScreen(
                             } else {
                                 null
                             },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Done),
+                        keyboardActions = KeyboardActions(onDone = {
+                            keyboardController?.hide()
+                            focusManager.clearFocus()
+                        }),
                         singleLine = true,
                         shape = MaterialTheme.shapes.large,
                         colors =
@@ -914,14 +879,14 @@ fun EmergencyFundScreen(
     // Deposit Bottom Sheet
     if (showDepositSheet) {
         var addAmountStr by remember { mutableStateOf("") }
-        val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
-        ModalBottomSheet(
+        BaseBottomSheet(
             onDismissRequest = { showDepositSheet = false },
-            sheetState = sheetState,
-            containerColor = MaterialTheme.colorScheme.surface,
-            dragHandle = null,
+            title = stringResource(R.string.deposit_title),
         ) {
+            val focusManager = LocalFocusManager.current
+            val keyboardController = LocalSoftwareKeyboardController.current
+
             Column(
                 modifier =
                     Modifier
@@ -929,41 +894,6 @@ fun EmergencyFundScreen(
                         .padding(bottom = 32.dp)
                         .verticalScroll(rememberScrollState()),
             ) {
-                // Header with Close Icon
-                Row(
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 24.dp, vertical = 20.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        text = stringResource(R.string.deposit_title),
-                        style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
-                    )
-                    IconButton(
-                        onClick = { showDepositSheet = false },
-                        modifier =
-                            Modifier
-                                .size(32.dp)
-                                .background(
-                                    MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                                    CircleShape,
-                                ),
-                    ) {
-                        Icon(
-                            Icons.Rounded.Close,
-                            contentDescription = stringResource(R.string.close),
-                            modifier = Modifier.size(18.dp),
-                        )
-                    }
-                }
-
-                androidx.compose.material3.HorizontalDivider(
-                    modifier = Modifier.padding(bottom = 24.dp),
-                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
-                )
 
                 val addAmountVal = addAmountStr.toDoubleOrNull()
                 val isDepositError =
@@ -1003,7 +933,11 @@ fun EmergencyFundScreen(
                             } else {
                                 null
                             },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Done),
+                        keyboardActions = KeyboardActions(onDone = {
+                            keyboardController?.hide()
+                            focusManager.clearFocus()
+                        }),
                         singleLine = true,
                         shape = MaterialTheme.shapes.large,
                         colors =
@@ -1059,14 +993,14 @@ fun EmergencyFundScreen(
     // Withdraw Bottom Sheet
     if (showWithdrawSheet) {
         var withdrawAmountStr by remember { mutableStateOf("") }
-        val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
-        ModalBottomSheet(
+        BaseBottomSheet(
             onDismissRequest = { showWithdrawSheet = false },
-            sheetState = sheetState,
-            containerColor = MaterialTheme.colorScheme.surface,
-            dragHandle = null,
+            title = stringResource(R.string.withdraw_title),
         ) {
+            val focusManager = LocalFocusManager.current
+            val keyboardController = LocalSoftwareKeyboardController.current
+
             Column(
                 modifier =
                     Modifier
@@ -1074,41 +1008,6 @@ fun EmergencyFundScreen(
                         .padding(bottom = 32.dp)
                         .verticalScroll(rememberScrollState()),
             ) {
-                // Header with Close Icon
-                Row(
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 24.dp, vertical = 20.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        text = stringResource(R.string.withdraw_title),
-                        style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
-                    )
-                    IconButton(
-                        onClick = { showWithdrawSheet = false },
-                        modifier =
-                            Modifier
-                                .size(32.dp)
-                                .background(
-                                    MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                                    CircleShape,
-                                ),
-                    ) {
-                        Icon(
-                            Icons.Rounded.Close,
-                            contentDescription = stringResource(R.string.close),
-                            modifier = Modifier.size(18.dp),
-                        )
-                    }
-                }
-
-                androidx.compose.material3.HorizontalDivider(
-                    modifier = Modifier.padding(bottom = 24.dp),
-                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
-                )
 
                 val withdrawAmountVal = withdrawAmountStr.toDoubleOrNull()
                 val withdrawErrorText =
@@ -1146,7 +1045,11 @@ fun EmergencyFundScreen(
                             } else {
                                 null
                             },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Done),
+                        keyboardActions = KeyboardActions(onDone = {
+                            keyboardController?.hide()
+                            focusManager.clearFocus()
+                        }),
                         singleLine = true,
                         shape = MaterialTheme.shapes.large,
                         colors =

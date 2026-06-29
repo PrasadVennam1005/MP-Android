@@ -37,7 +37,7 @@ object ExportHelper {
                 }
 
             writer.write(
-                "$dateStr,${transaction.type.name},$categoryName,${transaction.paymentMode},${transaction.amount.inRupees},$formattedNote\n",
+                "$dateStr,${transaction.type.name},$categoryName,${transaction.paymentMode},${transaction.amount.toMajorUnit},$formattedNote\n",
             )
         }
         writer.flush()
@@ -125,7 +125,7 @@ object ExportHelper {
 
             val dateStr = dateFormat.format(Date(transaction.timestamp))
             val categoryName = categories.find { it.id == transaction.categoryId }?.name ?: "Other"
-            val amountStr = CurrencyFormatter.format(transaction.amount.inRupees, currencyCode)
+            val amountStr = CurrencyFormatter.format(transaction.amount.toMajorUnit, currencyCode)
 
             // Adjust amount color based on transaction type (Green for Income, Red for Expense)
             val amountPaint =

@@ -27,6 +27,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.stringResource
+import prasad.vennam.moneypilot.R
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -134,7 +136,7 @@ fun LearnFinancePromoCard(onClick: () -> Unit) {
             // Text
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "Grow Your Financial IQ",
+                    text = stringResource(R.string.grow_your_financial_iq),
                     style =
                         MaterialTheme.typography.titleSmall.copy(
                             fontWeight = FontWeight.ExtraBold,
@@ -143,7 +145,7 @@ fun LearnFinancePromoCard(onClick: () -> Unit) {
                 )
                 Spacer(modifier = Modifier.height(3.dp))
                 Text(
-                    text = "22 expert-curated lessons on budgeting, investing & more",
+                    text = stringResource(R.string.learn_finance_desc),
                     style =
                         MaterialTheme.typography.bodySmall.copy(
                             color = Color.White.copy(alpha = 0.78f),
@@ -164,7 +166,7 @@ fun LearnFinancePromoCard(onClick: () -> Unit) {
                 contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
             ) {
                 Text(
-                    text = "Start",
+                    text = stringResource(R.string.start_btn),
                     style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
                 )
             }

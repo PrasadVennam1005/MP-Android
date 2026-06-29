@@ -36,6 +36,7 @@ import prasad.vennam.moneypilot.data.entity.Category
 import prasad.vennam.moneypilot.data.repository.DataManagementRepository
 import prasad.vennam.moneypilot.domain.usecase.BackupSyncManager
 import prasad.vennam.moneypilot.domain.usecase.LoanReminderScheduler
+import prasad.vennam.moneypilot.util.AnalyticsHelper
 import prasad.vennam.moneypilot.util.SecureStorageHelper
 import prasad.vennam.moneypilot.worker.BackupSyncManagerImpl
 import prasad.vennam.moneypilot.worker.LoanReminderSchedulerImpl
@@ -105,9 +106,16 @@ object DatabaseModule {
                         val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
                         scope.launch {
                             val categoryDao = categoryDaoProvider.get()
-                            // Only seed if empty
-                            if (categoryDao.getAllCategories().first().isEmpty()) {
+                            val existingCategories = categoryDao.getAllCategories().first()
+                            if (existingCategories.isEmpty()) {
                                 categoryDao.insertCategories(Category.DEFAULT_CATEGORIES)
+                            } else {
+                                // Insert missing default categories (e.g. after app update)
+                                val existingNames = existingCategories.map { it.name }.toSet()
+                                val missingCategories = Category.DEFAULT_CATEGORIES.filter { it.name !in existingNames }
+                                if (missingCategories.isNotEmpty()) {
+                                    categoryDao.insertCategories(missingCategories)
+                                }
                             }
                         }
                     }
@@ -182,6 +190,9 @@ object DatabaseModule {
         investmentDao: InvestmentDao,
         loanDao: LoanDao,
         emergencyFundDao: EmergencyFundDao,
+        subscriptionDao: SubscriptionDao,
+        savingGoalDao: SavingGoalDao,
+        loanPaymentDao: LoanPaymentDao,
         database: MoneyPilotDatabase,
     ): DataManagementRepository =
         DataManagementRepository(
@@ -191,6 +202,9 @@ object DatabaseModule {
             investmentDao = investmentDao,
             loanDao = loanDao,
             emergencyFundDao = emergencyFundDao,
+            subscriptionDao = subscriptionDao,
+            savingGoalDao = savingGoalDao,
+            loanPaymentDao = loanPaymentDao,
             database = database,
         )
 
@@ -207,5 +221,6 @@ object DatabaseModule {
     fun provideBackupSyncManager(
         repository: DataManagementRepository,
         userPreferences: UserPreferences,
-    ): BackupSyncManager = BackupSyncManagerImpl(repository, userPreferences)
+        analyticsHelper: AnalyticsHelper,
+    ): BackupSyncManager = BackupSyncManagerImpl(repository, userPreferences, analyticsHelper)
 }

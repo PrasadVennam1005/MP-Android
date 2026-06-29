@@ -171,7 +171,7 @@ private fun SummaryChartCard(
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     Text(
-                        text = "Total",
+                        text = stringResource(R.string.total),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -191,12 +191,12 @@ private fun SummaryChartCard(
             ) {
                 LegendIndicator(
                     color = primaryColor,
-                    label = "Principal",
+                    label = stringResource(R.string.principal),
                     value = CurrencyFormatter.format(principal, currencyCode),
                 )
                 LegendIndicator(
                     color = tertiaryColor,
-                    label = "Interest",
+                    label = stringResource(R.string.interest),
                     value = CurrencyFormatter.format(totalInterest, currencyCode),
                 )
             }
@@ -243,15 +243,15 @@ private fun MetricsGrid(
             MetricCard(
                 icon = Icons.Rounded.CalendarMonth,
                 label = stringResource(R.string.tenure),
-                value = "${state.tenureInput} ${if (state.isTenureInYears) "Years" else "Months"}",
+                value = if (state.isTenureInYears) stringResource(R.string.duration_years_format, state.tenureInput) else stringResource(R.string.duration_months_format, state.tenureInput),
                 modifier = Modifier.weight(1f),
             )
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             MetricCard(
                 icon = Icons.Rounded.Percent,
-                label = "Interest Rate",
-                value = "${state.rateInput}% p.a.",
+                label = stringResource(R.string.interest_rate),
+                value = stringResource(R.string.interest_rate_format, state.rateInput),
                 modifier = Modifier.weight(1f),
             )
             MetricCard(
@@ -380,7 +380,7 @@ private fun ExportActions(onExport: (String) -> Unit) {
         ) {
             Icon(Icons.Rounded.PictureAsPdf, null, modifier = Modifier.size(18.dp))
             Spacer(modifier = Modifier.width(8.dp))
-            Text("PDF")
+            Text(stringResource(R.string.format_pdf))
         }
         OutlinedButton(
             onClick = { onExport("CSV") },
@@ -389,7 +389,7 @@ private fun ExportActions(onExport: (String) -> Unit) {
         ) {
             Icon(Icons.Rounded.TableChart, null, modifier = Modifier.size(18.dp))
             Spacer(modifier = Modifier.width(8.dp))
-            Text("CSV")
+            Text(stringResource(R.string.format_csv))
         }
     }
 }

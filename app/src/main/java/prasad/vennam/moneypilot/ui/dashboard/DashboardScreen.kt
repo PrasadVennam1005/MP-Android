@@ -1,5 +1,6 @@
 package prasad.vennam.moneypilot.ui.dashboard
 
+import prasad.vennam.moneypilot.ui.components.BaseBottomSheet
 import android.app.Activity
 import android.util.Log
 import android.widget.Toast
@@ -60,13 +61,11 @@ import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -127,7 +126,7 @@ import prasad.vennam.moneypilot.util.AnalyticsHelper
 import prasad.vennam.moneypilot.util.CurrencyFormatter
 import prasad.vennam.moneypilot.util.GoogleSheetsSyncHelper
 import prasad.vennam.moneypilot.util.TrackScreen
-import prasad.vennam.moneypilot.util.inRupees
+import prasad.vennam.moneypilot.util.toMajorUnit
 import java.util.Calendar
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -946,7 +945,7 @@ fun DashboardEmergencyFundCard(
                         )
                     }
                     Text(
-                        text = "$percent%",
+                        text = stringResource(R.string.percentage_format, percent),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.secondary,
@@ -1010,11 +1009,11 @@ fun DashboardSavingGoalsCard(
 
     val savedFormatted =
         remember(totalSaved, currencyCode) {
-            CurrencyFormatter.format(totalSaved.inRupees, currencyCode)
+            CurrencyFormatter.format(totalSaved.toMajorUnit, currencyCode)
         }
     val targetFormatted =
         remember(totalTarget, currencyCode) {
-            CurrencyFormatter.format(totalTarget.inRupees, currencyCode)
+            CurrencyFormatter.format(totalTarget.toMajorUnit, currencyCode)
         }
 
     Card(
@@ -1051,12 +1050,12 @@ fun DashboardSavingGoalsCard(
                 Spacer(modifier = Modifier.width(16.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "Create Savings Goals",
+                        text = stringResource(R.string.create_savings_goals),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                     )
                     Text(
-                        text = "Set custom milestones with rich metrics",
+                        text = stringResource(R.string.savings_goals_desc),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -1084,13 +1083,13 @@ fun DashboardSavingGoalsCard(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "Savings Goals ($completedGoals/$totalGoals)",
+                            text = stringResource(R.string.savings_goals_count, completedGoals, totalGoals),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                         )
                     }
                     Text(
-                        text = "$percent%",
+                        text = stringResource(R.string.percentage_format, percent),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary,
@@ -1118,13 +1117,13 @@ fun DashboardSavingGoalsCard(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
-                        text = "Saved: $savedFormatted",
+                        text = stringResource(R.string.saved_amount_format, savedFormatted),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontWeight = FontWeight.SemiBold,
                     )
                     Text(
-                        text = "Target: $targetFormatted",
+                        text = stringResource(R.string.target_amount_format, targetFormatted),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -1199,34 +1198,23 @@ fun PendingReviewBottomSheet(
     onDismiss: (PendingTransaction) -> Unit,
     onDismissRequest: () -> Unit,
 ) {
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
 
     val selectedCategoryMap = remember { mutableStateMapOf<Long, Category?>() }
     val noteTextMap = remember { mutableStateMapOf<Long, String>() }
     val expandedRawMessageMap = remember { mutableStateMapOf<Long, Boolean>() }
 
-    ModalBottomSheet(
+    BaseBottomSheet(
         onDismissRequest = onDismissRequest,
-        sheetState = sheetState,
-        dragHandle = { BottomSheetDefaults.DragHandle() },
-        containerColor = MaterialTheme.colorScheme.surface,
+        title = stringResource(R.string.review_auto_detected_transactions),
     ) {
         Column(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .navigationBarsPadding()
                     .padding(horizontal = 20.dp)
                     .padding(bottom = 24.dp),
         ) {
-            Text(
-                text = stringResource(R.string.review_auto_detected_transactions),
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.padding(bottom = 8.dp),
-            )
-
             Text(
                 text = stringResource(R.string.verify_pending_transactions_desc),
                 style = MaterialTheme.typography.bodySmall,

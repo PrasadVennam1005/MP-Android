@@ -28,7 +28,7 @@ import prasad.vennam.moneypilot.data.repository.LoanRepository
 import prasad.vennam.moneypilot.domain.usecase.*
 import prasad.vennam.moneypilot.util.LoanIntelligenceUtil
 import prasad.vennam.moneypilot.util.RemoteConfigHelper
-import prasad.vennam.moneypilot.util.inRupees
+import prasad.vennam.moneypilot.util.toMajorUnit
 import java.util.Calendar
 import javax.inject.Inject
 
@@ -131,10 +131,10 @@ class DashboardViewModel
                     amountInMinor: Long,
                     fromCurrency: String,
                 ): Double {
-                    if (fromCurrency == currentCurrencyCode) return amountInMinor.inRupees
+                    if (fromCurrency == currentCurrencyCode) return amountInMinor.toMajorUnit
                     val rateFrom = allRates[fromCurrency] ?: 1.0
                     val rateTo = allRates[currentCurrencyCode] ?: 1.0
-                    val amountInUSD = amountInMinor.inRupees / rateFrom
+                    val amountInUSD = amountInMinor.toMajorUnit / rateFrom
                     return amountInUSD * rateTo
                 }
 

@@ -1,5 +1,6 @@
 package prasad.vennam.moneypilot.ui.investments.components
 
+import prasad.vennam.moneypilot.ui.components.BaseBottomSheet
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -21,6 +22,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.unit.dp
 import prasad.vennam.moneypilot.R
 import prasad.vennam.moneypilot.data.entity.Investment
@@ -28,7 +33,7 @@ import prasad.vennam.moneypilot.domain.model.SymbolResult
 import prasad.vennam.moneypilot.ui.viewmodel.state.AutoFillState
 import prasad.vennam.moneypilot.util.FinanceMath
 import prasad.vennam.moneypilot.util.LocalCurrencyCode
-import prasad.vennam.moneypilot.util.inRupees
+import prasad.vennam.moneypilot.util.toMajorUnit
 import java.text.SimpleDateFormat
 import java.util.Currency
 import java.util.Date
@@ -56,7 +61,7 @@ fun InvestmentFormBottomSheet(
         mutableStateOf(
             initialInvestment
                 ?.investedAmount
-                ?.inRupees
+                ?.toMajorUnit
                 ?.toString()
                 ?.removeSuffix(".0") ?: "",
         )
@@ -65,7 +70,7 @@ fun InvestmentFormBottomSheet(
         mutableStateOf(
             initialInvestment
                 ?.currentValue
-                ?.inRupees
+                ?.toMajorUnit
                 ?.toString()
                 ?.removeSuffix(".0") ?: "",
         )
@@ -102,7 +107,6 @@ fun InvestmentFormBottomSheet(
     val currencyCode = LocalCurrencyCode.current
     val currencySymbol = remember(currencyCode) { Currency.getInstance(currencyCode).symbol }
 
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     val investedVal = invested.toDoubleOrNull()
     val interestRateVal = interestRate.toDoubleOrNull()
@@ -111,6 +115,9 @@ fun InvestmentFormBottomSheet(
     val isInvestedError = invested.isNotEmpty() && (investedVal == null || investedVal <= 0.0 || investedVal > 100000000.0)
     val isQuantityError = quantity.isNotEmpty() && (quantityVal == null || quantityVal <= 0.0 || quantityVal > 100000000.0)
     val isInterestRateError = interestRate.isNotEmpty() && (interestRateVal == null || interestRateVal < 0.0 || interestRateVal > 100.0)
+
+    val focusManager = LocalFocusManager.current
+    val keyboardController = LocalSoftwareKeyboardController.current
 
     val isFormValid =
         name.isNotBlank() &&
@@ -133,11 +140,13 @@ fun InvestmentFormBottomSheet(
                 }
             }
 
-    ModalBottomSheet(
+    BaseBottomSheet(
         onDismissRequest = onDismiss,
-        sheetState = sheetState,
-        containerColor = MaterialTheme.colorScheme.surface,
-        dragHandle = null,
+        title = if (initialInvestment == null) {
+            stringResource(R.string.add_investment)
+        } else {
+            stringResource(R.string.edit_investment)
+        },
     ) {
         Column(
             modifier =
@@ -146,48 +155,6 @@ fun InvestmentFormBottomSheet(
                     .padding(bottom = 32.dp)
                     .verticalScroll(rememberScrollState()),
         ) {
-            // Header with Close Icon
-            Row(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 24.dp, vertical = 20.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text =
-                        if (initialInvestment ==
-                            null
-                        ) {
-                            stringResource(R.string.add_investment)
-                        } else {
-                            stringResource(R.string.edit_investment)
-                        },
-                    style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
-                )
-                IconButton(
-                    onClick = onDismiss,
-                    modifier =
-                        Modifier
-                            .size(32.dp)
-                            .background(
-                                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                                CircleShape,
-                            ),
-                ) {
-                    Icon(
-                        Icons.Rounded.Close,
-                        contentDescription = stringResource(R.string.close),
-                        modifier = Modifier.size(18.dp),
-                    )
-                }
-            }
-
-            HorizontalDivider(
-                modifier = Modifier.padding(bottom = 24.dp),
-                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
-            )
 
             Column(
                 modifier = Modifier.padding(horizontal = 24.dp),
@@ -290,8 +257,9 @@ fun InvestmentFormBottomSheet(
                                 KeyboardOptions(
                                     capitalization = KeyboardCapitalization.Characters,
                                     autoCorrectEnabled = false,
-                                    imeAction = ImeAction.Done,
+                                    imeAction = ImeAction.Next,
                                 ),
+                            keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }),
                             singleLine = true,
                             shape = MaterialTheme.shapes.large,
                             modifier =
@@ -359,6 +327,8 @@ fun InvestmentFormBottomSheet(
                             tint = MaterialTheme.colorScheme.primary,
                         )
                     },
+                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words, imeAction = ImeAction.Next),
+                    keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }),
                     shape = MaterialTheme.shapes.large,
                     modifier = Modifier.fillMaxWidth(),
                     colors =
@@ -398,16 +368,17 @@ fun InvestmentFormBottomSheet(
                             {
                                 val text =
                                     when {
-                                        investedVal == null -> "Invalid format"
+                                        investedVal == null -> stringResource(R.string.invalid_format)
                                         investedVal <= 0.0 -> stringResource(R.string.invested_amount_error_desc)
-                                        else -> "Amount cannot exceed 100,000,000"
+                                        else -> stringResource(R.string.amount_cannot_exceed)
                                     }
                                 Text(text)
                             }
                         } else {
                             null
                         },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
+                    keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }),
                     shape = MaterialTheme.shapes.large,
                     modifier = Modifier.fillMaxWidth(),
                     colors =
@@ -482,16 +453,20 @@ fun InvestmentFormBottomSheet(
                                     {
                                         val text =
                                             when {
-                                                quantityVal == null -> "Invalid format"
+                                                quantityVal == null -> stringResource(R.string.invalid_format)
                                                 quantityVal <= 0.0 -> stringResource(R.string.quantity_error_desc)
-                                                else -> "Quantity cannot exceed 100,000,000"
+                                                else -> stringResource(R.string.quantity_cannot_exceed)
                                             }
                                         Text(text)
                                     }
                                 } else {
                                     null
                                 },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Done),
+                            keyboardActions = KeyboardActions(onDone = {
+                                keyboardController?.hide()
+                                focusManager.clearFocus()
+                            }),
                             shape = MaterialTheme.shapes.large,
                             modifier = Modifier.fillMaxWidth(),
                             colors =
@@ -650,16 +625,20 @@ fun InvestmentFormBottomSheet(
                                 {
                                     val text =
                                         when {
-                                            interestRateVal == null -> "Invalid format"
+                                            interestRateVal == null -> stringResource(R.string.invalid_format)
                                             interestRateVal < 0.0 -> stringResource(R.string.appreciation_rate_error_desc)
-                                            else -> "Rate cannot exceed 100%"
+                                            else -> stringResource(R.string.interest_rate_cannot_exceed)
                                         }
                                     Text(text)
                                 }
                             } else {
                                 null
                             },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Done),
+                        keyboardActions = KeyboardActions(onDone = {
+                            keyboardController?.hide()
+                            focusManager.clearFocus()
+                        }),
                         shape = MaterialTheme.shapes.large,
                         modifier = Modifier.fillMaxWidth(),
                         colors =
@@ -698,7 +677,7 @@ fun InvestmentFormBottomSheet(
                                     startDate = finalStart,
                                 )
                             } else {
-                                initialInvestment?.currentValue?.inRupees ?: investedValue
+                                initialInvestment?.currentValue?.toMajorUnit ?: investedValue
                             }
 
                         onSave(
@@ -727,16 +706,11 @@ fun InvestmentFormBottomSheet(
         }
 
         if (showTypeBottomSheet) {
-            ModalBottomSheet(
+            BaseBottomSheet(
                 onDismissRequest = { showTypeBottomSheet = false },
-                containerColor = MaterialTheme.colorScheme.surface,
+                title = stringResource(R.string.select_asset_type),
             ) {
                 Column(modifier = Modifier.padding(bottom = 32.dp)) {
-                    Text(
-                        stringResource(R.string.select_asset_type),
-                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                        modifier = Modifier.padding(24.dp),
-                    )
                     types.forEach { t ->
                         DropdownMenuItem(
                             text = { Text(getLocalizedAssetType(t)) },

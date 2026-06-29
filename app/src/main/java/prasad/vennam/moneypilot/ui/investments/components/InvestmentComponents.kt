@@ -25,7 +25,7 @@ import prasad.vennam.moneypilot.data.entity.Investment
 import prasad.vennam.moneypilot.domain.model.SymbolResult
 import prasad.vennam.moneypilot.util.CurrencyFormatter
 import prasad.vennam.moneypilot.util.LocalCurrencyCode
-import prasad.vennam.moneypilot.util.inRupees
+import prasad.vennam.moneypilot.util.toMajorUnit
 
 @Composable
 fun InvestmentSummaryCard(
@@ -138,9 +138,9 @@ fun SwipeableInvestmentCard(
 @Composable
 fun InvestmentItem(investment: Investment) {
     val currencyCode = LocalCurrencyCode.current
-    val gain = investment.currentValue.inRupees - investment.investedAmount.inRupees
+    val gain = investment.currentValue.toMajorUnit - investment.investedAmount.toMajorUnit
     val gainPercentage =
-        if (investment.investedAmount > 0) (gain / investment.investedAmount.inRupees) * 100 else 0.0
+        if (investment.investedAmount > 0) (gain / investment.investedAmount.toMajorUnit) * 100 else 0.0
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -182,7 +182,7 @@ fun InvestmentItem(investment: Investment) {
 
             Column(horizontalAlignment = Alignment.End) {
                 Text(
-                    CurrencyFormatter.format(investment.currentValue.inRupees, currencyCode),
+                    CurrencyFormatter.format(investment.currentValue.toMajorUnit, currencyCode),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
                 )

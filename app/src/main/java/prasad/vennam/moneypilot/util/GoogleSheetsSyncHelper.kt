@@ -49,6 +49,7 @@ object GoogleSheetsSyncHelper {
         context: Context,
         email: String,
         repository: DataManagementRepository,
+        analyticsHelper: AnalyticsHelper,
         userPreferences: UserPreferences,
         spreadsheetId: String?,
         isRestore: Boolean = false,
@@ -59,6 +60,7 @@ object GoogleSheetsSyncHelper {
                 "GoogleSheetsSyncHelper",
                 "performTwoWaySync: Start for email=$email, spreadsheetId=$spreadsheetId, isRestore=$isRestore",
             )
+            analyticsHelper.logEvent(AnalyticsConstants.Event.SYNC_STARTED)
             try {
                 val account = android.accounts.Account(email, "com.google")
                 val scopeString = "oauth2:https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.metadata.readonly"
@@ -123,6 +125,10 @@ object GoogleSheetsSyncHelper {
                             investmentDao = repository.investmentDao,
                             transactionDao = repository.transactionDao,
                             emergencyFundDao = repository.emergencyFundDao,
+                            subscriptionDao = repository.subscriptionDao,
+                            savingGoalDao = repository.savingGoalDao,
+                            loanDao = repository.loanDao,
+                            loanPaymentDao = repository.loanPaymentDao,
                             userPreferences = userPreferences,
                             valueRanges = valueRanges,
                         )
@@ -144,12 +150,18 @@ object GoogleSheetsSyncHelper {
                         investmentDao = repository.investmentDao,
                         transactionDao = repository.transactionDao,
                         emergencyFundDao = repository.emergencyFundDao,
+                        subscriptionDao = repository.subscriptionDao,
+                        savingGoalDao = repository.savingGoalDao,
+                        loanDao = repository.loanDao,
+                        loanPaymentDao = repository.loanPaymentDao,
                     )
                     Log.d(
                         "GoogleSheetsSyncHelper",
                         "performTwoWaySync: Sync sequence successfully completed",
                     )
+                    analyticsHelper.logEvent(AnalyticsConstants.Event.SYNC_SUCCESS)
                 } catch (e: SheetStructureBrokenException) {
+                    analyticsHelper.logEvent(AnalyticsConstants.Event.SYNC_FAILURE)
                     Log.w(
                         "GoogleSheetsSyncHelper",
                         "performTwoWaySync: SheetStructureBrokenException caught. Recreating spreadsheet...",
@@ -169,6 +181,10 @@ object GoogleSheetsSyncHelper {
                         investmentDao = repository.investmentDao,
                         transactionDao = repository.transactionDao,
                         emergencyFundDao = repository.emergencyFundDao,
+                        subscriptionDao = repository.subscriptionDao,
+                        savingGoalDao = repository.savingGoalDao,
+                        loanDao = repository.loanDao,
+                        loanPaymentDao = repository.loanPaymentDao,
                     )
                 }
 
@@ -249,7 +265,11 @@ object GoogleSheetsSyncHelper {
                 "&ranges=Categories!A2:Z10000" +
                 "&ranges=Budgets!A2:Z10000" +
                 "&ranges=Investments!A2:Z10000" +
-                "&ranges=EmergencyFund!A2:Z10000"
+                "&ranges=EmergencyFund!A2:Z10000" +
+                "&ranges=Subscriptions!A2:Z10000" +
+                "&ranges=SavingGoals!A2:Z10000" +
+                "&ranges=Loans!A2:Z10000" +
+                "&ranges=LoanPayments!A2:Z10000"
 
         val request =
             Request
@@ -295,6 +315,10 @@ object GoogleSheetsSyncHelper {
         investmentDao: InvestmentDao,
         transactionDao: TransactionDao,
         emergencyFundDao: EmergencyFundDao,
+        subscriptionDao: SubscriptionDao,
+        savingGoalDao: SavingGoalDao,
+        loanDao: LoanDao,
+        loanPaymentDao: LoanPaymentDao,
         userPreferences: UserPreferences,
         valueRanges: List<ValueRange>,
     ) {
@@ -540,6 +564,122 @@ object GoogleSheetsSyncHelper {
                         "mergeCloudDataIntoLocal: EmergencyFund sheet values row is empty/null",
                     )
                 }
+
+            } else if (range.contains("Subscriptions")) {
+                for (row in values) {
+                    try {
+                        val id = row.getOrNull(0)?.toString()?.toLongOrNull() ?: continue
+                        val name = row.getOrNull(1)?.toString() ?: continue
+                        val amount = row.getOrNull(2)?.toString()?.toLongOrNull() ?: 0L
+                        val billingCycle = row.getOrNull(3)?.toString() ?: "Monthly"
+                        val nextPaymentDate = row.getOrNull(4)?.toString()?.toLongOrNull() ?: 0L
+                        val paymentMode = row.getOrNull(5)?.toString() ?: "UPI"
+                        val categoryId = row.getOrNull(6)?.toString()?.toLongOrNull()
+                        val isNotificationEnabled = row.getOrNull(7)?.toString()?.toBooleanStrictOrNull() ?: true
+                        val lastUpdated = row.getOrNull(8)?.toString()?.toLongOrNull() ?: System.currentTimeMillis()
+
+                        subscriptionDao.insertSubscription(
+                            prasad.vennam.moneypilot.data.entity.Subscription(
+                                id = id,
+                                name = name,
+                                amount = amount,
+                                billingCycle = billingCycle,
+                                nextPaymentDate = nextPaymentDate,
+                                paymentMode = paymentMode,
+                                categoryId = categoryId,
+                                isNotificationEnabled = isNotificationEnabled,
+                                lastUpdated = lastUpdated
+                            )
+                        )
+                    } catch (e: Exception) { Log.w("GoogleSheetsSyncHelper", "Failed to parse Subscription row: $row", e) }
+                }
+            } else if (range.contains("SavingGoals")) {
+                for (row in values) {
+                    try {
+                        val id = row.getOrNull(0)?.toString()?.toLongOrNull() ?: continue
+                        val name = row.getOrNull(1)?.toString() ?: continue
+                        val targetAmount = row.getOrNull(2)?.toString()?.toLongOrNull() ?: 0L
+                        val currentSavedAmount = row.getOrNull(3)?.toString()?.toLongOrNull() ?: 0L
+                        val deadline = row.getOrNull(4)?.toString()?.toLongOrNull() ?: 0L
+                        val colorHex = row.getOrNull(5)?.toString() ?: "#3F51B5"
+                        val iconName = row.getOrNull(6)?.toString() ?: "Savings"
+                        val isCompleted = row.getOrNull(7)?.toString()?.toBooleanStrictOrNull() ?: false
+                        val lastUpdated = row.getOrNull(8)?.toString()?.toLongOrNull() ?: System.currentTimeMillis()
+
+                        savingGoalDao.insertSavingGoal(
+                            prasad.vennam.moneypilot.data.entity.SavingGoal(
+                                id = id,
+                                name = name,
+                                targetAmount = targetAmount,
+                                currentSavedAmount = currentSavedAmount,
+                                deadline = deadline,
+                                colorHex = colorHex,
+                                iconName = iconName,
+                                isCompleted = isCompleted,
+                                lastUpdated = lastUpdated
+                            )
+                        )
+                    } catch (e: Exception) { Log.w("GoogleSheetsSyncHelper", "Failed to parse SavingGoal row: $row", e) }
+                }
+            } else if (range.contains("Loans")) {
+                for (row in values) {
+                    try {
+                        val id = row.getOrNull(0)?.toString()?.toLongOrNull() ?: continue
+                        val name = row.getOrNull(1)?.toString() ?: continue
+                        val totalAmount = row.getOrNull(2)?.toString()?.toLongOrNull() ?: 0L
+                        val outstandingAmount = row.getOrNull(3)?.toString()?.toLongOrNull() ?: 0L
+                        val emiAmount = row.getOrNull(4)?.toString()?.toLongOrNull() ?: 0L
+                        val nextEmiDate = row.getOrNull(5)?.toString()?.toLongOrNull() ?: 0L
+                        val currencyCode = row.getOrNull(6)?.toString() ?: "INR"
+                        val lenderName = row.getOrNull(7)?.toString() ?: ""
+                        val interestRate = row.getOrNull(8)?.toString()?.toDoubleOrNull() ?: 0.0
+                        val tenureMonths = row.getOrNull(9)?.toString()?.toIntOrNull() ?: 12
+                        val dueDayOfMonth = row.getOrNull(10)?.toString()?.toIntOrNull() ?: 1
+                        val isNotificationEnabled = row.getOrNull(11)?.toString()?.toBooleanStrictOrNull() ?: true
+                        val startDate = row.getOrNull(12)?.toString()?.toLongOrNull() ?: System.currentTimeMillis()
+
+                        loanDao.insertLoan(
+                            prasad.vennam.moneypilot.data.entity.Loan(
+                                id = id,
+                                name = name,
+                                totalAmount = totalAmount,
+                                outstandingAmount = outstandingAmount,
+                                emiAmount = emiAmount,
+                                nextEmiDate = nextEmiDate,
+                                currencyCode = currencyCode,
+                                lenderName = lenderName,
+                                interestRate = interestRate,
+                                tenureMonths = tenureMonths,
+                                dueDayOfMonth = dueDayOfMonth,
+                                isNotificationEnabled = isNotificationEnabled,
+                                startDate = startDate
+                            )
+                        )
+                    } catch (e: Exception) { Log.w("GoogleSheetsSyncHelper", "Failed to parse Loan row: $row", e) }
+                }
+            } else if (range.contains("LoanPayments")) {
+                for (row in values) {
+                    try {
+                        val id = row.getOrNull(0)?.toString()?.toLongOrNull() ?: continue
+                        val loanId = row.getOrNull(1)?.toString()?.toLongOrNull() ?: continue
+                        val amount = row.getOrNull(2)?.toString()?.toLongOrNull() ?: 0L
+                        val date = row.getOrNull(3)?.toString()?.toLongOrNull() ?: 0L
+                        val isExtraPayment = row.getOrNull(4)?.toString()?.toBooleanStrictOrNull() ?: false
+                        val note = row.getOrNull(5)?.toString() ?: ""
+
+                        loanPaymentDao.insertPayment(
+                            prasad.vennam.moneypilot.data.entity.LoanPayment(
+                                id = id,
+                                loanId = loanId,
+                                amount = amount,
+                                date = date,
+                                isExtraPayment = isExtraPayment,
+                                note = note
+                            )
+                        )
+                    } catch (e: Exception) { Log.w("GoogleSheetsSyncHelper", "Failed to parse LoanPayment row: $row", e) }
+                }
+
             }
         }
     }
@@ -552,6 +692,10 @@ object GoogleSheetsSyncHelper {
         investmentDao: InvestmentDao,
         transactionDao: TransactionDao,
         emergencyFundDao: EmergencyFundDao,
+        subscriptionDao: SubscriptionDao,
+        savingGoalDao: SavingGoalDao,
+        loanDao: LoanDao,
+        loanPaymentDao: LoanPaymentDao,
     ) {
         Log.d(
             "GoogleSheetsSyncHelper",
@@ -565,7 +709,11 @@ object GoogleSheetsSyncHelper {
                 "Categories!A1:Z10000",
                 "Budgets!A1:Z10000",
                 "Investments!A1:Z10000",
-                "EmergencyFund!A1:Z10000"
+                "EmergencyFund!A1:Z10000",
+                "Subscriptions!A1:Z10000",
+                "SavingGoals!A1:Z10000",
+                "Loans!A1:Z10000",
+                "LoanPayments!A1:Z10000"
               ]
             }
             """.trimIndent()
@@ -687,6 +835,24 @@ object GoogleSheetsSyncHelper {
                 listOf("Monthly Expenses", "Target Months", "Current Saved"),
                 listOf(emergencyMonthlyExpenses, emergencyTargetMonths, emergencyCurrentSaved),
             )
+
+
+        val subscriptions: List<prasad.vennam.moneypilot.data.entity.Subscription> = subscriptionDao.getAllSubscriptionsSync()
+        val savingGoals: List<prasad.vennam.moneypilot.data.entity.SavingGoal> = savingGoalDao.getAllSavingGoalsSync()
+        val loans: List<prasad.vennam.moneypilot.data.entity.Loan> = loanDao.getAllLoansSync()
+        val loanPayments: List<prasad.vennam.moneypilot.data.entity.LoanPayment> = loanPaymentDao.getAllLoanPaymentsSync()
+
+        val subRows = mutableListOf<List<Any>>(listOf("ID", "Name", "Amount", "Billing Cycle", "Next Payment Date", "Payment Mode", "Category ID", "Is Notification Enabled", "Last Updated"))
+        for (s in subscriptions) subRows.add(listOf(s.id, s.name, s.amount, s.billingCycle, s.nextPaymentDate, s.paymentMode, s.categoryId ?: "", s.isNotificationEnabled, s.lastUpdated))
+
+        val sgRows = mutableListOf<List<Any>>(listOf("ID", "Name", "Target Amount", "Current Saved Amount", "Deadline", "Color Hex", "Icon Name", "Is Completed", "Last Updated"))
+        for (sg in savingGoals) sgRows.add(listOf(sg.id, sg.name, sg.targetAmount, sg.currentSavedAmount, sg.deadline, sg.colorHex, sg.iconName, sg.isCompleted, sg.lastUpdated))
+
+        val lRows = mutableListOf<List<Any>>(listOf("ID", "Name", "Total Amount", "Outstanding Amount", "EMI Amount", "Next EMI Date", "Currency Code", "Lender Name", "Interest Rate", "Tenure Months", "Due Day of Month", "Is Notification Enabled", "Start Date"))
+        for (l in loans) lRows.add(listOf(l.id, l.name, l.totalAmount, l.outstandingAmount, l.emiAmount, l.nextEmiDate, l.currencyCode, l.lenderName, l.interestRate, l.tenureMonths, l.dueDayOfMonth, l.isNotificationEnabled, l.startDate))
+
+        val lpRows = mutableListOf<List<Any>>(listOf("ID", "Loan ID", "Amount", "Date", "Is Extra Payment", "Note"))
+        for (lp in loanPayments) lpRows.add(listOf(lp.id, lp.loanId, lp.amount, lp.date, lp.isExtraPayment, lp.note))
 
         val bodyMap =
             mapOf(
@@ -840,7 +1006,7 @@ object GoogleSheetsSyncHelper {
                 )
 
                 val requiredSheets =
-                    listOf("Transactions", "Categories", "Budgets", "Investments", "EmergencyFund")
+                    listOf("Transactions", "Categories", "Budgets", "Investments", "EmergencyFund", "Subscriptions", "SavingGoals", "Loans", "LoanPayments")
                 val missingSheets = requiredSheets.filter { it !in existingTitles }
 
                 if (missingSheets.isNotEmpty()) {
