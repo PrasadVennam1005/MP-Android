@@ -22,6 +22,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -29,10 +30,6 @@ import prasad.vennam.moneypilot.ui.viewmodel.state.AllocationDetail
 import prasad.vennam.moneypilot.ui.viewmodel.state.AllocationProfile
 import prasad.vennam.moneypilot.util.CurrencyFormatter
 import kotlin.math.abs
-
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.LocalLayoutDirection
-import androidx.compose.ui.unit.LayoutDirection
 
 @OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 @Composable
@@ -59,9 +56,10 @@ fun AssetAllocationCard(
     }
 
     val density = LocalDensity.current
-    val stroke = remember(density) {
-        Stroke(width = with(density) { 14.dp.toPx() }, cap = StrokeCap.Round)
-    }
+    val stroke =
+        remember(density) {
+            Stroke(width = with(density) { 14.dp.toPx() }, cap = StrokeCap.Round)
+        }
 
     Card(
         modifier = modifier.fillMaxWidth(),

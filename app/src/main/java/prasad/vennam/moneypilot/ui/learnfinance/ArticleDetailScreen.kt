@@ -43,16 +43,17 @@ fun ArticleDetailScreen(
     viewModel: LearnFinanceViewModel,
     analyticsHelper: AnalyticsHelper,
     onBack: () -> Unit,
-    onArticleClick: (String) -> Unit
+    onArticleClick: (String) -> Unit,
 ) {
     val article = viewModel.getArticleById(articleId) ?: return
     TrackScreen(analyticsHelper, "${AnalyticsConstants.Screen.ARTICLE_DETAIL}_${article.title}")
     val bookmarkedIds by viewModel.bookmarkedIds.collectAsState()
     val isBookmarked = bookmarkedIds.contains(articleId)
 
-    val relatedArticles = remember(article.relatedArticles) {
-        article.relatedArticles.mapNotNull { viewModel.getArticleById(it) }
-    }
+    val relatedArticles =
+        remember(article.relatedArticles) {
+            article.relatedArticles.mapNotNull { viewModel.getArticleById(it) }
+        }
 
     Scaffold(
         topBar = {
@@ -68,54 +69,56 @@ fun ArticleDetailScreen(
                         Icon(
                             if (isBookmarked) Icons.Rounded.Bookmark else Icons.Rounded.BookmarkBorder,
                             contentDescription = "Bookmark",
-                            tint = if (isBookmarked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                            tint = if (isBookmarked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
                         )
                     }
-                }
+                },
             )
-        }
+        },
     ) { padding ->
         Column(
-            modifier = Modifier
-                .padding(padding)
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
+            modifier =
+                Modifier
+                    .padding(padding)
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState()),
         ) {
             // Hero Header
             Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(
-                        Brush.verticalGradient(
-                            colors = listOf(
-                                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
-                                Color.Transparent
-                            )
-                        )
-                    )
-                    .padding(horizontal = 16.dp, vertical = 24.dp)
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .background(
+                            Brush.verticalGradient(
+                                colors =
+                                    listOf(
+                                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
+                                        Color.Transparent,
+                                    ),
+                            ),
+                        ).padding(horizontal = 16.dp, vertical = 24.dp),
             ) {
                 Column {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
                         Text(
                             text = article.category.uppercase(),
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.primary,
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.Bold,
                         )
                         if (article.subcategory.isNotEmpty()) {
                             Text(
                                 text = "•",
                                 style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                             Text(
                                 text = article.subcategory.uppercase(),
                                 style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
                     }
@@ -123,27 +126,27 @@ fun ArticleDetailScreen(
                     Text(
                         text = article.title,
                         style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
                         LevelBadge(level = article.level)
-                        
+
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(
                                 imageVector = Icons.Rounded.Schedule,
                                 contentDescription = null,
                                 modifier = Modifier.size(16.dp),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                             Spacer(modifier = Modifier.width(4.dp))
                             Text(
                                 text = "${article.readTimeMinutes} min read",
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
                     }
@@ -155,7 +158,7 @@ fun ArticleDetailScreen(
                 Text(
                     text = article.content,
                     style = MaterialTheme.typography.bodyLarge,
-                    lineHeight = MaterialTheme.typography.bodyLarge.lineHeight * 1.3
+                    lineHeight = MaterialTheme.typography.bodyLarge.lineHeight * 1.3,
                 )
 
                 // Quiz Card
@@ -170,16 +173,16 @@ fun ArticleDetailScreen(
                     Text(
                         text = "Related Articles",
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                        modifier = Modifier.padding(vertical = 8.dp)
+                        modifier = Modifier.padding(vertical = 8.dp),
                     )
                     Column(
                         verticalArrangement = Arrangement.spacedBy(12.dp),
-                        modifier = Modifier.padding(bottom = 24.dp)
+                        modifier = Modifier.padding(bottom = 24.dp),
                     ) {
                         relatedArticles.forEach { related ->
                             RelatedArticleCard(
                                 article = related,
-                                onClick = { onArticleClick(related.id) }
+                                onClick = { onArticleClick(related.id) },
                             )
                         }
                     }
@@ -197,38 +200,41 @@ fun ArticleQuizCard(quiz: prasad.vennam.moneypilot.data.model.ArticleQuiz) {
     val isAnswered = selectedIndex != null
 
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 8.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
-        ),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp),
+        colors =
+            CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+            ),
         shape = MaterialTheme.shapes.large,
-        border = androidx.compose.foundation.BorderStroke(
-            width = 1.dp,
-            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
-        )
+        border =
+            androidx.compose.foundation.BorderStroke(
+                width = 1.dp,
+                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f),
+            ),
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Rounded.Assignment,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary
+                    tint = MaterialTheme.colorScheme.primary,
                 )
                 Text(
                     text = "Test Your Knowledge",
                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                    color = MaterialTheme.colorScheme.primary
+                    color = MaterialTheme.colorScheme.primary,
                 )
             }
             Spacer(modifier = Modifier.height(12.dp))
             Text(
                 text = quiz.question,
-                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium)
+                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
             )
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -236,31 +242,34 @@ fun ArticleQuizCard(quiz: prasad.vennam.moneypilot.data.model.ArticleQuiz) {
                 quiz.options.forEachIndexed { index, option ->
                     val isSelected = selectedIndex == index
                     val isCorrectOption = index == quiz.correctAnswer
-                    
-                    val cardBgColor = when {
-                        !isAnswered -> MaterialTheme.colorScheme.surface
-                        isSelected && isCorrectOption -> Color(0xFFE8F5E9)
-                        isSelected && !isCorrectOption -> Color(0xFFFFEBEE)
-                        isCorrectOption -> Color(0xFFE8F5E9)
-                        else -> MaterialTheme.colorScheme.surface.copy(alpha = 0.6f)
-                    }
 
-                    val contentColor = when {
-                        !isAnswered -> MaterialTheme.colorScheme.onSurface
-                        isSelected && isCorrectOption -> Color(0xFF2E7D32)
-                        isSelected && !isCorrectOption -> Color(0xFFC62828)
-                        isCorrectOption -> Color(0xFF2E7D32)
-                        else -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                    }
+                    val cardBgColor =
+                        when {
+                            !isAnswered -> MaterialTheme.colorScheme.surface
+                            isSelected && isCorrectOption -> Color(0xFFE8F5E9)
+                            isSelected && !isCorrectOption -> Color(0xFFFFEBEE)
+                            isCorrectOption -> Color(0xFFE8F5E9)
+                            else -> MaterialTheme.colorScheme.surface.copy(alpha = 0.6f)
+                        }
 
-                    val borderColor = when {
-                        !isAnswered && isSelected -> MaterialTheme.colorScheme.primary
-                        !isAnswered -> MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
-                        isSelected && isCorrectOption -> Color(0xFF2E7D32)
-                        isSelected && !isCorrectOption -> Color(0xFFC62828)
-                        isCorrectOption -> Color(0xFF2E7D32)
-                        else -> Color.Transparent
-                    }
+                    val contentColor =
+                        when {
+                            !isAnswered -> MaterialTheme.colorScheme.onSurface
+                            isSelected && isCorrectOption -> Color(0xFF2E7D32)
+                            isSelected && !isCorrectOption -> Color(0xFFC62828)
+                            isCorrectOption -> Color(0xFF2E7D32)
+                            else -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                        }
+
+                    val borderColor =
+                        when {
+                            !isAnswered && isSelected -> MaterialTheme.colorScheme.primary
+                            !isAnswered -> MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+                            isSelected && isCorrectOption -> Color(0xFF2E7D32)
+                            isSelected && !isCorrectOption -> Color(0xFFC62828)
+                            isCorrectOption -> Color(0xFF2E7D32)
+                            else -> Color.Transparent
+                        }
 
                     Card(
                         onClick = { if (!isAnswered) selectedIndex = index },
@@ -268,32 +277,33 @@ fun ArticleQuizCard(quiz: prasad.vennam.moneypilot.data.model.ArticleQuiz) {
                         modifier = Modifier.fillMaxWidth(),
                         colors = CardDefaults.cardColors(containerColor = cardBgColor, contentColor = contentColor),
                         border = androidx.compose.foundation.BorderStroke(1.dp, borderColor),
-                        shape = MaterialTheme.shapes.medium
+                        shape = MaterialTheme.shapes.medium,
                     ) {
                         Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp),
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
+                            horizontalArrangement = Arrangement.SpaceBetween,
                         ) {
                             Text(
                                 text = option,
                                 style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
-                                modifier = Modifier.weight(1f)
+                                modifier = Modifier.weight(1f),
                             )
                             if (isAnswered) {
                                 if (isCorrectOption) {
                                     Icon(
                                         imageVector = Icons.Rounded.CheckCircle,
                                         contentDescription = "Correct",
-                                        tint = Color(0xFF2E7D32)
+                                        tint = Color(0xFF2E7D32),
                                     )
                                 } else if (isSelected) {
                                     Icon(
                                         imageVector = Icons.Rounded.Cancel,
                                         contentDescription = "Incorrect",
-                                        tint = Color(0xFFC62828)
+                                        tint = Color(0xFFC62828),
                                     )
                                 }
                             }
@@ -309,13 +319,13 @@ fun ArticleQuizCard(quiz: prasad.vennam.moneypilot.data.model.ArticleQuiz) {
                 Text(
                     text = "Explanation",
                     style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = quiz.explanation,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }
@@ -325,45 +335,47 @@ fun ArticleQuizCard(quiz: prasad.vennam.moneypilot.data.model.ArticleQuiz) {
 @Composable
 fun RelatedArticleCard(
     article: FinanceArticle,
-    onClick: () -> Unit
+    onClick: () -> Unit,
 ) {
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onClick),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
     ) {
         Row(
-            modifier = Modifier
-                .padding(12.dp)
-                .fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
+            modifier =
+                Modifier
+                    .padding(12.dp)
+                    .fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = article.category.uppercase(),
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.primary
+                    color = MaterialTheme.colorScheme.primary,
                 )
                 Text(
                     text = article.title,
                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    overflow = TextOverflow.Ellipsis,
                 )
                 Text(
                     text = article.description,
                     style = MaterialTheme.typography.bodySmall,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
             Icon(
                 imageVector = Icons.AutoMirrored.Rounded.KeyboardArrowRight,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }

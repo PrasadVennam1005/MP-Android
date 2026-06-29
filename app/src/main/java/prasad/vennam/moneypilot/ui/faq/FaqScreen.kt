@@ -156,7 +156,7 @@ private val faqCategories =
 @Composable
 fun FaqScreen(
     analyticsHelper: AnalyticsHelper,
-    onNavigateBack: () -> Unit
+    onNavigateBack: () -> Unit,
 ) {
     TrackScreen(analyticsHelper, AnalyticsConstants.Screen.FAQ)
     val context = LocalContext.current
@@ -179,9 +179,10 @@ fun FaqScreen(
                         Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Back")
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                ),
+                colors =
+                    TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.surface,
+                    ),
             )
         },
         floatingActionButton = {
@@ -199,9 +200,10 @@ fun FaqScreen(
         containerColor = MaterialTheme.colorScheme.background,
     ) { innerPadding ->
         LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding),
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding),
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 100.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
@@ -217,7 +219,7 @@ fun FaqScreen(
                         category = category,
                         expandedStates = expandedStates,
                         categoryKey = "cat_$catIdx",
-                        analyticsHelper = analyticsHelper
+                        analyticsHelper = analyticsHelper,
                     )
                 }
             }
@@ -229,12 +231,13 @@ fun FaqScreen(
         ContactBottomSheet(
             onDismiss = { showContactSheet = false },
             onSendEmail = { subject, body ->
-                val intent = Intent(Intent.ACTION_SENDTO).apply {
-                    data = Uri.parse("mailto:")
-                    putExtra(Intent.EXTRA_EMAIL, arrayOf("support@moneypilotapp.com"))
-                    putExtra(Intent.EXTRA_SUBJECT, subject)
-                    putExtra(Intent.EXTRA_TEXT, body)
-                }
+                val intent =
+                    Intent(Intent.ACTION_SENDTO).apply {
+                        data = Uri.parse("mailto:")
+                        putExtra(Intent.EXTRA_EMAIL, arrayOf("support@moneypilotapp.com"))
+                        putExtra(Intent.EXTRA_SUBJECT, subject)
+                        putExtra(Intent.EXTRA_TEXT, body)
+                    }
                 context.startActivity(Intent.createChooser(intent, "Send Email"))
                 showContactSheet = false
             },
@@ -247,25 +250,28 @@ fun FaqScreen(
 @Composable
 private fun FaqHeroCard() {
     Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp))
-            .background(
-                Brush.linearGradient(
-                    colors = listOf(
-                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f),
-                        MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(20.dp))
+                .background(
+                    Brush.linearGradient(
+                        colors =
+                            listOf(
+                                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f),
+                                MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f),
+                            ),
                     ),
-                )
-            ).padding(24.dp),
+                ).padding(24.dp),
         contentAlignment = Alignment.Center,
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Box(
-                modifier = Modifier
-                    .size(64.dp)
-                    .clip(RoundedCornerShape(18.dp))
-                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)),
+                modifier =
+                    Modifier
+                        .size(64.dp)
+                        .clip(RoundedCornerShape(18.dp))
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
@@ -316,10 +322,11 @@ private fun FaqCategorySection(
             Spacer(Modifier.width(8.dp))
             Text(
                 category.title,
-                style = MaterialTheme.typography.labelLarge.copy(
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = androidx.compose.ui.unit.TextUnit.Unspecified,
-                ),
+                style =
+                    MaterialTheme.typography.labelLarge.copy(
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = androidx.compose.ui.unit.TextUnit.Unspecified,
+                    ),
                 color = MaterialTheme.colorScheme.primary,
             )
         }
@@ -336,7 +343,7 @@ private fun FaqCategorySection(
                     if (!isExpanded) {
                         analyticsHelper.logEvent(
                             AnalyticsConstants.Event.FAQ_ITEM_EXPANDED,
-                            mapOf(AnalyticsConstants.Param.QUESTION to item.question)
+                            mapOf(AnalyticsConstants.Param.QUESTION to item.question),
                         )
                     }
                     expandedStates[key] = !isExpanded
@@ -361,14 +368,16 @@ private fun FaqItemCard(
     )
 
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .clickable(onClick = onToggle),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(16.dp))
+                .clickable(onClick = onToggle),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
-        ),
+        colors =
+            CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+            ),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -387,9 +396,10 @@ private fun FaqItemCard(
                     imageVector = Icons.Rounded.KeyboardArrowDown,
                     contentDescription = if (isExpanded) "Collapse" else "Expand",
                     tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier
-                        .size(24.dp)
-                        .rotate(rotationAngle),
+                    modifier =
+                        Modifier
+                            .size(24.dp)
+                            .rotate(rotationAngle),
                 )
             }
 
@@ -439,10 +449,11 @@ fun ContactBottomSheet(
         dragHandle = { BottomSheetDefaults.DragHandle() },
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 24.dp)
-                .padding(bottom = 36.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp)
+                    .padding(bottom = 36.dp),
         ) {
             // Header
             Row(
@@ -450,10 +461,11 @@ fun ContactBottomSheet(
                 modifier = Modifier.padding(bottom = 20.dp),
             ) {
                 Box(
-                    modifier = Modifier
-                        .size(44.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(MaterialTheme.colorScheme.primaryContainer),
+                    modifier =
+                        Modifier
+                            .size(44.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(MaterialTheme.colorScheme.primaryContainer),
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(
@@ -495,10 +507,11 @@ fun ContactBottomSheet(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(14.dp),
                 keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = MaterialTheme.colorScheme.primary,
-                    unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
-                ),
+                colors =
+                    OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
+                    ),
             )
 
             Spacer(Modifier.height(14.dp))
@@ -517,16 +530,18 @@ fun ContactBottomSheet(
                         modifier = Modifier.padding(top = 14.dp),
                     )
                 },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(160.dp),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .height(160.dp),
                 maxLines = 8,
                 shape = RoundedCornerShape(14.dp),
                 keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = MaterialTheme.colorScheme.primary,
-                    unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
-                ),
+                colors =
+                    OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
+                    ),
             )
 
             Spacer(Modifier.height(20.dp))
@@ -535,16 +550,18 @@ fun ContactBottomSheet(
             Button(
                 onClick = { onSendEmail(subject.trim(), body.trim()) },
                 enabled = isSendEnabled,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(54.dp),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .height(54.dp),
                 shape = RoundedCornerShape(14.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary,
-                    disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                    disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                ),
+                colors =
+                    ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary,
+                        disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                        disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    ),
             ) {
                 Icon(Icons.AutoMirrored.Rounded.Send, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(10.dp))

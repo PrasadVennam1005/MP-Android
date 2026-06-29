@@ -9,7 +9,7 @@ import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.flow.first
 import prasad.vennam.moneypilot.data.UserPreferences
-import prasad.vennam.moneypilot.data.repository.MoneyPilotRepository
+import prasad.vennam.moneypilot.data.repository.DataManagementRepository
 
 @HiltWorker
 class GoogleSheetsSyncWorker
@@ -17,7 +17,7 @@ class GoogleSheetsSyncWorker
     constructor(
         @Assisted context: Context,
         @Assisted params: WorkerParameters,
-        private val repository: MoneyPilotRepository,
+        private val repository: DataManagementRepository,
         private val userPreferences: UserPreferences,
     ) : CoroutineWorker(context, params) {
         override suspend fun doWork(): Result {

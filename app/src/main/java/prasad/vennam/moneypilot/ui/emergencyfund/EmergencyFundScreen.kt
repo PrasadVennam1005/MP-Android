@@ -359,17 +359,19 @@ fun EmergencyFundScreen(
                                 val sweepColor = MaterialTheme.colorScheme.secondary
 
                                 val density = androidx.compose.ui.platform.LocalDensity.current
-                                val gaugeStroke = remember(density) {
-                                    Stroke(width = with(density) { 16.dp.toPx() }, cap = StrokeCap.Round)
-                                }
-                                val sweepGradientBrush = remember(sweepColor) {
-                                    Brush.sweepGradient(
-                                        listOf(
-                                            sweepColor.copy(alpha = 0.6f),
-                                            sweepColor,
+                                val gaugeStroke =
+                                    remember(density) {
+                                        Stroke(width = with(density) { 16.dp.toPx() }, cap = StrokeCap.Round)
+                                    }
+                                val sweepGradientBrush =
+                                    remember(sweepColor) {
+                                        Brush.sweepGradient(
+                                            listOf(
+                                                sweepColor.copy(alpha = 0.6f),
+                                                sweepColor,
+                                            ),
                                         )
-                                    )
-                                }
+                                    }
 
                                 // Circular Gauge Canvas
                                 Canvas(modifier = Modifier.size(170.dp)) {
@@ -1031,7 +1033,7 @@ fun EmergencyFundScreen(
                                 if (additional > 0.0) {
                                     analyticsHelper.logEvent(
                                         AnalyticsConstants.Event.EMERGENCY_FUND_DEPOSIT,
-                                        mapOf(AnalyticsConstants.Param.AMOUNT to additional)
+                                        mapOf(AnalyticsConstants.Param.AMOUNT to additional),
                                     )
                                     viewModel.updateEmergencySaved(currentSaved + additional)
                                     showDepositSheet = false
@@ -1174,7 +1176,7 @@ fun EmergencyFundScreen(
                                 if (amount > 0.0 && amount <= currentSaved) {
                                     analyticsHelper.logEvent(
                                         AnalyticsConstants.Event.EMERGENCY_FUND_WITHDRAW,
-                                        mapOf(AnalyticsConstants.Param.AMOUNT to amount)
+                                        mapOf(AnalyticsConstants.Param.AMOUNT to amount),
                                     )
                                     viewModel.updateEmergencySaved(
                                         (currentSaved - amount).coerceAtLeast(

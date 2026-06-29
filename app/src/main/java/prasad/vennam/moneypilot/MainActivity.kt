@@ -77,7 +77,6 @@ class MainActivity : FragmentActivity() {
         enableEdgeToEdge()
         MobileAds.initialize(this) {}
 
-
         // Schedule timezone-based Daily News Notifications
         prasad.vennam.moneypilot.worker.DailyNewsWorker
             .schedule(applicationContext)
@@ -109,21 +108,22 @@ class MainActivity : FragmentActivity() {
 
             val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
             DisposableEffect(lifecycleOwner) {
-                val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
-                    if (event == androidx.lifecycle.Lifecycle.Event.ON_STOP) {
-                        // Store the timestamp when the app is backgrounded
-                        lastBackgroundTime = System.currentTimeMillis()
-                    } else if (event == androidx.lifecycle.Lifecycle.Event.ON_START) {
-                        // Require re-authentication only if the app has been in the background for > 1 minute (60s)
-                        if (lastBackgroundTime != 0L) {
-                            val elapsed = System.currentTimeMillis() - lastBackgroundTime
-                            if (elapsed > 60_000L) {
-                                isAuthenticated = false
+                val observer =
+                    androidx.lifecycle.LifecycleEventObserver { _, event ->
+                        if (event == androidx.lifecycle.Lifecycle.Event.ON_STOP) {
+                            // Store the timestamp when the app is backgrounded
+                            lastBackgroundTime = System.currentTimeMillis()
+                        } else if (event == androidx.lifecycle.Lifecycle.Event.ON_START) {
+                            // Require re-authentication only if the app has been in the background for > 1 minute (60s)
+                            if (lastBackgroundTime != 0L) {
+                                val elapsed = System.currentTimeMillis() - lastBackgroundTime
+                                if (elapsed > 60_000L) {
+                                    isAuthenticated = false
+                                }
+                                lastBackgroundTime = 0L // Reset
                             }
-                            lastBackgroundTime = 0L // Reset
                         }
                     }
-                }
                 lifecycleOwner.lifecycle.addObserver(observer)
                 onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
             }
@@ -138,7 +138,7 @@ class MainActivity : FragmentActivity() {
                         onSuccess = { isAuthenticated = true },
                         onError = {
                             // Silently ignore; user can tap Unlock button
-                        }
+                        },
                     )
                 }
             }
@@ -165,14 +165,15 @@ class MainActivity : FragmentActivity() {
                                     subtitle = "Verify your identity to open the app",
                                     onSuccess = { isAuthenticated = true },
                                     onError = {
-                                        android.widget.Toast.makeText(
-                                            this@MainActivity,
-                                            "Authentication failed. Please try again.",
-                                            android.widget.Toast.LENGTH_SHORT
-                                        ).show()
-                                    }
+                                        android.widget.Toast
+                                            .makeText(
+                                                this@MainActivity,
+                                                "Authentication failed. Please try again.",
+                                                android.widget.Toast.LENGTH_SHORT,
+                                            ).show()
+                                    },
                                 )
-                            }
+                            },
                         )
                     }
                 }
@@ -190,36 +191,36 @@ class MainActivity : FragmentActivity() {
 fun BiometricLockScreen(onUnlockClick: () -> Unit) {
     androidx.compose.material3.Surface(
         modifier = Modifier.fillMaxSize(),
-        color = MaterialTheme.colorScheme.background
+        color = MaterialTheme.colorScheme.background,
     ) {
         Column(
             modifier = Modifier.fillMaxSize(),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+            verticalArrangement = Arrangement.Center,
         ) {
             Icon(
                 imageVector = Icons.Rounded.Lock,
                 contentDescription = "Locked",
                 modifier = Modifier.size(80.dp),
-                tint = MaterialTheme.colorScheme.primary
+                tint = MaterialTheme.colorScheme.primary,
             )
             Spacer(modifier = Modifier.height(20.dp))
             Text(
                 "MoneyPilot is locked",
-                style = MaterialTheme.typography.titleLarge
+                style = MaterialTheme.typography.titleLarge,
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
                 "Verify your identity to continue",
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Spacer(modifier = Modifier.height(32.dp))
             Button(onClick = onUnlockClick) {
                 Icon(
                     imageVector = Icons.Rounded.Lock,
                     contentDescription = null,
-                    modifier = Modifier.size(18.dp)
+                    modifier = Modifier.size(18.dp),
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text("Unlock")
@@ -286,13 +287,14 @@ fun MoneyPilotApp(
 
     CompositionLocalProvider(LocalCurrencyCode provides currencyCode) {
         val showNavigation =
-            isLoggedIn && (
-                currentDestination is Destination.Dashboard ||
-                currentDestination is Destination.History ||
-                currentDestination is Destination.Loans ||
-                currentDestination is Destination.Investments ||
-                currentDestination is Destination.Reports
-            )
+            isLoggedIn &&
+                (
+                    currentDestination is Destination.Dashboard ||
+                        currentDestination is Destination.History ||
+                        currentDestination is Destination.Loans ||
+                        currentDestination is Destination.Investments ||
+                        currentDestination is Destination.Reports
+                )
 
         NavigationSuiteScaffold(
             layoutType =
@@ -377,7 +379,7 @@ fun MoneyPilotApp(
                 onBack = { if (backStack.size > 1) backStack.removeLastOrNull() },
                 modifier = Modifier,
                 entryProvider = { key ->
-                   moneyPilotNavEntry(
+                    moneyPilotNavEntry(
                         key = key,
                         backStack = backStack,
                         analyticsHelper = analyticsHelper,
@@ -392,7 +394,7 @@ fun MoneyPilotApp(
                         userData = userData,
                         syncState = syncState,
                         interstitialAdManager = interstitialAdManager,
-                        onBack = { if (backStack.size > 1) backStack.removeLastOrNull() }
+                        onBack = { if (backStack.size > 1) backStack.removeLastOrNull() },
                     )
                 },
             )

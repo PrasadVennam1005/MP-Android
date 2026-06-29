@@ -139,9 +139,10 @@ private fun SummaryChartCard(
             val tertiaryColor = MaterialTheme.colorScheme.tertiary
 
             val density = androidx.compose.ui.platform.LocalDensity.current
-            val stroke = remember(density) {
-                Stroke(width = with(density) { 16.dp.toPx() }, cap = StrokeCap.Round)
-            }
+            val stroke =
+                remember(density) {
+                    Stroke(width = with(density) { 16.dp.toPx() }, cap = StrokeCap.Round)
+                }
 
             Box(
                 contentAlignment = Alignment.Center,

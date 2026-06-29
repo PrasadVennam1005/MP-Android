@@ -12,7 +12,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import prasad.vennam.moneypilot.data.entity.PendingTransaction
-import prasad.vennam.moneypilot.data.repository.MoneyPilotRepository
+import prasad.vennam.moneypilot.data.repository.TransactionRepository
 import prasad.vennam.moneypilot.util.NotificationParser
 import prasad.vennam.moneypilot.util.inRupees
 import javax.inject.Inject
@@ -20,7 +20,7 @@ import javax.inject.Inject
 @AndroidEntryPoint
 class TransactionNotificationListener : NotificationListenerService() {
     @Inject
-    lateinit var repository: MoneyPilotRepository
+    lateinit var repository: TransactionRepository
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 

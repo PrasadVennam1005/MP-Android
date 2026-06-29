@@ -24,7 +24,7 @@ import prasad.vennam.moneypilot.data.entity.TimeFrame
 import prasad.vennam.moneypilot.data.entity.Transaction
 import prasad.vennam.moneypilot.data.entity.TransactionType
 import prasad.vennam.moneypilot.data.repository.ExchangeRateRepository
-import prasad.vennam.moneypilot.data.repository.MoneyPilotRepository
+import prasad.vennam.moneypilot.data.repository.LoanRepository
 import prasad.vennam.moneypilot.domain.usecase.*
 import prasad.vennam.moneypilot.util.LoanIntelligenceUtil
 import prasad.vennam.moneypilot.util.RemoteConfigHelper
@@ -75,7 +75,7 @@ class DashboardViewModel
     constructor(
         private val exchangeRateRepo: ExchangeRateRepository,
         private val userPreferences: UserPreferences,
-        private val repository: MoneyPilotRepository,
+        private val loanRepository: LoanRepository,
         private val addLoanUseCase: AddLoanUseCase,
         private val updateLoanUseCase: UpdateLoanUseCase,
         private val deleteLoanUseCase: DeleteLoanUseCase,
@@ -207,19 +207,21 @@ class DashboardViewModel
                         .mapKeys { (catId, _) -> categoriesMap[catId] }
                         .mapValues { (_, trans) -> trans.sumOf { convertAmount(it.amount, it.currencyCode) } }
 
-                val currentMonthExpenses = transactions.filter {
-                    val transCal = Calendar.getInstance().apply { timeInMillis = it.timestamp }
-                    it.type == TransactionType.EXPENSE &&
-                        transCal.get(Calendar.MONTH) == currentMonth &&
-                        transCal.get(Calendar.YEAR) == currentYear
-                }
+                val currentMonthExpenses =
+                    transactions.filter {
+                        val transCal = Calendar.getInstance().apply { timeInMillis = it.timestamp }
+                        it.type == TransactionType.EXPENSE &&
+                            transCal.get(Calendar.MONTH) == currentMonth &&
+                            transCal.get(Calendar.YEAR) == currentYear
+                    }
                 val expensesByCategoryId = currentMonthExpenses.groupBy { it.categoryId }
 
                 val budgetProgresses =
                     budgets.map { budget ->
                         val category = categoriesMap[budget.categoryId]
-                        val spent = expensesByCategoryId[budget.categoryId]
-                            ?.sumOf { convertAmount(it.amount, it.currencyCode) } ?: 0.0
+                        val spent =
+                            expensesByCategoryId[budget.categoryId]
+                                ?.sumOf { convertAmount(it.amount, it.currencyCode) } ?: 0.0
 
                         val budgetConverted = convertAmount(budget.amount, budget.currencyCode)
                         val progress = if (budgetConverted > 0) (spent / budgetConverted).toFloat().coerceIn(0f, 1f) else 0f
@@ -242,7 +244,7 @@ class DashboardViewModel
                     emergencyFund = data.emergencyFund,
                     selectedTimeFrame = timeFrame,
                     pendingTransactions = data.pendingTransactions,
-                    isLearnFinanceEnabled = remoteConfigHelper.isLearnFinanceEnabled()
+                    isLearnFinanceEnabled = remoteConfigHelper.isLearnFinanceEnabled(),
                 )
             }.flowOn(Dispatchers.Default)
                 .stateIn(
@@ -317,11 +319,11 @@ class DashboardViewModel
                         isExtraPayment = isExtra,
                         note = note,
                     )
-                repository.insertLoanPayment(payment)
+                loanRepository.insertLoanPayment(payment)
             }
         }
 
-        fun getLoanPayments(loanId: Long): kotlinx.coroutines.flow.Flow<List<LoanPayment>> = repository.getPaymentsForLoan(loanId)
+        fun getLoanPayments(loanId: Long): kotlinx.coroutines.flow.Flow<List<LoanPayment>> = loanRepository.getPaymentsForLoan(loanId)
 
         fun estimatePayoff(loan: Loan): Long =
             LoanIntelligenceUtil.predictPayoffDate(

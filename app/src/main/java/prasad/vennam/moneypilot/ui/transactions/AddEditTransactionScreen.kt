@@ -91,7 +91,7 @@ fun AddEditTransactionScreen(
 ) {
     TrackScreen(
         analyticsHelper,
-        if (transactionId == null) AnalyticsConstants.Screen.ADD_TRANSACTION else AnalyticsConstants.Screen.EDIT_TRANSACTION
+        if (transactionId == null) AnalyticsConstants.Screen.ADD_TRANSACTION else AnalyticsConstants.Screen.EDIT_TRANSACTION,
     )
     val formState by viewModel.formState.collectAsStateWithLifecycle()
 

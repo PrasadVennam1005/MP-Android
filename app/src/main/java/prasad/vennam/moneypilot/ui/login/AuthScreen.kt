@@ -68,9 +68,9 @@ import androidx.compose.ui.unit.lerp
 import androidx.compose.ui.unit.sp
 import androidx.credentials.CredentialManager
 import androidx.credentials.GetCredentialRequest
+import androidx.credentials.exceptions.GetCredentialCancellationException
 import androidx.credentials.exceptions.GetCredentialException
 import androidx.credentials.exceptions.NoCredentialException
-import androidx.credentials.exceptions.GetCredentialCancellationException
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import kotlinx.coroutines.delay
@@ -299,7 +299,7 @@ fun AuthScreen(
                                             if (googleIdTokenCredential != null) {
                                                 analyticsHelper.logEvent(
                                                     AnalyticsConstants.Event.LOGIN,
-                                                    mapOf(AnalyticsConstants.Param.METHOD to "google")
+                                                    mapOf(AnalyticsConstants.Param.METHOD to "google"),
                                                 )
                                                 mainViewModel.saveUserData(
                                                     UserPreferences.UserData(
@@ -369,7 +369,7 @@ fun AuthScreen(
                                 onClick = {
                                     analyticsHelper.logEvent(
                                         AnalyticsConstants.Event.LOGIN,
-                                        mapOf(AnalyticsConstants.Param.METHOD to "guest")
+                                        mapOf(AnalyticsConstants.Param.METHOD to "guest"),
                                     )
                                     scope.launch {
                                         mainViewModel.saveUserData(

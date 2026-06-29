@@ -244,9 +244,10 @@ fun AnalyticsScreen(
                     item {
                         AdBannerView(
                             isPremium = isPremium,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(top = 16.dp)
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .padding(top = 16.dp),
                         )
                     }
                 }

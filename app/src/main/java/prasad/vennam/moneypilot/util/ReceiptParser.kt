@@ -96,7 +96,8 @@ object ReceiptParser {
         val numberCandidateRegex = Regex("(?i)^(?:\\p{Sc}|rs\\.?|inr)?[0-9oOlI|.,]+$")
         return line.split("\\s+".toRegex()).joinToString(" ") { word ->
             if (numberCandidateRegex.matches(word)) {
-                word.replace(Regex("[oO]"), "0")
+                word
+                    .replace(Regex("[oO]"), "0")
                     .replace(Regex("[lI|]"), "1")
             } else {
                 word
@@ -105,16 +106,17 @@ object ReceiptParser {
     }
 
     private fun extractMerchant(lines: List<String>): String? {
-        val rawMerchant = lines.firstOrNull { line ->
-            val lower = line.lowercase(Locale.getDefault())
+        val rawMerchant =
+            lines.firstOrNull { line ->
+                val lower = line.lowercase(Locale.getDefault())
 
-            merchantIgnoreWords.none {
-                lower.contains(it)
-            } &&
-                !line.any { char -> char.isDigit() } &&
-                line.length > 2 &&
-                line.length < 60
-        } ?: return null
+                merchantIgnoreWords.none {
+                    lower.contains(it)
+                } &&
+                    !line.any { char -> char.isDigit() } &&
+                    line.length > 2 &&
+                    line.length < 60
+            } ?: return null
 
         val lower = rawMerchant.lowercase(Locale.getDefault())
         return when {
@@ -174,15 +176,31 @@ object ReceiptParser {
             return bestAmount
         }
 
-        val filteredLines = cleanedLines.filter { line ->
-            val lower = line.lowercase(Locale.getDefault())
-            val containsIgnoreMetadata = listOf(
-                "phone", "mobile", "tel", "invoice", "date", "bill no",
-                "receipt no", "gstin", "zip", "pin", "card", "tax",
-                "number", "ac no", "a/c", "fax", "email"
-            ).any { lower.contains(it) }
-            !containsIgnoreMetadata
-        }
+        val filteredLines =
+            cleanedLines.filter { line ->
+                val lower = line.lowercase(Locale.getDefault())
+                val containsIgnoreMetadata =
+                    listOf(
+                        "phone",
+                        "mobile",
+                        "tel",
+                        "invoice",
+                        "date",
+                        "bill no",
+                        "receipt no",
+                        "gstin",
+                        "zip",
+                        "pin",
+                        "card",
+                        "tax",
+                        "number",
+                        "ac no",
+                        "a/c",
+                        "fax",
+                        "email",
+                    ).any { lower.contains(it) }
+                !containsIgnoreMetadata
+            }
 
         return filteredLines
             .flatMap { line ->

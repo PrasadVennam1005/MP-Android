@@ -1,7 +1,6 @@
 package prasad.vennam.moneypilot.ui.subscription
 
 import androidx.compose.animation.*
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -9,10 +8,9 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
@@ -22,7 +20,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -38,11 +35,11 @@ import prasad.vennam.moneypilot.data.entity.Category
 import prasad.vennam.moneypilot.data.entity.Subscription
 import prasad.vennam.moneypilot.ui.budget.utils.getCategoryIcon
 import prasad.vennam.moneypilot.ui.viewmodel.SubscriptionViewModel
+import prasad.vennam.moneypilot.util.AnalyticsConstants
 import prasad.vennam.moneypilot.util.AnalyticsHelper
-import prasad.vennam.moneypilot.util.TrackScreen
 import prasad.vennam.moneypilot.util.CurrencyFormatter
 import prasad.vennam.moneypilot.util.LocalCurrencyCode
-import prasad.vennam.moneypilot.util.AnalyticsConstants
+import prasad.vennam.moneypilot.util.TrackScreen
 import prasad.vennam.moneypilot.util.inRupees
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -53,7 +50,7 @@ import java.util.Locale
 fun SubscriptionScreen(
     onBackClick: () -> Unit,
     analyticsHelper: AnalyticsHelper,
-    viewModel: SubscriptionViewModel = hiltViewModel()
+    viewModel: SubscriptionViewModel = hiltViewModel(),
 ) {
     TrackScreen(analyticsHelper, AnalyticsConstants.Screen.SUBSCRIPTIONS)
     val subscriptions by viewModel.allSubscriptions.collectAsState()
@@ -69,20 +66,21 @@ fun SubscriptionScreen(
                 title = {
                     Text(
                         text = "Subscriptions",
-                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
+                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
                     )
                 },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
-                            contentDescription = stringResource(R.string.back)
+                            contentDescription = stringResource(R.string.back),
                         )
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background
-                )
+                colors =
+                    TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.background,
+                    ),
             )
         },
         floatingActionButton = {
@@ -93,17 +91,18 @@ fun SubscriptionScreen(
                 },
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary,
-                shape = MaterialTheme.shapes.large
+                shape = MaterialTheme.shapes.large,
             ) {
                 Icon(Icons.Rounded.Add, contentDescription = "Add Subscription")
             }
         },
-        containerColor = MaterialTheme.colorScheme.background
+        containerColor = MaterialTheme.colorScheme.background,
     ) { padding ->
         Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(padding),
         ) {
             if (subscriptions.isEmpty()) {
                 EmptySubscriptionsState()
@@ -111,7 +110,7 @@ fun SubscriptionScreen(
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     items(subscriptions, key = { it.id }) { subscription ->
                         SubscriptionCard(
@@ -127,11 +126,11 @@ fun SubscriptionScreen(
                                     AnalyticsConstants.Event.SUBSCRIPTION_DELETED,
                                     mapOf(
                                         AnalyticsConstants.Param.SUBSCRIPTION_NAME to subscription.name,
-                                        AnalyticsConstants.Param.SUBSCRIPTION_AMOUNT to subscription.amount.inRupees
-                                    )
+                                        AnalyticsConstants.Param.SUBSCRIPTION_AMOUNT to subscription.amount.inRupees,
+                                    ),
                                 )
                                 viewModel.deleteSubscription(subscription)
-                            }
+                            },
                         )
                     }
                 }
@@ -146,31 +145,36 @@ fun SubscriptionScreen(
             onDismiss = { showFormSheet = false },
             onSave = { name, amount, cycle, date, mode, categoryId, notify ->
                 val id = selectedSubscriptionForEdit?.id ?: 0L
-                val eventName = if (id == 0L) {
-                    AnalyticsConstants.Event.SUBSCRIPTION_ADDED
-                } else {
-                    AnalyticsConstants.Event.SUBSCRIPTION_UPDATED
-                }
-                analyticsHelper.logEvent(eventName, mapOf(
-                    AnalyticsConstants.Param.SUBSCRIPTION_NAME to name,
-                    AnalyticsConstants.Param.SUBSCRIPTION_AMOUNT to amount.inRupees,
-                    AnalyticsConstants.Param.SUBSCRIPTION_CYCLE to cycle,
-                    AnalyticsConstants.Param.SUBSCRIPTION_MODE to mode,
-                    AnalyticsConstants.Param.SUBSCRIPTION_NOTIFY to notify
-                ))
-                val sub = Subscription(
-                    id = id,
-                    name = name,
-                    amount = amount,
-                    billingCycle = cycle,
-                    nextPaymentDate = date,
-                    paymentMode = mode,
-                    categoryId = categoryId,
-                    isNotificationEnabled = notify
+                val eventName =
+                    if (id == 0L) {
+                        AnalyticsConstants.Event.SUBSCRIPTION_ADDED
+                    } else {
+                        AnalyticsConstants.Event.SUBSCRIPTION_UPDATED
+                    }
+                analyticsHelper.logEvent(
+                    eventName,
+                    mapOf(
+                        AnalyticsConstants.Param.SUBSCRIPTION_NAME to name,
+                        AnalyticsConstants.Param.SUBSCRIPTION_AMOUNT to amount.inRupees,
+                        AnalyticsConstants.Param.SUBSCRIPTION_CYCLE to cycle,
+                        AnalyticsConstants.Param.SUBSCRIPTION_MODE to mode,
+                        AnalyticsConstants.Param.SUBSCRIPTION_NOTIFY to notify,
+                    ),
                 )
+                val sub =
+                    Subscription(
+                        id = id,
+                        name = name,
+                        amount = amount,
+                        billingCycle = cycle,
+                        nextPaymentDate = date,
+                        paymentMode = mode,
+                        categoryId = categoryId,
+                        isNotificationEnabled = notify,
+                    )
                 viewModel.saveSubscription(sub)
                 showFormSheet = false
-            }
+            },
         )
     }
 }
@@ -178,24 +182,26 @@ fun SubscriptionScreen(
 @Composable
 fun EmptySubscriptionsState() {
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(24.dp),
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+        verticalArrangement = Arrangement.Center,
     ) {
         Box(
-            modifier = Modifier
-                .size(80.dp)
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.08f)),
-            contentAlignment = Alignment.Center
+            modifier =
+                Modifier
+                    .size(80.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.08f)),
+            contentAlignment = Alignment.Center,
         ) {
             Icon(
                 imageVector = Icons.Rounded.NotificationsActive,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(36.dp)
+                modifier = Modifier.size(36.dp),
             )
         }
         Spacer(modifier = Modifier.height(16.dp))
@@ -203,7 +209,7 @@ fun EmptySubscriptionsState() {
             text = "Track Recurring Subscriptions",
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onBackground
+            color = MaterialTheme.colorScheme.onBackground,
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
@@ -211,7 +217,7 @@ fun EmptySubscriptionsState() {
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
             textAlign = TextAlign.Center,
-            modifier = Modifier.padding(horizontal = 16.dp)
+            modifier = Modifier.padding(horizontal = 16.dp),
         )
     }
 }
@@ -222,45 +228,49 @@ fun SubscriptionCard(
     category: Category?,
     currencyCode: String,
     onEdit: () -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
 ) {
     val context = LocalContext.current
     val dateFormatter = remember { SimpleDateFormat("dd MMM, yyyy", Locale.getDefault()) }
-    val daysRemaining = remember(subscription.nextPaymentDate) {
-        val diffMs = subscription.nextPaymentDate - System.currentTimeMillis()
-        val days = (diffMs / (24 * 60 * 60 * 1000L)).toInt()
-        if (days < 0) 0 else days
-    }
+    val daysRemaining =
+        remember(subscription.nextPaymentDate) {
+            val diffMs = subscription.nextPaymentDate - System.currentTimeMillis()
+            val days = (diffMs / (24 * 60 * 60 * 1000L)).toInt()
+            if (days < 0) 0 else days
+        }
 
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onEdit),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onEdit),
         shape = MaterialTheme.shapes.extraLarge,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.5.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.5.dp),
     ) {
         Row(
-            modifier = Modifier
-                .padding(16.dp)
-                .fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
+            modifier =
+                Modifier
+                    .padding(16.dp)
+                    .fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             // Category Icon
             Surface(
                 color = if (category != null) Color(category.color).copy(alpha = 0.15f) else MaterialTheme.colorScheme.surfaceVariant,
                 shape = MaterialTheme.shapes.large,
-                modifier = Modifier.size(52.dp)
+                modifier = Modifier.size(52.dp),
             ) {
                 Box(contentAlignment = Alignment.Center) {
-                    val icon = remember(category?.iconName) {
-                        getCategoryIcon(category?.iconName)
-                    }
+                    val icon =
+                        remember(category?.iconName) {
+                            getCategoryIcon(category?.iconName)
+                        }
                     Icon(
                         icon,
                         contentDescription = null,
                         tint = if (category != null) Color(category.color) else MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(24.dp)
+                        modifier = Modifier.size(24.dp),
                     )
                 }
             }
@@ -272,45 +282,46 @@ fun SubscriptionCard(
                     text = subscription.name,
                     style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    overflow = TextOverflow.Ellipsis,
                 )
                 Text(
                     text = "Next: ${dateFormatter.format(Date(subscription.nextPaymentDate))} (${subscription.billingCycle})",
                     style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Row(
                     modifier = Modifier.padding(top = 4.dp),
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Surface(
                         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                        shape = MaterialTheme.shapes.extraSmall
+                        shape = MaterialTheme.shapes.extraSmall,
                     ) {
                         Text(
                             text = subscription.paymentMode,
                             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                             style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
-                            color = MaterialTheme.colorScheme.outline
+                            color = MaterialTheme.colorScheme.outline,
                         )
                     }
-                    
+
                     val badgeColor = if (daysRemaining <= 2) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.secondaryContainer
                     val badgeTextColor = if (daysRemaining <= 2) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onSecondaryContainer
                     Surface(
                         color = badgeColor,
-                        shape = MaterialTheme.shapes.extraSmall
+                        shape = MaterialTheme.shapes.extraSmall,
                     ) {
                         Text(
-                            text = when (daysRemaining) {
-                                0 -> "Due Today"
-                                1 -> "Due Tomorrow"
-                                else -> "In $daysRemaining days"
-                            },
+                            text =
+                                when (daysRemaining) {
+                                    0 -> "Due Today"
+                                    1 -> "Due Tomorrow"
+                                    else -> "In $daysRemaining days"
+                                },
                             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                             style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp, fontWeight = FontWeight.Bold),
-                            color = badgeTextColor
+                            color = badgeTextColor,
                         )
                     }
                 }
@@ -321,17 +332,17 @@ fun SubscriptionCard(
                 Text(
                     text = formattedAmount,
                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.ExtraBold),
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
                 IconButton(
                     onClick = onDelete,
-                    modifier = Modifier.size(24.dp)
+                    modifier = Modifier.size(24.dp),
                 ) {
                     Icon(
                         imageVector = Icons.Rounded.Delete,
                         contentDescription = "Delete",
                         tint = MaterialTheme.colorScheme.error.copy(alpha = 0.6f),
-                        modifier = Modifier.size(18.dp)
+                        modifier = Modifier.size(18.dp),
                     )
                 }
             }
@@ -345,7 +356,7 @@ fun SubscriptionFormBottomSheet(
     subscription: Subscription?,
     categories: List<Category>,
     onDismiss: () -> Unit,
-    onSave: (name: String, amount: Long, cycle: String, date: Long, mode: String, categoryId: Long?, notify: Boolean) -> Unit
+    onSave: (name: String, amount: Long, cycle: String, date: Long, mode: String, categoryId: Long?, notify: Boolean) -> Unit,
 ) {
     var name by remember { mutableStateOf(subscription?.name ?: "") }
     var amountStr by remember {
@@ -363,19 +374,20 @@ fun SubscriptionFormBottomSheet(
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        sheetState = sheetState
+        sheetState = sheetState,
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 24.dp, vertical = 16.dp)
-                .padding(bottom = 32.dp)
-                .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp, vertical = 16.dp)
+                    .padding(bottom = 32.dp)
+                    .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             Text(
                 text = if (subscription == null) "Add Subscription" else "Edit Subscription",
-                style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold)
+                style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
             )
 
             OutlinedTextField(
@@ -384,7 +396,7 @@ fun SubscriptionFormBottomSheet(
                 label = { Text("Subscription Name") },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
-                shape = MaterialTheme.shapes.large
+                shape = MaterialTheme.shapes.large,
             )
 
             OutlinedTextField(
@@ -394,14 +406,14 @@ fun SubscriptionFormBottomSheet(
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
                 shape = MaterialTheme.shapes.large,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
             )
 
             // Billing Cycle Select
             Text("Billing Cycle", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium)
             Row(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
             ) {
                 listOf("Weekly", "Monthly", "Yearly").forEach { cycle ->
                     val selected = billingCycle == cycle
@@ -409,7 +421,7 @@ fun SubscriptionFormBottomSheet(
                         selected = selected,
                         onClick = { billingCycle = cycle },
                         label = { Text(cycle) },
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1f),
                     )
                 }
             }
@@ -418,32 +430,33 @@ fun SubscriptionFormBottomSheet(
             Text("Next Payment Due Date", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium)
             Surface(
                 onClick = { showDatePicker = true },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp)
-                    .clip(MaterialTheme.shapes.large)
-                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
-                    .border(
-                        1.dp,
-                        MaterialTheme.colorScheme.outline.copy(alpha = 0.15f),
-                        MaterialTheme.shapes.large
-                    ),
-                color = Color.Transparent
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .height(56.dp)
+                        .clip(MaterialTheme.shapes.large)
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+                        .border(
+                            1.dp,
+                            MaterialTheme.colorScheme.outline.copy(alpha = 0.15f),
+                            MaterialTheme.shapes.large,
+                        ),
+                color = Color.Transparent,
             ) {
                 Row(
                     modifier = Modifier.padding(horizontal = 16.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Icon(
                         imageVector = Icons.Rounded.CalendarToday,
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary
+                        tint = MaterialTheme.colorScheme.primary,
                     )
                     Spacer(modifier = Modifier.width(12.dp))
                     Text(
                         text = dateFormatter.format(Date(nextPaymentDate)),
                         style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurface
+                        color = MaterialTheme.colorScheme.onSurface,
                     )
                 }
             }
@@ -452,7 +465,7 @@ fun SubscriptionFormBottomSheet(
             Text("Payment Mode", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium)
             LazyRow(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
             ) {
                 val modes = listOf("UPI", "Credit Card", "Debit Card", "Bank Transfer", "Cash")
                 items(modes) { mode ->
@@ -460,7 +473,7 @@ fun SubscriptionFormBottomSheet(
                     FilterChip(
                         selected = selected,
                         onClick = { paymentMode = mode },
-                        label = { Text(mode) }
+                        label = { Text(mode) },
                     )
                 }
             }
@@ -469,14 +482,14 @@ fun SubscriptionFormBottomSheet(
             Text("Category", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium)
             LazyRow(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
             ) {
                 items(categories) { category ->
                     val selected = selectedCategoryId == category.id
                     FilterChip(
                         selected = selected,
                         onClick = { selectedCategoryId = category.id },
-                        label = { Text(category.name) }
+                        label = { Text(category.name) },
                     )
                 }
             }
@@ -485,12 +498,12 @@ fun SubscriptionFormBottomSheet(
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.SpaceBetween,
             ) {
                 Text("Enable Alert Reminder", fontWeight = FontWeight.SemiBold)
                 Switch(
                     checked = isNotificationEnabled,
-                    onCheckedChange = { isNotificationEnabled = it }
+                    onCheckedChange = { isNotificationEnabled = it },
                 )
             }
 
@@ -505,15 +518,16 @@ fun SubscriptionFormBottomSheet(
                             nextPaymentDate,
                             paymentMode,
                             selectedCategoryId,
-                            isNotificationEnabled
+                            isNotificationEnabled,
                         )
                     }
                 },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp)
-                    .padding(top = 8.dp),
-                shape = MaterialTheme.shapes.large
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .height(56.dp)
+                        .padding(top = 8.dp),
+                shape = MaterialTheme.shapes.large,
             ) {
                 Text("Save Subscription")
             }
@@ -536,7 +550,7 @@ fun SubscriptionFormBottomSheet(
                 TextButton(onClick = { showDatePicker = false }) {
                     Text(stringResource(R.string.cancel))
                 }
-            }
+            },
         ) {
             DatePicker(state = datePickerState)
         }

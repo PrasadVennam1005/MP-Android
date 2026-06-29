@@ -6,5 +6,5 @@ import androidx.room.PrimaryKey
 @Entity(tableName = "bookmarked_finance_articles")
 data class BookmarkedFinanceArticle(
     @PrimaryKey val articleId: String,
-    val bookmarkedAt: Long = System.currentTimeMillis()
+    val bookmarkedAt: Long = System.currentTimeMillis(),
 )

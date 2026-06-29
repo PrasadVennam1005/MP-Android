@@ -203,8 +203,9 @@ object NotificationParser {
                 break
             }
             // Skip dates and times (e.g., 22-06-26, 22-Jun, 12:30)
-            val isDateOrTime = word.matches(Regex("\\d{1,2}[-/](?:\\d{1,2}|[a-zA-Z]{3})[-/]\\d{2,4}")) ||
-                               word.matches(Regex("\\d{1,2}:\\d{2}(?::\\d{2})?.*"))
+            val isDateOrTime =
+                word.matches(Regex("\\d{1,2}[-/](?:\\d{1,2}|[a-zA-Z]{3})[-/]\\d{2,4}")) ||
+                    word.matches(Regex("\\d{1,2}:\\d{2}(?::\\d{2})?.*"))
             if (isDateOrTime) {
                 break
             }

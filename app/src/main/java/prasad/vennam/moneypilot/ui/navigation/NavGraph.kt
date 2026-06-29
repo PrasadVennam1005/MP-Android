@@ -1,12 +1,10 @@
 package prasad.vennam.moneypilot.ui.navigation
 
 import android.app.Activity
-import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
 import androidx.navigation3.runtime.NavBackStack
 import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.runtime.NavKey
-import prasad.vennam.moneypilot.R
 import prasad.vennam.moneypilot.ads.InterstitialAdManager
 import prasad.vennam.moneypilot.data.AppLinks
 import prasad.vennam.moneypilot.data.UserPreferences
@@ -59,9 +57,9 @@ fun moneyPilotNavEntry(
     userData: UserPreferences.UserData?,
     syncState: SyncState?,
     interstitialAdManager: InterstitialAdManager,
-    onBack: () -> Unit
-): NavEntry<NavKey> {
-    return when (key) {
+    onBack: () -> Unit,
+): NavEntry<NavKey> =
+    when (key) {
         is Destination.Auth ->
             NavEntry(key) {
                 AuthScreen(
@@ -236,7 +234,7 @@ fun moneyPilotNavEntry(
                     prefillRate = key.prefillRate,
                     prefillTenureMonths = key.prefillTenureMonths,
                     prefillEmi = key.prefillEmi,
-                    analyticsHelper = analyticsHelper
+                    analyticsHelper = analyticsHelper,
                 )
             }
 
@@ -250,7 +248,7 @@ fun moneyPilotNavEntry(
                     syncState = syncState,
                     isPremium = isPremium,
                     onProfileClick = { backStack.add(Destination.Settings) },
-                    analyticsHelper = analyticsHelper
+                    analyticsHelper = analyticsHelper,
                 )
             }
 
@@ -438,7 +436,7 @@ fun moneyPilotNavEntry(
                     onArticleClick = { articleId ->
                         backStack.add(Destination.ArticleDetail(articleId))
                     },
-                    isPremium = isPremium
+                    isPremium = isPremium,
                 )
             }
 
@@ -451,7 +449,7 @@ fun moneyPilotNavEntry(
                     onBack = onBack,
                     onArticleClick = { articleId ->
                         backStack.add(Destination.ArticleDetail(articleId))
-                    }
+                    },
                 )
             }
 
@@ -467,10 +465,9 @@ fun moneyPilotNavEntry(
             NavEntry(key) {
                 CurrencyConverterScreen(
                     onNavigateBack = onBack,
-                    analyticsHelper = analyticsHelper
+                    analyticsHelper = analyticsHelper,
                 )
             }
 
         else -> error("Unknown destination: $key")
     }
-}

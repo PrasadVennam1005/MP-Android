@@ -12,20 +12,26 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import prasad.vennam.moneypilot.data.entity.Transaction
 import prasad.vennam.moneypilot.data.entity.TransactionType
-import prasad.vennam.moneypilot.data.repository.MoneyPilotRepository
+import prasad.vennam.moneypilot.data.repository.SubscriptionRepository
+import prasad.vennam.moneypilot.data.repository.TransactionRepository
 import prasad.vennam.moneypilot.worker.SubscriptionReminderWorker
 import java.util.Calendar
 import javax.inject.Inject
 
 @AndroidEntryPoint
 class SubscriptionActionReceiver : BroadcastReceiver() {
+    @Inject
+    lateinit var subscriptionRepository: SubscriptionRepository
 
     @Inject
-    lateinit var repository: MoneyPilotRepository
+    lateinit var transactionRepository: TransactionRepository
 
     private val receiverScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
-    override fun onReceive(context: Context, intent: Intent) {
+    override fun onReceive(
+        context: Context,
+        intent: Intent,
+    ) {
         if (intent.action != SubscriptionReminderWorker.ACTION_APPROVE_AND_LOG) return
         val subscriptionId = intent.getLongExtra(SubscriptionReminderWorker.EXTRA_SUBSCRIPTION_ID, -1L)
         val notificationId = intent.getIntExtra(SubscriptionReminderWorker.EXTRA_NOTIFICATION_ID, -1)
@@ -37,28 +43,29 @@ class SubscriptionActionReceiver : BroadcastReceiver() {
         receiverScope.launch {
             try {
                 // 1. Fetch Subscription
-                val subscription = repository.getSubscriptionById(subscriptionId)
+                val subscription = subscriptionRepository.getSubscriptionById(subscriptionId)
                 if (subscription != null) {
                     Log.d("SubscriptionReceiver", "Auto-logging subscription: ${subscription.name}")
 
                     // 2. Insert transaction to primary ledger
-                    val transaction = Transaction(
-                        amount = subscription.amount,
-                        type = TransactionType.EXPENSE,
-                        categoryId = subscription.categoryId,
-                        note = "Paid: ${subscription.name}",
-                        paymentMode = subscription.paymentMode,
-                        timestamp = System.currentTimeMillis()
-                    )
-                    repository.insertTransaction(transaction)
+                    val transaction =
+                        Transaction(
+                            amount = subscription.amount,
+                            type = TransactionType.EXPENSE,
+                            categoryId = subscription.categoryId,
+                            note = "Paid: ${subscription.name}",
+                            paymentMode = subscription.paymentMode,
+                            timestamp = System.currentTimeMillis(),
+                        )
+                    transactionRepository.insertTransaction(transaction)
 
                     // 3. Update subscription's nextPaymentDate to next cycle
                     val nextDate = calculateNextPaymentDate(subscription.nextPaymentDate, subscription.billingCycle)
-                    repository.updateSubscription(
+                    subscriptionRepository.updateSubscription(
                         subscription.copy(
                             nextPaymentDate = nextDate,
-                            lastUpdated = System.currentTimeMillis()
-                        )
+                            lastUpdated = System.currentTimeMillis(),
+                        ),
                     )
                     Log.d("SubscriptionReceiver", "Successfully logged transaction and advanced billing cycle.")
                 }
@@ -76,7 +83,10 @@ class SubscriptionActionReceiver : BroadcastReceiver() {
         }
     }
 
-    private fun calculateNextPaymentDate(currentDate: Long, billingCycle: String): Long {
+    private fun calculateNextPaymentDate(
+        currentDate: Long,
+        billingCycle: String,
+    ): Long {
         val cal = Calendar.getInstance().apply { timeInMillis = currentDate }
         when (billingCycle) {
             "Weekly" -> cal.add(Calendar.WEEK_OF_YEAR, 1)

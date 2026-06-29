@@ -7,13 +7,13 @@ import prasad.vennam.moneypilot.data.entity.EmergencyFund
 import prasad.vennam.moneypilot.data.entity.Investment
 import prasad.vennam.moneypilot.data.entity.Loan
 import prasad.vennam.moneypilot.data.entity.Transaction
-import prasad.vennam.moneypilot.data.repository.MoneyPilotRepository
+import prasad.vennam.moneypilot.data.repository.DataManagementRepository
 import javax.inject.Inject
 
 class RestoreBackupUseCase
     @Inject
     constructor(
-        private val repository: MoneyPilotRepository,
+        private val repository: DataManagementRepository,
         private val userPreferences: UserPreferences,
     ) {
         suspend operator fun invoke(

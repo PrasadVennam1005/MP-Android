@@ -10,12 +10,11 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
@@ -40,11 +39,11 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import prasad.vennam.moneypilot.R
 import prasad.vennam.moneypilot.data.entity.SavingGoal
 import prasad.vennam.moneypilot.ui.viewmodel.SavingGoalViewModel
-import prasad.vennam.moneypilot.util.AnalyticsHelper
-import prasad.vennam.moneypilot.util.TrackScreen
-import prasad.vennam.moneypilot.util.CurrencyFormatter
 import prasad.vennam.moneypilot.util.AnalyticsConstants
+import prasad.vennam.moneypilot.util.AnalyticsHelper
+import prasad.vennam.moneypilot.util.CurrencyFormatter
 import prasad.vennam.moneypilot.util.LocalCurrencyCode
+import prasad.vennam.moneypilot.util.TrackScreen
 import prasad.vennam.moneypilot.util.inRupees
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -55,7 +54,7 @@ import java.util.Locale
 fun SavingGoalsScreen(
     onBackClick: () -> Unit,
     analyticsHelper: AnalyticsHelper,
-    viewModel: SavingGoalViewModel = hiltViewModel()
+    viewModel: SavingGoalViewModel = hiltViewModel(),
 ) {
     TrackScreen(analyticsHelper, AnalyticsConstants.Screen.SAVING_GOALS)
     val goals by viewModel.allSavingGoals.collectAsState()
@@ -63,7 +62,7 @@ fun SavingGoalsScreen(
 
     var showFormSheet by remember { mutableStateOf(false) }
     var selectedGoalForEdit by remember { mutableStateOf<SavingGoal?>(null) }
-    
+
     var showGoalDetailSheet by remember { mutableStateOf(false) }
     var selectedGoalForDetail by remember { mutableStateOf<SavingGoal?>(null) }
 
@@ -73,20 +72,21 @@ fun SavingGoalsScreen(
                 title = {
                     Text(
                         text = "Savings Goals",
-                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
+                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
                     )
                 },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
-                            contentDescription = stringResource(R.string.back)
+                            contentDescription = stringResource(R.string.back),
                         )
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background
-                )
+                colors =
+                    TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.background,
+                    ),
             )
         },
         floatingActionButton = {
@@ -97,17 +97,18 @@ fun SavingGoalsScreen(
                 },
                 containerColor = MaterialTheme.colorScheme.secondary,
                 contentColor = MaterialTheme.colorScheme.onSecondary,
-                shape = MaterialTheme.shapes.large
+                shape = MaterialTheme.shapes.large,
             ) {
                 Icon(Icons.Rounded.Add, contentDescription = "Add Goal")
             }
         },
-        containerColor = MaterialTheme.colorScheme.background
+        containerColor = MaterialTheme.colorScheme.background,
     ) { padding ->
         Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(padding),
         ) {
             if (goals.isEmpty()) {
                 EmptyGoalsState()
@@ -115,7 +116,7 @@ fun SavingGoalsScreen(
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
                     items(goals, key = { it.id }) { goal ->
                         SavingGoalCard(
@@ -124,7 +125,7 @@ fun SavingGoalsScreen(
                             onClick = {
                                 selectedGoalForDetail = goal
                                 showGoalDetailSheet = true
-                            }
+                            },
                         )
                     }
                 }
@@ -138,36 +139,41 @@ fun SavingGoalsScreen(
             onDismiss = { showFormSheet = false },
             onSave = { name, target, currentSaved, deadline, color, icon ->
                 val id = selectedGoalForEdit?.id ?: 0L
-                val eventName = if (id == 0L) {
-                    AnalyticsConstants.Event.SAVING_GOAL_ADDED
-                } else {
-                    AnalyticsConstants.Event.SAVING_GOAL_UPDATED
-                }
-                analyticsHelper.logEvent(eventName, mapOf(
-                    AnalyticsConstants.Param.GOAL_NAME to name,
-                    AnalyticsConstants.Param.GOAL_TARGET to target.inRupees,
-                    AnalyticsConstants.Param.GOAL_SAVED to currentSaved.inRupees,
-                    AnalyticsConstants.Param.GOAL_DEADLINE to deadline
-                ))
-                val updated = SavingGoal(
-                    id = id,
-                    name = name,
-                    targetAmount = target,
-                    currentSavedAmount = currentSaved,
-                    deadline = deadline,
-                    colorHex = color,
-                    iconName = icon
+                val eventName =
+                    if (id == 0L) {
+                        AnalyticsConstants.Event.SAVING_GOAL_ADDED
+                    } else {
+                        AnalyticsConstants.Event.SAVING_GOAL_UPDATED
+                    }
+                analyticsHelper.logEvent(
+                    eventName,
+                    mapOf(
+                        AnalyticsConstants.Param.GOAL_NAME to name,
+                        AnalyticsConstants.Param.GOAL_TARGET to target.inRupees,
+                        AnalyticsConstants.Param.GOAL_SAVED to currentSaved.inRupees,
+                        AnalyticsConstants.Param.GOAL_DEADLINE to deadline,
+                    ),
                 )
+                val updated =
+                    SavingGoal(
+                        id = id,
+                        name = name,
+                        targetAmount = target,
+                        currentSavedAmount = currentSaved,
+                        deadline = deadline,
+                        colorHex = color,
+                        iconName = icon,
+                    )
                 viewModel.saveSavingGoal(updated)
                 showFormSheet = false
-            }
+            },
         )
     }
 
     if (showGoalDetailSheet && selectedGoalForDetail != null) {
         // Re-fetch current state of goal from the list in case of updates
         val currentGoal = goals.find { it.id == selectedGoalForDetail!!.id } ?: selectedGoalForDetail!!
-        
+
         SavingGoalDetailBottomSheet(
             goal = currentGoal,
             currencyCode = currencyCode,
@@ -182,8 +188,8 @@ fun SavingGoalsScreen(
                     AnalyticsConstants.Event.SAVING_GOAL_DELETED,
                     mapOf(
                         AnalyticsConstants.Param.GOAL_NAME to currentGoal.name,
-                        AnalyticsConstants.Param.GOAL_TARGET to currentGoal.targetAmount.inRupees
-                    )
+                        AnalyticsConstants.Param.GOAL_TARGET to currentGoal.targetAmount.inRupees,
+                    ),
                 )
                 viewModel.deleteSavingGoal(currentGoal)
                 showGoalDetailSheet = false
@@ -193,8 +199,8 @@ fun SavingGoalsScreen(
                     AnalyticsConstants.Event.SAVING_GOAL_DEPOSIT,
                     mapOf(
                         AnalyticsConstants.Param.GOAL_NAME to currentGoal.name,
-                        AnalyticsConstants.Param.DEPOSIT_AMOUNT to amount.inRupees
-                    )
+                        AnalyticsConstants.Param.DEPOSIT_AMOUNT to amount.inRupees,
+                    ),
                 )
                 val newSaved = currentGoal.currentSavedAmount + amount
                 if (newSaved >= currentGoal.targetAmount && !currentGoal.isCompleted) {
@@ -202,8 +208,8 @@ fun SavingGoalsScreen(
                         AnalyticsConstants.Event.SAVING_GOAL_COMPLETED,
                         mapOf(
                             AnalyticsConstants.Param.GOAL_NAME to currentGoal.name,
-                            AnalyticsConstants.Param.GOAL_TARGET to currentGoal.targetAmount.inRupees
-                        )
+                            AnalyticsConstants.Param.GOAL_TARGET to currentGoal.targetAmount.inRupees,
+                        ),
                     )
                 }
                 viewModel.depositToGoal(currentGoal, amount)
@@ -213,11 +219,11 @@ fun SavingGoalsScreen(
                     AnalyticsConstants.Event.SAVING_GOAL_WITHDRAWAL,
                     mapOf(
                         AnalyticsConstants.Param.GOAL_NAME to currentGoal.name,
-                        AnalyticsConstants.Param.WITHDRAWAL_AMOUNT to amount.inRupees
-                    )
+                        AnalyticsConstants.Param.WITHDRAWAL_AMOUNT to amount.inRupees,
+                    ),
                 )
                 viewModel.withdrawFromGoal(currentGoal, amount)
-            }
+            },
         )
     }
 }
@@ -225,24 +231,26 @@ fun SavingGoalsScreen(
 @Composable
 fun EmptyGoalsState() {
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(24.dp),
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+        verticalArrangement = Arrangement.Center,
     ) {
         Box(
-            modifier = Modifier
-                .size(80.dp)
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.08f)),
-            contentAlignment = Alignment.Center
+            modifier =
+                Modifier
+                    .size(80.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.08f)),
+            contentAlignment = Alignment.Center,
         ) {
             Icon(
                 imageVector = Icons.Rounded.TrackChanges,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.secondary,
-                modifier = Modifier.size(36.dp)
+                modifier = Modifier.size(36.dp),
             )
         }
         Spacer(modifier = Modifier.height(16.dp))
@@ -250,7 +258,7 @@ fun EmptyGoalsState() {
             text = "Create Savings Goals",
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onBackground
+            color = MaterialTheme.colorScheme.onBackground,
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
@@ -258,7 +266,7 @@ fun EmptyGoalsState() {
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
             textAlign = TextAlign.Center,
-            modifier = Modifier.padding(horizontal = 16.dp)
+            modifier = Modifier.padding(horizontal = 16.dp),
         )
     }
 }
@@ -267,59 +275,72 @@ fun EmptyGoalsState() {
 fun SavingGoalCard(
     goal: SavingGoal,
     currencyCode: String,
-    onClick: () -> Unit
+    onClick: () -> Unit,
 ) {
-    val themeColor = remember(goal.colorHex) {
-        try { Color(android.graphics.Color.parseColor(goal.colorHex)) } catch (e: Exception) { Color(0xFF3F51B5) }
-    }
-    val icon = remember(goal.iconName) {
-        when (goal.iconName) {
-            "Home" -> Icons.Rounded.Home
-            "Car" -> Icons.Rounded.DirectionsCar
-            "Flight" -> Icons.Rounded.Flight
-            "Laptop" -> Icons.Rounded.Laptop
-            "Savings" -> Icons.Rounded.Savings
-            else -> Icons.Rounded.Savings
+    val themeColor =
+        remember(goal.colorHex) {
+            try {
+                Color(android.graphics.Color.parseColor(goal.colorHex))
+            } catch (e: Exception) {
+                Color(0xFF3F51B5)
+            }
         }
-    }
-    val percentAchieved = remember(goal.currentSavedAmount, goal.targetAmount) {
-        if (goal.targetAmount > 0) {
-            ((goal.currentSavedAmount.toDouble() / goal.targetAmount.toDouble()) * 100).toFloat().coerceAtMost(100f)
-        } else 0f
-    }
-    
-    val currentSavedFormatted = remember(goal.currentSavedAmount, currencyCode) {
-        CurrencyFormatter.format(goal.currentSavedAmount.inRupees, currencyCode)
-    }
-    val targetGoalFormatted = remember(goal.targetAmount, currencyCode) {
-        CurrencyFormatter.format(goal.targetAmount.inRupees, currencyCode)
-    }
+    val icon =
+        remember(goal.iconName) {
+            when (goal.iconName) {
+                "Home" -> Icons.Rounded.Home
+                "Car" -> Icons.Rounded.DirectionsCar
+                "Flight" -> Icons.Rounded.Flight
+                "Laptop" -> Icons.Rounded.Laptop
+                "Savings" -> Icons.Rounded.Savings
+                else -> Icons.Rounded.Savings
+            }
+        }
+    val percentAchieved =
+        remember(goal.currentSavedAmount, goal.targetAmount) {
+            if (goal.targetAmount > 0) {
+                ((goal.currentSavedAmount.toDouble() / goal.targetAmount.toDouble()) * 100).toFloat().coerceAtMost(100f)
+            } else {
+                0f
+            }
+        }
+
+    val currentSavedFormatted =
+        remember(goal.currentSavedAmount, currencyCode) {
+            CurrencyFormatter.format(goal.currentSavedAmount.inRupees, currencyCode)
+        }
+    val targetGoalFormatted =
+        remember(goal.targetAmount, currencyCode) {
+            CurrencyFormatter.format(goal.targetAmount.inRupees, currencyCode)
+        }
 
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onClick),
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 Box(
-                    modifier = Modifier
-                        .size(44.dp)
-                        .clip(CircleShape)
-                        .background(themeColor.copy(alpha = 0.15f)),
-                    contentAlignment = Alignment.Center
+                    modifier =
+                        Modifier
+                            .size(44.dp)
+                            .clip(CircleShape)
+                            .background(themeColor.copy(alpha = 0.15f)),
+                    contentAlignment = Alignment.Center,
                 ) {
                     Icon(
                         imageVector = icon,
                         contentDescription = null,
                         tint = themeColor,
-                        modifier = Modifier.size(20.dp)
+                        modifier = Modifier.size(20.dp),
                     )
                 }
                 Spacer(modifier = Modifier.width(12.dp))
@@ -329,24 +350,24 @@ fun SavingGoalCard(
                         style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
                         color = MaterialTheme.colorScheme.onSurface,
                         maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        overflow = TextOverflow.Ellipsis,
                     )
                     Text(
                         text = "$currentSavedFormatted saved of $targetGoalFormatted",
                         style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-                
+
                 Surface(
                     color = if (goal.isCompleted) Color(0xFF2E7D32).copy(alpha = 0.12f) else MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f),
-                    shape = MaterialTheme.shapes.small
+                    shape = MaterialTheme.shapes.small,
                 ) {
                     Text(
                         text = if (goal.isCompleted) "Completed" else "${percentAchieved.toInt()}%",
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                         style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                        color = if (goal.isCompleted) Color(0xFF2E7D32) else MaterialTheme.colorScheme.onSecondaryContainer
+                        color = if (goal.isCompleted) Color(0xFF2E7D32) else MaterialTheme.colorScheme.onSecondaryContainer,
                     )
                 }
             }
@@ -356,26 +377,28 @@ fun SavingGoalCard(
             // Linear Progress Bar
             val animatedPercent by animateFloatAsState(
                 targetValue = percentAchieved / 100f,
-                animationSpec = tween(durationMillis = 800)
+                animationSpec = tween(durationMillis = 800),
             )
-            
+
             Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(8.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .height(8.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)),
             ) {
                 Box(
-                    modifier = Modifier
-                        .fillMaxHeight()
-                        .fillMaxWidth(animatedPercent)
-                        .clip(CircleShape)
-                        .background(
-                            Brush.linearGradient(
-                                listOf(themeColor.copy(alpha = 0.7f), themeColor)
-                            )
-                        )
+                    modifier =
+                        Modifier
+                            .fillMaxHeight()
+                            .fillMaxWidth(animatedPercent)
+                            .clip(CircleShape)
+                            .background(
+                                Brush.linearGradient(
+                                    listOf(themeColor.copy(alpha = 0.7f), themeColor),
+                                ),
+                            ),
                 )
             }
         }
@@ -387,7 +410,7 @@ fun SavingGoalCard(
 fun SavingGoalFormBottomSheet(
     goal: SavingGoal?,
     onDismiss: () -> Unit,
-    onSave: (name: String, target: Long, currentSaved: Long, deadline: Long, color: String, icon: String) -> Unit
+    onSave: (name: String, target: Long, currentSaved: Long, deadline: Long, color: String, icon: String) -> Unit,
 ) {
     var name by remember { mutableStateOf(goal?.name ?: "") }
     var targetStr by remember {
@@ -410,19 +433,20 @@ fun SavingGoalFormBottomSheet(
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        sheetState = sheetState
+        sheetState = sheetState,
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 24.dp, vertical = 16.dp)
-                .padding(bottom = 32.dp)
-                .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp, vertical = 16.dp)
+                    .padding(bottom = 32.dp)
+                    .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             Text(
                 text = if (goal == null) "Create Savings Goal" else "Edit Savings Goal",
-                style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold)
+                style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
             )
 
             OutlinedTextField(
@@ -431,12 +455,12 @@ fun SavingGoalFormBottomSheet(
                 label = { Text("Goal Name") },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
-                shape = MaterialTheme.shapes.large
+                shape = MaterialTheme.shapes.large,
             )
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 OutlinedTextField(
                     value = targetStr,
@@ -445,7 +469,7 @@ fun SavingGoalFormBottomSheet(
                     singleLine = true,
                     modifier = Modifier.weight(1f),
                     shape = MaterialTheme.shapes.large,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                 )
                 OutlinedTextField(
                     value = currentSavedStr,
@@ -454,7 +478,7 @@ fun SavingGoalFormBottomSheet(
                     singleLine = true,
                     modifier = Modifier.weight(1f),
                     shape = MaterialTheme.shapes.large,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                 )
             }
 
@@ -462,31 +486,32 @@ fun SavingGoalFormBottomSheet(
             Text("Target Deadline", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium)
             Surface(
                 onClick = { showDatePicker = true },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp)
-                    .clip(MaterialTheme.shapes.large)
-                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
-                    .border(
-                        1.dp,
-                        MaterialTheme.colorScheme.outline.copy(alpha = 0.15f),
-                        MaterialTheme.shapes.large
-                    ),
-                color = Color.Transparent
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .height(56.dp)
+                        .clip(MaterialTheme.shapes.large)
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+                        .border(
+                            1.dp,
+                            MaterialTheme.colorScheme.outline.copy(alpha = 0.15f),
+                            MaterialTheme.shapes.large,
+                        ),
+                color = Color.Transparent,
             ) {
                 Row(
                     modifier = Modifier.padding(horizontal = 16.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Icon(
                         imageVector = Icons.Rounded.CalendarToday,
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary
+                        tint = MaterialTheme.colorScheme.primary,
                     )
                     Spacer(modifier = Modifier.width(12.dp))
                     Text(
                         text = dateFormatter.format(Date(deadline)),
-                        style = MaterialTheme.typography.bodyLarge
+                        style = MaterialTheme.typography.bodyLarge,
                     )
                 }
             }
@@ -495,22 +520,23 @@ fun SavingGoalFormBottomSheet(
             Text("Goal Theme Color", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium)
             Row(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
             ) {
                 colors.forEach { hex ->
                     val color = Color(android.graphics.Color.parseColor(hex))
                     val selected = selectedColorHex == hex
                     Box(
-                        modifier = Modifier
-                            .size(36.dp)
-                            .clip(CircleShape)
-                            .background(color)
-                            .clickable { selectedColorHex = hex }
-                            .border(
-                                width = if (selected) 3.dp else 0.dp,
-                                color = if (selected) MaterialTheme.colorScheme.onSurface else Color.Transparent,
-                                shape = CircleShape
-                            )
+                        modifier =
+                            Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(color)
+                                .clickable { selectedColorHex = hex }
+                                .border(
+                                    width = if (selected) 3.dp else 0.dp,
+                                    color = if (selected) MaterialTheme.colorScheme.onSurface else Color.Transparent,
+                                    shape = CircleShape,
+                                ),
                     )
                 }
             }
@@ -519,32 +545,33 @@ fun SavingGoalFormBottomSheet(
             Text("Goal Icon", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium)
             Row(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
             ) {
                 icons.forEach { iconName ->
-                    val icon = when (iconName) {
-                        "Home" -> Icons.Rounded.Home
-                        "Car" -> Icons.Rounded.DirectionsCar
-                        "Flight" -> Icons.Rounded.Flight
-                        "Laptop" -> Icons.Rounded.Laptop
-                        "Savings" -> Icons.Rounded.Savings
-                        else -> Icons.Rounded.Savings
-                    }
+                    val icon =
+                        when (iconName) {
+                            "Home" -> Icons.Rounded.Home
+                            "Car" -> Icons.Rounded.DirectionsCar
+                            "Flight" -> Icons.Rounded.Flight
+                            "Laptop" -> Icons.Rounded.Laptop
+                            "Savings" -> Icons.Rounded.Savings
+                            else -> Icons.Rounded.Savings
+                        }
                     val selected = selectedIconName == iconName
                     Box(
-                        modifier = Modifier
-                            .size(44.dp)
-                            .clip(CircleShape)
-                            .background(
-                                if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant
-                            )
-                            .clickable { selectedIconName = iconName },
-                        contentAlignment = Alignment.Center
+                        modifier =
+                            Modifier
+                                .size(44.dp)
+                                .clip(CircleShape)
+                                .background(
+                                    if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+                                ).clickable { selectedIconName = iconName },
+                        contentAlignment = Alignment.Center,
                     ) {
                         Icon(
                             imageVector = icon,
                             contentDescription = null,
-                            tint = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                            tint = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                 }
@@ -561,15 +588,16 @@ fun SavingGoalFormBottomSheet(
                             currentVal.toLong(),
                             deadline,
                             selectedColorHex,
-                            selectedIconName
+                            selectedIconName,
                         )
                     }
                 },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp)
-                    .padding(top = 8.dp),
-                shape = MaterialTheme.shapes.large
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .height(56.dp)
+                        .padding(top = 8.dp),
+                shape = MaterialTheme.shapes.large,
             ) {
                 Text("Create Goal")
             }
@@ -592,7 +620,7 @@ fun SavingGoalFormBottomSheet(
                 TextButton(onClick = { showDatePicker = false }) {
                     Text(stringResource(R.string.cancel))
                 }
-            }
+            },
         ) {
             DatePicker(state = datePickerState)
         }
@@ -608,47 +636,57 @@ fun SavingGoalDetailBottomSheet(
     onEdit: () -> Unit,
     onDelete: () -> Unit,
     onDeposit: (Long) -> Unit,
-    onWithdraw: (Long) -> Unit
+    onWithdraw: (Long) -> Unit,
 ) {
     var showDepositDialog by remember { mutableStateOf(false) }
     var showWithdrawDialog by remember { mutableStateOf(false) }
-    
-    val themeColor = remember(goal.colorHex) {
-        try { Color(android.graphics.Color.parseColor(goal.colorHex)) } catch (e: Exception) { Color(0xFF3F51B5) }
-    }
-    val percentAchieved = remember(goal.currentSavedAmount, goal.targetAmount) {
-        if (goal.targetAmount > 0) {
-            ((goal.currentSavedAmount.toDouble() / goal.targetAmount.toDouble()) * 100).toFloat().coerceAtMost(100f)
-        } else 0f
-    }
-    val remaining = remember(goal.targetAmount, goal.currentSavedAmount) {
-        (goal.targetAmount - goal.currentSavedAmount).coerceAtLeast(0L)
-    }
+
+    val themeColor =
+        remember(goal.colorHex) {
+            try {
+                Color(android.graphics.Color.parseColor(goal.colorHex))
+            } catch (e: Exception) {
+                Color(0xFF3F51B5)
+            }
+        }
+    val percentAchieved =
+        remember(goal.currentSavedAmount, goal.targetAmount) {
+            if (goal.targetAmount > 0) {
+                ((goal.currentSavedAmount.toDouble() / goal.targetAmount.toDouble()) * 100).toFloat().coerceAtMost(100f)
+            } else {
+                0f
+            }
+        }
+    val remaining =
+        remember(goal.targetAmount, goal.currentSavedAmount) {
+            (goal.targetAmount - goal.currentSavedAmount).coerceAtLeast(0L)
+        }
 
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        sheetState = sheetState
+        sheetState = sheetState,
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 24.dp, vertical = 16.dp)
-                .padding(bottom = 32.dp)
-                .verticalScroll(rememberScrollState()),
-            horizontalAlignment = Alignment.CenterHorizontally
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp, vertical = 16.dp)
+                    .padding(bottom = 32.dp)
+                    .verticalScroll(rememberScrollState()),
+            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             // Header Title row with Edit and Delete
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
                     text = goal.name,
                     style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     IconButton(onClick = onEdit) {
@@ -665,24 +703,24 @@ fun SavingGoalDetailBottomSheet(
             // Gauge / Circular visualizer
             Box(
                 contentAlignment = Alignment.Center,
-                modifier = Modifier.size(180.dp)
+                modifier = Modifier.size(180.dp),
             ) {
                 val animatedPercent by animateFloatAsState(
                     targetValue = percentAchieved,
-                    animationSpec = tween(durationMillis = 1000)
+                    animationSpec = tween(durationMillis = 1000),
                 )
 
                 Canvas(modifier = Modifier.size(150.dp)) {
                     drawCircle(
                         color = Color.LightGray.copy(alpha = 0.2f),
-                        style = Stroke(width = 12.dp.toPx(), cap = StrokeCap.Round)
+                        style = Stroke(width = 12.dp.toPx(), cap = StrokeCap.Round),
                     )
                     drawArc(
                         brush = Brush.sweepGradient(listOf(themeColor.copy(alpha = 0.5f), themeColor)),
                         startAngle = -90f,
                         sweepAngle = (animatedPercent / 100f) * 360f,
                         useCenter = false,
-                        style = Stroke(width = 12.dp.toPx(), cap = StrokeCap.Round)
+                        style = Stroke(width = 12.dp.toPx(), cap = StrokeCap.Round),
                     )
                 }
 
@@ -690,12 +728,12 @@ fun SavingGoalDetailBottomSheet(
                     Text(
                         text = "${percentAchieved.toInt()}%",
                         style = MaterialTheme.typography.headlineLarge.copy(fontWeight = FontWeight.Bold, fontSize = 34.sp),
-                        color = themeColor
+                        color = themeColor,
                     )
                     Text(
                         text = "achieved",
                         style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }
@@ -707,23 +745,23 @@ fun SavingGoalDetailBottomSheet(
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = MaterialTheme.shapes.large,
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFFE8F5E9))
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFFE8F5E9)),
                 ) {
                     Row(
                         modifier = Modifier.padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Icon(
                             imageVector = Icons.Rounded.Celebration,
                             contentDescription = null,
                             tint = Color(0xFF2E7D32),
-                            modifier = Modifier.size(28.dp)
+                            modifier = Modifier.size(28.dp),
                         )
                         Spacer(modifier = Modifier.width(12.dp))
                         Text(
                             text = "Congratulations! You have fully funded this goal!",
                             style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
-                            color = Color(0xFF2E7D32)
+                            color = Color(0xFF2E7D32),
                         )
                     }
                 }
@@ -733,30 +771,30 @@ fun SavingGoalDetailBottomSheet(
             // Progress stats
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 Card(
                     modifier = Modifier.weight(1f),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text("Saved", style = MaterialTheme.typography.labelMedium)
                         Text(
                             CurrencyFormatter.format(goal.currentSavedAmount.inRupees, currencyCode),
                             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                            color = themeColor
+                            color = themeColor,
                         )
                     }
                 }
                 Card(
                     modifier = Modifier.weight(1f),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text("Target", style = MaterialTheme.typography.labelMedium)
                         Text(
                             CurrencyFormatter.format(goal.targetAmount.inRupees, currencyCode),
-                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                         )
                     }
                 }
@@ -766,11 +804,11 @@ fun SavingGoalDetailBottomSheet(
                 Spacer(modifier = Modifier.height(12.dp))
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.15f))
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.15f)),
                 ) {
                     Row(
                         modifier = Modifier.padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Icon(Icons.Rounded.Info, contentDescription = null, tint = MaterialTheme.colorScheme.error)
                         Spacer(modifier = Modifier.width(12.dp))
@@ -779,7 +817,7 @@ fun SavingGoalDetailBottomSheet(
                             Text(
                                 CurrencyFormatter.format(remaining.inRupees, currencyCode),
                                 style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-                                color = MaterialTheme.colorScheme.error
+                                color = MaterialTheme.colorScheme.error,
                             )
                         }
                     }
@@ -791,14 +829,14 @@ fun SavingGoalDetailBottomSheet(
             // Action Buttons (Deposit / Withdraw)
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
             ) {
                 OutlinedButton(
                     onClick = { showWithdrawDialog = true },
                     modifier = Modifier.weight(1f),
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.5f)),
-                    shape = MaterialTheme.shapes.large
+                    shape = MaterialTheme.shapes.large,
                 ) {
                     Text("Withdraw")
                 }
@@ -806,7 +844,7 @@ fun SavingGoalDetailBottomSheet(
                     onClick = { showDepositDialog = true },
                     modifier = Modifier.weight(1f),
                     colors = ButtonDefaults.buttonColors(containerColor = themeColor),
-                    shape = MaterialTheme.shapes.large
+                    shape = MaterialTheme.shapes.large,
                 ) {
                     Text("Deposit")
                 }
@@ -822,7 +860,7 @@ fun SavingGoalDetailBottomSheet(
             onConfirm = { amount ->
                 onDeposit(amount)
                 showDepositDialog = false
-            }
+            },
         )
     }
 
@@ -834,7 +872,7 @@ fun SavingGoalDetailBottomSheet(
             onConfirm = { amount ->
                 onWithdraw(amount)
                 showWithdrawDialog = false
-            }
+            },
         )
     }
 }
@@ -844,7 +882,7 @@ fun FundGoalDialog(
     isDeposit: Boolean,
     themeColor: Color,
     onDismiss: () -> Unit,
-    onConfirm: (Long) -> Unit
+    onConfirm: (Long) -> Unit,
 ) {
     var amountStr by remember { mutableStateOf("") }
     AlertDialog(
@@ -853,8 +891,12 @@ fun FundGoalDialog(
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
-                    text = if (isDeposit) "Enter the amount you want to virtually add to this goal."
-                    else "Enter the amount you want to virtually retrieve from this goal."
+                    text =
+                        if (isDeposit) {
+                            "Enter the amount you want to virtually add to this goal."
+                        } else {
+                            "Enter the amount you want to virtually retrieve from this goal."
+                        },
                 )
                 OutlinedTextField(
                     value = amountStr,
@@ -862,7 +904,7 @@ fun FundGoalDialog(
                     label = { Text("Amount (₹)") },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
                 )
             }
         },
@@ -874,7 +916,7 @@ fun FundGoalDialog(
                         onConfirm(amountVal.toLong())
                     }
                 },
-                colors = ButtonDefaults.buttonColors(containerColor = themeColor)
+                colors = ButtonDefaults.buttonColors(containerColor = themeColor),
             ) {
                 Text("Confirm")
             }
@@ -883,6 +925,6 @@ fun FundGoalDialog(
             TextButton(onClick = onDismiss) {
                 Text("Cancel")
             }
-        }
+        },
     )
 }

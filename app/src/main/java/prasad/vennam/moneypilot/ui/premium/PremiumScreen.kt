@@ -121,7 +121,7 @@ fun PremiumScreen(
                             onPurchaseClick = {
                                 analyticsHelper.logEvent(
                                     AnalyticsConstants.Event.PURCHASE_ATTEMPTED,
-                                    mapOf(AnalyticsConstants.Param.PRODUCT_ID to product.productId)
+                                    mapOf(AnalyticsConstants.Param.PRODUCT_ID to product.productId),
                                 )
                                 viewModel.launchBillingFlow(context as Activity, product)
                             },

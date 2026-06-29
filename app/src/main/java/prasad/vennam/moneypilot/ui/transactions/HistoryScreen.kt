@@ -24,7 +24,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
-import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.Category
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Edit
@@ -88,12 +87,12 @@ import prasad.vennam.moneypilot.ui.components.ProfileIconButton
 import prasad.vennam.moneypilot.ui.dashboard.SyncState
 import prasad.vennam.moneypilot.ui.dashboard.SyncStatusIndicator
 import prasad.vennam.moneypilot.ui.viewmodel.TransactionViewModel
-import prasad.vennam.moneypilot.util.CurrencyFormatter
-import prasad.vennam.moneypilot.util.LocalCurrencyCode
-import prasad.vennam.moneypilot.util.inRupees
 import prasad.vennam.moneypilot.util.AnalyticsConstants
 import prasad.vennam.moneypilot.util.AnalyticsHelper
+import prasad.vennam.moneypilot.util.CurrencyFormatter
+import prasad.vennam.moneypilot.util.LocalCurrencyCode
 import prasad.vennam.moneypilot.util.TrackScreen
+import prasad.vennam.moneypilot.util.inRupees
 import java.text.SimpleDateFormat
 import java.util.Date
 
@@ -196,7 +195,7 @@ fun HistoryScreen(
                             enter = scaleIn() + fadeIn(),
                             exit = scaleOut() + fadeOut(),
                         ) {
-                            IconButton(onClick = {onAddTransaction(activeType)}) {
+                            IconButton(onClick = { onAddTransaction(activeType) }) {
                                 Icon(
                                     imageVector = Icons.Rounded.Add,
                                     contentDescription = stringResource(R.string.add),
@@ -239,7 +238,7 @@ fun HistoryScreen(
                                     val newType = if (index == 0) TransactionType.EXPENSE else TransactionType.INCOME
                                     analyticsHelper.logEvent(
                                         AnalyticsConstants.Event.HISTORY_TAB_SWITCHED,
-                                        mapOf(AnalyticsConstants.Param.TYPE to newType.name)
+                                        mapOf(AnalyticsConstants.Param.TYPE to newType.name),
                                     )
                                     selectedTabType = newType
                                     selectedCategoryId = null // Reset category filter on tab switch
@@ -341,8 +340,8 @@ fun HistoryScreen(
                     AnalyticsConstants.Event.HISTORY_FILTERS_APPLIED,
                     mapOf(
                         AnalyticsConstants.Param.CATEGORY_FILTERED to (selectedCategoryId != null),
-                        AnalyticsConstants.Param.PAYMENT_MODE_FILTERED to (selectedPaymentMode != null)
-                    )
+                        AnalyticsConstants.Param.PAYMENT_MODE_FILTERED to (selectedPaymentMode != null),
+                    ),
                 )
                 showFilterSheet = false
             },

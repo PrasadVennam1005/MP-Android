@@ -1,12 +1,18 @@
 package prasad.vennam.moneypilot.feature.ai.presentation
 
+import android.graphics.drawable.GradientDrawable
+import android.view.Gravity
+import android.view.ViewGroup
+import android.widget.FrameLayout
+import android.widget.ImageView
+import android.widget.LinearLayout
+import android.widget.TextView
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -31,37 +37,27 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.graphics.toColorInt
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import com.google.android.gms.ads.AdLoader
 import com.google.android.gms.ads.AdRequest
-import com.google.android.gms.ads.AdSize
-import com.google.android.gms.ads.AdView
 import com.google.android.gms.ads.nativead.NativeAd
 import com.google.android.gms.ads.nativead.NativeAdView
-import com.google.android.gms.ads.AdLoader
-import android.widget.FrameLayout
-import android.widget.LinearLayout
-import android.widget.TextView
-import android.widget.ImageView
-import android.view.Gravity
-import android.view.ViewGroup
-import android.graphics.drawable.GradientDrawable
-import prasad.vennam.moneypilot.ui.components.BannerPlaceholder
-import prasad.vennam.moneypilot.ads.AdConfig
-import kotlinx.coroutines.launch
 import prasad.vennam.moneypilot.R
+import prasad.vennam.moneypilot.ads.AdConfig
+import prasad.vennam.moneypilot.data.entity.TransactionType
 import prasad.vennam.moneypilot.feature.ai.model.AiAction
 import prasad.vennam.moneypilot.feature.ai.model.Author
 import prasad.vennam.moneypilot.feature.ai.model.ChatMessage
 import prasad.vennam.moneypilot.feature.ai.model.LlmState
-import prasad.vennam.moneypilot.data.entity.TransactionType
-import androidx.core.graphics.toColorInt
+import prasad.vennam.moneypilot.ui.components.BannerPlaceholder
 import prasad.vennam.moneypilot.util.AnalyticsConstants
 import prasad.vennam.moneypilot.util.AnalyticsHelper
 import prasad.vennam.moneypilot.util.TrackScreen
@@ -147,7 +143,7 @@ fun AiChatScreen(
                         Icon(
                             imageVector = Icons.Rounded.Lightbulb,
                             contentDescription = "Suggestions",
-                            tint = MaterialTheme.colorScheme.primary
+                            tint = MaterialTheme.colorScheme.primary,
                         )
                     }
                 },
@@ -164,12 +160,13 @@ fun AiChatScreen(
                 tonalElevation = 8.dp,
                 shadowElevation = 8.dp,
                 color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
-                modifier = Modifier
-                    .border(
-                        width = 1.dp,
-                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.08f),
-                        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
-                    )
+                modifier =
+                    Modifier
+                        .border(
+                            width = 1.dp,
+                            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.08f),
+                            shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+                        ),
             ) {
                 Column {
                     if (aiState is LlmState.Error) {
@@ -204,7 +201,7 @@ fun AiChatScreen(
                             onConfirm = { editedAction ->
                                 analyticsHelper.logEvent(
                                     AnalyticsConstants.Event.AI_CHAT_ACTION_CONFIRMED,
-                                    mapOf(AnalyticsConstants.Param.TYPE to editedAction::class.java.simpleName)
+                                    mapOf(AnalyticsConstants.Param.TYPE to editedAction::class.java.simpleName),
                                 )
                                 viewModel.confirmAction(editedAction)
                             },
@@ -255,36 +252,37 @@ fun AiChatScreen(
                             enabled = aiState is LlmState.Ready || aiState is LlmState.Generating || aiState is LlmState.ActionConfirm,
                         )
                         Spacer(modifier = Modifier.width(8.dp))
-                        
+
                         // Custom Gradient Send Button
-                        val buttonEnabled = inputText.isNotBlank() &&
-                            (aiState is LlmState.Ready || aiState is LlmState.Generating || aiState is LlmState.ActionConfirm)
-                        
+                        val buttonEnabled =
+                            inputText.isNotBlank() &&
+                                (aiState is LlmState.Ready || aiState is LlmState.Generating || aiState is LlmState.ActionConfirm)
+
                         Box(
-                            modifier = Modifier
-                                .size(48.dp)
-                                .clip(CircleShape)
-                                .background(
-                                    if (buttonEnabled) {
-                                        Brush.linearGradient(listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.tertiary))
-                                    } else {
-                                        Brush.linearGradient(listOf(MaterialTheme.colorScheme.outline.copy(alpha = 0.1f), MaterialTheme.colorScheme.outline.copy(alpha = 0.15f)))
-                                    }
-                                )
-                                .clickable(
-                                    enabled = buttonEnabled,
-                                    onClick = {
-                                        viewModel.sendMessage(inputText)
-                                        inputText = ""
-                                    }
-                                ),
-                            contentAlignment = Alignment.Center
+                            modifier =
+                                Modifier
+                                    .size(48.dp)
+                                    .clip(CircleShape)
+                                    .background(
+                                        if (buttonEnabled) {
+                                            Brush.linearGradient(listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.tertiary))
+                                        } else {
+                                            Brush.linearGradient(listOf(MaterialTheme.colorScheme.outline.copy(alpha = 0.1f), MaterialTheme.colorScheme.outline.copy(alpha = 0.15f)))
+                                        },
+                                    ).clickable(
+                                        enabled = buttonEnabled,
+                                        onClick = {
+                                            viewModel.sendMessage(inputText)
+                                            inputText = ""
+                                        },
+                                    ),
+                            contentAlignment = Alignment.Center,
                         ) {
                             Icon(
                                 Icons.AutoMirrored.Rounded.Send,
                                 contentDescription = stringResource(R.string.search),
                                 tint = if (buttonEnabled) Color.White else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
-                                modifier = Modifier.size(20.dp)
+                                modifier = Modifier.size(20.dp),
                             )
                         }
                     }
@@ -304,7 +302,7 @@ fun AiChatScreen(
                     } catch (e: Exception) {
                         // Focus request might fail if node is not attached yet
                     }
-                }
+                },
             )
         }
 
@@ -366,28 +364,28 @@ fun AiChatScreen(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
                             )
                             Spacer(modifier = Modifier.height(24.dp))
-                            
+
                             Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(48.dp)
-                                    .clip(RoundedCornerShape(16.dp))
-                                    .background(
-                                        Brush.linearGradient(
-                                            listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.tertiary)
-                                        )
-                                    )
-                                    .clickable {
-                                        analyticsHelper.logEvent(AnalyticsConstants.Event.AI_CHAT_MODEL_DOWNLOAD_CLICKED)
-                                        viewModel.downloadModel()
-                                    },
-                                contentAlignment = Alignment.Center
+                                modifier =
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .height(48.dp)
+                                        .clip(RoundedCornerShape(16.dp))
+                                        .background(
+                                            Brush.linearGradient(
+                                                listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.tertiary),
+                                            ),
+                                        ).clickable {
+                                            analyticsHelper.logEvent(AnalyticsConstants.Event.AI_CHAT_MODEL_DOWNLOAD_CLICKED)
+                                            viewModel.downloadModel()
+                                        },
+                                contentAlignment = Alignment.Center,
                             ) {
                                 Text(
                                     stringResource(R.string.download_model_btn),
                                     color = Color.White,
                                     fontWeight = FontWeight.Bold,
-                                    style = MaterialTheme.typography.labelLarge
+                                    style = MaterialTheme.typography.labelLarge,
                                 )
                             }
                         }
@@ -480,7 +478,7 @@ fun AiChatScreen(
                             } catch (e: Exception) {
                                 // Focus request might fail if node is not attached yet
                             }
-                        }
+                        },
                     )
                 } else {
                     LazyColumn(
@@ -496,10 +494,12 @@ fun AiChatScreen(
                             }
                             AnimatedVisibility(
                                 visible = visible,
-                                enter = fadeIn(animationSpec = tween(400)) + slideInVertically(
-                                    initialOffsetY = { it / 3 },
-                                    animationSpec = tween(400, easing = FastOutSlowInEasing)
-                                )
+                                enter =
+                                    fadeIn(animationSpec = tween(400)) +
+                                        slideInVertically(
+                                            initialOffsetY = { it / 3 },
+                                            animationSpec = tween(400, easing = FastOutSlowInEasing),
+                                        ),
                             ) {
                                 ChatBubble(message)
                             }
@@ -533,16 +533,17 @@ fun StatusIndicator(state: LlmState) {
             LlmState.Downloading -> MaterialTheme.colorScheme.primary
             is LlmState.ActionConfirm -> Color(0xFFFFA500)
         }
-        
+
     val infiniteTransition = rememberInfiniteTransition(label = "pulse")
     val alpha by infiniteTransition.animateFloat(
         initialValue = 0.4f,
         targetValue = 1.0f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1000, easing = LinearEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "pulse_alpha"
+        animationSpec =
+            infiniteRepeatable(
+                animation = tween(1000, easing = LinearEasing),
+                repeatMode = RepeatMode.Reverse,
+            ),
+        label = "pulse_alpha",
     )
 
     Row(
@@ -556,8 +557,8 @@ fun StatusIndicator(state: LlmState) {
                     .clip(CircleShape)
                     .background(
                         color.copy(
-                            alpha = if (state is LlmState.Generating || state is LlmState.Initializing || state is LlmState.Downloading) alpha else 1f
-                        )
+                            alpha = if (state is LlmState.Generating || state is LlmState.Initializing || state is LlmState.Downloading) alpha else 1f,
+                        ),
                     ),
         )
         Text(
@@ -616,12 +617,13 @@ fun ChatBubble(message: ChatMessage) {
                         .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f))
                         .border(
                             width = 1.dp,
-                            brush = Brush.linearGradient(
-                                listOf(
-                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
-                                    MaterialTheme.colorScheme.tertiary.copy(alpha = 0.15f)
-                                )
-                            ),
+                            brush =
+                                Brush.linearGradient(
+                                    listOf(
+                                        MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                                        MaterialTheme.colorScheme.tertiary.copy(alpha = 0.15f),
+                                    ),
+                                ),
                             shape = bubbleShape,
                         )
                 },
@@ -743,7 +745,7 @@ fun TypingDotsIndicator(tint: Color) {
 @Composable
 fun WelcomeScreen(
     analyticsHelper: AnalyticsHelper,
-    onSuggestionClick: (String) -> Unit
+    onSuggestionClick: (String) -> Unit,
 ) {
     val categories = listOf("Transactions", "Wealth", "Loans")
     var selectedCategoryIndex by remember { mutableIntStateOf(0) }
@@ -755,17 +757,19 @@ fun WelcomeScreen(
 
     LaunchedEffect(Unit) {
         try {
-            val adLoader = AdLoader.Builder(context, AdConfig.nativeAdUnitId)
-                .forNativeAd { ad ->
-                    nativeAd = ad
-                    adLoading = false
-                }
-                .withAdListener(object : com.google.android.gms.ads.AdListener() {
-                    override fun onAdFailedToLoad(error: com.google.android.gms.ads.LoadAdError) {
+            val adLoader =
+                AdLoader
+                    .Builder(context, AdConfig.nativeAdUnitId)
+                    .forNativeAd { ad ->
+                        nativeAd = ad
                         adLoading = false
-                    }
-                })
-                .build()
+                    }.withAdListener(
+                        object : com.google.android.gms.ads.AdListener() {
+                            override fun onAdFailedToLoad(error: com.google.android.gms.ads.LoadAdError) {
+                                adLoading = false
+                            }
+                        },
+                    ).build()
             adLoader.loadAd(AdRequest.Builder().build())
         } catch (e: Exception) {
             adLoading = false
@@ -779,39 +783,41 @@ fun WelcomeScreen(
     }
 
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(16.dp),
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Top,
     ) {
         Spacer(modifier = Modifier.height(24.dp))
-        
+
         // AI pulsing gradient icon
         val infiniteTransition = rememberInfiniteTransition(label = "pulse_star")
         val scale by infiniteTransition.animateFloat(
             initialValue = 0.95f,
             targetValue = 1.05f,
-            animationSpec = infiniteRepeatable(
-                animation = tween(1500, easing = FastOutSlowInEasing),
-                repeatMode = RepeatMode.Reverse
-            ),
-            label = "scale"
+            animationSpec =
+                infiniteRepeatable(
+                    animation = tween(1500, easing = FastOutSlowInEasing),
+                    repeatMode = RepeatMode.Reverse,
+                ),
+            label = "scale",
         )
         Box(
-            modifier = Modifier
-                .size(72.dp)
-                .graphicsLayer {
-                    scaleX = scale
-                    scaleY = scale
-                }
-                .clip(CircleShape)
-                .background(
-                    Brush.linearGradient(
-                        listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.tertiary),
+            modifier =
+                Modifier
+                    .size(72.dp)
+                    .graphicsLayer {
+                        scaleX = scale
+                        scaleY = scale
+                    }.clip(CircleShape)
+                    .background(
+                        Brush.linearGradient(
+                            listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.tertiary),
+                        ),
                     ),
-                ),
             contentAlignment = Alignment.Center,
         ) {
             Icon(
@@ -827,7 +833,7 @@ fun WelcomeScreen(
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.ExtraBold,
             color = MaterialTheme.colorScheme.onBackground,
-            textAlign = TextAlign.Center
+            textAlign = TextAlign.Center,
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
@@ -846,35 +852,38 @@ fun WelcomeScreen(
             style = MaterialTheme.typography.labelSmall,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier
-                .align(Alignment.Start)
-                .padding(start = 8.dp, bottom = 8.dp),
+            modifier =
+                Modifier
+                    .align(Alignment.Start)
+                    .padding(start = 8.dp, bottom = 8.dp),
         )
 
         Row(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 4.dp)
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp),
         ) {
             categories.forEachIndexed { index, name ->
                 val isSelected = index == selectedCategoryIndex
                 val chipBg = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
                 val chipTextColor = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
                 Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(chipBg)
-                        .clickable { selectedCategoryIndex = index }
-                        .padding(vertical = 10.dp),
-                    contentAlignment = Alignment.Center
+                    modifier =
+                        Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(chipBg)
+                            .clickable { selectedCategoryIndex = index }
+                            .padding(vertical = 10.dp),
+                    contentAlignment = Alignment.Center,
                 ) {
                     Text(
                         text = name,
                         style = MaterialTheme.typography.labelMedium,
                         color = chipTextColor,
-                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
                     )
                 }
             }
@@ -886,76 +895,82 @@ fun WelcomeScreen(
             AdmobNativeAd(nativeAd = nativeAd!!, modifier = Modifier.padding(vertical = 12.dp))
         }
 
-        val currentSuggestions = when (selectedCategoryIndex) {
-            0 -> listOf(
-                Pair("Add food expense of 500 from Swiggy", Icons.Rounded.Fastfood),
-                Pair("Spent 1200 on petrol today", Icons.Rounded.LocalGasStation),
-                Pair("Received salary of 75000", Icons.Rounded.Payments),
-                Pair("Log shopping expense of 3500 on Amazon", Icons.Rounded.ShoppingBag)
-            )
-            1 -> listOf(
-                Pair("Invested 25000 in FD today", Icons.Rounded.Savings),
-                Pair("Bought HDFC stock for 15k", Icons.AutoMirrored.Rounded.TrendingUp),
-                Pair("Invested 10000 in Mutual Fund", Icons.Rounded.Analytics),
-                Pair("Bought Gold for 5000 today", Icons.Rounded.MonetizationOn)
-            )
-            else -> listOf(
-                Pair("Add SBI Home Loan of 30L, EMI 45000", Icons.Rounded.Home),
-                Pair("Add personal loan of 50k", Icons.Rounded.Person),
-                Pair("Add car loan of 12L, EMI 22000", Icons.Rounded.DirectionsCar),
-                Pair("Show active loans summary", Icons.Rounded.Summarize)
-            )
-        }
+        val currentSuggestions =
+            when (selectedCategoryIndex) {
+                0 ->
+                    listOf(
+                        Pair("Add food expense of 500 from Swiggy", Icons.Rounded.Fastfood),
+                        Pair("Spent 1200 on petrol today", Icons.Rounded.LocalGasStation),
+                        Pair("Received salary of 75000", Icons.Rounded.Payments),
+                        Pair("Log shopping expense of 3500 on Amazon", Icons.Rounded.ShoppingBag),
+                    )
+                1 ->
+                    listOf(
+                        Pair("Invested 25000 in FD today", Icons.Rounded.Savings),
+                        Pair("Bought HDFC stock for 15k", Icons.AutoMirrored.Rounded.TrendingUp),
+                        Pair("Invested 10000 in Mutual Fund", Icons.Rounded.Analytics),
+                        Pair("Bought Gold for 5000 today", Icons.Rounded.MonetizationOn),
+                    )
+                else ->
+                    listOf(
+                        Pair("Add SBI Home Loan of 30L, EMI 45000", Icons.Rounded.Home),
+                        Pair("Add personal loan of 50k", Icons.Rounded.Person),
+                        Pair("Add car loan of 12L, EMI 22000", Icons.Rounded.DirectionsCar),
+                        Pair("Show active loans summary", Icons.Rounded.Summarize),
+                    )
+            }
 
         Column(
             verticalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
         ) {
             currentSuggestions.forEach { (text, icon) ->
                 var clicked by remember { mutableStateOf(false) }
                 val scaleFactor by animateFloatAsState(
                     targetValue = if (clicked) 0.97f else 1f,
                     animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy),
-                    label = "suggestion_click"
+                    label = "suggestion_click",
                 )
                 Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .graphicsLayer {
-                            scaleX = scaleFactor
-                            scaleY = scaleFactor
-                        }
-                        .clip(RoundedCornerShape(16.dp))
-                        .clickable {
-                            clicked = true
-                            analyticsHelper.logEvent(
-                                AnalyticsConstants.Event.AI_CHAT_WELCOME_SUGGESTION_CLICKED,
-                                mapOf(AnalyticsConstants.Param.TEXT to text)
-                            )
-                            onSuggestionClick(text)
-                            clicked = false
-                        },
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f)
-                    ),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.08f))
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .graphicsLayer {
+                                scaleX = scaleFactor
+                                scaleY = scaleFactor
+                            }.clip(RoundedCornerShape(16.dp))
+                            .clickable {
+                                clicked = true
+                                analyticsHelper.logEvent(
+                                    AnalyticsConstants.Event.AI_CHAT_WELCOME_SUGGESTION_CLICKED,
+                                    mapOf(AnalyticsConstants.Param.TEXT to text),
+                                )
+                                onSuggestionClick(text)
+                                clicked = false
+                            },
+                    colors =
+                        CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f),
+                        ),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.08f)),
                 ) {
                     Row(
                         modifier = Modifier.padding(14.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Box(
-                            modifier = Modifier
-                                .size(36.dp)
-                                .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.08f)),
-                            contentAlignment = Alignment.Center
+                            modifier =
+                                Modifier
+                                    .size(36.dp)
+                                    .clip(CircleShape)
+                                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.08f)),
+                            contentAlignment = Alignment.Center,
                         ) {
                             Icon(
                                 icon,
                                 contentDescription = null,
                                 tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(18.dp)
+                                modifier = Modifier.size(18.dp),
                             )
                         }
                         Spacer(modifier = Modifier.width(12.dp))
@@ -963,13 +978,13 @@ fun WelcomeScreen(
                             text = text,
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurface,
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier.weight(1f),
                         )
                         Icon(
                             Icons.AutoMirrored.Rounded.ArrowForward,
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
-                            modifier = Modifier.size(16.dp)
+                            modifier = Modifier.size(16.dp),
                         )
                     }
                 }
@@ -1044,23 +1059,25 @@ fun ActionConfirmationCard(
             is AiAction.AddTransaction -> {
                 val amount = amountState.toLongOrNull() ?: action.amount
                 val dateOffset = dateOffsetState.toIntOrNull() ?: action.dateOffset
-                currentAction = AiAction.AddTransaction(
-                    amount = amount,
-                    type = typeState,
-                    categoryName = categoryState,
-                    note = noteState,
-                    dateOffset = dateOffset
-                )
+                currentAction =
+                    AiAction.AddTransaction(
+                        amount = amount,
+                        type = typeState,
+                        categoryName = categoryState,
+                        note = noteState,
+                        dateOffset = dateOffset,
+                    )
             }
             is AiAction.AddInvestment -> {
                 val invested = investedAmountState.toLongOrNull() ?: action.investedAmount
                 val current = currentValueState.toLongOrNull() ?: action.currentValue
-                currentAction = AiAction.AddInvestment(
-                    name = investmentNameState,
-                    type = investmentTypeState,
-                    investedAmount = invested,
-                    currentValue = current
-                )
+                currentAction =
+                    AiAction.AddInvestment(
+                        name = investmentNameState,
+                        type = investmentTypeState,
+                        investedAmount = invested,
+                        currentValue = current,
+                    )
             }
             is AiAction.AddLoan -> {
                 val total = loanTotalAmountState.toLongOrNull() ?: action.totalAmount
@@ -1068,14 +1085,15 @@ fun ActionConfirmationCard(
                 val interest = loanInterestRateState.toDoubleOrNull() ?: action.interestRate
                 val tenure = loanTenureMonthsState.toIntOrNull() ?: action.tenureMonths
                 val nextEmi = loanNextEmiDaysState.toIntOrNull() ?: action.nextEmiDays
-                currentAction = AiAction.AddLoan(
-                    name = loanNameState,
-                    totalAmount = total,
-                    emiAmount = emi,
-                    interestRate = interest,
-                    tenureMonths = tenure,
-                    nextEmiDays = nextEmi
-                )
+                currentAction =
+                    AiAction.AddLoan(
+                        name = loanNameState,
+                        totalAmount = total,
+                        emiAmount = emi,
+                        interestRate = interest,
+                        tenureMonths = tenure,
+                        nextEmiDays = nextEmi,
+                    )
             }
         }
         isEditing = false
@@ -1185,7 +1203,7 @@ fun ActionConfirmationCard(
                         Icon(
                             imageVector = Icons.Rounded.Edit,
                             contentDescription = "Edit details",
-                            tint = MaterialTheme.colorScheme.primary
+                            tint = MaterialTheme.colorScheme.primary,
                         )
                     }
                 }
@@ -1195,10 +1213,11 @@ fun ActionConfirmationCard(
 
             if (isEditing) {
                 Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     when (action) {
                         is AiAction.AddTransaction -> {
@@ -1208,26 +1227,27 @@ fun ActionConfirmationCard(
                                 label = { Text(stringResource(R.string.amount)) },
                                 singleLine = true,
                                 modifier = Modifier.fillMaxWidth(),
-                                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
-                                    keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
-                                )
+                                keyboardOptions =
+                                    androidx.compose.foundation.text.KeyboardOptions(
+                                        keyboardType = androidx.compose.ui.text.input.KeyboardType.Number,
+                                    ),
                             )
 
                             Row(
                                 horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                modifier = Modifier.fillMaxWidth()
+                                modifier = Modifier.fillMaxWidth(),
                             ) {
                                 FilterChip(
                                     selected = typeState == TransactionType.EXPENSE,
                                     onClick = { typeState = TransactionType.EXPENSE },
                                     label = { Text("Expense") },
-                                    modifier = Modifier.weight(1f)
+                                    modifier = Modifier.weight(1f),
                                 )
                                 FilterChip(
                                     selected = typeState == TransactionType.INCOME,
                                     onClick = { typeState = TransactionType.INCOME },
                                     label = { Text("Income") },
-                                    modifier = Modifier.weight(1f)
+                                    modifier = Modifier.weight(1f),
                                 )
                             }
 
@@ -1236,7 +1256,7 @@ fun ActionConfirmationCard(
                                 onValueChange = { categoryState = it },
                                 label = { Text(stringResource(R.string.category)) },
                                 singleLine = true,
-                                modifier = Modifier.fillMaxWidth()
+                                modifier = Modifier.fillMaxWidth(),
                             )
 
                             OutlinedTextField(
@@ -1244,7 +1264,7 @@ fun ActionConfirmationCard(
                                 onValueChange = { noteState = it },
                                 label = { Text(stringResource(R.string.detail_note)) },
                                 singleLine = true,
-                                modifier = Modifier.fillMaxWidth()
+                                modifier = Modifier.fillMaxWidth(),
                             )
 
                             OutlinedTextField(
@@ -1253,9 +1273,10 @@ fun ActionConfirmationCard(
                                 label = { Text("Date Offset (0=Today, -1=Yesterday)") },
                                 singleLine = true,
                                 modifier = Modifier.fillMaxWidth(),
-                                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
-                                    keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
-                                )
+                                keyboardOptions =
+                                    androidx.compose.foundation.text.KeyboardOptions(
+                                        keyboardType = androidx.compose.ui.text.input.KeyboardType.Number,
+                                    ),
                             )
                         }
                         is AiAction.AddInvestment -> {
@@ -1264,7 +1285,7 @@ fun ActionConfirmationCard(
                                 onValueChange = { investmentNameState = it },
                                 label = { Text(stringResource(R.string.detail_asset_name)) },
                                 singleLine = true,
-                                modifier = Modifier.fillMaxWidth()
+                                modifier = Modifier.fillMaxWidth(),
                             )
 
                             OutlinedTextField(
@@ -1272,7 +1293,7 @@ fun ActionConfirmationCard(
                                 onValueChange = { investmentTypeState = it },
                                 label = { Text(stringResource(R.string.detail_asset_type)) },
                                 singleLine = true,
-                                modifier = Modifier.fillMaxWidth()
+                                modifier = Modifier.fillMaxWidth(),
                             )
 
                             OutlinedTextField(
@@ -1281,9 +1302,10 @@ fun ActionConfirmationCard(
                                 label = { Text(stringResource(R.string.detail_invested)) },
                                 singleLine = true,
                                 modifier = Modifier.fillMaxWidth(),
-                                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
-                                    keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
-                                )
+                                keyboardOptions =
+                                    androidx.compose.foundation.text.KeyboardOptions(
+                                        keyboardType = androidx.compose.ui.text.input.KeyboardType.Number,
+                                    ),
                             )
 
                             OutlinedTextField(
@@ -1292,9 +1314,10 @@ fun ActionConfirmationCard(
                                 label = { Text(stringResource(R.string.detail_current_value)) },
                                 singleLine = true,
                                 modifier = Modifier.fillMaxWidth(),
-                                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
-                                    keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
-                                )
+                                keyboardOptions =
+                                    androidx.compose.foundation.text.KeyboardOptions(
+                                        keyboardType = androidx.compose.ui.text.input.KeyboardType.Number,
+                                    ),
                             )
                         }
                         is AiAction.AddLoan -> {
@@ -1303,7 +1326,7 @@ fun ActionConfirmationCard(
                                 onValueChange = { loanNameState = it },
                                 label = { Text(stringResource(R.string.detail_loan_name)) },
                                 singleLine = true,
-                                modifier = Modifier.fillMaxWidth()
+                                modifier = Modifier.fillMaxWidth(),
                             )
 
                             OutlinedTextField(
@@ -1312,9 +1335,10 @@ fun ActionConfirmationCard(
                                 label = { Text(stringResource(R.string.detail_principal)) },
                                 singleLine = true,
                                 modifier = Modifier.fillMaxWidth(),
-                                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
-                                    keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
-                                )
+                                keyboardOptions =
+                                    androidx.compose.foundation.text.KeyboardOptions(
+                                        keyboardType = androidx.compose.ui.text.input.KeyboardType.Number,
+                                    ),
                             )
 
                             OutlinedTextField(
@@ -1323,9 +1347,10 @@ fun ActionConfirmationCard(
                                 label = { Text(stringResource(R.string.detail_emi_amount)) },
                                 singleLine = true,
                                 modifier = Modifier.fillMaxWidth(),
-                                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
-                                    keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
-                                )
+                                keyboardOptions =
+                                    androidx.compose.foundation.text.KeyboardOptions(
+                                        keyboardType = androidx.compose.ui.text.input.KeyboardType.Number,
+                                    ),
                             )
 
                             OutlinedTextField(
@@ -1334,9 +1359,10 @@ fun ActionConfirmationCard(
                                 label = { Text("Interest Rate (% p.a.)") },
                                 singleLine = true,
                                 modifier = Modifier.fillMaxWidth(),
-                                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
-                                    keyboardType = androidx.compose.ui.text.input.KeyboardType.Decimal
-                                )
+                                keyboardOptions =
+                                    androidx.compose.foundation.text.KeyboardOptions(
+                                        keyboardType = androidx.compose.ui.text.input.KeyboardType.Decimal,
+                                    ),
                             )
 
                             OutlinedTextField(
@@ -1345,9 +1371,10 @@ fun ActionConfirmationCard(
                                 label = { Text("Tenure (Months)") },
                                 singleLine = true,
                                 modifier = Modifier.fillMaxWidth(),
-                                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
-                                    keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
-                                )
+                                keyboardOptions =
+                                    androidx.compose.foundation.text.KeyboardOptions(
+                                        keyboardType = androidx.compose.ui.text.input.KeyboardType.Number,
+                                    ),
                             )
 
                             OutlinedTextField(
@@ -1356,9 +1383,10 @@ fun ActionConfirmationCard(
                                 label = { Text("First EMI Due (Days)") },
                                 singleLine = true,
                                 modifier = Modifier.fillMaxWidth(),
-                                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
-                                    keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
-                                )
+                                keyboardOptions =
+                                    androidx.compose.foundation.text.KeyboardOptions(
+                                        keyboardType = androidx.compose.ui.text.input.KeyboardType.Number,
+                                    ),
                             )
                         }
                     }
@@ -1414,14 +1442,15 @@ fun ActionConfirmationCard(
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 if (isEditing) {
                     OutlinedButton(
                         onClick = { cancelChanges() },
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(44.dp),
+                        modifier =
+                            Modifier
+                                .weight(1f)
+                                .height(44.dp),
                         colors =
                             ButtonDefaults.outlinedButtonColors(
                                 contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -1435,17 +1464,17 @@ fun ActionConfirmationCard(
                     }
 
                     Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(44.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(
-                                Brush.linearGradient(
-                                    listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.tertiary)
-                                )
-                            )
-                            .clickable { saveChanges() },
-                        contentAlignment = Alignment.Center
+                        modifier =
+                            Modifier
+                                .weight(1f)
+                                .height(44.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(
+                                    Brush.linearGradient(
+                                        listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.tertiary),
+                                    ),
+                                ).clickable { saveChanges() },
+                        contentAlignment = Alignment.Center,
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Rounded.Save, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
@@ -1456,9 +1485,10 @@ fun ActionConfirmationCard(
                 } else {
                     OutlinedButton(
                         onClick = onDismiss,
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(44.dp),
+                        modifier =
+                            Modifier
+                                .weight(1f)
+                                .height(44.dp),
                         colors =
                             ButtonDefaults.outlinedButtonColors(
                                 contentColor = MaterialTheme.colorScheme.error,
@@ -1472,17 +1502,17 @@ fun ActionConfirmationCard(
                     }
 
                     Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(44.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(
-                                Brush.linearGradient(
-                                    listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.tertiary)
-                                )
-                            )
-                            .clickable { onConfirm(currentAction) },
-                        contentAlignment = Alignment.Center
+                        modifier =
+                            Modifier
+                                .weight(1f)
+                                .height(44.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(
+                                    Brush.linearGradient(
+                                        listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.tertiary),
+                                    ),
+                                ).clickable { onConfirm(currentAction) },
+                        contentAlignment = Alignment.Center,
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Rounded.CheckCircle, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
@@ -1519,149 +1549,171 @@ fun DetailRow(
     }
 }
 
-private fun Int.dpToPx(context: android.content.Context): Int {
-    return (this * context.resources.displayMetrics.density).toInt()
-}
+private fun Int.dpToPx(context: android.content.Context): Int = (this * context.resources.displayMetrics.density).toInt()
 
 @Composable
-fun AdmobNativeAd(nativeAd: NativeAd, modifier: Modifier = Modifier) {
+fun AdmobNativeAd(
+    nativeAd: NativeAd,
+    modifier: Modifier = Modifier,
+) {
     val context = LocalContext.current
-    
+
     // Resolve theme colors
     val primaryColor = MaterialTheme.colorScheme.primary.toArgb()
     val tertiaryColor = MaterialTheme.colorScheme.tertiary.toArgb()
 
     AndroidView(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(vertical = 8.dp),
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp),
         factory = { ctx ->
             NativeAdView(ctx).apply {
-                val rootLayout = FrameLayout(ctx).apply {
-                    layoutParams = FrameLayout.LayoutParams(
-                        ViewGroup.LayoutParams.MATCH_PARENT,
-                        ViewGroup.LayoutParams.WRAP_CONTENT
-                    )
-                }
+                val rootLayout =
+                    FrameLayout(ctx).apply {
+                        layoutParams =
+                            FrameLayout.LayoutParams(
+                                ViewGroup.LayoutParams.MATCH_PARENT,
+                                ViewGroup.LayoutParams.WRAP_CONTENT,
+                            )
+                    }
 
                 // Main card container
-                val cardContainer = LinearLayout(ctx).apply {
-                    orientation = LinearLayout.HORIZONTAL
-                    gravity = Gravity.CENTER_VERTICAL
-                    setPadding(
-                        16.dpToPx(ctx),
-                        20.dpToPx(ctx), // overlapping badge clearance
-                        16.dpToPx(ctx),
-                        16.dpToPx(ctx)
-                    )
-                    
-                    // Linear Gradient matching primary/tertiary colors of the app theme
-                    val gradient = GradientDrawable(
-                        GradientDrawable.Orientation.LEFT_RIGHT,
-                        intArrayOf(primaryColor, tertiaryColor)
-                    ).apply {
-                        cornerRadius = 20.dpToPx(ctx).toFloat()
+                val cardContainer =
+                    LinearLayout(ctx).apply {
+                        orientation = LinearLayout.HORIZONTAL
+                        gravity = Gravity.CENTER_VERTICAL
+                        setPadding(
+                            16.dpToPx(ctx),
+                            20.dpToPx(ctx), // overlapping badge clearance
+                            16.dpToPx(ctx),
+                            16.dpToPx(ctx),
+                        )
+
+                        // Linear Gradient matching primary/tertiary colors of the app theme
+                        val gradient =
+                            GradientDrawable(
+                                GradientDrawable.Orientation.LEFT_RIGHT,
+                                intArrayOf(primaryColor, tertiaryColor),
+                            ).apply {
+                                cornerRadius = 20.dpToPx(ctx).toFloat()
+                            }
+                        background = gradient
+
+                        layoutParams =
+                            FrameLayout
+                                .LayoutParams(
+                                    ViewGroup.LayoutParams.MATCH_PARENT,
+                                    ViewGroup.LayoutParams.WRAP_CONTENT,
+                                ).apply {
+                                    topMargin = 8.dpToPx(ctx)
+                                }
                     }
-                    background = gradient
-                    
-                    layoutParams = FrameLayout.LayoutParams(
-                        ViewGroup.LayoutParams.MATCH_PARENT,
-                        ViewGroup.LayoutParams.WRAP_CONTENT
-                    ).apply {
-                        topMargin = 8.dpToPx(ctx)
-                    }
-                }
 
                 // Icon (ImageView)
-                val iconView = ImageView(ctx).apply {
-                    layoutParams = LinearLayout.LayoutParams(
-                        44.dpToPx(ctx),
-                        44.dpToPx(ctx)
-                    )
-                    scaleType = ImageView.ScaleType.CENTER_CROP
-                    val iconBg = GradientDrawable().apply {
-                        setColor(0x26FFFFFF) // 15% opacity white
-                        cornerRadius = 12.dpToPx(ctx).toFloat()
+                val iconView =
+                    ImageView(ctx).apply {
+                        layoutParams =
+                            LinearLayout.LayoutParams(
+                                44.dpToPx(ctx),
+                                44.dpToPx(ctx),
+                            )
+                        scaleType = ImageView.ScaleType.CENTER_CROP
+                        val iconBg =
+                            GradientDrawable().apply {
+                                setColor(0x26FFFFFF) // 15% opacity white
+                                cornerRadius = 12.dpToPx(ctx).toFloat()
+                            }
+                        background = iconBg
+                        setPadding(4.dpToPx(ctx), 4.dpToPx(ctx), 4.dpToPx(ctx), 4.dpToPx(ctx))
                     }
-                    background = iconBg
-                    setPadding(4.dpToPx(ctx), 4.dpToPx(ctx), 4.dpToPx(ctx), 4.dpToPx(ctx))
-                }
                 cardContainer.addView(iconView)
 
                 // Text Container (Headline & Body)
-                val textContainer = LinearLayout(ctx).apply {
-                    orientation = LinearLayout.VERTICAL
-                    layoutParams = LinearLayout.LayoutParams(
-                        0,
-                        ViewGroup.LayoutParams.WRAP_CONTENT,
-                        1f
-                    ).apply {
-                        leftMargin = 12.dpToPx(ctx)
-                        rightMargin = 12.dpToPx(ctx)
+                val textContainer =
+                    LinearLayout(ctx).apply {
+                        orientation = LinearLayout.VERTICAL
+                        layoutParams =
+                            LinearLayout
+                                .LayoutParams(
+                                    0,
+                                    ViewGroup.LayoutParams.WRAP_CONTENT,
+                                    1f,
+                                ).apply {
+                                    leftMargin = 12.dpToPx(ctx)
+                                    rightMargin = 12.dpToPx(ctx)
+                                }
                     }
-                }
 
-                val headlineView = TextView(ctx).apply {
-                    textSize = 14f
-                    setTextColor(android.graphics.Color.WHITE)
-                    typeface = android.graphics.Typeface.create("sans-serif", android.graphics.Typeface.BOLD)
-                    maxLines = 1
-                    ellipsize = android.text.TextUtils.TruncateAt.END
-                }
+                val headlineView =
+                    TextView(ctx).apply {
+                        textSize = 14f
+                        setTextColor(android.graphics.Color.WHITE)
+                        typeface = android.graphics.Typeface.create("sans-serif", android.graphics.Typeface.BOLD)
+                        maxLines = 1
+                        ellipsize = android.text.TextUtils.TruncateAt.END
+                    }
                 textContainer.addView(headlineView)
 
-                val bodyView = TextView(ctx).apply {
-                    textSize = 11f
-                    setTextColor(0xC7FFFFFF.toInt()) // 78% opacity white
-                    maxLines = 2
-                    ellipsize = android.text.TextUtils.TruncateAt.END
-                    setPadding(0, 2.dpToPx(ctx), 0, 0)
-                }
+                val bodyView =
+                    TextView(ctx).apply {
+                        textSize = 11f
+                        setTextColor(0xC7FFFFFF.toInt()) // 78% opacity white
+                        maxLines = 2
+                        ellipsize = android.text.TextUtils.TruncateAt.END
+                        setPadding(0, 2.dpToPx(ctx), 0, 0)
+                    }
                 textContainer.addView(bodyView)
 
                 cardContainer.addView(textContainer)
 
                 // Call to Action View
-                val ctaView = TextView(ctx).apply {
-                    textSize = 12f
-                    setTextColor("#1A237E".toColorInt())
-                    typeface = android.graphics.Typeface.create("sans-serif", android.graphics.Typeface.BOLD)
-                    gravity = Gravity.CENTER
-                    setPadding(14.dpToPx(ctx), 8.dpToPx(ctx), 14.dpToPx(ctx), 8.dpToPx(ctx))
-                    
-                    val ctaBg = GradientDrawable().apply {
-                        setColor("#FFD54F".toColorInt()) // Gold color to match LearnFinance CTA
-                        cornerRadius = 10.dpToPx(ctx).toFloat()
+                val ctaView =
+                    TextView(ctx).apply {
+                        textSize = 12f
+                        setTextColor("#1A237E".toColorInt())
+                        typeface = android.graphics.Typeface.create("sans-serif", android.graphics.Typeface.BOLD)
+                        gravity = Gravity.CENTER
+                        setPadding(14.dpToPx(ctx), 8.dpToPx(ctx), 14.dpToPx(ctx), 8.dpToPx(ctx))
+
+                        val ctaBg =
+                            GradientDrawable().apply {
+                                setColor("#FFD54F".toColorInt()) // Gold color to match LearnFinance CTA
+                                cornerRadius = 10.dpToPx(ctx).toFloat()
+                            }
+                        background = ctaBg
                     }
-                    background = ctaBg
-                }
                 cardContainer.addView(ctaView)
 
                 rootLayout.addView(cardContainer)
 
                 // SPONSORED badge
-                val adBadge = TextView(ctx).apply {
-                    text = "SPONSORED"
-                    textSize = 9f
-                    setTextColor(android.graphics.Color.WHITE)
-                    typeface = android.graphics.Typeface.create("sans-serif", android.graphics.Typeface.BOLD)
-                    gravity = Gravity.CENTER
-                    setPadding(6.dpToPx(ctx), 2.dpToPx(ctx), 6.dpToPx(ctx), 2.dpToPx(ctx))
-                    
-                    val badgeBg = GradientDrawable().apply {
-                        setColor(tertiaryColor)
-                        cornerRadius = 4.dpToPx(ctx).toFloat()
+                val adBadge =
+                    TextView(ctx).apply {
+                        text = "SPONSORED"
+                        textSize = 9f
+                        setTextColor(android.graphics.Color.WHITE)
+                        typeface = android.graphics.Typeface.create("sans-serif", android.graphics.Typeface.BOLD)
+                        gravity = Gravity.CENTER
+                        setPadding(6.dpToPx(ctx), 2.dpToPx(ctx), 6.dpToPx(ctx), 2.dpToPx(ctx))
+
+                        val badgeBg =
+                            GradientDrawable().apply {
+                                setColor(tertiaryColor)
+                                cornerRadius = 4.dpToPx(ctx).toFloat()
+                            }
+                        background = badgeBg
+
+                        layoutParams =
+                            FrameLayout
+                                .LayoutParams(
+                                    ViewGroup.LayoutParams.WRAP_CONTENT,
+                                    ViewGroup.LayoutParams.WRAP_CONTENT,
+                                ).apply {
+                                    gravity = Gravity.TOP or Gravity.START
+                                    leftMargin = 16.dpToPx(ctx)
+                                }
                     }
-                    background = badgeBg
-                    
-                    layoutParams = FrameLayout.LayoutParams(
-                        ViewGroup.LayoutParams.WRAP_CONTENT,
-                        ViewGroup.LayoutParams.WRAP_CONTENT
-                    ).apply {
-                        gravity = Gravity.TOP or Gravity.START
-                        leftMargin = 16.dpToPx(ctx)
-                    }
-                }
                 rootLayout.addView(adBadge)
 
                 addView(rootLayout)
@@ -1692,7 +1744,7 @@ fun AdmobNativeAd(nativeAd: NativeAd, modifier: Modifier = Modifier) {
 
                 setNativeAd(nativeAd)
             }
-        }
+        },
     )
 }
 
@@ -1701,7 +1753,7 @@ fun AdmobNativeAd(nativeAd: NativeAd, modifier: Modifier = Modifier) {
 fun SampleQueriesBottomSheet(
     analyticsHelper: AnalyticsHelper,
     onDismissRequest: () -> Unit,
-    onSuggestionClick: (String) -> Unit
+    onSuggestionClick: (String) -> Unit,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val categories = listOf("Transactions", "Wealth", "Loans")
@@ -1712,37 +1764,39 @@ fun SampleQueriesBottomSheet(
         sheetState = sheetState,
         containerColor = MaterialTheme.colorScheme.surface,
         tonalElevation = 8.dp,
-        dragHandle = { BottomSheetDefaults.DragHandle() }
+        dragHandle = { BottomSheetDefaults.DragHandle() },
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .navigationBarsPadding()
-                .padding(horizontal = 20.dp, vertical = 8.dp)
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .navigationBarsPadding()
+                    .padding(horizontal = 20.dp, vertical = 8.dp),
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.padding(bottom = 16.dp)
+                modifier = Modifier.padding(bottom = 16.dp),
             ) {
                 Box(
-                    modifier = Modifier
-                        .size(36.dp)
-                        .clip(CircleShape)
-                        .background(
-                            Brush.linearGradient(
-                                listOf(
-                                    MaterialTheme.colorScheme.primary,
-                                    MaterialTheme.colorScheme.tertiary
-                                )
-                            )
-                        ),
-                    contentAlignment = Alignment.Center
+                    modifier =
+                        Modifier
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .background(
+                                Brush.linearGradient(
+                                    listOf(
+                                        MaterialTheme.colorScheme.primary,
+                                        MaterialTheme.colorScheme.tertiary,
+                                    ),
+                                ),
+                            ),
+                    contentAlignment = Alignment.Center,
                 ) {
                     Icon(
                         Icons.Rounded.Lightbulb,
                         contentDescription = null,
                         tint = Color.White,
-                        modifier = Modifier.size(18.dp)
+                        modifier = Modifier.size(18.dp),
                     )
                 }
                 Spacer(modifier = Modifier.width(12.dp))
@@ -1751,12 +1805,12 @@ fun SampleQueriesBottomSheet(
                         text = "Explore Suggestions",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
+                        color = MaterialTheme.colorScheme.onSurface,
                     )
                     Text(
                         text = "Tap a prompt to insert it into the chat input",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                     )
                 }
             }
@@ -1764,28 +1818,30 @@ fun SampleQueriesBottomSheet(
             // Category tag selection row
             Row(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 8.dp)
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp),
             ) {
                 categories.forEachIndexed { index, name ->
                     val isSelected = index == selectedCategoryIndex
                     val chipBg = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
                     val chipTextColor = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
                     Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .clip(RoundedCornerShape(16.dp))
-                            .background(chipBg)
-                            .clickable { selectedCategoryIndex = index }
-                            .padding(vertical = 10.dp),
-                        contentAlignment = Alignment.Center
+                        modifier =
+                            Modifier
+                                .weight(1f)
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(chipBg)
+                                .clickable { selectedCategoryIndex = index }
+                                .padding(vertical = 10.dp),
+                        contentAlignment = Alignment.Center,
                     ) {
                         Text(
                             text = name,
                             style = MaterialTheme.typography.labelMedium,
                             color = chipTextColor,
-                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
                         )
                     }
                 }
@@ -1793,78 +1849,85 @@ fun SampleQueriesBottomSheet(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            val currentSuggestions = when (selectedCategoryIndex) {
-                0 -> listOf(
-                    Pair("Add food expense of 500 from Swiggy", Icons.Rounded.Fastfood),
-                    Pair("Spent 1200 on petrol today", Icons.Rounded.LocalGasStation),
-                    Pair("Received salary of 75000", Icons.Rounded.Payments),
-                    Pair("Log shopping expense of 3500 on Amazon", Icons.Rounded.ShoppingBag)
-                )
-                1 -> listOf(
-                    Pair("Invested 25000 in FD today", Icons.Rounded.Savings),
-                    Pair("Bought HDFC stock for 15k", Icons.AutoMirrored.Rounded.TrendingUp),
-                    Pair("Invested 10000 in Mutual Fund", Icons.Rounded.Analytics),
-                    Pair("Bought Gold for 5000 today", Icons.Rounded.MonetizationOn)
-                )
-                else -> listOf(
-                    Pair("Add SBI Home Loan of 30L, EMI 45000", Icons.Rounded.Home),
-                    Pair("Add personal loan of 50k", Icons.Rounded.Person),
-                    Pair("Add car loan of 12L, EMI 22000", Icons.Rounded.DirectionsCar),
-                    Pair("Show active loans summary", Icons.Rounded.Summarize)
-                )
-            }
+            val currentSuggestions =
+                when (selectedCategoryIndex) {
+                    0 ->
+                        listOf(
+                            Pair("Add food expense of 500 from Swiggy", Icons.Rounded.Fastfood),
+                            Pair("Spent 1200 on petrol today", Icons.Rounded.LocalGasStation),
+                            Pair("Received salary of 75000", Icons.Rounded.Payments),
+                            Pair("Log shopping expense of 3500 on Amazon", Icons.Rounded.ShoppingBag),
+                        )
+                    1 ->
+                        listOf(
+                            Pair("Invested 25000 in FD today", Icons.Rounded.Savings),
+                            Pair("Bought HDFC stock for 15k", Icons.AutoMirrored.Rounded.TrendingUp),
+                            Pair("Invested 10000 in Mutual Fund", Icons.Rounded.Analytics),
+                            Pair("Bought Gold for 5000 today", Icons.Rounded.MonetizationOn),
+                        )
+                    else ->
+                        listOf(
+                            Pair("Add SBI Home Loan of 30L, EMI 45000", Icons.Rounded.Home),
+                            Pair("Add personal loan of 50k", Icons.Rounded.Person),
+                            Pair("Add car loan of 12L, EMI 22000", Icons.Rounded.DirectionsCar),
+                            Pair("Show active loans summary", Icons.Rounded.Summarize),
+                        )
+                }
 
             Column(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 24.dp)
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 24.dp),
             ) {
                 currentSuggestions.forEach { (text, icon) ->
                     var clicked by remember { mutableStateOf(false) }
                     val scaleFactor by animateFloatAsState(
                         targetValue = if (clicked) 0.97f else 1f,
                         animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy),
-                        label = "suggestion_click"
+                        label = "suggestion_click",
                     )
                     Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .graphicsLayer {
-                                scaleX = scaleFactor
-                                scaleY = scaleFactor
-                            }
-                            .clip(RoundedCornerShape(16.dp))
-                        .clickable {
-                            clicked = true
-                            analyticsHelper.logEvent(
-                                AnalyticsConstants.Event.AI_CHAT_BOTTOMSHEET_SUGGESTION_CLICKED,
-                                mapOf(AnalyticsConstants.Param.TEXT to text)
-                            )
-                            onSuggestionClick(text)
-                            clicked = false
-                        },
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f)
-                        ),
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.08f))
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .graphicsLayer {
+                                    scaleX = scaleFactor
+                                    scaleY = scaleFactor
+                                }.clip(RoundedCornerShape(16.dp))
+                                .clickable {
+                                    clicked = true
+                                    analyticsHelper.logEvent(
+                                        AnalyticsConstants.Event.AI_CHAT_BOTTOMSHEET_SUGGESTION_CLICKED,
+                                        mapOf(AnalyticsConstants.Param.TEXT to text),
+                                    )
+                                    onSuggestionClick(text)
+                                    clicked = false
+                                },
+                        colors =
+                            CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f),
+                            ),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.08f)),
                     ) {
                         Row(
                             modifier = Modifier.padding(14.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                            verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Box(
-                                modifier = Modifier
-                                    .size(36.dp)
-                                    .clip(CircleShape)
-                                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)),
-                                contentAlignment = Alignment.Center
+                                modifier =
+                                    Modifier
+                                        .size(36.dp)
+                                        .clip(CircleShape)
+                                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)),
+                                contentAlignment = Alignment.Center,
                             ) {
                                 Icon(
                                     imageVector = icon,
                                     contentDescription = null,
                                     tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(18.dp)
+                                    modifier = Modifier.size(18.dp),
                                 )
                             }
                             Spacer(modifier = Modifier.width(14.dp))
@@ -1872,13 +1935,13 @@ fun SampleQueriesBottomSheet(
                                 text = text,
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.weight(1f)
+                                modifier = Modifier.weight(1f),
                             )
                             Icon(
                                 imageVector = Icons.AutoMirrored.Rounded.ArrowForward,
                                 contentDescription = null,
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
-                                modifier = Modifier.size(16.dp)
+                                modifier = Modifier.size(16.dp),
                             )
                         }
                     }
@@ -1887,4 +1950,3 @@ fun SampleQueriesBottomSheet(
         }
     }
 }
-

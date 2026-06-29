@@ -6,7 +6,7 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
-import prasad.vennam.moneypilot.data.repository.MoneyPilotRepository
+import prasad.vennam.moneypilot.data.repository.*
 import prasad.vennam.moneypilot.feature.ai.data.AiRepositoryImpl
 import prasad.vennam.moneypilot.feature.ai.domain.AiRepository
 import prasad.vennam.moneypilot.feature.ai.service.LlmService
@@ -26,7 +26,19 @@ object AiModule {
     fun provideAiRepository(
         @ApplicationContext context: Context,
         llmService: LlmService,
-        moneyPilotRepository: MoneyPilotRepository,
+        transactionRepository: TransactionRepository,
+        budgetRepository: BudgetRepository,
+        investmentRepository: InvestmentRepository,
+        loanRepository: LoanRepository,
         remoteConfigHelper: prasad.vennam.moneypilot.util.RemoteConfigHelper,
-    ): AiRepository = AiRepositoryImpl(context, llmService, moneyPilotRepository, remoteConfigHelper)
+    ): AiRepository =
+        AiRepositoryImpl(
+            context,
+            llmService,
+            transactionRepository,
+            budgetRepository,
+            investmentRepository,
+            loanRepository,
+            remoteConfigHelper,
+        )
 }

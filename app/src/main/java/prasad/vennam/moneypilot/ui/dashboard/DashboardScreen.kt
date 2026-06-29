@@ -47,6 +47,7 @@ import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Shield
+import androidx.compose.material.icons.rounded.TrackChanges
 import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -88,9 +89,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.credentials.CredentialManager
 import androidx.credentials.GetCredentialRequest
+import androidx.credentials.exceptions.GetCredentialCancellationException
 import androidx.credentials.exceptions.GetCredentialException
 import androidx.credentials.exceptions.NoCredentialException
-import androidx.credentials.exceptions.GetCredentialCancellationException
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
@@ -119,9 +120,8 @@ import prasad.vennam.moneypilot.ui.settings.LoginRequiredDialog
 import prasad.vennam.moneypilot.ui.viewmodel.DashboardViewModel
 import prasad.vennam.moneypilot.ui.viewmodel.MainViewModel
 import prasad.vennam.moneypilot.ui.viewmodel.NotificationViewModel
-import prasad.vennam.moneypilot.ui.viewmodel.SavingGoalViewModel
-import androidx.compose.material.icons.rounded.TrackChanges
 import prasad.vennam.moneypilot.ui.viewmodel.RestoreState
+import prasad.vennam.moneypilot.ui.viewmodel.SavingGoalViewModel
 import prasad.vennam.moneypilot.util.AnalyticsConstants
 import prasad.vennam.moneypilot.util.AnalyticsHelper
 import prasad.vennam.moneypilot.util.CurrencyFormatter
@@ -450,9 +450,10 @@ fun DashboardScreen(
                 }
             } else {
                 Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(innerPadding),
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .padding(innerPadding),
                 ) {
                     // Sticky banner — stays pinned at top while content scrolls below
                     AdBannerView(
@@ -626,7 +627,7 @@ fun DashboardScreen(
                                 onClick = {
                                     analyticsHelper.logEvent(AnalyticsConstants.Event.SAVING_GOALS_CARD_CLICKED)
                                     onNavigateToSavingGoals()
-                                }
+                                },
                             )
                         }
 
@@ -667,7 +668,7 @@ fun DashboardScreen(
                                     onActionClick = {
                                         analyticsHelper.logEvent(AnalyticsConstants.Event.BUDGET_SEE_ALL_CLICKED)
                                         onNavigateToBudgets()
-                                    }
+                                    },
                                 )
                                 BudgetProgressSection(dashboardState.budgetProgresses, unknownString)
                             }
@@ -680,18 +681,17 @@ fun DashboardScreen(
                                     onActionClick = {
                                         analyticsHelper.logEvent(AnalyticsConstants.Event.HISTORY_SEE_ALL_CLICKED)
                                         onNavigateToHistory()
-                                    }
+                                    },
                                 )
                                 RecentTransactionsCard(dashboardState.recentTransactions, dashboardState.categories)
                             }
                         }
 
                         item { Spacer(modifier = Modifier.height(16.dp)) }
-                    }   // end LazyColumn
-                }       // end Column
-            }           // end else
+                    } // end LazyColumn
+                } // end Column
+            } // end else
         }
-
 
         // Floating AI Bot Icon with Animation
         AnimatedVisibility(
@@ -736,7 +736,6 @@ fun DashboardScreen(
             onDismissRequest = { showPendingReviewSheet = false },
         )
     }
-
 }
 
 @Composable
@@ -817,8 +816,7 @@ fun FloatingAiBot(
                 .graphicsLayer {
                     scaleX = scale
                     scaleY = scale
-                }
-                .clickable { onClick() },
+                }.clickable { onClick() },
         shape = CircleShape,
         color = Color.Transparent,
         shadowElevation = 12.dp,
@@ -1000,30 +998,35 @@ fun DashboardSavingGoalsCard(
 ) {
     val totalGoals = savingGoals.size
     val completedGoals = savingGoals.count { it.isCompleted }
-    
+
     val totalSaved = savingGoals.sumOf { it.currentSavedAmount }
     val totalTarget = savingGoals.sumOf { it.targetAmount }
-    
-    val progress = remember(totalSaved, totalTarget) {
-        if (totalTarget > 0L) (totalSaved.toDouble() / totalTarget.toDouble()).toFloat().coerceIn(0f, 1f) else 0f
-    }
+
+    val progress =
+        remember(totalSaved, totalTarget) {
+            if (totalTarget > 0L) (totalSaved.toDouble() / totalTarget.toDouble()).toFloat().coerceIn(0f, 1f) else 0f
+        }
     val percent = remember(progress) { (progress * 100).toInt() }
-    
-    val savedFormatted = remember(totalSaved, currencyCode) {
-        CurrencyFormatter.format(totalSaved.inRupees, currencyCode)
-    }
-    val targetFormatted = remember(totalTarget, currencyCode) {
-        CurrencyFormatter.format(totalTarget.inRupees, currencyCode)
-    }
+
+    val savedFormatted =
+        remember(totalSaved, currencyCode) {
+            CurrencyFormatter.format(totalSaved.inRupees, currencyCode)
+        }
+    val targetFormatted =
+        remember(totalTarget, currencyCode) {
+            CurrencyFormatter.format(totalTarget.inRupees, currencyCode)
+        }
 
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onClick() },
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clickable { onClick() },
         shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface,
-        ),
+        colors =
+            CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surface,
+            ),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
     ) {
         if (totalGoals == 0) {
@@ -1032,10 +1035,11 @@ fun DashboardSavingGoalsCard(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Box(
-                    modifier = Modifier
-                        .size(44.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.secondaryContainer),
+                    modifier =
+                        Modifier
+                            .size(44.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.secondaryContainer),
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(
@@ -1097,10 +1101,11 @@ fun DashboardSavingGoalsCard(
 
                 LinearProgressIndicator(
                     progress = { progress },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(8.dp)
-                        .clip(RoundedCornerShape(4.dp)),
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .height(8.dp)
+                            .clip(RoundedCornerShape(4.dp)),
                     color = MaterialTheme.colorScheme.primary,
                     trackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f),
                 )
@@ -1373,8 +1378,7 @@ fun PendingReviewBottomSheet(
                                             .background(
                                                 color = MaterialTheme.colorScheme.surfaceVariant,
                                                 shape = RoundedCornerShape(8.dp),
-                                            )
-                                            .padding(8.dp)
+                                            ).padding(8.dp)
                                             .fillMaxWidth(),
                                 )
                             }
@@ -1511,85 +1515,85 @@ fun autoMatchCategory(
         if (isExpense) {
             when {
                 nameLower.contains("uber") ||
-                        nameLower.contains("ola") ||
-                        nameLower.contains("lyft") ||
-                        nameLower.contains("taxi") ||
-                        nameLower.contains("metro") ||
-                        nameLower.contains("rail") ||
-                        nameLower.contains("train") ||
-                        nameLower.contains("fuel") ||
-                        nameLower.contains("petrol") ||
-                        nameLower.contains("diesel") ||
-                        nameLower.contains("gas station") -> "Transport"
+                    nameLower.contains("ola") ||
+                    nameLower.contains("lyft") ||
+                    nameLower.contains("taxi") ||
+                    nameLower.contains("metro") ||
+                    nameLower.contains("rail") ||
+                    nameLower.contains("train") ||
+                    nameLower.contains("fuel") ||
+                    nameLower.contains("petrol") ||
+                    nameLower.contains("diesel") ||
+                    nameLower.contains("gas station") -> "Transport"
 
                 nameLower.contains("starbucks") ||
-                        nameLower.contains("swiggy") ||
-                        nameLower.contains("zomato") ||
-                        nameLower.contains("ubereats") ||
-                        nameLower.contains("food") ||
-                        nameLower.contains("restaurant") ||
-                        nameLower.contains("cafe") ||
-                        nameLower.contains("dining") ||
-                        nameLower.contains("pizza") ||
-                        nameLower.contains("mcdonald") ||
-                        nameLower.contains("burger") -> "Food"
+                    nameLower.contains("swiggy") ||
+                    nameLower.contains("zomato") ||
+                    nameLower.contains("ubereats") ||
+                    nameLower.contains("food") ||
+                    nameLower.contains("restaurant") ||
+                    nameLower.contains("cafe") ||
+                    nameLower.contains("dining") ||
+                    nameLower.contains("pizza") ||
+                    nameLower.contains("mcdonald") ||
+                    nameLower.contains("burger") -> "Food"
 
                 nameLower.contains("netflix") ||
-                        nameLower.contains("spotify") ||
-                        nameLower.contains("youtube") ||
-                        nameLower.contains("disney") ||
-                        nameLower.contains("prime video") ||
-                        nameLower.contains("movie") ||
-                        nameLower.contains("cinema") ||
-                        nameLower.contains("game") ||
-                        nameLower.contains("steam") ||
-                        nameLower.contains("epic") ||
-                        nameLower.contains("entertainment") -> "Entertainment"
+                    nameLower.contains("spotify") ||
+                    nameLower.contains("youtube") ||
+                    nameLower.contains("disney") ||
+                    nameLower.contains("prime video") ||
+                    nameLower.contains("movie") ||
+                    nameLower.contains("cinema") ||
+                    nameLower.contains("game") ||
+                    nameLower.contains("steam") ||
+                    nameLower.contains("epic") ||
+                    nameLower.contains("entertainment") -> "Entertainment"
 
                 nameLower.contains("amazon") ||
-                        nameLower.contains("flipkart") ||
-                        nameLower.contains("myntra") ||
-                        nameLower.contains("shopping") ||
-                        nameLower.contains("store") ||
-                        nameLower.contains("supermarket") ||
-                        nameLower.contains("grocery") ||
-                        nameLower.contains("walmart") ||
-                        nameLower.contains("target") -> "Shopping"
+                    nameLower.contains("flipkart") ||
+                    nameLower.contains("myntra") ||
+                    nameLower.contains("shopping") ||
+                    nameLower.contains("store") ||
+                    nameLower.contains("supermarket") ||
+                    nameLower.contains("grocery") ||
+                    nameLower.contains("walmart") ||
+                    nameLower.contains("target") -> "Shopping"
 
                 nameLower.contains("hospital") ||
-                        nameLower.contains("clinic") ||
-                        nameLower.contains("medical") ||
-                        nameLower.contains("pharmacy") ||
-                        nameLower.contains("doctor") ||
-                        nameLower.contains("dentist") ||
-                        nameLower.contains("health") ||
-                        nameLower.contains("medicine") -> "Health"
+                    nameLower.contains("clinic") ||
+                    nameLower.contains("medical") ||
+                    nameLower.contains("pharmacy") ||
+                    nameLower.contains("doctor") ||
+                    nameLower.contains("dentist") ||
+                    nameLower.contains("health") ||
+                    nameLower.contains("medicine") -> "Health"
 
                 nameLower.contains("electricity") || nameLower.contains("water bill") || nameLower.contains("power") -> "Utilities"
 
                 nameLower.contains("airtel") ||
-                        nameLower.contains("jio") ||
-                        nameLower.contains("bill") ||
-                        nameLower.contains("recharge") ||
-                        nameLower.contains("internet") ||
-                        nameLower.contains("wifi") ||
-                        nameLower.contains("mobile") -> "Bills"
+                    nameLower.contains("jio") ||
+                    nameLower.contains("bill") ||
+                    nameLower.contains("recharge") ||
+                    nameLower.contains("internet") ||
+                    nameLower.contains("wifi") ||
+                    nameLower.contains("mobile") -> "Bills"
 
                 nameLower.contains("rent") || nameLower.contains("housing") || nameLower.contains("apartment") -> "Housing"
 
                 nameLower.contains("school") ||
-                        nameLower.contains("college") ||
-                        nameLower.contains("university") ||
-                        nameLower.contains("course") ||
-                        nameLower.contains("udemy") ||
-                        nameLower.contains("education") -> "Education"
+                    nameLower.contains("college") ||
+                    nameLower.contains("university") ||
+                    nameLower.contains("course") ||
+                    nameLower.contains("udemy") ||
+                    nameLower.contains("education") -> "Education"
 
                 nameLower.contains("flight") ||
-                        nameLower.contains("hotel") ||
-                        nameLower.contains("travel") ||
-                        nameLower.contains("trip") ||
-                        nameLower.contains("booking") ||
-                        nameLower.contains("airbnb") -> "Travel"
+                    nameLower.contains("hotel") ||
+                    nameLower.contains("travel") ||
+                    nameLower.contains("trip") ||
+                    nameLower.contains("booking") ||
+                    nameLower.contains("airbnb") -> "Travel"
 
                 nameLower.contains("insurance") || nameLower.contains("lic") -> "Insurance"
 
@@ -1600,11 +1604,11 @@ fun autoMatchCategory(
                 nameLower.contains("salary") || nameLower.contains("payroll") || nameLower.contains("wage") -> "Salary"
                 nameLower.contains("freelance") || nameLower.contains("gigs") || nameLower.contains("consulting") -> "Freelance"
                 nameLower.contains("interest") ||
-                        nameLower.contains("dividend") ||
-                        nameLower.contains("mutual fund") ||
-                        nameLower.contains("stock") ||
-                        nameLower.contains("crypto") ||
-                        nameLower.contains("investment") -> "Investments"
+                    nameLower.contains("dividend") ||
+                    nameLower.contains("mutual fund") ||
+                    nameLower.contains("stock") ||
+                    nameLower.contains("crypto") ||
+                    nameLower.contains("investment") -> "Investments"
 
                 nameLower.contains("rental") || nameLower.contains("tenant") -> "Rental"
                 nameLower.contains("gift") || nameLower.contains("present") -> "Gifts"

@@ -9,43 +9,46 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import prasad.vennam.moneypilot.data.entity.Category
 import prasad.vennam.moneypilot.data.entity.Subscription
-import prasad.vennam.moneypilot.data.repository.MoneyPilotRepository
+import prasad.vennam.moneypilot.data.repository.SubscriptionRepository
+import prasad.vennam.moneypilot.data.repository.TransactionRepository
 import javax.inject.Inject
 
 @HiltViewModel
-class SubscriptionViewModel @Inject constructor(
-    private val repository: MoneyPilotRepository
-) : ViewModel() {
+class SubscriptionViewModel
+    @Inject
+    constructor(
+        private val subscriptionRepository: SubscriptionRepository,
+        private val transactionRepository: TransactionRepository,
+    ) : ViewModel() {
+        val allSubscriptions: StateFlow<List<Subscription>> =
+            subscriptionRepository.allSubscriptions
+                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val allSubscriptions: StateFlow<List<Subscription>> =
-        repository.allSubscriptions
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+        val allCategories: StateFlow<List<Category>> =
+            transactionRepository.allCategories
+                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val allCategories: StateFlow<List<Category>> =
-        repository.allCategories
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-
-    fun saveSubscription(subscription: Subscription) {
-        viewModelScope.launch {
-            try {
-                if (subscription.id == 0L) {
-                    repository.insertSubscription(subscription)
-                } else {
-                    repository.updateSubscription(subscription)
+        fun saveSubscription(subscription: Subscription) {
+            viewModelScope.launch {
+                try {
+                    if (subscription.id == 0L) {
+                        subscriptionRepository.insertSubscription(subscription)
+                    } else {
+                        subscriptionRepository.updateSubscription(subscription)
+                    }
+                } catch (e: Exception) {
+                    android.util.Log.e("SubscriptionViewModel", "Error saving subscription", e)
                 }
-            } catch (e: Exception) {
-                android.util.Log.e("SubscriptionViewModel", "Error saving subscription", e)
             }
         }
-    }
 
-    fun deleteSubscription(subscription: Subscription) {
-        viewModelScope.launch {
-            try {
-                repository.deleteSubscription(subscription)
-            } catch (e: Exception) {
-                android.util.Log.e("SubscriptionViewModel", "Error deleting subscription", e)
+        fun deleteSubscription(subscription: Subscription) {
+            viewModelScope.launch {
+                try {
+                    subscriptionRepository.deleteSubscription(subscription)
+                } catch (e: Exception) {
+                    android.util.Log.e("SubscriptionViewModel", "Error deleting subscription", e)
+                }
             }
         }
     }
-}

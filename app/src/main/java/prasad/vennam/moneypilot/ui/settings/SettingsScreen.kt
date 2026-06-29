@@ -1,6 +1,11 @@
 package prasad.vennam.moneypilot.ui.settings
 
+import android.Manifest
 import android.app.Activity
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.net.Uri
+import android.provider.Settings
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -24,6 +29,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.HelpOutline
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.rounded.Logout
@@ -40,9 +46,9 @@ import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.LightMode
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.Notifications
+import androidx.compose.material.icons.rounded.NotificationsActive
 import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.Person
-import android.content.Intent
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.PrivacyTip
 import androidx.compose.material.icons.rounded.SettingsSuggest
@@ -89,11 +95,12 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.credentials.CredentialManager
 import androidx.credentials.GetCredentialRequest
+import androidx.credentials.exceptions.GetCredentialCancellationException
 import androidx.credentials.exceptions.GetCredentialException
 import androidx.credentials.exceptions.NoCredentialException
-import androidx.credentials.exceptions.GetCredentialCancellationException
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -110,13 +117,6 @@ import prasad.vennam.moneypilot.ui.viewmodel.TransactionViewModel
 import prasad.vennam.moneypilot.util.AnalyticsConstants
 import prasad.vennam.moneypilot.util.AnalyticsHelper
 import prasad.vennam.moneypilot.util.ExportHelper
-import android.Manifest
-import android.content.pm.PackageManager
-import android.net.Uri
-import android.provider.Settings
-import androidx.core.content.ContextCompat
-import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material.icons.rounded.NotificationsActive
 import prasad.vennam.moneypilot.util.TrackScreen
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -363,14 +363,15 @@ fun SettingsScreen(
             }
         }
 
-    val smsPermissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission()
-    ) { isGranted: Boolean ->
-        isSmsTrackingEnabled = isGranted
-        if (!isGranted) {
-            Toast.makeText(context, "SMS tracking requires permission.", Toast.LENGTH_SHORT).show()
+    val smsPermissionLauncher =
+        rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.RequestPermission(),
+        ) { isGranted: Boolean ->
+            isSmsTrackingEnabled = isGranted
+            if (!isGranted) {
+                Toast.makeText(context, "SMS tracking requires permission.", Toast.LENGTH_SHORT).show()
+            }
         }
-    }
 
     val currencyOptions =
         listOf(
@@ -431,7 +432,7 @@ fun SettingsScreen(
             onSave = { goal, target ->
                 mainViewModel.savePreferences(goal, target, currentCurrencyCode)
             },
-            onDismiss = { showGoalSheet = false }
+            onDismiss = { showGoalSheet = false },
         )
     }
 
@@ -556,7 +557,7 @@ fun SettingsScreen(
                         subtitle = "Require fingerprint/face to open app",
                         checked = isBiometricEnabled,
                         onCheckedChange = { checked ->
-                             analyticsHelper.logEvent(AnalyticsConstants.Event.SETTINGS_BIOMETRIC_TOGGLED, mapOf(AnalyticsConstants.Param.ENABLED to checked))
+                            analyticsHelper.logEvent(AnalyticsConstants.Event.SETTINGS_BIOMETRIC_TOGGLED, mapOf(AnalyticsConstants.Param.ENABLED to checked))
                             if (activity != null) {
                                 if (checked) {
                                     prasad.vennam.moneypilot.util.BiometricHelper.authenticate(
@@ -564,7 +565,7 @@ fun SettingsScreen(
                                         title = "Enable Biometric Lock",
                                         subtitle = "Verify your identity to enable biometric lock",
                                         onSuccess = { mainViewModel.setIsBiometricEnabled(true) },
-                                        onError = { Toast.makeText(context, "Authentication failed: $it", Toast.LENGTH_SHORT).show() }
+                                        onError = { Toast.makeText(context, "Authentication failed: $it", Toast.LENGTH_SHORT).show() },
                                     )
                                 } else {
                                     mainViewModel.setIsBiometricEnabled(false)
@@ -572,7 +573,7 @@ fun SettingsScreen(
                             } else {
                                 Toast.makeText(context, "Biometric authentication requires app restart to work correctly.", Toast.LENGTH_LONG).show()
                             }
-                        }
+                        },
                     )
                 }
             }
@@ -600,7 +601,7 @@ fun SettingsScreen(
                         subtitle = "Parse notifications to auto-add expenses",
                         checked = isNotificationTrackingEnabled,
                         onCheckedChange = {
-                             analyticsHelper.logEvent(AnalyticsConstants.Event.SETTINGS_NOTIFICATION_TRACKING_TOGGLED)
+                            analyticsHelper.logEvent(AnalyticsConstants.Event.SETTINGS_NOTIFICATION_TRACKING_TOGGLED)
                             val intent = android.content.Intent(android.provider.Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)
                             context.startActivity(intent)
                         },
@@ -612,14 +613,15 @@ fun SettingsScreen(
                         subtitle = "Parse debit/credit SMS to auto-add expenses",
                         checked = isSmsTrackingEnabled,
                         onCheckedChange = { checked ->
-                             analyticsHelper.logEvent(AnalyticsConstants.Event.SETTINGS_SMS_TRACKING_TOGGLED, mapOf(AnalyticsConstants.Param.ENABLED to checked))
+                            analyticsHelper.logEvent(AnalyticsConstants.Event.SETTINGS_SMS_TRACKING_TOGGLED, mapOf(AnalyticsConstants.Param.ENABLED to checked))
                             if (checked) {
                                 smsPermissionLauncher.launch(Manifest.permission.RECEIVE_SMS)
                             } else {
                                 Toast.makeText(context, "Please disable permission from app settings to stop SMS tracking.", Toast.LENGTH_LONG).show()
-                                val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                                    data = Uri.fromParts("package", context.packageName, null)
-                                }
+                                val intent =
+                                    Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                                        data = Uri.fromParts("package", context.packageName, null)
+                                    }
                                 context.startActivity(intent)
                             }
                         },
@@ -681,7 +683,7 @@ fun SettingsScreen(
                             title = "Enable DevTools",
                             subtitle = "Unlock restricted features for testing",
                             checked = isDevToolEnabled,
-                            onCheckedChange = { mainViewModel.setDevToolEnabled(it) }
+                            onCheckedChange = { mainViewModel.setDevToolEnabled(it) },
                         )
                         if (isGuest) {
                             SettingsItem(
@@ -767,7 +769,7 @@ fun SettingsScreen(
                 if (isSeedingDemoData) {
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp)
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
                     ) {
                         CircularProgressIndicator()
                         Spacer(modifier = Modifier.height(16.dp))
@@ -787,9 +789,11 @@ fun SettingsScreen(
                                 showDemoConfirmDialog = false
                                 val intent = context.packageManager.getLaunchIntentForPackage(context.packageName)
                                 intent?.let {
-                                    it.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or 
-                                                Intent.FLAG_ACTIVITY_NEW_TASK or 
-                                                Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                                    it.addFlags(
+                                        Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                                            Intent.FLAG_ACTIVITY_NEW_TASK or
+                                            Intent.FLAG_ACTIVITY_CLEAR_TASK,
+                                    )
                                     context.startActivity(it)
                                     if (context is Activity) {
                                         context.finish()
@@ -797,7 +801,7 @@ fun SettingsScreen(
                                     Runtime.getRuntime().exit(0)
                                 }
                             }
-                        }
+                        },
                     ) {
                         Text("Yes, Load & Relaunch")
                     }
@@ -809,7 +813,7 @@ fun SettingsScreen(
                         Text(stringResource(R.string.cancel))
                     }
                 }
-            }
+            },
         )
     }
 

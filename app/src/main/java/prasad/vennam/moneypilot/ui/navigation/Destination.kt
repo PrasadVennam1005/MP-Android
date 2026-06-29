@@ -105,4 +105,3 @@ sealed interface Destination : NavKey {
     @Serializable
     data object SavingGoals : Destination
 }
-

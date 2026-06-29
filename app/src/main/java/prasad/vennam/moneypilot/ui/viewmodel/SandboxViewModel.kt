@@ -60,9 +60,9 @@ class SandboxViewModel
                     currencyCode = currency,
                 )
             }.flowOn(Dispatchers.Default)
-            .stateIn(
-                scope = viewModelScope,
-                started = SharingStarted.WhileSubscribed(5000),
-                initialValue = SandboxDefaults(50000.0, 30000.0, "INR"),
-            )
+                .stateIn(
+                    scope = viewModelScope,
+                    started = SharingStarted.WhileSubscribed(5000),
+                    initialValue = SandboxDefaults(50000.0, 30000.0, "INR"),
+                )
     }

@@ -74,31 +74,33 @@ fun TrendLineChart(
 
     // Pre-measure X and Y labels so expensive text layout does not run on every frame
     val gridLinesCount = 4
-    val yLabelResults = remember(points, maxVal, textMeasurer, labelColor, currencySymbol) {
-        (0..gridLinesCount).map { i ->
-            val ratio = i.toFloat() / gridLinesCount
-            val value = minVal + (ratio * (maxVal - minVal))
-            val label = "$currencySymbol${String.format("%,.0f", value)}"
-            textMeasurer.measure(
-                text = label,
-                style = TextStyle(fontSize = 10.sp, color = labelColor),
-            )
-        }
-    }
-
-    val xLabelResults = remember(points, textMeasurer, labelColor) {
-        val labelStep = (points.size / 6).coerceAtLeast(1)
-        points.mapIndexed { index, point ->
-            if (index % labelStep == 0 || index == points.size - 1) {
+    val yLabelResults =
+        remember(points, maxVal, textMeasurer, labelColor, currencySymbol) {
+            (0..gridLinesCount).map { i ->
+                val ratio = i.toFloat() / gridLinesCount
+                val value = minVal + (ratio * (maxVal - minVal))
+                val label = "$currencySymbol${String.format("%,.0f", value)}"
                 textMeasurer.measure(
-                    text = point.label,
+                    text = label,
                     style = TextStyle(fontSize = 10.sp, color = labelColor),
                 )
-            } else {
-                null
             }
         }
-    }
+
+    val xLabelResults =
+        remember(points, textMeasurer, labelColor) {
+            val labelStep = (points.size / 6).coerceAtLeast(1)
+            points.mapIndexed { index, point ->
+                if (index % labelStep == 0 || index == points.size - 1) {
+                    textMeasurer.measure(
+                        text = point.label,
+                        style = TextStyle(fontSize = 10.sp, color = labelColor),
+                    )
+                } else {
+                    null
+                }
+            }
+        }
 
     Box(
         modifier =

@@ -173,7 +173,7 @@ fun ReportsTabScreen(
                     onClick = {
                         analyticsHelper.logEvent(
                             AnalyticsConstants.Event.REPORTS_TAB_SWITCHED,
-                            mapOf(AnalyticsConstants.Param.TAB to "budgets")
+                            mapOf(AnalyticsConstants.Param.TAB to "budgets"),
                         )
                         selectedTab = 0
                     },
@@ -184,7 +184,7 @@ fun ReportsTabScreen(
                     onClick = {
                         analyticsHelper.logEvent(
                             AnalyticsConstants.Event.REPORTS_TAB_SWITCHED,
-                            mapOf(AnalyticsConstants.Param.TAB to "analytics")
+                            mapOf(AnalyticsConstants.Param.TAB to "analytics"),
                         )
                         selectedTab = 1
                     },
@@ -225,7 +225,7 @@ fun ReportsTabScreen(
                     AnalyticsScreen(
                         viewModel = analyticsViewModel,
                         analyticsHelper = analyticsHelper,
-                        isPremium = isPremium
+                        isPremium = isPremium,
                     )
                 }
             }
@@ -314,9 +314,10 @@ fun BudgetContent(
             item {
                 AdBannerView(
                     isPremium = isPremium,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 16.dp)
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(top = 16.dp),
                 )
             }
         }

@@ -10,7 +10,7 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import prasad.vennam.moneypilot.data.UserPreferences
 import prasad.vennam.moneypilot.data.entity.Category
-import prasad.vennam.moneypilot.data.repository.MoneyPilotRepository
+import prasad.vennam.moneypilot.data.repository.*
 import prasad.vennam.moneypilot.domain.usecase.BackupSyncManager
 import prasad.vennam.moneypilot.domain.usecase.ClearAllDataUseCase
 import prasad.vennam.moneypilot.domain.usecase.RestoreBackupUseCase
@@ -44,9 +44,14 @@ class MainViewModel
         private val restoreBackupUseCase: RestoreBackupUseCase,
         private val clearAllDataUseCase: ClearAllDataUseCase,
         private val userPreferences: UserPreferences,
-        private val exchangeRateRepo: prasad.vennam.moneypilot.data.repository.ExchangeRateRepository,
+        private val exchangeRateRepo: ExchangeRateRepository,
         private val checkLoanRemindersUseCase: prasad.vennam.moneypilot.domain.usecase.CheckLoanRemindersUseCase,
-        private val repository: MoneyPilotRepository,
+        private val transactionRepository: TransactionRepository,
+        private val budgetRepository: BudgetRepository,
+        private val investmentRepository: InvestmentRepository,
+        private val loanRepository: LoanRepository,
+        private val goalRepository: GoalRepository,
+        private val dataManagementRepository: DataManagementRepository,
     ) : ViewModel() {
         init {
             viewModelScope.launch {
@@ -312,7 +317,14 @@ class MainViewModel
         fun loadDemoData(onComplete: () -> Unit) {
             viewModelScope.launch {
                 try {
-                    DemoDataSeeder.seed(repository)
+                    DemoDataSeeder.seed(
+                        transactionRepository,
+                        budgetRepository,
+                        investmentRepository,
+                        loanRepository,
+                        goalRepository,
+                        dataManagementRepository,
+                    )
                     userPreferences.setCurrency("INR")
                     userPreferences.setSynced(true)
                 } catch (e: Exception) {

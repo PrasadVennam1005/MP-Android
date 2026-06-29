@@ -29,11 +29,11 @@ import prasad.vennam.moneypilot.data.dao.LoanDao
 import prasad.vennam.moneypilot.data.dao.LoanPaymentDao
 import prasad.vennam.moneypilot.data.dao.NotificationDao
 import prasad.vennam.moneypilot.data.dao.PendingTransactionDao
-import prasad.vennam.moneypilot.data.dao.TransactionDao
-import prasad.vennam.moneypilot.data.dao.SubscriptionDao
 import prasad.vennam.moneypilot.data.dao.SavingGoalDao
+import prasad.vennam.moneypilot.data.dao.SubscriptionDao
+import prasad.vennam.moneypilot.data.dao.TransactionDao
 import prasad.vennam.moneypilot.data.entity.Category
-import prasad.vennam.moneypilot.data.repository.MoneyPilotRepository
+import prasad.vennam.moneypilot.data.repository.DataManagementRepository
 import prasad.vennam.moneypilot.domain.usecase.BackupSyncManager
 import prasad.vennam.moneypilot.domain.usecase.LoanReminderScheduler
 import prasad.vennam.moneypilot.util.SecureStorageHelper
@@ -78,7 +78,7 @@ object DatabaseModule {
                         passphraseStr,
                         null,
                         SQLiteDatabase.OPEN_READONLY,
-                        null
+                        null,
                     )
                 db.close()
             } catch (e: Exception) {
@@ -86,7 +86,6 @@ object DatabaseModule {
                 context.deleteDatabase(dbName)
             }
         }
-
 
         return Room
             .databaseBuilder(
@@ -97,9 +96,8 @@ object DatabaseModule {
             .addMigrations(
                 MoneyPilotDatabase.MIGRATION_1_2,
                 MoneyPilotDatabase.MIGRATION_2_3,
-                MoneyPilotDatabase.MIGRATION_3_4
-            )
-            .fallbackToDestructiveMigration(true)
+                MoneyPilotDatabase.MIGRATION_3_4,
+            ).fallbackToDestructiveMigration(true)
             .addCallback(
                 object : RoomDatabase.Callback() {
                     override fun onOpen(db: SupportSQLiteDatabase) {
@@ -183,28 +181,16 @@ object DatabaseModule {
         budgetDao: BudgetDao,
         investmentDao: InvestmentDao,
         loanDao: LoanDao,
-        loanPaymentDao: LoanPaymentDao,
         emergencyFundDao: EmergencyFundDao,
-        pendingTransactionDao: PendingTransactionDao,
-        bookmarkedArticleDao: BookmarkedArticleDao,
-        notificationDao: NotificationDao,
-        subscriptionDao: SubscriptionDao,
-        savingGoalDao: SavingGoalDao,
         database: MoneyPilotDatabase,
-    ): MoneyPilotRepository =
-        MoneyPilotRepository(
+    ): DataManagementRepository =
+        DataManagementRepository(
             categoryDao = categoryDao,
             transactionDao = transactionDao,
             budgetDao = budgetDao,
             investmentDao = investmentDao,
             loanDao = loanDao,
-            loanPaymentDao = loanPaymentDao,
             emergencyFundDao = emergencyFundDao,
-            pendingTransactionDao = pendingTransactionDao,
-            bookmarkedArticleDao = bookmarkedArticleDao,
-            notificationDao = notificationDao,
-            subscriptionDao = subscriptionDao,
-            savingGoalDao = savingGoalDao,
             database = database,
         )
 
@@ -219,7 +205,7 @@ object DatabaseModule {
     @Provides
     @Singleton
     fun provideBackupSyncManager(
-        repository: MoneyPilotRepository,
+        repository: DataManagementRepository,
         userPreferences: UserPreferences,
     ): BackupSyncManager = BackupSyncManagerImpl(repository, userPreferences)
 }

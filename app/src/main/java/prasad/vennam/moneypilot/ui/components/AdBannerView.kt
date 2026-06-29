@@ -23,7 +23,9 @@ import kotlin.time.Duration.Companion.milliseconds
 
 private sealed interface AdState {
     data object Loading : AdState
+
     data object Loaded : AdState
+
     data object Failed : AdState
 }
 
@@ -37,9 +39,8 @@ fun AdBannerView(
     val context = LocalContext.current
 
     BoxWithConstraints(
-        modifier = modifier.fillMaxWidth()
+        modifier = modifier.fillMaxWidth(),
     ) {
-
         val availableWidthDp = maxWidth.value.toInt()
 
         if (availableWidthDp <= 0) return@BoxWithConstraints
@@ -59,35 +60,36 @@ fun AdBannerView(
             }
         }
 
-        val adSize = remember(availableWidthDp) {
-            AdSize.getLargeAnchoredAdaptiveBannerAdSize(
-                context,
-                availableWidthDp
-            )
-        }
-
-        val adView = remember(availableWidthDp) {
-            AdView(context).apply {
-
-                setAdSize(adSize)
-                adUnitId = AdConfig.bannerAdUnitId
-
-                adListener = object : AdListener() {
-
-                    override fun onAdLoaded() {
-                        adState = AdState.Loaded
-                    }
-
-                    override fun onAdFailedToLoad(error: LoadAdError) {
-                        adState = AdState.Failed
-                    }
-                }
-
-                loadAd(
-                    AdRequest.Builder().build()
+        val adSize =
+            remember(availableWidthDp) {
+                AdSize.getLargeAnchoredAdaptiveBannerAdSize(
+                    context,
+                    availableWidthDp,
                 )
             }
-        }
+
+        val adView =
+            remember(availableWidthDp) {
+                AdView(context).apply {
+                    setAdSize(adSize)
+                    adUnitId = AdConfig.bannerAdUnitId
+
+                    adListener =
+                        object : AdListener() {
+                            override fun onAdLoaded() {
+                                adState = AdState.Loaded
+                            }
+
+                            override fun onAdFailedToLoad(error: LoadAdError) {
+                                adState = AdState.Failed
+                            }
+                        }
+
+                    loadAd(
+                        AdRequest.Builder().build(),
+                    )
+                }
+            }
 
         DisposableEffect(adView) {
             onDispose {
@@ -96,11 +98,10 @@ fun AdBannerView(
         }
 
         when (adState) {
-
             AdState.Loaded -> {
                 AndroidView(
                     modifier = Modifier.fillMaxWidth(),
-                    factory = { adView }
+                    factory = { adView },
                 )
             }
 

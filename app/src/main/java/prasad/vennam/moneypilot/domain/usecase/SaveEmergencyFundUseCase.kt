@@ -2,13 +2,13 @@ package prasad.vennam.moneypilot.domain.usecase
 
 import prasad.vennam.moneypilot.data.UserPreferences
 import prasad.vennam.moneypilot.data.entity.EmergencyFund
-import prasad.vennam.moneypilot.data.repository.MoneyPilotRepository
+import prasad.vennam.moneypilot.data.repository.GoalRepository
 import javax.inject.Inject
 
 class SaveEmergencyFundUseCase
     @Inject
     constructor(
-        private val repository: MoneyPilotRepository,
+        private val repository: GoalRepository,
         private val userPreferences: UserPreferences,
     ) {
         suspend operator fun invoke(emergencyFund: EmergencyFund) {

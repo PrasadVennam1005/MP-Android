@@ -19,33 +19,38 @@ import androidx.compose.ui.unit.dp
 
 @Composable
 fun BannerPlaceholder(
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
-    val transition = rememberInfiniteTransition(
-        label = "banner_placeholder"
-    )
+    val transition =
+        rememberInfiniteTransition(
+            label = "banner_placeholder",
+        )
 
-    val alpha = transition.animateFloat(
-        initialValue = 0.4f,
-        targetValue = 0.9f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(
-                durationMillis = 1000,
-                easing = FastOutSlowInEasing
-            ),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "alpha"
-    )
+    val alpha =
+        transition.animateFloat(
+            initialValue = 0.4f,
+            targetValue = 0.9f,
+            animationSpec =
+                infiniteRepeatable(
+                    animation =
+                        tween(
+                            durationMillis = 1000,
+                            easing = FastOutSlowInEasing,
+                        ),
+                    repeatMode = RepeatMode.Reverse,
+                ),
+            label = "alpha",
+        )
 
     Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(60.dp)
-            .alpha(alpha.value)
-            .background(
-                color = MaterialTheme.colorScheme.surfaceVariant,
-                shape = RoundedCornerShape(12.dp)
-            )
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .height(60.dp)
+                .alpha(alpha.value)
+                .background(
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    shape = RoundedCornerShape(12.dp),
+                ),
     )
 }

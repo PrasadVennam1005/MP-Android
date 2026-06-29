@@ -122,7 +122,7 @@ fun InsightsScreen(
                         onNavigateToAiChat = {
                             analyticsHelper.logEvent(AnalyticsConstants.Event.INSIGHTS_AI_RECOMMENDATION_CLICKED)
                             onNavigateToAiChat()
-                        }
+                        },
                     )
                 }
 

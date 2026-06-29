@@ -373,19 +373,21 @@ class AnalyticsViewModel
                 }
 
                 // 4. Budget Overrun Insight
-                val currentMonthExpenses = data.transactions.filter {
-                    val transCal = Calendar.getInstance().apply { timeInMillis = it.timestamp }
-                    it.type == TransactionType.EXPENSE &&
-                        transCal.get(Calendar.MONTH) == currentMonth &&
-                        transCal.get(Calendar.YEAR) == currentYear
-                }
+                val currentMonthExpenses =
+                    data.transactions.filter {
+                        val transCal = Calendar.getInstance().apply { timeInMillis = it.timestamp }
+                        it.type == TransactionType.EXPENSE &&
+                            transCal.get(Calendar.MONTH) == currentMonth &&
+                            transCal.get(Calendar.YEAR) == currentYear
+                    }
                 val expensesByCategoryId = currentMonthExpenses.groupBy { it.categoryId }
 
                 val overruns =
                     data.budgets.mapNotNull { budget ->
                         val cat = categoriesMap[budget.categoryId]
-                        val spent = expensesByCategoryId[budget.categoryId]
-                            ?.sumOf { convertAmount(it.amount, it.currencyCode) } ?: 0.0
+                        val spent =
+                            expensesByCategoryId[budget.categoryId]
+                                ?.sumOf { convertAmount(it.amount, it.currencyCode) } ?: 0.0
 
                         val budgetAmt = convertAmount(budget.amount, budget.currencyCode)
                         if (spent > budgetAmt) {

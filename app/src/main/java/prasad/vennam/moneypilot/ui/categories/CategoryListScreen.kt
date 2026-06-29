@@ -142,8 +142,8 @@ fun CategoryListScreen(
                         AnalyticsConstants.Event.CATEGORY_SAVED,
                         mapOf(
                             AnalyticsConstants.Param.IS_EDIT to (editingCategory != null),
-                            AnalyticsConstants.Param.IS_EXPENSE to newCategory.isExpense
-                        )
+                            AnalyticsConstants.Param.IS_EXPENSE to newCategory.isExpense,
+                        ),
                     )
                     viewModel.saveCategory(newCategory)
                     scope.launch { sheetState.hide() }.invokeOnCompletion {
@@ -179,7 +179,7 @@ fun CategoryListScreen(
                     onClick = {
                         analyticsHelper.logEvent(
                             AnalyticsConstants.Event.CATEGORY_DELETED,
-                            mapOf(AnalyticsConstants.Param.NAME to cat.name)
+                            mapOf(AnalyticsConstants.Param.NAME to cat.name),
                         )
                         viewModel.deleteCategory(cat)
                         categoryToDelete = null

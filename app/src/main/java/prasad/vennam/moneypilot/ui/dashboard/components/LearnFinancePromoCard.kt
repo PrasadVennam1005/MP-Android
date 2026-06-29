@@ -42,81 +42,92 @@ fun LearnFinancePromoCard(onClick: () -> Unit) {
     val glowAlpha by infiniteTransition.animateFloat(
         initialValue = 0.12f,
         targetValue = 0.38f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 2000, easing = LinearEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "lf_glow_alpha"
+        animationSpec =
+            infiniteRepeatable(
+                animation = tween(durationMillis = 2000, easing = LinearEasing),
+                repeatMode = RepeatMode.Reverse,
+            ),
+        label = "lf_glow_alpha",
     )
 
     Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp))
-            .background(
-                Brush.linearGradient(
-                    colors = listOf(
-                        Color(0xFF1A237E),
-                        Color(0xFF283593),
-                        Color(0xFF3949AB)
-                    )
-                )
-            )
-            .clickable(onClick = onClick), contentAlignment = Alignment.Center
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(20.dp))
+                .background(
+                    Brush.linearGradient(
+                        colors =
+                            listOf(
+                                Color(0xFF1A237E),
+                                Color(0xFF283593),
+                                Color(0xFF3949AB),
+                            ),
+                    ),
+                ).clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
     ) {
         // Top-right glow orb
         Box(
-            modifier = Modifier
-                .size(130.dp)
-                .align(Alignment.TopEnd)
-                .background(
-                    brush = Brush.radialGradient(
-                        colors = listOf(
-                            Color(0xFF7986CB).copy(alpha = glowAlpha),
-                            Color.Transparent
-                        )
+            modifier =
+                Modifier
+                    .size(130.dp)
+                    .align(Alignment.TopEnd)
+                    .background(
+                        brush =
+                            Brush.radialGradient(
+                                colors =
+                                    listOf(
+                                        Color(0xFF7986CB).copy(alpha = glowAlpha),
+                                        Color.Transparent,
+                                    ),
+                            ),
+                        shape = RoundedCornerShape(65.dp),
                     ),
-                    shape = RoundedCornerShape(65.dp)
-                )
         )
         // Bottom-left glow orb
         Box(
-            modifier = Modifier
-                .size(90.dp)
-                .align(Alignment.BottomStart)
-                .background(
-                    brush = Brush.radialGradient(
-                        colors = listOf(
-                            Color(0xFF9FA8DA).copy(alpha = glowAlpha * 0.55f),
-                            Color.Transparent
-                        )
+            modifier =
+                Modifier
+                    .size(90.dp)
+                    .align(Alignment.BottomStart)
+                    .background(
+                        brush =
+                            Brush.radialGradient(
+                                colors =
+                                    listOf(
+                                        Color(0xFF9FA8DA).copy(alpha = glowAlpha * 0.55f),
+                                        Color.Transparent,
+                                    ),
+                            ),
+                        shape = RoundedCornerShape(45.dp),
                     ),
-                    shape = RoundedCornerShape(45.dp)
-                )
         )
 
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = 18.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 18.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(14.dp)
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             // Icon badge
             Box(
-                modifier = Modifier
-                    .size(54.dp)
-                    .background(
-                        color = Color.White.copy(alpha = 0.13f),
-                        shape = RoundedCornerShape(16.dp)
-                    ),
-                contentAlignment = Alignment.Center
+                modifier =
+                    Modifier
+                        .size(54.dp)
+                        .background(
+                            color = Color.White.copy(alpha = 0.13f),
+                            shape = RoundedCornerShape(16.dp),
+                        ),
+                contentAlignment = Alignment.Center,
             ) {
                 Icon(
                     imageVector = Icons.Rounded.AutoAwesome,
                     contentDescription = null,
                     tint = Color(0xFFFFD54F),
-                    modifier = Modifier.size(28.dp)
+                    modifier = Modifier.size(28.dp),
                 )
             }
 
@@ -124,34 +135,37 @@ fun LearnFinancePromoCard(onClick: () -> Unit) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = "Grow Your Financial IQ",
-                    style = MaterialTheme.typography.titleSmall.copy(
-                        fontWeight = FontWeight.ExtraBold,
-                        color = Color.White
-                    )
+                    style =
+                        MaterialTheme.typography.titleSmall.copy(
+                            fontWeight = FontWeight.ExtraBold,
+                            color = Color.White,
+                        ),
                 )
                 Spacer(modifier = Modifier.height(3.dp))
                 Text(
                     text = "22 expert-curated lessons on budgeting, investing & more",
-                    style = MaterialTheme.typography.bodySmall.copy(
-                        color = Color.White.copy(alpha = 0.78f)
-                    ),
-                    maxLines = 2
+                    style =
+                        MaterialTheme.typography.bodySmall.copy(
+                            color = Color.White.copy(alpha = 0.78f),
+                        ),
+                    maxLines = 2,
                 )
             }
 
             // CTA
             Button(
                 onClick = onClick,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFFFFD54F),
-                    contentColor = Color(0xFF1A237E)
-                ),
+                colors =
+                    ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFFFFD54F),
+                        contentColor = Color(0xFF1A237E),
+                    ),
                 shape = RoundedCornerShape(12.dp),
-                contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp)
+                contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
             ) {
                 Text(
                     text = "Start",
-                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold)
+                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
                 )
             }
         }

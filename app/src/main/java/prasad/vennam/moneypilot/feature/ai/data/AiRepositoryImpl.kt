@@ -5,25 +5,22 @@ import android.util.Log
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
-import okhttp3.Request
 import prasad.vennam.moneypilot.data.entity.Investment
 import prasad.vennam.moneypilot.data.entity.Loan
 import prasad.vennam.moneypilot.data.entity.Transaction
 import prasad.vennam.moneypilot.data.entity.TransactionType
-import prasad.vennam.moneypilot.data.repository.MoneyPilotRepository
+import prasad.vennam.moneypilot.data.repository.*
 import prasad.vennam.moneypilot.feature.ai.domain.AiActionParser
 import prasad.vennam.moneypilot.feature.ai.domain.AiRepository
 import prasad.vennam.moneypilot.feature.ai.model.AiAction
 import prasad.vennam.moneypilot.feature.ai.model.LlmState
 import prasad.vennam.moneypilot.feature.ai.service.LlmService
 import prasad.vennam.moneypilot.util.ParsedReceipt
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import java.io.File
-import java.io.FileOutputStream
-import java.io.IOException
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -35,7 +32,10 @@ class AiRepositoryImpl
     constructor(
         private val context: Context,
         private val llmService: LlmService,
-        private val moneyPilotRepository: MoneyPilotRepository,
+        private val transactionRepository: TransactionRepository,
+        private val budgetRepository: BudgetRepository,
+        private val investmentRepository: InvestmentRepository,
+        private val loanRepository: LoanRepository,
         private val remoteConfigHelper: prasad.vennam.moneypilot.util.RemoteConfigHelper,
     ) : AiRepository {
         private val _state = MutableStateFlow<LlmState>(LlmState.Idle)
@@ -72,25 +72,21 @@ class AiRepositoryImpl
                 product == "sdk_gphone64_arm64"
         }
 
-        /**
-         * Model configuration:
-         * - Emulator / CPU-only: Qwen2.5-1.5B-Instruct q8 (~1.5GB).
-         *   Apache 2.0 license — NO HuggingFace login required. Runs CPU inference on emulator.
-         * - Physical device (GPU): Gemma 4 E2B IT (~2.58GB). Best quality, requires GPU/NPU.
-         */
         private val modelFileName: String
-            get() = if (isEmulator) {
-                remoteConfigHelper.getEmulatorModelFile().ifEmpty { EMULATOR_MODEL_FILE }
-            } else {
-                remoteConfigHelper.getDeviceModelFile().ifEmpty { DEVICE_MODEL_FILE }
-            }
+            get() =
+                if (isEmulator) {
+                    remoteConfigHelper.getEmulatorModelFile().ifEmpty { EMULATOR_MODEL_FILE }
+                } else {
+                    remoteConfigHelper.getDeviceModelFile().ifEmpty { DEVICE_MODEL_FILE }
+                }
 
         private val modelUrl: String
-            get() = if (isEmulator) {
-                remoteConfigHelper.getEmulatorModelUrl().ifEmpty { EMULATOR_MODEL_URL }
-            } else {
-                remoteConfigHelper.getDeviceModelUrl().ifEmpty { DEVICE_MODEL_URL }
-            }
+            get() =
+                if (isEmulator) {
+                    remoteConfigHelper.getEmulatorModelUrl().ifEmpty { EMULATOR_MODEL_URL }
+                } else {
+                    remoteConfigHelper.getDeviceModelUrl().ifEmpty { DEVICE_MODEL_URL }
+                }
 
         // Required free disk space per model
         private val requiredSpaceBytes: Long
@@ -130,7 +126,8 @@ class AiRepositoryImpl
                 }.launchIn(kotlinx.coroutines.GlobalScope)
 
             // Listen to background model download updates via WorkManager
-            workManager.getWorkInfosForUniqueWorkFlow("llm_model_download_work")
+            workManager
+                .getWorkInfosForUniqueWorkFlow("llm_model_download_work")
                 .onEach { workInfos ->
                     val workInfo = workInfos.firstOrNull() ?: return@onEach
                     when (workInfo.state) {
@@ -230,27 +227,28 @@ class AiRepositoryImpl
         override suspend fun downloadModel() =
             withContext(Dispatchers.IO) {
                 // Check if already downloading, ready, or if model already exists on disk
-                val shouldInitialize = downloadMutex.withLock {
-                    if (_state.value is LlmState.Downloading) {
-                        Log.d(TAG, "Download ignored — Model download already in progress.")
-                        return@withContext
-                    }
-                    if (_state.value is LlmState.Initializing || (_state.value is LlmState.Ready && getModelFile().exists() && getModelFile().length() > 0L)) {
-                        Log.d(TAG, "Download ignored — Model already initializing or ready locally.")
-                        return@withContext
-                    }
+                val shouldInitialize =
+                    downloadMutex.withLock {
+                        if (_state.value is LlmState.Downloading) {
+                            Log.d(TAG, "Download ignored — Model download already in progress.")
+                            return@withContext
+                        }
+                        if (_state.value is LlmState.Initializing || (_state.value is LlmState.Ready && getModelFile().exists() && getModelFile().length() > 0L)) {
+                            Log.d(TAG, "Download ignored — Model already initializing or ready locally.")
+                            return@withContext
+                        }
 
-                    val destinationDir = context.getExternalFilesDir(null) ?: context.filesDir
-                    val modelFile = File(destinationDir, modelFileName)
-                    if (modelFile.exists() && modelFile.length() > 0L) {
-                        Log.d(TAG, "Download ignored — Model file already exists on disk. Initializing...")
-                        true
-                    } else {
-                        _state.value = LlmState.Downloading
-                        _downloadProgress.value = 0f
-                        false
+                        val destinationDir = context.getExternalFilesDir(null) ?: context.filesDir
+                        val modelFile = File(destinationDir, modelFileName)
+                        if (modelFile.exists() && modelFile.length() > 0L) {
+                            Log.d(TAG, "Download ignored — Model file already exists on disk. Initializing...")
+                            true
+                        } else {
+                            _state.value = LlmState.Downloading
+                            _downloadProgress.value = 0f
+                            false
+                        }
                     }
-                }
 
                 if (shouldInitialize) {
                     initialize()
@@ -274,24 +272,25 @@ class AiRepositoryImpl
 
                 // Enqueue background download using WorkManager
                 try {
-                    val workRequest = androidx.work.OneTimeWorkRequestBuilder<prasad.vennam.moneypilot.worker.ModelDownloadWorker>()
-                        .setInputData(
-                            androidx.work.workDataOf(
-                                "model_url" to modelUrl,
-                                "model_file_name" to modelFileName
-                            )
-                        )
-                        .setConstraints(
-                            androidx.work.Constraints.Builder()
-                                .setRequiredNetworkType(androidx.work.NetworkType.CONNECTED)
-                                .build()
-                        )
-                        .build()
+                    val workRequest =
+                        androidx.work
+                            .OneTimeWorkRequestBuilder<prasad.vennam.moneypilot.worker.ModelDownloadWorker>()
+                            .setInputData(
+                                androidx.work.workDataOf(
+                                    "model_url" to modelUrl,
+                                    "model_file_name" to modelFileName,
+                                ),
+                            ).setConstraints(
+                                androidx.work.Constraints
+                                    .Builder()
+                                    .setRequiredNetworkType(androidx.work.NetworkType.CONNECTED)
+                                    .build(),
+                            ).build()
 
                     workManager.enqueueUniqueWork(
                         "llm_model_download_work",
                         androidx.work.ExistingWorkPolicy.KEEP,
-                        workRequest
+                        workRequest,
                     )
                     Log.d(TAG, "Model download enqueued via WorkManager successfully.")
                 } catch (e: Exception) {
@@ -319,23 +318,23 @@ class AiRepositoryImpl
                             promptLower.contains("status")
                     )
 
-            val transactions = if (isLoggingOnly) emptyList() else moneyPilotRepository.allTransactions.first().take(3)
-            val budgets = if (isLoggingOnly) emptyList() else moneyPilotRepository.allBudgets.first().take(3)
-            val investments = if (isLoggingOnly) emptyList() else moneyPilotRepository.allInvestments.first().take(3)
-            val loans = if (isLoggingOnly) emptyList() else moneyPilotRepository.allLoans.first().take(3)
-            val categories = moneyPilotRepository.allCategories.first().associateBy { it.id }
+            val transactions = if (isLoggingOnly) emptyList() else transactionRepository.allTransactions.first().take(3)
+            val budgets = if (isLoggingOnly) emptyList() else budgetRepository.allBudgets.first().take(3)
+            val investments = if (isLoggingOnly) emptyList() else investmentRepository.allInvestments.first().take(3)
+            val loans = if (isLoggingOnly) emptyList() else loanRepository.allLoans.first().take(3)
+            val categories = transactionRepository.allCategories.first().associateBy { it.id }
 
             val sdf = java.text.SimpleDateFormat("dd MMM yyyy", java.util.Locale.getDefault())
 
             val expenseCategories =
-                moneyPilotRepository.allCategories
+                transactionRepository.allCategories
                     .first()
                     .filter { it.isExpense }
                     .map { it.name }
                     .take(8)
                     .joinToString(", ")
             val incomeCategories =
-                moneyPilotRepository.allCategories
+                transactionRepository.allCategories
                     .first()
                     .filter { !it.isExpense }
                     .map { it.name }
@@ -404,8 +403,6 @@ class AiRepositoryImpl
             }
 
             try {
-                // Complete the Gemma chat template:
-                // <start_of_turn>user\n{system_message}\n\n{question}<end_of_turn>\n<start_of_turn>model\n
                 val contextPrompt = buildFinancialContext(prompt) + prompt + "<end_of_turn>\n<start_of_turn>model\n"
                 if (isReady && getModelFile().exists()) {
                     llmService.generateResponseStreaming(contextPrompt)
@@ -417,16 +414,12 @@ class AiRepositoryImpl
             }
         }
 
-        /**
-         * Executes a confirmed AI action by writing to the Room database.
-         * @return Result with a human-readable success/failure message.
-         */
         override suspend fun executeAction(action: AiAction): Result<String> =
             withContext(Dispatchers.IO) {
                 return@withContext try {
                     when (action) {
                         is AiAction.AddTransaction -> {
-                            val categories = moneyPilotRepository.allCategories.first()
+                            val categories = transactionRepository.allCategories.first()
                             val categoryId =
                                 fuzzyMatchCategory(
                                     name = action.categoryName,
@@ -436,7 +429,7 @@ class AiRepositoryImpl
                             val timestamp =
                                 System.currentTimeMillis() +
                                     (action.dateOffset * 24 * 60 * 60 * 1000L)
-                            moneyPilotRepository.insertTransaction(
+                            transactionRepository.insertTransaction(
                                 Transaction(
                                     amount = action.amount * 100,
                                     timestamp = timestamp,
@@ -453,7 +446,7 @@ class AiRepositoryImpl
                         }
 
                         is AiAction.AddInvestment -> {
-                            moneyPilotRepository.insertInvestment(
+                            investmentRepository.insertInvestment(
                                 Investment(
                                     name = action.name,
                                     type = action.type,
@@ -471,11 +464,11 @@ class AiRepositoryImpl
                             val nextEmiTimestamp =
                                 System.currentTimeMillis() +
                                     (action.nextEmiDays * 24 * 60 * 60 * 1000L)
-                            moneyPilotRepository.insertLoan(
+                            loanRepository.insertLoan(
                                 Loan(
                                     name = action.name,
                                     totalAmount = action.totalAmount * 100,
-                                    outstandingAmount = action.totalAmount * 100, // starts as full amount
+                                    outstandingAmount = action.totalAmount * 100,
                                     emiAmount = action.emiAmount * 100,
                                     nextEmiDate = nextEmiTimestamp,
                                     currencyCode = "INR",
@@ -492,10 +485,6 @@ class AiRepositoryImpl
                 }
             }
 
-        /**
-         * Fuzzy-matches a category name from the model to the closest DB category.
-         * Priority: exact match (case-insensitive) > contains match > default null.
-         */
         private fun fuzzyMatchCategory(
             name: String,
             categories: List<prasad.vennam.moneypilot.data.entity.Category>,
@@ -503,13 +492,10 @@ class AiRepositoryImpl
         ): Long? {
             val filtered = categories.filter { it.isExpense == isExpense }
             val nameLower = name.lowercase().trim()
-            // 1. Exact match
             filtered.firstOrNull { it.name.lowercase() == nameLower }?.let { return it.id }
-            // 2. Contains match (e.g. "grocery" matches "Food")
             filtered
                 .firstOrNull { it.name.lowercase().contains(nameLower) || nameLower.contains(it.name.lowercase()) }
                 ?.let { return it.id }
-            // 3. Keyword synonyms
             val synonymMap =
                 mapOf(
                     "grocery" to "Food",
@@ -554,7 +540,6 @@ class AiRepositoryImpl
             if (mappedName != null) {
                 filtered.firstOrNull { it.name.equals(mappedName, ignoreCase = true) }?.let { return it.id }
             }
-            // 4. No match — return null (uncategorized)
             Log.w(TAG, "No category match for '$name', leaving uncategorized")
             return null
         }
@@ -567,7 +552,6 @@ class AiRepositoryImpl
                     return@withContext ""
                 }
                 try {
-                    // Keep the prompt extremely simple and compact to prevent exceeding the context window
                     val contextPrompt =
                         "<start_of_turn>user\n" +
                             "You are MoneyPilot AI, a financial advisor. Write exactly one short, encouraging advice sentence (max 15 words) based on the user's financial stats:\n" +
@@ -575,11 +559,12 @@ class AiRepositoryImpl
                             "Keep it direct and action-oriented. Do not include tags or markup.<end_of_turn>\n" +
                             "<start_of_turn>model\n"
 
-                    val response = if (isReady) {
-                        llmService.generateResponse(contextPrompt).trim()
-                    } else {
-                        llmService.generateCloudResponse(contextPrompt)?.trim() ?: ""
-                    }
+                    val response =
+                        if (isReady) {
+                            llmService.generateResponse(contextPrompt).trim()
+                        } else {
+                            llmService.generateCloudResponse(contextPrompt)?.trim() ?: ""
+                        }
                     Log.d(TAG, "AI Advice generated: $response")
                     response
                 } catch (e: Exception) {
@@ -597,24 +582,26 @@ class AiRepositoryImpl
                     return@withContext null
                 }
                 try {
-                    val prompt = buildString {
-                        append("<start_of_turn>user\n")
-                        append("Analyze the following OCR text from a transaction receipt and extract:\n")
-                        append("1. The merchant name (e.g. Starbucks, Walmart, Swiggy).\n")
-                        append("2. The total transaction amount paid as a numeric value.\n")
-                        append("Format your response as an action tag with NO other text or explanation:\n")
-                        append("[ACTION:ADD_EXPENSE|amount=VALUE|category=Other|note=MERCHANT_NAME|date=today]\n\n")
-                        append("OCR Text:\n")
-                        append(ocrText)
-                        append("<end_of_turn>\n<start_of_turn>model\n")
-                    }
-                    val response = if (isReady) {
-                        Log.d(TAG, "Running parseReceiptText locally via LiteRT")
-                        llmService.generateResponse(prompt).trim()
-                    } else {
-                        Log.d(TAG, "Running parseReceiptText via Cloud Fallback")
-                        llmService.generateCloudResponse(prompt)?.trim()
-                    }
+                    val prompt =
+                        buildString {
+                            append("<start_of_turn>user\n")
+                            append("Analyze the following OCR text from a transaction receipt and extract:\n")
+                            append("1. The merchant name (e.g. Starbucks, Walmart, Swiggy).\n")
+                            append("2. The total transaction amount paid as a numeric value.\n")
+                            append("Format your response as an action tag with NO other text or explanation:\n")
+                            append("[ACTION:ADD_EXPENSE|amount=VALUE|category=Other|note=MERCHANT_NAME|date=today]\n\n")
+                            append("OCR Text:\n")
+                            append(ocrText)
+                            append("<end_of_turn>\n<start_of_turn>model\n")
+                        }
+                    val response =
+                        if (isReady) {
+                            Log.d(TAG, "Running parseReceiptText locally via LiteRT")
+                            llmService.generateResponse(prompt).trim()
+                        } else {
+                            Log.d(TAG, "Running parseReceiptText via Cloud Fallback")
+                            llmService.generateCloudResponse(prompt)?.trim()
+                        }
 
                     if (response.isNullOrEmpty()) {
                         Log.w(TAG, "Received empty response from LLM")
@@ -644,23 +631,12 @@ class AiRepositoryImpl
 
         companion object {
             private const val TAG = "AiRepository"
-
-            // ── Emulator / CPU-fallback model ──────────────────────────────────────────
-            // Gemma 3 1B IT int4 — Gemma License.
-            // Native .litertlm format, CPU+GPU compatible. ~600MB.
-            // Gated-free public mirror: adiagarwal/nanochat-models
             const val EMULATOR_MODEL_FILE = "gemma3-1b-it-int4.litertlm"
             const val EMULATOR_MODEL_URL =
                 "https://huggingface.co/adiagarwal/nanochat-models/resolve/main/Gemma3-1B-IT/gemma3-1b-it-int4.litertlm"
-
-            // ── Tiny fallback (ultra-low memory, e.g. 4GB RAM emulator) ───────────────
-            // Gemma 3 1B IT int4 — Gemma License. ~600MB.
             const val TINY_MODEL_FILE = "gemma3-1b-it-int4.litertlm"
             const val TINY_MODEL_URL =
                 "https://huggingface.co/adiagarwal/nanochat-models/resolve/main/Gemma3-1B-IT/gemma3-1b-it-int4.litertlm"
-
-            // ── Production / Physical device model ────────────────────────────────────
-            // Gemma 3n E4B IT — 2.58GB, GPU/NPU compiled, best quality on real devices
             const val DEVICE_MODEL_FILE = "gemma-3n-E4B-it-int4.litertlm"
             const val DEVICE_MODEL_URL =
                 "https://huggingface.co/adiagarwal/nanochat-models/resolve/main/Gemma-3n-E4B-it/gemma-3n-E4B-it-int4.litertlm"

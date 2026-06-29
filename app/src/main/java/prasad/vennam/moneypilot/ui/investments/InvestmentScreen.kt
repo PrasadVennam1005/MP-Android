@@ -11,7 +11,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
-import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -29,11 +28,11 @@ import prasad.vennam.moneypilot.ui.dashboard.SyncState
 import prasad.vennam.moneypilot.ui.dashboard.SyncStatusIndicator
 import prasad.vennam.moneypilot.ui.investments.components.*
 import prasad.vennam.moneypilot.ui.viewmodel.InvestmentViewModel
-import prasad.vennam.moneypilot.util.LocalCurrencyCode
-import prasad.vennam.moneypilot.util.inPaisa
-import prasad.vennam.moneypilot.util.AnalyticsHelper
 import prasad.vennam.moneypilot.util.AnalyticsConstants
+import prasad.vennam.moneypilot.util.AnalyticsHelper
+import prasad.vennam.moneypilot.util.LocalCurrencyCode
 import prasad.vennam.moneypilot.util.TrackScreen
+import prasad.vennam.moneypilot.util.inPaisa
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -188,7 +187,7 @@ fun InvestmentScreen(
                         onClick = {
                             analyticsHelper.logEvent(
                                 AnalyticsConstants.Event.INVESTMENTS_TAB_SWITCHED,
-                                mapOf(AnalyticsConstants.Param.TAB to title)
+                                mapOf(AnalyticsConstants.Param.TAB to title),
                             )
                             selectedTab = index
                         },

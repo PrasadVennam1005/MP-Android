@@ -232,7 +232,10 @@ class LlmService(
 
     suspend fun generateCloudResponse(prompt: String): String? =
         withContext(Dispatchers.IO) {
-            val apiKey = prasad.vennam.moneypilot.BuildConfig.GEMINI_API_KEY.trim().removeSurrounding("\"")
+            val apiKey =
+                prasad.vennam.moneypilot.BuildConfig.GEMINI_API_KEY
+                    .trim()
+                    .removeSurrounding("\"")
             if (apiKey.isBlank()) {
                 Log.d(TAG, "generateCloudResponse: GEMINI_API_KEY is empty/placeholder, skipping cloud fallback")
                 return@withContext null
@@ -241,14 +244,16 @@ class LlmService(
             Log.d(TAG, "generateCloudResponse: Sending query to Gemini API Cloud")
             val url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=$apiKey"
 
-            val escapedPrompt = prompt
-                .replace("\\", "\\\\")
-                .replace("\"", "\\\"")
-                .replace("\n", "\\n")
-                .replace("\r", "\\r")
-                .replace("\t", "\\t")
+            val escapedPrompt =
+                prompt
+                    .replace("\\", "\\\\")
+                    .replace("\"", "\\\"")
+                    .replace("\n", "\\n")
+                    .replace("\r", "\\r")
+                    .replace("\t", "\\t")
 
-            val requestBodyJson = """
+            val requestBodyJson =
+                """
                 {
                   "contents": [
                     {
@@ -260,13 +265,15 @@ class LlmService(
                     }
                   ]
                 }
-            """.trimIndent()
+                """.trimIndent()
 
             val mediaType = "application/json; charset=utf-8".toMediaType()
-            val request = Request.Builder()
-                .url(url)
-                .post(requestBodyJson.toRequestBody(mediaType))
-                .build()
+            val request =
+                Request
+                    .Builder()
+                    .url(url)
+                    .post(requestBodyJson.toRequestBody(mediaType))
+                    .build()
 
             try {
                 client.newCall(request).execute().use { response ->
@@ -278,7 +285,14 @@ class LlmService(
                     }
                     val moshi = Moshi.Builder().addLast(KotlinJsonAdapterFactory()).build()
                     val geminiResponse = moshi.adapter(GeminiResponse::class.java).fromJson(body)
-                    val responseText = geminiResponse?.candidates?.firstOrNull()?.content?.parts?.firstOrNull()?.text
+                    val responseText =
+                        geminiResponse
+                            ?.candidates
+                            ?.firstOrNull()
+                            ?.content
+                            ?.parts
+                            ?.firstOrNull()
+                            ?.text
                     Log.d(TAG, "generateCloudResponse: Successfully parsed response of length: ${responseText?.length ?: 0}")
                     responseText
                 }
@@ -316,20 +330,20 @@ class LlmService(
 
 @JsonClass(generateAdapter = true)
 data class GeminiResponse(
-    val candidates: List<GeminiCandidate>?
+    val candidates: List<GeminiCandidate>?,
 )
 
 @JsonClass(generateAdapter = true)
 data class GeminiCandidate(
-    val content: GeminiContent?
+    val content: GeminiContent?,
 )
 
 @JsonClass(generateAdapter = true)
 data class GeminiContent(
-    val parts: List<GeminiPart>?
+    val parts: List<GeminiPart>?,
 )
 
 @JsonClass(generateAdapter = true)
 data class GeminiPart(
-    val text: String?
+    val text: String?,
 )

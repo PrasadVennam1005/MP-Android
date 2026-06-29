@@ -416,33 +416,37 @@ fun FinancialSandboxScreen(
 
                     val density = androidx.compose.ui.platform.LocalDensity.current
                     val labelColorArgb = labelColor.toArgb()
-                    val textPaintY = remember(density, labelColorArgb) {
-                        android.graphics.Paint().apply {
-                            color = labelColorArgb
-                            textSize = with(density) { 10.sp.toPx() }
-                            textAlign = android.graphics.Paint.Align.RIGHT
+                    val textPaintY =
+                        remember(density, labelColorArgb) {
+                            android.graphics.Paint().apply {
+                                color = labelColorArgb
+                                textSize = with(density) { 10.sp.toPx() }
+                                textAlign = android.graphics.Paint.Align.RIGHT
+                            }
                         }
-                    }
-                    val textPaintX = remember(density, labelColorArgb) {
-                        android.graphics.Paint().apply {
-                            color = labelColorArgb
-                            textSize = with(density) { 10.sp.toPx() }
-                            textAlign = android.graphics.Paint.Align.CENTER
+                    val textPaintX =
+                        remember(density, labelColorArgb) {
+                            android.graphics.Paint().apply {
+                                color = labelColorArgb
+                                textSize = with(density) { 10.sp.toPx() }
+                                textAlign = android.graphics.Paint.Align.CENTER
+                            }
                         }
-                    }
 
                     val currentPath = remember { Path() }
                     val optimizedPath = remember { Path() }
                     val currentFillPath = remember { Path() }
                     val optimizedFillPath = remember { Path() }
 
-                    val lineStroke = remember(density) {
-                        Stroke(width = with(density) { 3.dp.toPx() }, cap = StrokeCap.Round)
-                    }
+                    val lineStroke =
+                        remember(density) {
+                            Stroke(width = with(density) { 3.dp.toPx() }, cap = StrokeCap.Round)
+                        }
 
-                    val dashPathEffect = remember {
-                        PathEffect.dashPathEffect(floatArrayOf(10f, 10f), 0f)
-                    }
+                    val dashPathEffect =
+                        remember {
+                            PathEffect.dashPathEffect(floatArrayOf(10f, 10f), 0f)
+                        }
 
                     Canvas(
                         modifier =

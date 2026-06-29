@@ -70,7 +70,7 @@ class InvestmentViewModel
 
                 InvestmentSummary(totalInvested, totalCurrent)
             }.flowOn(Dispatchers.Default)
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), InvestmentSummary())
+                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), InvestmentSummary())
 
         private val _selectedProfile = MutableStateFlow(AllocationProfile.BALANCED)
         val selectedProfile: StateFlow<AllocationProfile> = _selectedProfile.asStateFlow()
@@ -149,7 +149,7 @@ class InvestmentViewModel
                     )
                 }
             }.flowOn(Dispatchers.Default)
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
         // ── Live price refresh ────────────────────────────────────────────────────
         private val _isRefreshing = MutableStateFlow(false)

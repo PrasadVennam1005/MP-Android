@@ -8,10 +8,9 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
-import prasad.vennam.moneypilot.util.WorkManagerSyncScheduler
 import prasad.vennam.moneypilot.data.model.RateAlert
+import prasad.vennam.moneypilot.util.WorkManagerSyncScheduler
 import javax.inject.Inject
-
 import javax.inject.Singleton
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "user_prefs")
@@ -84,8 +83,6 @@ class UserPreferences
         private val rateAlertsKey =
             androidx.datastore.preferences.core
                 .stringPreferencesKey("currency_rate_alerts")
-
-
 
         val isLoggedIn: Flow<Boolean> =
             context.dataStore.data
@@ -197,7 +194,6 @@ class UserPreferences
             }
         }
 
-
         private fun parseCurrencyPairs(raw: String): List<Pair<String, String>> {
             if (raw.isEmpty()) return emptyList()
             return raw.split(";").mapNotNull {
@@ -209,7 +205,6 @@ class UserPreferences
                 }
             }
         }
-
 
         val isSynced: Flow<Boolean> =
             context.dataStore.data
@@ -378,7 +373,10 @@ class UserPreferences
             }
         }
 
-        suspend fun saveRecentCurrencyPair(from: String, to: String) {
+        suspend fun saveRecentCurrencyPair(
+            from: String,
+            to: String,
+        ) {
             context.dataStore.edit { preferences ->
                 val raw = preferences[recentCurrencyPairsKey] ?: ""
                 val current = parseCurrencyPairs(raw).toMutableList()
@@ -390,7 +388,10 @@ class UserPreferences
             }
         }
 
-        suspend fun toggleFavoriteCurrencyPair(from: String, to: String) {
+        suspend fun toggleFavoriteCurrencyPair(
+            from: String,
+            to: String,
+        ) {
             context.dataStore.edit { preferences ->
                 val raw = preferences[favoriteCurrencyPairsKey] ?: ""
                 val current = parseCurrencyPairs(raw).toMutableList()
@@ -411,9 +412,10 @@ class UserPreferences
                 if (!current.contains(alert)) {
                     current.add(alert)
                 }
-                preferences[rateAlertsKey] = current.joinToString(";") {
-                    "${it.from},${it.to},${it.targetRate},${if (it.isAbove) "above" else "below"}"
-                }
+                preferences[rateAlertsKey] =
+                    current.joinToString(";") {
+                        "${it.from},${it.to},${it.targetRate},${if (it.isAbove) "above" else "below"}"
+                    }
             }
         }
 
@@ -422,9 +424,10 @@ class UserPreferences
                 val raw = preferences[rateAlertsKey] ?: ""
                 val current = parseRateAlerts(raw).toMutableList()
                 current.remove(alert)
-                preferences[rateAlertsKey] = current.joinToString(";") {
-                    "${it.from},${it.to},${it.targetRate},${if (it.isAbove) "above" else "below"}"
-                }
+                preferences[rateAlertsKey] =
+                    current.joinToString(";") {
+                        "${it.from},${it.to},${it.targetRate},${if (it.isAbove) "above" else "below"}"
+                    }
             }
         }
 
@@ -434,5 +437,3 @@ class UserPreferences
             }
         }
     }
-
-

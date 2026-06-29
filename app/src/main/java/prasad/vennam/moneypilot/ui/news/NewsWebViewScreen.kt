@@ -95,13 +95,13 @@ fun NewsWebViewScreen(
                                 if (isBookmarked) {
                                     analyticsHelper.logEvent(
                                         AnalyticsConstants.Event.NEWS_BOOKMARK_REMOVED,
-                                        mapOf(AnalyticsConstants.Param.URL to currentUrl)
+                                        mapOf(AnalyticsConstants.Param.URL to currentUrl),
                                     )
                                     viewModel.removeBookmarkByUrl(currentUrl)
                                 } else {
                                     analyticsHelper.logEvent(
                                         AnalyticsConstants.Event.NEWS_BOOKMARK_ADDED,
-                                        mapOf(AnalyticsConstants.Param.URL to currentUrl)
+                                        mapOf(AnalyticsConstants.Param.URL to currentUrl),
                                     )
                                     viewModel.addBookmark(
                                         title = currentTitle,
@@ -124,7 +124,7 @@ fun NewsWebViewScreen(
                         onClick = {
                             analyticsHelper.logEvent(
                                 AnalyticsConstants.Event.NEWS_SHARED,
-                                mapOf(AnalyticsConstants.Param.URL to currentUrl)
+                                mapOf(AnalyticsConstants.Param.URL to currentUrl),
                             )
                             try {
                                 val sendIntent =

@@ -1,46 +1,41 @@
 package prasad.vennam.moneypilot
 
-import android.util.Log
 import com.google.mlkit.vision.text.Text
-import org.junit.AfterClass
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
-import org.junit.BeforeClass
 import org.junit.Test
 import org.mockito.Mockito.mock
-import org.mockito.Mockito.mockStatic
-import prasad.vennam.moneypilot.data.entity.TransactionType
-import prasad.vennam.moneypilot.feature.ai.domain.AiActionParser
-import prasad.vennam.moneypilot.feature.ai.model.AiAction
-import prasad.vennam.moneypilot.util.ReceiptParser
-import org.mockito.Mockito.`when` as whenever
-import kotlinx.coroutines.runBlocking
 import prasad.vennam.moneypilot.data.UserPreferences
-import prasad.vennam.moneypilot.domain.usecase.GetTransactionByIdUseCase
-import prasad.vennam.moneypilot.domain.usecase.SaveTransactionUseCase
-import prasad.vennam.moneypilot.domain.usecase.DeleteTransactionUseCase
-import prasad.vennam.moneypilot.domain.usecase.GetTransactionsUseCase
-import prasad.vennam.moneypilot.domain.usecase.GetCategoriesUseCase
-import prasad.vennam.moneypilot.domain.usecase.SaveCategoryUseCase
+import prasad.vennam.moneypilot.data.entity.TransactionType
+import prasad.vennam.moneypilot.data.repository.*
 import prasad.vennam.moneypilot.domain.usecase.DeleteCategoryUseCase
+import prasad.vennam.moneypilot.domain.usecase.DeleteTransactionUseCase
+import prasad.vennam.moneypilot.domain.usecase.GetCategoriesUseCase
+import prasad.vennam.moneypilot.domain.usecase.GetTransactionByIdUseCase
+import prasad.vennam.moneypilot.domain.usecase.GetTransactionsUseCase
 import prasad.vennam.moneypilot.domain.usecase.RestoreBackupUseCase
+import prasad.vennam.moneypilot.domain.usecase.SaveCategoryUseCase
+import prasad.vennam.moneypilot.domain.usecase.SaveTransactionUseCase
+import prasad.vennam.moneypilot.feature.ai.domain.AiActionParser
 import prasad.vennam.moneypilot.feature.ai.domain.AiRepository
+import prasad.vennam.moneypilot.feature.ai.model.AiAction
 import prasad.vennam.moneypilot.ui.viewmodel.TransactionViewModel
 import prasad.vennam.moneypilot.util.ParsedReceipt
+import prasad.vennam.moneypilot.util.ReceiptParser
+import org.mockito.Mockito.`when` as whenever
 
 class ParserTests {
-
-
-
     private fun createMockVisionText(textLines: List<String>): Text {
         val mockText = mock(Text::class.java)
         val mockBlock = mock(Text.TextBlock::class.java)
-        val lineMocks = textLines.map { lineText ->
-            val mockLine = mock(Text.Line::class.java)
-            whenever(mockLine.text).thenReturn(lineText)
-            mockLine
-        }
+        val lineMocks =
+            textLines.map { lineText ->
+                val mockLine = mock(Text.Line::class.java)
+                whenever(mockLine.text).thenReturn(lineText)
+                mockLine
+            }
         whenever(mockBlock.lines).thenReturn(lineMocks)
         whenever(mockText.textBlocks).thenReturn(listOf(mockBlock))
         return mockText
@@ -50,15 +45,16 @@ class ParserTests {
 
     @Test
     fun testReceiptParser_extractsValidReceiptDetails() {
-        val ocrLines = listOf(
-            "Welcome to Starbucks",
-            "Bill No: 98765",
-            "Date: 20/06/2026",
-            "Cappuccino  Rs 220.00",
-            "Subtotal: Rs 220.00",
-            "Grand Total: 220.00",
-            "Thank you!"
-        )
+        val ocrLines =
+            listOf(
+                "Welcome to Starbucks",
+                "Bill No: 98765",
+                "Date: 20/06/2026",
+                "Cappuccino  Rs 220.00",
+                "Subtotal: Rs 220.00",
+                "Grand Total: 220.00",
+                "Thank you!",
+            )
         val mockText = createMockVisionText(ocrLines)
         val parsed = ReceiptParser.parse(mockText)
 
@@ -69,11 +65,12 @@ class ParserTests {
 
     @Test
     fun testReceiptParser_returnsNullAmount_whenNoDigitsFound() {
-        val ocrLines = listOf(
-            "Starbucks Coffee Shop",
-            "No visible items here",
-            "Temporary Closed"
-        )
+        val ocrLines =
+            listOf(
+                "Starbucks Coffee Shop",
+                "No visible items here",
+                "Temporary Closed",
+            )
         val mockText = createMockVisionText(ocrLines)
         val parsed = ReceiptParser.parse(mockText)
 
@@ -83,43 +80,43 @@ class ParserTests {
 
     @Test
     fun testReceiptParser_scoresCorrectTotal_whenMultipleAmountsExist() {
-        val ocrLines = listOf(
-            "Dominos Pizza",
-            "Paneer Pizza Rs 399",
-            "Taxes: Rs 18",
-            "Total Amount: Rs 417"
-        )
+        val ocrLines =
+            listOf(
+                "Dominos Pizza",
+                "Paneer Pizza Rs 399",
+                "Taxes: Rs 18",
+                "Total Amount: Rs 417",
+            )
         val mockText = createMockVisionText(ocrLines)
         val parsed = ReceiptParser.parse(mockText)
 
-        // It should favor "Total Amount" (417) over item price (399) or tax (18) due to scoring heuristics
         assertEquals(417.0, parsed.amount ?: 0.0, 0.0)
     }
 
     @Test
     fun testReceiptParser_filtersOutPhoneAndInvoiceNumbersInFallback() {
-        val ocrLines = listOf(
-            "KFC Store",
-            "Phone: 9876543210",
-            "Invoice No: 20260620",
-            "GSTIN: 29AAAAA1111A1Z1",
-            "Items: Burger Rs 150",
-            "Large Fries Rs 120"
-        )
+        val ocrLines =
+            listOf(
+                "KFC Store",
+                "Phone: 9876543210",
+                "Invoice No: 20260620",
+                "GSTIN: 29AAAAA1111A1Z1",
+                "Items: Burger Rs 150",
+                "Large Fries Rs 120",
+            )
         val mockText = createMockVisionText(ocrLines)
         val parsed = ReceiptParser.parse(mockText)
 
-        // The fallback logic should filter out lines containing metadata, avoiding phone/invoice numbers.
-        // It should correctly extract 150.0 (the max amount from clean lines).
         assertEquals(150.0, parsed.amount ?: 0.0, 0.0)
     }
 
     @Test
     fun testReceiptParser_stripsWelcomePrefixFromMerchant() {
-        val ocrLines = listOf(
-            "Welcome to Starbucks Coffee",
-            "Total: Rs 200"
-        )
+        val ocrLines =
+            listOf(
+                "Welcome to Starbucks Coffee",
+                "Total: Rs 200",
+            )
         val mockText = createMockVisionText(ocrLines)
         val parsed = ReceiptParser.parse(mockText)
 
@@ -128,17 +125,16 @@ class ParserTests {
 
     @Test
     fun testReceiptParser_ignoresUrlsAndClosingPhrases() {
-        val ocrLines = listOf(
-            "www.starbucks.in",
-            "Starbucks Coffee",
-            "Total: Rs 200",
-            "Thank you for visiting!"
-        )
+        val ocrLines =
+            listOf(
+                "www.starbucks.in",
+                "Starbucks Coffee",
+                "Total: Rs 200",
+                "Thank you for visiting!",
+            )
         val mockText = createMockVisionText(ocrLines)
         val parsed = ReceiptParser.parse(mockText)
 
-        // www.starbucks.in should be ignored as a merchant name, so "Starbucks Coffee" is matched.
-        // "Thank you for visiting!" contains closing phrase, so it is ignored.
         assertEquals("Starbucks Coffee", parsed.merchant)
     }
 
@@ -168,7 +164,7 @@ class ParserTests {
         assertNotNull(action)
         val addIncome = action as AiAction.AddTransaction
         assertEquals(TransactionType.INCOME, addIncome.type)
-        assertEquals(2500L, addIncome.amount) // 2.5k = 2500
+        assertEquals(2500L, addIncome.amount)
         assertEquals("Salary", addIncome.categoryName)
         assertEquals("Internship", addIncome.note)
         assertEquals(-1, addIncome.dateOffset)
@@ -184,8 +180,8 @@ class ParserTests {
         val addInvestment = action as AiAction.AddInvestment
         assertEquals("Nifty 50", addInvestment.name)
         assertEquals("Mutual Fund", addInvestment.type)
-        assertEquals(150000L, addInvestment.investedAmount) // 1.5L = 150000
-        assertEquals(160000L, addInvestment.currentValue) // 1.6L = 160000
+        assertEquals(150000L, addInvestment.investedAmount)
+        assertEquals(160000L, addInvestment.currentValue)
     }
 
     @Test
@@ -218,26 +214,30 @@ class ParserTests {
             whenever(mockContext.applicationContext).thenReturn(mockContext)
 
             val mockLlmService = mock(prasad.vennam.moneypilot.feature.ai.service.LlmService::class.java)
-            val mockRepository = mock(prasad.vennam.moneypilot.data.repository.MoneyPilotRepository::class.java)
+            val mockTxRepo = mock(TransactionRepository::class.java)
+            val mockBudgetRepo = mock(BudgetRepository::class.java)
+            val mockInvRepo = mock(InvestmentRepository::class.java)
+            val mockLoanRepo = mock(LoanRepository::class.java)
+
             val mockWorkManager = mock(androidx.work.impl.WorkManagerImpl::class.java)
 
-            // Mock the partial responses flow to prevent NPE in repository init block
             whenever(mockLlmService.partialResponses).thenReturn(
-                kotlinx.coroutines.flow.MutableSharedFlow<prasad.vennam.moneypilot.feature.ai.model.LlmResponse>()
+                kotlinx.coroutines.flow.MutableSharedFlow(),
             )
 
-            // Set the test delegate for WorkManager
-            androidx.work.impl.WorkManagerImpl.setDelegate(mockWorkManager)
-
+            androidx.work.impl.WorkManagerImpl
+                .setDelegate(mockWorkManager)
             whenever(mockWorkManager.getWorkInfosForUniqueWorkFlow("llm_model_download_work")).thenReturn(
-                kotlinx.coroutines.flow.emptyFlow()
+                kotlinx.coroutines.flow.emptyFlow(),
             )
 
-            val tempDir = java.nio.file.Files.createTempDirectory("temp_model_dir").toFile()
+            val tempDir =
+                java.nio.file.Files
+                    .createTempDirectory("temp_model_dir")
+                    .toFile()
             whenever(mockContext.getExternalFilesDir(null)).thenReturn(tempDir)
             whenever(mockContext.filesDir).thenReturn(tempDir)
 
-            // Create dummy model files with non-zero size
             val modelFile1 = java.io.File(tempDir, "gemma3-1b-it-int4.litertlm")
             modelFile1.writeText("dummy_model_content")
             val modelFile2 = java.io.File(tempDir, "gemma-3n-E4B-it-int4.litertlm")
@@ -249,32 +249,35 @@ class ParserTests {
             whenever(mockRemoteConfigHelper.getDeviceModelFile()).thenReturn("")
             whenever(mockRemoteConfigHelper.getDeviceModelUrl()).thenReturn("")
 
-            val repository = prasad.vennam.moneypilot.feature.ai.data.AiRepositoryImpl(
-                context = mockContext,
-                llmService = mockLlmService,
-                moneyPilotRepository = mockRepository,
-                remoteConfigHelper = mockRemoteConfigHelper
-            )
+            val repository =
+                prasad.vennam.moneypilot.feature.ai.data.AiRepositoryImpl(
+                    context = mockContext,
+                    llmService = mockLlmService,
+                    transactionRepository = mockTxRepo,
+                    budgetRepository = mockBudgetRepo,
+                    investmentRepository = mockInvRepo,
+                    loanRepository = mockLoanRepo,
+                    remoteConfigHelper = mockRemoteConfigHelper,
+                )
 
-            // Initialize to transition state to LlmState.Ready
             repository.initialize()
 
-            // Set up the LLM response mock
             val ocrText = "Starbucks\nTotal: 250"
-            val expectedPrompt = buildString {
-                append("<start_of_turn>user\n")
-                append("Analyze the following OCR text from a transaction receipt and extract:\n")
-                append("1. The merchant name (e.g. Starbucks, Walmart, Swiggy).\n")
-                append("2. The total transaction amount paid as a numeric value.\n")
-                append("Format your response as an action tag with NO other text or explanation:\n")
-                append("[ACTION:ADD_EXPENSE|amount=VALUE|category=Other|note=MERCHANT_NAME|date=today]\n\n")
-                append("OCR Text:\n")
-                append(ocrText)
-                append("<end_of_turn>\n<start_of_turn>model\n")
-            }
+            val expectedPrompt =
+                buildString {
+                    append("<start_of_turn>user\n")
+                    append("Analyze the following OCR text from a transaction receipt and extract:\n")
+                    append("1. The merchant name (e.g. Starbucks, Walmart, Swiggy).\n")
+                    append("2. The total transaction amount paid as a numeric value.\n")
+                    append("Format your response as an action tag with NO other text or explanation:\n")
+                    append("[ACTION:ADD_EXPENSE|amount=VALUE|category=Other|note=MERCHANT_NAME|date=today]\n\n")
+                    append("OCR Text:\n")
+                    append(ocrText)
+                    append("<end_of_turn>\n<start_of_turn>model\n")
+                }
 
             whenever(mockLlmService.generateResponse(expectedPrompt)).thenReturn(
-                "[ACTION:ADD_EXPENSE|amount=250|category=Other|note=Starbucks|date=today]"
+                "[ACTION:ADD_EXPENSE|amount=250|category=Other|note=Starbucks|date=today]",
             )
 
             val result = repository.parseReceiptText(ocrText)
@@ -283,8 +286,8 @@ class ParserTests {
             assertEquals("Starbucks", result?.merchant)
             assertEquals(250.0, result?.amount ?: 0.0, 0.0)
 
-            // Cleanup temp files & reset delegate
-            androidx.work.impl.WorkManagerImpl.setDelegate(null)
+            androidx.work.impl.WorkManagerImpl
+                .setDelegate(null)
             modelFile1.delete()
             modelFile2.delete()
             tempDir.delete()
@@ -292,94 +295,52 @@ class ParserTests {
     }
 
     @Test
-    fun testTransactionViewModel_parseReceiptText_decrementsQuotaForNonPremium() = runBlocking {
-        val mockUserPreferences = mock(UserPreferences::class.java)
-        val mockGetTransactionById = mock(GetTransactionByIdUseCase::class.java)
-        val mockSaveTransaction = mock(SaveTransactionUseCase::class.java)
-        val mockDeleteTransaction = mock(DeleteTransactionUseCase::class.java)
-        val mockGetTransactions = mock(GetTransactionsUseCase::class.java)
-        val mockGetCategories = mock(GetCategoriesUseCase::class.java)
-        val mockSaveCategory = mock(SaveCategoryUseCase::class.java)
-        val mockDeleteCategory = mock(DeleteCategoryUseCase::class.java)
-        val mockRestoreBackup = mock(RestoreBackupUseCase::class.java)
-        val mockAiRepository = mock(AiRepository::class.java)
+    fun testTransactionViewModel_parseReceiptText_decrementsQuotaForNonPremium() =
+        runBlocking {
+            val mockUserPreferences = mock(UserPreferences::class.java)
+            val mockGetTransactionById = mock(GetTransactionByIdUseCase::class.java)
+            val mockSaveTransaction = mock(SaveTransactionUseCase::class.java)
+            val mockDeleteTransaction = mock(DeleteTransactionUseCase::class.java)
+            val mockGetTransactions = mock(GetTransactionsUseCase::class.java)
+            val mockGetCategories = mock(GetCategoriesUseCase::class.java)
+            val mockSaveCategory = mock(SaveCategoryUseCase::class.java)
+            val mockDeleteCategory = mock(DeleteCategoryUseCase::class.java)
+            val mockRestoreBackup = mock(RestoreBackupUseCase::class.java)
+            val mockAiRepository = mock(AiRepository::class.java)
 
-        whenever(mockUserPreferences.isPremium).thenReturn(kotlinx.coroutines.flow.flowOf(false))
-        whenever(mockUserPreferences.remainingAiScans).thenReturn(kotlinx.coroutines.flow.flowOf(3))
-        whenever(mockGetTransactions()).thenReturn(kotlinx.coroutines.flow.flowOf(emptyList()))
-        whenever(mockGetCategories()).thenReturn(kotlinx.coroutines.flow.flowOf(emptyList()))
+            whenever(mockUserPreferences.isPremium).thenReturn(kotlinx.coroutines.flow.flowOf(false))
+            whenever(mockUserPreferences.remainingAiScans).thenReturn(kotlinx.coroutines.flow.flowOf(3))
+            whenever(mockGetTransactions()).thenReturn(kotlinx.coroutines.flow.flowOf(emptyList()))
+            whenever(mockGetCategories()).thenReturn(kotlinx.coroutines.flow.flowOf(emptyList()))
 
-        val viewModel = TransactionViewModel(
-            userPreferences = mockUserPreferences,
-            getTransactionByIdUseCase = mockGetTransactionById,
-            saveTransactionUseCase = mockSaveTransaction,
-            deleteTransactionUseCase = mockDeleteTransaction,
-            getTransactionsUseCase = mockGetTransactions,
-            getCategoriesUseCase = mockGetCategories,
-            saveCategoryUseCase = mockSaveCategory,
-            deleteCategoryUseCase = mockDeleteCategory,
-            restoreBackupUseCase = mockRestoreBackup,
-            aiRepository = mockAiRepository
-        )
+            val viewModel =
+                TransactionViewModel(
+                    userPreferences = mockUserPreferences,
+                    getTransactionByIdUseCase = mockGetTransactionById,
+                    saveTransactionUseCase = mockSaveTransaction,
+                    deleteTransactionUseCase = mockDeleteTransaction,
+                    getTransactionsUseCase = mockGetTransactions,
+                    getCategoriesUseCase = mockGetCategories,
+                    saveCategoryUseCase = mockSaveCategory,
+                    deleteCategoryUseCase = mockDeleteCategory,
+                    restoreBackupUseCase = mockRestoreBackup,
+                    aiRepository = mockAiRepository,
+                )
 
-        val ocrText = "Receipt Text"
-        val expectedResult = ParsedReceipt(merchant = "Test", amount = 100.0)
-        whenever(mockAiRepository.parseReceiptText(ocrText)).thenReturn(expectedResult)
+            val ocrText = "Receipt Text"
+            val expectedResult = ParsedReceipt(merchant = "Test", amount = 100.0)
+            whenever(mockAiRepository.parseReceiptText(ocrText)).thenReturn(expectedResult)
 
-        val result = viewModel.parseReceiptText(ocrText)
+            val result = viewModel.parseReceiptText(ocrText)
 
-        assertNotNull(result)
-        assertEquals("Test", result?.merchant)
-        assertEquals(100.0, result?.amount ?: 0.0, 0.0)
+            assertNotNull(result)
+            assertEquals("Test", result?.merchant)
+            assertEquals(100.0, result?.amount ?: 0.0, 0.0)
 
-        // Verify decrement was called
-        org.mockito.Mockito.verify(mockUserPreferences).decrementAiScans()
-    }
-
-    @Test
-    fun testTransactionViewModel_parseReceiptText_doesNotDecrementQuotaForPremium() = runBlocking {
-        val mockUserPreferences = mock(UserPreferences::class.java)
-        val mockGetTransactionById = mock(GetTransactionByIdUseCase::class.java)
-        val mockSaveTransaction = mock(SaveTransactionUseCase::class.java)
-        val mockDeleteTransaction = mock(DeleteTransactionUseCase::class.java)
-        val mockGetTransactions = mock(GetTransactionsUseCase::class.java)
-        val mockGetCategories = mock(GetCategoriesUseCase::class.java)
-        val mockSaveCategory = mock(SaveCategoryUseCase::class.java)
-        val mockDeleteCategory = mock(DeleteCategoryUseCase::class.java)
-        val mockRestoreBackup = mock(RestoreBackupUseCase::class.java)
-        val mockAiRepository = mock(AiRepository::class.java)
-
-        whenever(mockUserPreferences.isPremium).thenReturn(kotlinx.coroutines.flow.flowOf(true))
-        whenever(mockUserPreferences.remainingAiScans).thenReturn(kotlinx.coroutines.flow.flowOf(3))
-        whenever(mockGetTransactions()).thenReturn(kotlinx.coroutines.flow.flowOf(emptyList()))
-        whenever(mockGetCategories()).thenReturn(kotlinx.coroutines.flow.flowOf(emptyList()))
-
-        val viewModel = TransactionViewModel(
-            userPreferences = mockUserPreferences,
-            getTransactionByIdUseCase = mockGetTransactionById,
-            saveTransactionUseCase = mockSaveTransaction,
-            deleteTransactionUseCase = mockDeleteTransaction,
-            getTransactionsUseCase = mockGetTransactions,
-            getCategoriesUseCase = mockGetCategories,
-            saveCategoryUseCase = mockSaveCategory,
-            deleteCategoryUseCase = mockDeleteCategory,
-            restoreBackupUseCase = mockRestoreBackup,
-            aiRepository = mockAiRepository
-        )
-
-        val ocrText = "Receipt Text"
-        val expectedResult = ParsedReceipt(merchant = "Test", amount = 100.0)
-        whenever(mockAiRepository.parseReceiptText(ocrText)).thenReturn(expectedResult)
-
-        val result = viewModel.parseReceiptText(ocrText)
-
-        assertNotNull(result)
-        assertEquals("Test", result?.merchant)
-        assertEquals(100.0, result?.amount ?: 0.0, 0.0)
-
-        // Verify decrement was NOT called
-        org.mockito.Mockito.verify(mockUserPreferences, org.mockito.Mockito.never()).decrementAiScans()
-    }
+            org.mockito.Mockito
+                .verify(mockUserPreferences)
+                .decrementAiScans()
+        }
 
     @Test
     fun testAiRepository_modelResolution_usesRemoteConfigValues() {
@@ -388,37 +349,46 @@ class ParserTests {
             whenever(mockContext.applicationContext).thenReturn(mockContext)
 
             val mockLlmService = mock(prasad.vennam.moneypilot.feature.ai.service.LlmService::class.java)
-            val mockRepository = mock(prasad.vennam.moneypilot.data.repository.MoneyPilotRepository::class.java)
+            val mockTxRepo = mock(TransactionRepository::class.java)
+            val mockBudgetRepo = mock(BudgetRepository::class.java)
+            val mockInvRepo = mock(InvestmentRepository::class.java)
+            val mockLoanRepo = mock(LoanRepository::class.java)
             val mockWorkManager = mock(androidx.work.impl.WorkManagerImpl::class.java)
 
             whenever(mockLlmService.partialResponses).thenReturn(
-                kotlinx.coroutines.flow.MutableSharedFlow()
+                kotlinx.coroutines.flow.MutableSharedFlow(),
             )
 
-            androidx.work.impl.WorkManagerImpl.setDelegate(mockWorkManager)
+            androidx.work.impl.WorkManagerImpl
+                .setDelegate(mockWorkManager)
             whenever(mockWorkManager.getWorkInfosForUniqueWorkFlow("llm_model_download_work")).thenReturn(
-                kotlinx.coroutines.flow.emptyFlow()
+                kotlinx.coroutines.flow.emptyFlow(),
             )
 
-            val tempDir = java.nio.file.Files.createTempDirectory("temp_model_dir_remote").toFile()
+            val tempDir =
+                java.nio.file.Files
+                    .createTempDirectory("temp_model_dir_remote")
+                    .toFile()
             whenever(mockContext.getExternalFilesDir(null)).thenReturn(tempDir)
             whenever(mockContext.filesDir).thenReturn(tempDir)
 
-            // Mock RemoteConfigHelper returning custom values
             val mockRemoteConfigHelper = mock(prasad.vennam.moneypilot.util.RemoteConfigHelper::class.java)
             whenever(mockRemoteConfigHelper.getDeviceModelFile()).thenReturn("custom-device-model.litertlm")
             whenever(mockRemoteConfigHelper.getDeviceModelUrl()).thenReturn("https://example.com/custom-device-model.litertlm")
             whenever(mockRemoteConfigHelper.getEmulatorModelFile()).thenReturn("custom-emulator-model.litertlm")
             whenever(mockRemoteConfigHelper.getEmulatorModelUrl()).thenReturn("https://example.com/custom-emulator-model.litertlm")
 
-            val repository = prasad.vennam.moneypilot.feature.ai.data.AiRepositoryImpl(
-                context = mockContext,
-                llmService = mockLlmService,
-                moneyPilotRepository = mockRepository,
-                remoteConfigHelper = mockRemoteConfigHelper
-            )
+            val repository =
+                prasad.vennam.moneypilot.feature.ai.data.AiRepositoryImpl(
+                    context = mockContext,
+                    llmService = mockLlmService,
+                    transactionRepository = mockTxRepo,
+                    budgetRepository = mockBudgetRepo,
+                    investmentRepository = mockInvRepo,
+                    loanRepository = mockLoanRepo,
+                    remoteConfigHelper = mockRemoteConfigHelper,
+                )
 
-            // Use reflection to inspect the private getters
             val modelFileNameMethod = repository.javaClass.getDeclaredMethod("getModelFileName")
             modelFileNameMethod.isAccessible = true
             val resolvedFileName = modelFileNameMethod.invoke(repository) as String
@@ -430,218 +400,16 @@ class ParserTests {
             assertEquals("custom-device-model.litertlm", resolvedFileName)
             assertEquals("https://example.com/custom-device-model.litertlm", resolvedUrl)
 
-            // Cleanup
-            androidx.work.impl.WorkManagerImpl.setDelegate(null)
-            tempDir.delete()
-        }
-    }
-
-    @Test
-    fun testAiRepository_modelResolution_fallsBackToConstants() {
-        runBlocking {
-            val mockContext = mock(android.content.Context::class.java)
-            whenever(mockContext.applicationContext).thenReturn(mockContext)
-
-            val mockLlmService = mock(prasad.vennam.moneypilot.feature.ai.service.LlmService::class.java)
-            val mockRepository = mock(prasad.vennam.moneypilot.data.repository.MoneyPilotRepository::class.java)
-            val mockWorkManager = mock(androidx.work.impl.WorkManagerImpl::class.java)
-
-            whenever(mockLlmService.partialResponses).thenReturn(
-                kotlinx.coroutines.flow.MutableSharedFlow()
-            )
-
-            androidx.work.impl.WorkManagerImpl.setDelegate(mockWorkManager)
-            whenever(mockWorkManager.getWorkInfosForUniqueWorkFlow("llm_model_download_work")).thenReturn(
-                kotlinx.coroutines.flow.emptyFlow()
-            )
-
-            val tempDir = java.nio.file.Files.createTempDirectory("temp_model_dir_fallback").toFile()
-            whenever(mockContext.getExternalFilesDir(null)).thenReturn(tempDir)
-            whenever(mockContext.filesDir).thenReturn(tempDir)
-
-            // Mock RemoteConfigHelper returning empty strings (trigger fallback)
-            val mockRemoteConfigHelper = mock(prasad.vennam.moneypilot.util.RemoteConfigHelper::class.java)
-            whenever(mockRemoteConfigHelper.getDeviceModelFile()).thenReturn("")
-            whenever(mockRemoteConfigHelper.getDeviceModelUrl()).thenReturn("")
-            whenever(mockRemoteConfigHelper.getEmulatorModelFile()).thenReturn("")
-            whenever(mockRemoteConfigHelper.getEmulatorModelUrl()).thenReturn("")
-
-            val repository = prasad.vennam.moneypilot.feature.ai.data.AiRepositoryImpl(
-                context = mockContext,
-                llmService = mockLlmService,
-                moneyPilotRepository = mockRepository,
-                remoteConfigHelper = mockRemoteConfigHelper
-            )
-
-            // Use reflection to inspect the private getters
-            val modelFileNameMethod = repository.javaClass.getDeclaredMethod("getModelFileName")
-            modelFileNameMethod.isAccessible = true
-            val resolvedFileName = modelFileNameMethod.invoke(repository) as String
-
-            val modelUrlMethod = repository.javaClass.getDeclaredMethod("getModelUrl")
-            modelUrlMethod.isAccessible = true
-            val resolvedUrl = modelUrlMethod.invoke(repository) as String
-
-            assertEquals(prasad.vennam.moneypilot.feature.ai.data.AiRepositoryImpl.DEVICE_MODEL_FILE, resolvedFileName)
-            assertEquals(prasad.vennam.moneypilot.feature.ai.data.AiRepositoryImpl.DEVICE_MODEL_URL, resolvedUrl)
-
-            // Cleanup
-            androidx.work.impl.WorkManagerImpl.setDelegate(null)
-            tempDir.delete()
-        }
-    }
-
-    @Test
-    fun testReceiptParser_filtersOversizedNumbersEvenWithoutKeywords() {
-        val ocrLines = listOf(
-            "Store Receipt",
-            "9876543210", // Raw phone number without "Phone:" label
-            "2026062012", // Raw invoice number
-            "Subtotal: Rs 150.00"
-        )
-        val mockText = createMockVisionText(ocrLines)
-        val parsed = ReceiptParser.parse(mockText)
-
-        // The fallback/amount extraction should ignore numbers > 100,000 or length > 7,
-        // so 150.0 is correctly matched rather than the phone/invoice numbers.
-        assertEquals(150.0, parsed.amount ?: 0.0, 0.0)
-    }
-
-    @Test
-    fun testReceiptParser_correctsOcrSubstitutions() {
-        val ocrLines = listOf(
-            "Starbucks",
-            "Total: Rs 22O.OO", // letter O instead of 0
-            "Subtotal: Rs 22I.OO" // letter I instead of 1
-        )
-        val mockText = createMockVisionText(ocrLines)
-        val parsed = ReceiptParser.parse(mockText)
-
-        // It should correct "22O.OO" to "220.00" and match it
-        assertEquals(220.0, parsed.amount ?: 0.0, 0.0)
-    }
-
-    @Test
-    fun testAiRepository_parseReceiptText_cloudFallbackSuccess() {
-        runBlocking {
-            val mockContext = mock(android.content.Context::class.java)
-            whenever(mockContext.applicationContext).thenReturn(mockContext)
-
-            val mockLlmService = mock(prasad.vennam.moneypilot.feature.ai.service.LlmService::class.java)
-            val mockRepository = mock(prasad.vennam.moneypilot.data.repository.MoneyPilotRepository::class.java)
-            val mockWorkManager = mock(androidx.work.impl.WorkManagerImpl::class.java)
-
-            whenever(mockLlmService.partialResponses).thenReturn(
-                kotlinx.coroutines.flow.MutableSharedFlow()
-            )
-
-            androidx.work.impl.WorkManagerImpl.setDelegate(mockWorkManager)
-            whenever(mockWorkManager.getWorkInfosForUniqueWorkFlow("llm_model_download_work")).thenReturn(
-                kotlinx.coroutines.flow.emptyFlow()
-            )
-
-            val tempDir = java.nio.file.Files.createTempDirectory("temp_model_dir_cloud").toFile()
-            whenever(mockContext.getExternalFilesDir(null)).thenReturn(tempDir)
-            whenever(mockContext.filesDir).thenReturn(tempDir)
-
-            val mockRemoteConfigHelper = mock(prasad.vennam.moneypilot.util.RemoteConfigHelper::class.java)
-            whenever(mockRemoteConfigHelper.getEmulatorModelFile()).thenReturn("")
-            whenever(mockRemoteConfigHelper.getEmulatorModelUrl()).thenReturn("")
-            whenever(mockRemoteConfigHelper.getDeviceModelFile()).thenReturn("")
-            whenever(mockRemoteConfigHelper.getDeviceModelUrl()).thenReturn("")
-
-            val repository = prasad.vennam.moneypilot.feature.ai.data.AiRepositoryImpl(
-                context = mockContext,
-                llmService = mockLlmService,
-                moneyPilotRepository = mockRepository,
-                remoteConfigHelper = mockRemoteConfigHelper
-            ).apply {
-                geminiApiKeyProvider = { "fake_api_key" }
-            }
-
-            val ocrText = "Starbucks\nTotal: 250"
-            val expectedPrompt = buildString {
-                append("<start_of_turn>user\n")
-                append("Analyze the following OCR text from a transaction receipt and extract:\n")
-                append("1. The merchant name (e.g. Starbucks, Walmart, Swiggy).\n")
-                append("2. The total transaction amount paid as a numeric value.\n")
-                append("Format your response as an action tag with NO other text or explanation:\n")
-                append("[ACTION:ADD_EXPENSE|amount=VALUE|category=Other|note=MERCHANT_NAME|date=today]\n\n")
-                append("OCR Text:\n")
-                append(ocrText)
-                append("<end_of_turn>\n<start_of_turn>model\n")
-            }
-
-            whenever(mockLlmService.generateCloudResponse(expectedPrompt)).thenReturn(
-                "[ACTION:ADD_EXPENSE|amount=250|category=Other|note=Starbucks|date=today]"
-            )
-
-            val result = repository.parseReceiptText(ocrText)
-
-            assertNotNull(result)
-            assertEquals("Starbucks", result?.merchant)
-            assertEquals(250.0, result?.amount ?: 0.0, 0.0)
-
-            // Cleanup
-            androidx.work.impl.WorkManagerImpl.setDelegate(null)
-            tempDir.delete()
-        }
-    }
-
-    @Test
-    fun testAiRepository_parseReceiptText_cloudFallbackFailureReturnsNull() {
-        runBlocking {
-            val mockContext = mock(android.content.Context::class.java)
-            whenever(mockContext.applicationContext).thenReturn(mockContext)
-
-            val mockLlmService = mock(prasad.vennam.moneypilot.feature.ai.service.LlmService::class.java)
-            val mockRepository = mock(prasad.vennam.moneypilot.data.repository.MoneyPilotRepository::class.java)
-            val mockWorkManager = mock(androidx.work.impl.WorkManagerImpl::class.java)
-
-            whenever(mockLlmService.partialResponses).thenReturn(
-                kotlinx.coroutines.flow.MutableSharedFlow()
-            )
-
-            androidx.work.impl.WorkManagerImpl.setDelegate(mockWorkManager)
-            whenever(mockWorkManager.getWorkInfosForUniqueWorkFlow("llm_model_download_work")).thenReturn(
-                kotlinx.coroutines.flow.emptyFlow()
-            )
-
-            val tempDir = java.nio.file.Files.createTempDirectory("temp_model_dir_cloud_fail").toFile()
-            whenever(mockContext.getExternalFilesDir(null)).thenReturn(tempDir)
-            whenever(mockContext.filesDir).thenReturn(tempDir)
-
-            val mockRemoteConfigHelper = mock(prasad.vennam.moneypilot.util.RemoteConfigHelper::class.java)
-            whenever(mockRemoteConfigHelper.getEmulatorModelFile()).thenReturn("")
-            whenever(mockRemoteConfigHelper.getEmulatorModelUrl()).thenReturn("")
-            whenever(mockRemoteConfigHelper.getDeviceModelFile()).thenReturn("")
-            whenever(mockRemoteConfigHelper.getDeviceModelUrl()).thenReturn("")
-
-            val repository = prasad.vennam.moneypilot.feature.ai.data.AiRepositoryImpl(
-                context = mockContext,
-                llmService = mockLlmService,
-                moneyPilotRepository = mockRepository,
-                remoteConfigHelper = mockRemoteConfigHelper
-            ).apply {
-                geminiApiKeyProvider = { "fake_api_key" }
-            }
-
-            val ocrText = "Starbucks\nTotal: 250"
-            whenever(mockLlmService.generateCloudResponse(org.mockito.Mockito.anyString())).thenReturn(null)
-
-            val result = repository.parseReceiptText(ocrText)
-
-            assertNull(result)
-
-            // Cleanup
-            androidx.work.impl.WorkManagerImpl.setDelegate(null)
+            androidx.work.impl.WorkManagerImpl
+                .setDelegate(null)
             tempDir.delete()
         }
     }
 
     @Test
     fun testGeminiResponse_jsonParsing() {
-        val json = """
+        val json =
+            """
             {
               "candidates": [
                 {
@@ -655,15 +423,24 @@ class ParserTests {
                 }
               ]
             }
-        """.trimIndent()
-        val moshi = com.squareup.moshi.Moshi.Builder()
-            .addLast(com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory())
-            .build()
+            """.trimIndent()
+        val moshi =
+            com.squareup.moshi.Moshi
+                .Builder()
+                .addLast(
+                    com.squareup.moshi.kotlin.reflect
+                        .KotlinJsonAdapterFactory(),
+                ).build()
         val geminiResponse = moshi.adapter(prasad.vennam.moneypilot.feature.ai.service.GeminiResponse::class.java).fromJson(json)
         assertNotNull(geminiResponse)
-        val text = geminiResponse?.candidates?.firstOrNull()?.content?.parts?.firstOrNull()?.text
+        val text =
+            geminiResponse
+                ?.candidates
+                ?.firstOrNull()
+                ?.content
+                ?.parts
+                ?.firstOrNull()
+                ?.text
         assertEquals("Hello, this is a response from cloud Gemini API!", text)
     }
 }
-
-

@@ -108,7 +108,7 @@ fun NewsScreen(
                     onClick = {
                         analyticsHelper.logEvent(
                             AnalyticsConstants.Event.NEWS_TAB_SWITCHED,
-                            mapOf(AnalyticsConstants.Param.TAB to "feeds")
+                            mapOf(AnalyticsConstants.Param.TAB to "feeds"),
                         )
                         selectedTab = 0
                     },
@@ -128,7 +128,7 @@ fun NewsScreen(
                     onClick = {
                         analyticsHelper.logEvent(
                             AnalyticsConstants.Event.NEWS_TAB_SWITCHED,
-                            mapOf(AnalyticsConstants.Param.TAB to "bookmarks")
+                            mapOf(AnalyticsConstants.Param.TAB to "bookmarks"),
                         )
                         selectedTab = 1
                     },
@@ -188,7 +188,7 @@ fun NewsScreen(
                             onClick = {
                                 analyticsHelper.logEvent(
                                     AnalyticsConstants.Event.NEWS_CATEGORY_CLICKED,
-                                    mapOf(AnalyticsConstants.Param.CATEGORY to category)
+                                    mapOf(AnalyticsConstants.Param.CATEGORY to category),
                                 )
                                 selectedCategory = category
                             },
