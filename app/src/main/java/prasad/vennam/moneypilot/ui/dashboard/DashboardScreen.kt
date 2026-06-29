@@ -1212,14 +1212,13 @@ fun PendingReviewBottomSheet(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 20.dp)
                     .padding(bottom = 24.dp),
         ) {
             Text(
                 text = stringResource(R.string.verify_pending_transactions_desc),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(bottom = 16.dp),
+                modifier = Modifier.padding(bottom = 16.dp, start = 4.dp, end = 4.dp),
             )
 
             LazyColumn(
@@ -1375,7 +1374,7 @@ fun PendingReviewBottomSheet(
 
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
                             ) {
                                 OutlinedButton(
                                     onClick = { onDismiss(pending) },
@@ -1390,28 +1389,38 @@ fun PendingReviewBottomSheet(
                                             MaterialTheme.colorScheme.error.copy(alpha = 0.5f),
                                         ),
                                     shape = RoundedCornerShape(12.dp),
+                                    contentPadding = PaddingValues(horizontal = 8.dp),
                                 ) {
                                     Icon(
                                         imageVector = Icons.Rounded.Delete,
                                         contentDescription = null,
-                                        modifier = Modifier.size(18.dp),
+                                        modifier = Modifier.size(16.dp),
                                     )
-                                    Spacer(modifier = Modifier.width(6.dp))
-                                    Text(stringResource(R.string.dismiss))
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        text = stringResource(R.string.dismiss),
+                                        style = MaterialTheme.typography.labelLarge,
+                                        maxLines = 1,
+                                    )
                                 }
 
                                 Button(
                                     onClick = { onApprove(pending, chosenCategory?.id, currentNote) },
-                                    modifier = Modifier.weight(1.5f),
+                                    modifier = Modifier.weight(1f),
                                     shape = RoundedCornerShape(12.dp),
+                                    contentPadding = PaddingValues(horizontal = 8.dp),
                                 ) {
                                     Icon(
                                         imageVector = Icons.Rounded.Check,
                                         contentDescription = null,
-                                        modifier = Modifier.size(18.dp),
+                                        modifier = Modifier.size(16.dp),
                                     )
-                                    Spacer(modifier = Modifier.width(6.dp))
-                                    Text(stringResource(R.string.approve))
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        text = stringResource(R.string.approve),
+                                        style = MaterialTheme.typography.labelLarge,
+                                        maxLines = 1,
+                                    )
                                 }
                             }
                         }

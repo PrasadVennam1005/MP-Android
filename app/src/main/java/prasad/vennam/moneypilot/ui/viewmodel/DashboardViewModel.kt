@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
@@ -57,6 +58,7 @@ data class DashboardState(
     val selectedTimeFrame: TimeFrame = TimeFrame.MONTHLY,
     val pendingTransactions: List<PendingTransaction> = emptyList(),
     val isLearnFinanceEnabled: Boolean = false,
+    val errorMessage: String? = null,
 )
 
 private data class DashboardData(
@@ -247,6 +249,9 @@ class DashboardViewModel
                     isLearnFinanceEnabled = remoteConfigHelper.isLearnFinanceEnabled(),
                 )
             }.flowOn(Dispatchers.Default)
+                .catch { e ->
+                    emit(DashboardState(isLoading = false, errorMessage = e.message))
+                }
                 .stateIn(
                     scope = viewModelScope,
                     started = SharingStarted.WhileSubscribed(5000),
