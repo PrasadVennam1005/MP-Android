@@ -29,4 +29,7 @@ interface TransactionDao {
 
     @Query("SELECT * FROM transactions WHERE loanPaymentId = :loanPaymentId LIMIT 1")
     suspend fun getTransactionByLoanPaymentId(loanPaymentId: Long): Transaction?
+
+    @Query("DELETE FROM transactions WHERE loanPaymentId IN (SELECT id FROM loan_payments WHERE loanId = :loanId)")
+    suspend fun deleteTransactionsByLoanId(loanId: Long)
 }

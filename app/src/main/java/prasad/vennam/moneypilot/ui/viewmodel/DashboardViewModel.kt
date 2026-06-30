@@ -482,9 +482,12 @@ class DashboardViewModel
             }
         }
 
-        fun deleteLoan(loan: Loan) {
+        fun deleteLoan(
+            loan: Loan,
+            deleteTransactions: Boolean = true,
+        ) {
             viewModelScope.launch {
-                deleteLoanUseCase(loan)
+                loanRepository.deleteLoan(loan, deleteTransactions)
             }
         }
 

@@ -29,7 +29,36 @@ class TransactionRepository
 
         suspend fun insertTransaction(transaction: Transaction) = transactionDao.insertTransaction(transaction)
 
-        suspend fun updateTransaction(transaction: Transaction) = transactionDao.updateTransaction(transaction)
+        suspend fun updateTransaction(transaction: Transaction) {
+            database.withTransaction {
+                val oldTransaction = transactionDao.getTransactionById(transaction.id)
+                transactionDao.updateTransaction(transaction)
+
+                if (oldTransaction != null && transaction.loanPaymentId != null) {
+                    val payment = loanPaymentDao.getPaymentById(transaction.loanPaymentId)
+                    payment?.let { pay ->
+                        val delta = transaction.amount - oldTransaction.amount
+                        
+                        // Update the Loan Payment amount and date to match the transaction
+                        loanPaymentDao.insertPayment(
+                            pay.copy(
+                                amount = transaction.amount,
+                                date = transaction.timestamp
+                            )
+                        )
+
+                        if (delta != 0L) {
+                            // Update the Loan outstanding amount
+                            val loan = loanDao.getLoanById(pay.loanId)
+                            loan?.let { l ->
+                                val newOutstanding = (l.outstandingAmount - delta).coerceAtLeast(0)
+                                loanDao.updateLoan(l.copy(outstandingAmount = newOutstanding))
+                            }
+                        }
+                    }
+                }
+            }
+        }
 
         suspend fun deleteTransaction(transaction: Transaction) {
             database.withTransaction {
@@ -41,7 +70,24 @@ class TransactionRepository
                         val loan = loanDao.getLoanById(pay.loanId)
                         loan?.let { l ->
                             val newOutstanding = l.outstandingAmount + pay.amount
-                            loanDao.updateLoan(l.copy(outstandingAmount = newOutstanding))
+                            
+                            // Revert next EMI date by 1 month ONLY if it was NOT an extra payment
+                            val revertedNextEmiDate = if (!pay.isExtraPayment) {
+                                val cal = java.util.Calendar.getInstance().apply {
+                                    timeInMillis = l.nextEmiDate
+                                }
+                                cal.add(java.util.Calendar.MONTH, -1)
+                                cal.timeInMillis
+                            } else {
+                                l.nextEmiDate
+                            }
+                            
+                            loanDao.updateLoan(
+                                l.copy(
+                                    outstandingAmount = newOutstanding,
+                                    nextEmiDate = revertedNextEmiDate
+                                )
+                            )
                         }
                     }
                 }

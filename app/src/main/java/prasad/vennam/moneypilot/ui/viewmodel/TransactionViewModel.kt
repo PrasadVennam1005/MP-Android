@@ -38,6 +38,7 @@ data class TransactionFormState(
     val subCategory: String = "",
     val paymentMode: String = "Cash",
     val timestamp: Long = System.currentTimeMillis(),
+    val loanPaymentId: Long? = null,
 )
 
 @HiltViewModel
@@ -139,6 +140,7 @@ class TransactionViewModel
                                 subCategory = it.subCategory,
                                 paymentMode = it.paymentMode,
                                 timestamp = it.timestamp,
+                                loanPaymentId = it.loanPaymentId,
                             )
                     }
                 } catch (e: Exception) {

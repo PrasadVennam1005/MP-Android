@@ -30,7 +30,17 @@ class LoanRepository
 
         suspend fun updateLoan(loan: Loan) = loanDao.updateLoan(loan)
 
-        suspend fun deleteLoan(loan: Loan) = loanDao.deleteLoan(loan)
+        suspend fun deleteLoan(
+            loan: Loan,
+            deleteTransactions: Boolean = true,
+        ) {
+            database.withTransaction {
+                if (deleteTransactions) {
+                    transactionDao.deleteTransactionsByLoanId(loan.id)
+                }
+                loanDao.deleteLoan(loan)
+            }
+        }
 
         suspend fun getLoanById(id: Long) = loanDao.getLoanById(id)
 
@@ -38,19 +48,34 @@ class LoanRepository
 
         suspend fun insertLoanPayment(payment: LoanPayment) {
             database.withTransaction {
-                val paymentId = loanPaymentDao.insertPayment(payment)
-                // Update outstanding amount
+                // Fetch the loan first to check outstanding amount
                 val loan = loanDao.getLoanById(payment.loanId)
-                loan?.let {
-                    val newOutstanding = (it.outstandingAmount - payment.amount).coerceAtLeast(0)
+                loan?.let { currentLoan ->
+                    // Guard: Cap payment amount at current outstanding balance
+                    val cappedAmount = if (payment.amount > currentLoan.outstandingAmount) {
+                        currentLoan.outstandingAmount
+                    } else {
+                        payment.amount
+                    }
 
-                    // Increment next EMI date by 1 month
-                    val cal =
-                        java.util.Calendar.getInstance().apply {
-                            timeInMillis = it.nextEmiDate
+                    if (cappedAmount <= 0) return@withTransaction
+
+                    val finalPayment = payment.copy(amount = cappedAmount)
+                    val paymentId = loanPaymentDao.insertPayment(finalPayment)
+
+                    // Update outstanding amount
+                    val newOutstanding = (currentLoan.outstandingAmount - cappedAmount).coerceAtLeast(0)
+
+                    // Increment next EMI date by 1 month ONLY if it's not an extra payment
+                    val newNextEmiDate = if (!finalPayment.isExtraPayment) {
+                        val cal = java.util.Calendar.getInstance().apply {
+                            timeInMillis = currentLoan.nextEmiDate
                         }
-                    cal.add(java.util.Calendar.MONTH, 1)
-                    val newNextEmiDate = cal.timeInMillis
+                        cal.add(java.util.Calendar.MONTH, 1)
+                        cal.timeInMillis
+                    } else {
+                        currentLoan.nextEmiDate
+                    }
 
                     // Record matching expense transaction
                     val categories = categoryDao.getAllCategoriesSync()
@@ -65,21 +90,25 @@ class LoanRepository
                         categoryId = categories.firstOrNull { cat -> cat.isExpense }?.id
                     }
 
+                    // Check for currency mismatch and potentially log a warning or handle conversion
+                    // For now, we use the payment's raw amount but ensure it uses the Loan's currency code
+                    // to keep the principal consistent.
+
                     val transaction =
                         Transaction(
-                            amount = payment.amount,
-                            timestamp = payment.date,
+                            amount = cappedAmount,
+                            timestamp = finalPayment.date,
                             categoryId = categoryId,
-                            note = if (payment.note.isNotBlank()) payment.note else "EMI Payment: ${it.name}",
+                            note = if (finalPayment.note.isNotBlank()) finalPayment.note else "EMI Payment: ${currentLoan.name}",
                             type = TransactionType.EXPENSE,
-                            paymentMode = payment.paymentMode,
-                            currencyCode = it.currencyCode,
+                            paymentMode = finalPayment.paymentMode,
+                            currencyCode = currentLoan.currencyCode,
                             loanPaymentId = paymentId,
                         )
                     transactionDao.insertTransaction(transaction)
 
                     loanDao.updateLoan(
-                        it.copy(
+                        currentLoan.copy(
                             outstandingAmount = newOutstanding,
                             nextEmiDate = newNextEmiDate,
                         ),

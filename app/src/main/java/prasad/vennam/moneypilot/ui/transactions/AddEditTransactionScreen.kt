@@ -20,6 +20,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.AccountBalance
 import androidx.compose.material.icons.rounded.CalendarToday
 import androidx.compose.material.icons.rounded.Category
 import androidx.compose.material.icons.rounded.Check
@@ -169,12 +170,38 @@ fun AddEditTransactionScreen(
             verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
             // Type Toggle
-            PremiumToggle(
-                selectedType = formState.type,
-                onTypeSelected = {
-                    viewModel.updateType(it)
-                },
-            )
+            if (formState.loanPaymentId != null) {
+                Surface(
+                    color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.4f),
+                    shape = MaterialTheme.shapes.medium,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            Icons.Rounded.AccountBalance,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(Modifier.width(12.dp))
+                        Text(
+                            text = "This transaction is linked to a loan payment. Some fields are restricted.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer
+                        )
+                    }
+                }
+            } else {
+                PremiumToggle(
+                    selectedType = formState.type,
+                    onTypeSelected = {
+                        viewModel.updateType(it)
+                    },
+                )
+            }
 
             val amountVal = formState.amount.toDoubleOrNull()
             val isAmountError = formState.amount.isNotEmpty() && (amountVal == null || amountVal <= 0.0 || amountVal > 100000000.0)

@@ -105,6 +105,7 @@ fun LoanScreen(
     var selectedLoan by remember { mutableStateOf<Loan?>(null) }
     var showAddLoanSheet by remember { mutableStateOf(prefillAmount != null) }
     var loanToDelete by remember { mutableStateOf<Loan?>(null) }
+    var deleteLinkedTransactions by remember { mutableStateOf(true) }
     var loanToPay by remember { mutableStateOf<Loan?>(null) }
 
     // Use derived state or side effect to handle pre-fill
@@ -305,11 +306,11 @@ fun LoanScreen(
         }
 
         if (loanToPay != null) {
-            RecordPaymentDialog(
+            RecordPaymentBottomSheet(
                 loan = loanToPay!!,
                 onDismiss = { loanToPay = null },
-                onConfirm = { amount, isExtra, note, paymentMode ->
-                    viewModel.recordLoanPayment(loanToPay!!.id, amount, isExtra, note, paymentMode)
+                onConfirm = { amount, isExtra, note, mode ->
+                    viewModel.recordLoanPayment(loanToPay!!.id, amount, isExtra, note, mode)
                     loanToPay = null
                 },
             )
@@ -328,15 +329,40 @@ fun LoanScreen(
                 )
             },
             text = {
-                Text(
-                    text = stringResource(R.string.delete_loan_confirm, currentLoanToDelete.name),
-                    style = MaterialTheme.typography.bodyMedium,
-                )
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text(
+                        text = stringResource(R.string.delete_loan_confirm, currentLoanToDelete.name),
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(MaterialTheme.shapes.medium)
+                            .clickable { deleteLinkedTransactions = !deleteLinkedTransactions },
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Checkbox(
+                                checked = deleteLinkedTransactions,
+                                onCheckedChange = { deleteLinkedTransactions = it }
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                "Delete linked transactions from history",
+                                style = MaterialTheme.typography.labelMedium
+                            )
+                        }
+                    }
+                }
             },
             confirmButton = {
                 Button(
                     onClick = {
-                        viewModel.deleteLoan(currentLoanToDelete)
+                        viewModel.deleteLoan(currentLoanToDelete, deleteLinkedTransactions)
                         loanToDelete = null
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
@@ -708,110 +734,173 @@ fun FullWidthLoanCard(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun RecordPaymentDialog(
+fun RecordPaymentBottomSheet(
     loan: Loan,
     onDismiss: () -> Unit,
     onConfirm: (Long, Boolean, String, String) -> Unit,
 ) {
-    var amount by remember { mutableStateOf(loan.emiAmount.toMajorUnit.toString()) }
+    var amount by remember { 
+        mutableStateOf(
+            loan.emiAmount.toMajorUnit.toString().removeSuffix(".0")
+        ) 
+    }
     var isExtra by remember { mutableStateOf(false) }
     var note by remember { mutableStateOf("") }
     var paymentMode by remember { mutableStateOf("UPI") }
     var expandedPaymentMode by remember { mutableStateOf(false) }
+    
     val currencyCode = LocalCurrencyCode.current
     val focusManager = LocalFocusManager.current
     val keyboardController = LocalSoftwareKeyboardController.current
 
-    AlertDialog(
+    BaseBottomSheet(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.record_payment)) },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                OutlinedTextField(
-                    value = amount,
-                    onValueChange = { amount = it },
-                    label = { Text(stringResource(R.string.amount)) },
-                    keyboardOptions = KeyboardOptions(
-                        keyboardType = KeyboardType.Decimal,
-                        imeAction = ImeAction.Next
-                    ),
-                    keyboardActions = KeyboardActions(
-                        onNext = { focusManager.moveFocus(androidx.compose.ui.focus.FocusDirection.Next) }
-                    ),
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Checkbox(checked = isExtra, onCheckedChange = { isExtra = it })
-                    Text(stringResource(R.string.extra_payment_top_up))
-                }
-                
-                Box(modifier = Modifier.fillMaxWidth()) {
-                    OutlinedTextField(
-                        value = paymentMode,
-                        onValueChange = {},
-                        readOnly = true,
-                        label = { Text("Payment Mode") },
-                        trailingIcon = {
-                            IconButton(onClick = { expandedPaymentMode = !expandedPaymentMode }) {
-                                Icon(
-                                    imageVector = if (expandedPaymentMode) Icons.Rounded.ArrowDropUp else Icons.Rounded.ArrowDropDown,
-                                    contentDescription = "Select Payment Mode"
-                                )
-                            }
-                        },
-                        modifier = Modifier.fillMaxWidth().clickable { expandedPaymentMode = true },
+        title = stringResource(R.string.record_payment)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 24.dp)
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(20.dp)
+        ) {
+            // Amount Field
+            OutlinedTextField(
+                value = amount,
+                onValueChange = { if (it.isEmpty() || it.toDoubleOrNull() != null) amount = it },
+                label = { Text(stringResource(R.string.amount)) },
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Decimal,
+                    imeAction = ImeAction.Next
+                ),
+                keyboardActions = KeyboardActions(
+                    onNext = { focusManager.moveFocus(androidx.compose.ui.focus.FocusDirection.Next) }
+                ),
+                shape = MaterialTheme.shapes.large,
+                modifier = Modifier.fillMaxWidth(),
+                prefix = {
+                    Text(
+                        text = Currency.getInstance(currencyCode).symbol,
+                        style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.primary
                     )
-                    DropdownMenu(
-                        expanded = expandedPaymentMode,
-                        onDismissRequest = { expandedPaymentMode = false },
-                        modifier = Modifier.fillMaxWidth(0.9f)
-                    ) {
-                        prasad.vennam.moneypilot.util.PaymentModes.ALL.forEach { mode ->
-                            DropdownMenuItem(
-                                text = { Text(mode) },
-                                onClick = {
-                                    paymentMode = mode
-                                    expandedPaymentMode = false
-                                }
-                            )
+                }
+            )
+
+            // Extra Payment Checkbox
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(MaterialTheme.shapes.large)
+                    .clickable { isExtra = !isExtra },
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+                shape = MaterialTheme.shapes.large
+            ) {
+                Row(
+                    modifier = Modifier.padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Checkbox(
+                        checked = isExtra,
+                        onCheckedChange = { isExtra = it }
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = stringResource(R.string.extra_payment_top_up),
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+            }
+
+            // Payment Mode Dropdown
+            ExposedDropdownMenuBox(
+                expanded = expandedPaymentMode,
+                onExpandedChange = { expandedPaymentMode = it },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                OutlinedTextField(
+                    value = paymentMode,
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text(stringResource(R.string.payment_mode)) },
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedPaymentMode) },
+                    colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
+                    modifier = Modifier
+                        .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable, true)
+                        .fillMaxWidth(),
+                    shape = MaterialTheme.shapes.large,
+                    leadingIcon = {
+                        val icon = remember(paymentMode) {
+                            prasad.vennam.moneypilot.util.PaymentModes.ALL_MODES.find { it.name == paymentMode }?.icon 
+                                ?: Icons.Rounded.AccountBalanceWallet
                         }
+                        Icon(icon, null, tint = MaterialTheme.colorScheme.primary)
+                    }
+                )
+                ExposedDropdownMenu(
+                    expanded = expandedPaymentMode,
+                    onDismissRequest = { expandedPaymentMode = false }
+                ) {
+                    prasad.vennam.moneypilot.util.PaymentModes.ALL_MODES.forEach { mode ->
+                        DropdownMenuItem(
+                            text = { Text(mode.name) },
+                            onClick = {
+                                paymentMode = mode.name
+                                expandedPaymentMode = false
+                            },
+                            leadingIcon = {
+                                Icon(mode.icon, null, modifier = Modifier.size(20.dp))
+                            },
+                            contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
+                        )
                     }
                 }
+            }
 
-                OutlinedTextField(
-                    value = note,
-                    onValueChange = { note = it },
-                    label = { Text(stringResource(R.string.payment_notes_optional)) },
-                    keyboardOptions = KeyboardOptions(
-                        imeAction = ImeAction.Done
-                    ),
-                    keyboardActions = KeyboardActions(
-                        onDone = {
-                            keyboardController?.hide()
-                            focusManager.clearFocus()
-                            val amt = amount.toDoubleOrNull() ?: 0.0
-                            onConfirm((amt * 100).toLong(), isExtra, note, paymentMode)
-                        }
-                    ),
-                    modifier = Modifier.fillMaxWidth(),
+            // Notes Field
+            OutlinedTextField(
+                value = note,
+                onValueChange = { note = it },
+                label = { Text(stringResource(R.string.payment_notes_optional)) },
+                keyboardOptions = KeyboardOptions(
+                    imeAction = ImeAction.Done
+                ),
+                keyboardActions = KeyboardActions(
+                    onDone = {
+                        keyboardController?.hide()
+                        focusManager.clearFocus()
+                    }
+                ),
+                shape = MaterialTheme.shapes.large,
+                modifier = Modifier.fillMaxWidth(),
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Confirm Button
+            Button(
+                onClick = {
+                    val amt = amount.toDoubleOrNull() ?: 0.0
+                    onConfirm((amt * 100).toLong(), isExtra, note, paymentMode)
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp),
+                shape = MaterialTheme.shapes.large,
+                enabled = amount.isNotBlank() && (amount.toDoubleOrNull() ?: 0.0) > 0
+            ) {
+                Icon(Icons.Rounded.Check, null)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = stringResource(R.string.confirm_payment),
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
                 )
             }
-        },
-        confirmButton = {
-            Button(onClick = {
-                val amt = amount.toDoubleOrNull() ?: 0.0
-                onConfirm((amt * 100).toLong(), isExtra, note, paymentMode)
-            }) {
-                Text(stringResource(R.string.confirm_payment))
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.cancel))
-            }
-        },
-    )
+        }
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
