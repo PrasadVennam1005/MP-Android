@@ -146,6 +146,9 @@
     <string name="yearly_expense">Yearly Expense</string>
     <string name="yearly_savings">Yearly Savings</string>
     <string name="profit_loss">Profit / Loss</string>
+    <string name="savings_rate">Savings Rate</string>
+    <string name="total_debt">Total Debt</string>
+    <string name="savings_rate_value">%1$.1f%%</string>
     <string name="quick_actions">Quick Actions</string>
     <string name="scan">Scan</string>
     <string name="syncing_with_google_drive">Syncing with Google Drive…</string>
@@ -287,7 +290,6 @@
     <string name="time_6_months">6 Months</string>
     <string name="time_all_time">All</string>
     <string name="net_savings">Net Savings</string>
-    <string name="savings_rate">Savings Rate</string>
     <string name="income_vs_expense">Income vs Expense Trend</string>
     <string name="asset_allocation">Asset Allocation</string>
     <string name="financial_insights">Financial Insights</string>

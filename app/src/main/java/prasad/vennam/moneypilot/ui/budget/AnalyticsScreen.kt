@@ -80,6 +80,17 @@ fun AnalyticsScreen(
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
+                if (!isPremium) {
+                    item {
+                        AdBannerView(
+                            isPremium = isPremium,
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .padding(top = 16.dp),
+                        )
+                    }
+                }
                 // 1. Time Filter Row
                 item {
                     TimeFilterRow(
@@ -237,18 +248,6 @@ fun AnalyticsScreen(
                     }
                     items(state.insights, key = { it.title }) { insight ->
                         InsightCard(insight = insight)
-                    }
-                }
-
-                if (!isPremium) {
-                    item {
-                        AdBannerView(
-                            isPremium = isPremium,
-                            modifier =
-                                Modifier
-                                    .fillMaxWidth()
-                                    .padding(top = 16.dp),
-                        )
                     }
                 }
             }

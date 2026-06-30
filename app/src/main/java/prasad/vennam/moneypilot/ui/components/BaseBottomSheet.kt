@@ -77,13 +77,16 @@ fun BaseBottomSheet(
                     targetOffsetY = { fullHeight -> fullHeight },
                     animationSpec = tween(durationMillis = 300)
                 ),
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .widthIn(max = 600.dp)
+                    .fillMaxWidth()
             ) {
                 val screenHeight = LocalConfiguration.current.screenHeightDp.dp
                 val maxHeight = screenHeight * 0.9f
 
                 Column(
                     modifier = modifier
+                        .widthIn(max = 600.dp)
                         .fillMaxWidth()
                         .heightIn(max = maxHeight)
                         .clickable(

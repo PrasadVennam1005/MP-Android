@@ -9,6 +9,8 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
+import androidx.compose.material3.adaptive.currentWindowAdaptiveInfoV2
+import androidx.window.core.layout.WindowWidthSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -37,6 +39,9 @@ fun PremiumScreen(
     val products by viewModel.products.collectAsState()
     val isPremium by viewModel.isPremium.collectAsState()
     val context = LocalContext.current
+
+    val adaptiveInfo = currentWindowAdaptiveInfoV2()
+    val isExpanded = adaptiveInfo.windowSizeClass.windowWidthSizeClass == WindowWidthSizeClass.EXPANDED
 
     Scaffold(
         topBar = {
@@ -117,18 +122,40 @@ fun PremiumScreen(
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(stringResource(id = R.string.loading_products))
                 } else {
-                    products.forEach { product ->
-                        ProductCard(
-                            product = product,
-                            onPurchaseClick = {
-                                analyticsHelper.logEvent(
-                                    AnalyticsConstants.Event.PURCHASE_ATTEMPTED,
-                                    mapOf(AnalyticsConstants.Param.PRODUCT_ID to product.productId),
-                                )
-                                viewModel.launchBillingFlow(context as Activity, product)
-                            },
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
+                    if (isExpanded) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            products.forEach { product ->
+                                Box(modifier = Modifier.weight(1f)) {
+                                    ProductCard(
+                                        product = product,
+                                        onPurchaseClick = {
+                                            analyticsHelper.logEvent(
+                                                AnalyticsConstants.Event.PURCHASE_ATTEMPTED,
+                                                mapOf(AnalyticsConstants.Param.PRODUCT_ID to product.productId),
+                                            )
+                                            viewModel.launchBillingFlow(context as Activity, product)
+                                        },
+                                    )
+                                }
+                            }
+                        }
+                    } else {
+                        products.forEach { product ->
+                            ProductCard(
+                                product = product,
+                                onPurchaseClick = {
+                                    analyticsHelper.logEvent(
+                                        AnalyticsConstants.Event.PURCHASE_ATTEMPTED,
+                                        mapOf(AnalyticsConstants.Param.PRODUCT_ID to product.productId),
+                                    )
+                                    viewModel.launchBillingFlow(context as Activity, product)
+                                },
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                        }
                     }
                 }
             }

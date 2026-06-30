@@ -15,6 +15,13 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material3.adaptive.currentWindowAdaptiveInfoV2
+import androidx.window.core.layout.WindowWidthSizeClass
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -107,6 +114,11 @@ fun NotificationsScreen(
             lifecycleOwner.lifecycle.removeObserver(observer)
         }
     }
+
+    val adaptiveInfo = currentWindowAdaptiveInfoV2()
+    val isExpanded = adaptiveInfo.windowSizeClass.windowWidthSizeClass == WindowWidthSizeClass.EXPANDED
+    val lazyListState = rememberLazyListState()
+    val lazyGridState = rememberLazyGridState()
 
     var selectedCategory by remember { mutableStateOf("All") }
     val categoryAllStr = stringResource(R.string.category_all)
@@ -280,31 +292,65 @@ fun NotificationsScreen(
             if (filteredNotifications.isEmpty()) {
                 EmptyNotificationsState(selectedCategory)
             } else {
-                LazyColumn(
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                    modifier = Modifier.fillMaxSize(),
-                ) {
-                    items(
-                        items = filteredNotifications,
-                        key = { it.id },
-                    ) { item ->
-                        SwipeToDismissNotification(
-                            item = item,
-                            onDismiss = {
-                                viewModel.deleteNotification(item.id)
-                                Toast.makeText(context, with(context) { getString(R.string.notification_deleted) }, Toast.LENGTH_SHORT).show()
-                            },
-                            onBookmark = {
-                                if (!item.url.isNullOrBlank()) {
-                                    viewModel.bookmarkNotificationUrl(item.title, item.url)
-                                    Toast.makeText(context, with(context) { getString(R.string.saved_offline) }, Toast.LENGTH_SHORT).show()
-                                } else {
-                                    Toast.makeText(context, with(context) { getString(R.string.no_link_to_bookmark) }, Toast.LENGTH_SHORT).show()
-                                }
-                            },
-                            onNavigateToWeb = onNavigateToWeb,
-                        )
+                if (isExpanded) {
+                    LazyVerticalGrid(
+                        columns = GridCells.Fixed(2),
+                        state = lazyGridState,
+                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier.fillMaxSize(),
+                    ) {
+                        items(
+                            items = filteredNotifications,
+                            key = { it.id },
+                        ) { item ->
+                            SwipeToDismissNotification(
+                                item = item,
+                                onDismiss = {
+                                    viewModel.deleteNotification(item.id)
+                                    Toast.makeText(context, with(context) { getString(R.string.notification_deleted) }, Toast.LENGTH_SHORT).show()
+                                },
+                                onBookmark = {
+                                    if (!item.url.isNullOrBlank()) {
+                                        viewModel.bookmarkNotificationUrl(item.title, item.url)
+                                        Toast.makeText(context, with(context) { getString(R.string.saved_offline) }, Toast.LENGTH_SHORT).show()
+                                    } else {
+                                        Toast.makeText(context, with(context) { getString(R.string.no_link_to_bookmark) }, Toast.LENGTH_SHORT).show()
+                                    }
+                                },
+                                onNavigateToWeb = onNavigateToWeb,
+                            )
+                        }
+                    }
+                } else {
+                    LazyColumn(
+                        state = lazyListState,
+                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier.fillMaxSize(),
+                    ) {
+                        items(
+                            items = filteredNotifications,
+                            key = { it.id },
+                        ) { item ->
+                            SwipeToDismissNotification(
+                                item = item,
+                                onDismiss = {
+                                    viewModel.deleteNotification(item.id)
+                                    Toast.makeText(context, with(context) { getString(R.string.notification_deleted) }, Toast.LENGTH_SHORT).show()
+                                },
+                                onBookmark = {
+                                    if (!item.url.isNullOrBlank()) {
+                                        viewModel.bookmarkNotificationUrl(item.title, item.url)
+                                        Toast.makeText(context, with(context) { getString(R.string.saved_offline) }, Toast.LENGTH_SHORT).show()
+                                    } else {
+                                        Toast.makeText(context, with(context) { getString(R.string.no_link_to_bookmark) }, Toast.LENGTH_SHORT).show()
+                                    }
+                                },
+                                onNavigateToWeb = onNavigateToWeb,
+                            )
+                        }
                     }
                 }
             }

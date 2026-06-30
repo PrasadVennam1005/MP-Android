@@ -12,6 +12,11 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -41,6 +46,7 @@ import androidx.compose.material.icons.rounded.NotificationsActive
 import androidx.compose.material.icons.rounded.NotificationsOff
 import androidx.compose.material.icons.rounded.TrendingUp
 import androidx.compose.material3.*
+import androidx.compose.material3.adaptive.currentWindowAdaptiveInfoV2
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -53,6 +59,7 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.ui.unit.dp
+import androidx.window.core.layout.WindowWidthSizeClass
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import prasad.vennam.moneypilot.R
 import prasad.vennam.moneypilot.data.UserPreferences
@@ -90,6 +97,9 @@ fun LoanScreen(
     TrackScreen(analyticsHelper, AnalyticsConstants.Screen.LOANS)
     val currencyCode = LocalCurrencyCode.current
     val state by viewModel.uiState.collectAsState()
+    val adaptiveInfo = currentWindowAdaptiveInfoV2()
+    val isExpanded = adaptiveInfo.windowSizeClass.windowWidthSizeClass == WindowWidthSizeClass.EXPANDED
+    
     var selectedLoan by remember { mutableStateOf<Loan?>(null) }
     var showAddLoanSheet by remember { mutableStateOf(prefillAmount != null) }
     var loanToDelete by remember { mutableStateOf<Loan?>(null) }
@@ -119,13 +129,14 @@ fun LoanScreen(
     }
 
     val lazyListState = rememberLazyListState()
+    val lazyGridState = rememberLazyGridState()
     var isFabVisible by remember { mutableStateOf(true) }
     var previousIndex by remember { mutableIntStateOf(0) }
     var previousOffset by remember { mutableIntStateOf(0) }
 
-    LaunchedEffect(lazyListState.firstVisibleItemIndex, lazyListState.firstVisibleItemScrollOffset) {
-        val currentIndex = lazyListState.firstVisibleItemIndex
-        val currentOffset = lazyListState.firstVisibleItemScrollOffset
+    LaunchedEffect(lazyListState.firstVisibleItemIndex, lazyListState.firstVisibleItemScrollOffset, lazyGridState.firstVisibleItemIndex, lazyGridState.firstVisibleItemScrollOffset) {
+        val currentIndex = if (isExpanded) lazyGridState.firstVisibleItemIndex else lazyListState.firstVisibleItemIndex
+        val currentOffset = if (isExpanded) lazyGridState.firstVisibleItemScrollOffset else lazyListState.firstVisibleItemScrollOffset
         if (currentIndex == 0 && currentOffset == 0) {
             isFabVisible = true
         } else if (currentIndex > previousIndex || (currentIndex == previousIndex && currentOffset > previousOffset)) {
@@ -223,6 +234,38 @@ fun LoanScreen(
                             text = stringResource(R.string.add_loan_to_monitor),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                        )
+                    }
+                }
+            } else if (isExpanded) {
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(2),
+                    state = lazyGridState,
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    contentPadding = PaddingValues(bottom = 80.dp),
+                ) {
+                    item(span = { GridItemSpan(2) }) {
+                        prasad.vennam.moneypilot.ui.components.AdBannerView(
+                            isPremium = isPremium,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
+                    items(state.loans, key = { it.id }) { loan ->
+                        FullWidthLoanCard(
+                            loan = loan,
+                            currencyCode = currencyCode,
+                            onEditClick = {
+                                selectedLoan = loan
+                                showAddLoanSheet = true
+                            },
+                            onDeleteClick = {
+                                loanToDelete = loan
+                            },
+                            onPayClick = {
+                                loanToPay = loan
+                            },
+                            payoffDate = viewModel.estimatePayoff(loan),
                         )
                     }
                 }

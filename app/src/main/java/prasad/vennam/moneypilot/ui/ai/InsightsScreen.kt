@@ -7,6 +7,12 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -15,6 +21,7 @@ import androidx.compose.material.icons.automirrored.rounded.TrendingDown
 import androidx.compose.material.icons.automirrored.rounded.TrendingUp
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
+import androidx.compose.material3.adaptive.currentWindowAdaptiveInfoV2
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -26,6 +33,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.window.core.layout.WindowWidthSizeClass
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import prasad.vennam.moneypilot.R
 import prasad.vennam.moneypilot.data.UserPreferences
@@ -56,6 +64,10 @@ fun InsightsScreen(
     val uiState by viewModel.uiState.collectAsState()
     val aiRecState by viewModel.aiRecommendation.collectAsState()
     val currencyCode = LocalCurrencyCode.current
+    
+    val adaptiveInfo = currentWindowAdaptiveInfoV2()
+    val isExpanded = adaptiveInfo.windowSizeClass.windowWidthSizeClass == WindowWidthSizeClass.EXPANDED
+    val gridState = rememberLazyGridState()
 
     val insights =
         remember(uiState, currencyCode) {
@@ -93,52 +105,108 @@ fun InsightsScreen(
             )
         },
     ) { padding ->
-        if (uiState.isLoading) {
-            Box(
-                modifier =
-                    Modifier
-                        .fillMaxSize()
-                        .padding(padding),
-                contentAlignment = Alignment.Center,
-            ) {
-                CircularProgressIndicator()
+        InsightsContent(
+            uiState = uiState,
+            aiRecState = aiRecState,
+            insights = insights,
+            currencyCode = currencyCode,
+            isExpanded = isExpanded,
+            gridState = gridState,
+            analyticsHelper = analyticsHelper,
+            onNavigateToAiChat = onNavigateToAiChat,
+            modifier = Modifier.padding(padding)
+        )
+    }
+}
+
+@Composable
+fun InsightsContent(
+    uiState: AnalyticsState,
+    aiRecState: AiRecommendationState,
+    insights: List<SmartInsight>,
+    currencyCode: String,
+    isExpanded: Boolean,
+    gridState: androidx.compose.foundation.lazy.grid.LazyGridState,
+    analyticsHelper: AnalyticsHelper,
+    onNavigateToAiChat: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    if (uiState.isLoading) {
+        Box(
+            modifier = modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center,
+        ) {
+            CircularProgressIndicator()
+        }
+    } else if (isExpanded) {
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(2),
+            state = gridState,
+            modifier = modifier.fillMaxSize(),
+            contentPadding = PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            item(span = { GridItemSpan(2) }) {
+                FinancialHealthCard(uiState, currencyCode)
             }
-        } else {
-            LazyColumn(
-                modifier =
-                    Modifier
-                        .fillMaxSize()
-                        .padding(padding),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-            ) {
-                item {
-                    FinancialHealthCard(uiState, currencyCode)
-                }
 
-                item {
-                    AiRecommendationCard(
-                        state = aiRecState,
-                        onNavigateToAiChat = {
-                            analyticsHelper.logEvent(AnalyticsConstants.Event.INSIGHTS_AI_RECOMMENDATION_CLICKED)
-                            onNavigateToAiChat()
-                        },
-                    )
-                }
+            item(span = { GridItemSpan(2) }) {
+                AiRecommendationCard(
+                    state = aiRecState,
+                    onNavigateToAiChat = {
+                        analyticsHelper.logEvent(AnalyticsConstants.Event.INSIGHTS_AI_RECOMMENDATION_CLICKED)
+                        onNavigateToAiChat()
+                    },
+                )
+            }
 
-                if (insights.isEmpty()) {
-                    item {
-                        EmptyInsightsState(onNavigateToAiChat)
-                    }
-                } else {
-                    items(insights, key = { it.id }) { insight ->
-                        InsightCard(insight)
-                    }
+            if (insights.isEmpty()) {
+                item(span = { GridItemSpan(2) }) {
+                    EmptyInsightsState(onNavigateToAiChat)
                 }
+            } else {
+                items(insights, key = { it.id }) { insight ->
+                    InsightCard(insight)
+                }
+            }
 
+            item(span = { GridItemSpan(2) }) {
+                Spacer(modifier = Modifier.height(80.dp))
+            }
+        }
+    } else {
+        LazyColumn(
+            modifier = modifier.fillMaxSize(),
+            contentPadding = PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            item {
+                FinancialHealthCard(uiState, currencyCode)
+            }
+
+            item {
+                AiRecommendationCard(
+                    state = aiRecState,
+                    onNavigateToAiChat = {
+                        analyticsHelper.logEvent(AnalyticsConstants.Event.INSIGHTS_AI_RECOMMENDATION_CLICKED)
+                        onNavigateToAiChat()
+                    },
+                )
+            }
+
+            if (insights.isEmpty()) {
                 item {
-                    Spacer(modifier = Modifier.height(80.dp))
+                    EmptyInsightsState(onNavigateToAiChat)
                 }
+            } else {
+                items(insights, key = { it.id }) { insight ->
+                    InsightCard(insight)
+                }
+            }
+
+            item {
+                Spacer(modifier = Modifier.height(80.dp))
             }
         }
     }
@@ -622,7 +690,7 @@ private data class InsightTheme(
     val icon: androidx.compose.ui.graphics.vector.ImageVector,
 )
 
-private fun generateSmartInsights(
+internal fun generateSmartInsights(
     state: AnalyticsState,
     currencyCode: String,
 ): List<SmartInsight> {

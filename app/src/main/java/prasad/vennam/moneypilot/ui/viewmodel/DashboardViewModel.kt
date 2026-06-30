@@ -21,6 +21,8 @@ import prasad.vennam.moneypilot.data.entity.Investment
 import prasad.vennam.moneypilot.data.entity.Loan
 import prasad.vennam.moneypilot.data.entity.LoanPayment
 import prasad.vennam.moneypilot.data.entity.PendingTransaction
+import prasad.vennam.moneypilot.data.entity.SavingGoal
+import prasad.vennam.moneypilot.data.entity.Subscription
 import prasad.vennam.moneypilot.data.entity.TimeFrame
 import prasad.vennam.moneypilot.data.entity.Transaction
 import prasad.vennam.moneypilot.data.entity.TransactionType
@@ -54,8 +56,14 @@ data class DashboardState(
     val budgetProgresses: List<BudgetProgress> = emptyList(),
     val categories: List<Category> = emptyList(),
     val loans: List<Loan> = emptyList(),
+    val subscriptions: List<Subscription> = emptyList(),
+    val savingGoals: List<SavingGoal> = emptyList(),
     val emergencyFund: EmergencyFund? = null,
+    val savingsRate: Double = 0.0,
+    val totalDebt: Double = 0.0,
     val selectedTimeFrame: TimeFrame = TimeFrame.MONTHLY,
+    val selectedMonth: Int = Calendar.getInstance().get(Calendar.MONTH),
+    val selectedYear: Int = Calendar.getInstance().get(Calendar.YEAR),
     val pendingTransactions: List<PendingTransaction> = emptyList(),
     val isLearnFinanceEnabled: Boolean = false,
     val errorMessage: String? = null,
@@ -67,6 +75,8 @@ private data class DashboardData(
     val budgets: List<Budget>,
     val investments: List<Investment>,
     val loans: List<Loan>,
+    val subscriptions: List<Subscription>,
+    val savingGoals: List<SavingGoal>,
     val emergencyFund: EmergencyFund?,
     val pendingTransactions: List<PendingTransaction>,
 )
@@ -86,6 +96,8 @@ class DashboardViewModel
         private val getBudgetsUseCase: GetBudgetsUseCase,
         private val getInvestmentsUseCase: GetInvestmentsUseCase,
         private val getLoansUseCase: GetLoansUseCase,
+        private val getSubscriptionsUseCase: GetSubscriptionsUseCase,
+        private val getSavingGoalsUseCase: GetSavingGoalsUseCase,
         private val getEmergencyFundUseCase: GetEmergencyFundUseCase,
         private val getPendingTransactionsUseCase: GetPendingTransactionsUseCase,
         private val approvePendingTransactionUseCase: ApprovePendingTransactionUseCase,
@@ -95,8 +107,93 @@ class DashboardViewModel
         private val _selectedTimeFrame = MutableStateFlow(TimeFrame.MONTHLY)
         val selectedTimeFrame: StateFlow<TimeFrame> = _selectedTimeFrame.asStateFlow()
 
+        private val _selectedMonth = MutableStateFlow(Calendar.getInstance().get(Calendar.MONTH))
+        val selectedMonth: StateFlow<Int> = _selectedMonth.asStateFlow()
+
+        private val _selectedYear = MutableStateFlow(Calendar.getInstance().get(Calendar.YEAR))
+        val selectedYear: StateFlow<Int> = _selectedYear.asStateFlow()
+
+        data class TimeFilter(val timeFrame: TimeFrame, val month: Int, val year: Int)
+
+        private val filterFlow = combine(_selectedTimeFrame, _selectedMonth, _selectedYear) { tf, m, y ->
+            TimeFilter(tf, m, y)
+        }
+
         fun setTimeFrame(timeFrame: TimeFrame) {
             _selectedTimeFrame.value = timeFrame
+            // Reset to current date when changing timeframe
+            val now = Calendar.getInstance()
+            _selectedMonth.value = now.get(Calendar.MONTH)
+            _selectedYear.value = now.get(Calendar.YEAR)
+        }
+
+        fun setMonth(month: Int) {
+            _selectedMonth.value = month
+        }
+
+        fun setYear(year: Int) {
+            _selectedYear.value = year
+        }
+
+        fun navigatePrevious() {
+            when (_selectedTimeFrame.value) {
+                TimeFrame.MONTHLY -> {
+                    if (_selectedMonth.value == 0) {
+                        _selectedMonth.value = 11
+                        _selectedYear.value -= 1
+                    } else {
+                        _selectedMonth.value -= 1
+                    }
+                }
+                TimeFrame.QUARTERLY -> {
+                    val currentQuarterMonthStart = (_selectedMonth.value / 3) * 3
+                    if (currentQuarterMonthStart == 0) {
+                        _selectedMonth.value = 9 // Q4 start (Oct)
+                        _selectedYear.value -= 1
+                    } else {
+                        _selectedMonth.value = currentQuarterMonthStart - 3
+                    }
+                }
+                TimeFrame.YEARLY -> {
+                    _selectedYear.value -= 1
+                }
+            }
+        }
+
+        fun navigateNext() {
+            val now = Calendar.getInstance()
+            val maxYear = now.get(Calendar.YEAR)
+            val maxMonth = now.get(Calendar.MONTH)
+
+            when (_selectedTimeFrame.value) {
+                TimeFrame.MONTHLY -> {
+                    if (_selectedYear.value < maxYear || (_selectedYear.value == maxYear && _selectedMonth.value < maxMonth)) {
+                        if (_selectedMonth.value == 11) {
+                            _selectedMonth.value = 0
+                            _selectedYear.value += 1
+                        } else {
+                            _selectedMonth.value += 1
+                        }
+                    }
+                }
+                TimeFrame.QUARTERLY -> {
+                    val currentQuarterMonthStart = (_selectedMonth.value / 3) * 3
+                    val maxQuarterMonthStart = (maxMonth / 3) * 3
+                    if (_selectedYear.value < maxYear || (_selectedYear.value == maxYear && currentQuarterMonthStart < maxQuarterMonthStart)) {
+                        if (currentQuarterMonthStart == 9) {
+                            _selectedMonth.value = 0 // Q1 start (Jan)
+                            _selectedYear.value += 1
+                        } else {
+                            _selectedMonth.value = currentQuarterMonthStart + 3
+                        }
+                    }
+                }
+                TimeFrame.YEARLY -> {
+                    if (_selectedYear.value < maxYear) {
+                        _selectedYear.value += 1
+                    }
+                }
+            }
         }
 
         @Suppress("UNCHECKED_CAST")
@@ -107,6 +204,8 @@ class DashboardViewModel
                 getBudgetsUseCase(),
                 getInvestmentsUseCase(),
                 getLoansUseCase(),
+                getSubscriptionsUseCase(),
+                getSavingGoalsUseCase(),
                 getEmergencyFundUseCase(),
                 getPendingTransactionsUseCase(),
             ) { array ->
@@ -116,8 +215,10 @@ class DashboardViewModel
                     budgets = array[2] as List<Budget>,
                     investments = array[3] as List<Investment>,
                     loans = array[4] as List<Loan>,
-                    emergencyFund = array[5] as EmergencyFund?,
-                    pendingTransactions = array[6] as List<PendingTransaction>,
+                    subscriptions = array[5] as List<Subscription>,
+                    savingGoals = array[6] as List<SavingGoal>,
+                    emergencyFund = array[7] as EmergencyFund?,
+                    pendingTransactions = array[8] as List<PendingTransaction>,
                 )
             }
 
@@ -126,8 +227,11 @@ class DashboardViewModel
                 dataFlow,
                 exchangeRateRepo.allRates,
                 userPreferences.currency,
-                _selectedTimeFrame,
-            ) { data, allRates, currentCurrencyCode, timeFrame ->
+                filterFlow,
+            ) { data, allRates, currentCurrencyCode, filter ->
+                val timeFrame = filter.timeFrame
+                val selMonth = filter.month
+                val selYear = filter.year
 
                 fun convertAmount(
                     amountInMinor: Long,
@@ -146,26 +250,25 @@ class DashboardViewModel
                 val investments = data.investments
 
                 val calendar = Calendar.getInstance()
-                val currentMonth = calendar.get(Calendar.MONTH)
-                val currentYear = calendar.get(Calendar.YEAR)
                 val today = calendar.get(Calendar.DAY_OF_YEAR)
+                val currentYear = calendar.get(Calendar.YEAR)
 
-                // Filter transactions based on selected TimeFrame
+                // Filter transactions based on selected TimeFrame, Month, and Year
                 val filteredTransactions =
                     transactions.filter {
                         val transCal = Calendar.getInstance().apply { timeInMillis = it.timestamp }
                         val transYear = transCal.get(Calendar.YEAR)
                         val transMonth = transCal.get(Calendar.MONTH)
 
-                        if (transYear != currentYear) {
+                        if (transYear != selYear) {
                             false
                         } else {
                             when (timeFrame) {
-                                TimeFrame.MONTHLY -> transMonth == currentMonth
+                                TimeFrame.MONTHLY -> transMonth == selMonth
                                 TimeFrame.QUARTERLY -> {
-                                    val currentQuarter = currentMonth / 3
+                                    val selectedQuarter = selMonth / 3
                                     val transQuarter = transMonth / 3
-                                    transQuarter == currentQuarter
+                                    transQuarter == selectedQuarter
                                 }
                                 TimeFrame.YEARLY -> true
                             }
@@ -196,9 +299,11 @@ class DashboardViewModel
                         )
                     }
                 val savings = periodIncome - periodExpense
+                val savingsRate = if (periodIncome > 0) (savings / periodIncome) * 100 else 0.0
 
                 val totalInvestment = investments.sumOf { convertAmount(it.investedAmount, it.currencyCode) }
                 val currentInvestmentValue = investments.sumOf { convertAmount(it.currentValue, it.currencyCode) }
+                val totalDebt = data.loans.sumOf { convertAmount(it.outstandingAmount, it.currencyCode) }
 
                 val categoriesMap = categories.associateBy { it.id }
 
@@ -213,8 +318,8 @@ class DashboardViewModel
                     transactions.filter {
                         val transCal = Calendar.getInstance().apply { timeInMillis = it.timestamp }
                         it.type == TransactionType.EXPENSE &&
-                            transCal.get(Calendar.MONTH) == currentMonth &&
-                            transCal.get(Calendar.YEAR) == currentYear
+                            transCal.get(Calendar.MONTH) == selMonth &&
+                            transCal.get(Calendar.YEAR) == selYear
                     }
                 val expensesByCategoryId = currentMonthExpenses.groupBy { it.categoryId }
 
@@ -243,8 +348,14 @@ class DashboardViewModel
                     budgetProgresses = budgetProgresses,
                     categories = categories,
                     loans = data.loans,
+                    subscriptions = data.subscriptions,
+                    savingGoals = data.savingGoals,
                     emergencyFund = data.emergencyFund,
+                    savingsRate = savingsRate,
+                    totalDebt = totalDebt,
                     selectedTimeFrame = timeFrame,
+                    selectedMonth = selMonth,
+                    selectedYear = selYear,
                     pendingTransactions = data.pendingTransactions,
                     isLearnFinanceEnabled = remoteConfigHelper.isLearnFinanceEnabled(),
                 )

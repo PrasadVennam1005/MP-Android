@@ -21,10 +21,12 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AirplanemodeActive
@@ -166,7 +168,8 @@ fun AuthScreen(
         Column(
             modifier =
                 Modifier
-                    .fillMaxSize()
+                    .widthIn(max = 480.dp)
+                    .fillMaxHeight()
                     .padding(24.dp)
                     .animateContentSize(animationSpec = tween(800, easing = FastOutSlowInEasing)),
             horizontalAlignment = Alignment.CenterHorizontally,

@@ -14,17 +14,24 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material3.*
+import androidx.compose.material3.adaptive.currentWindowAdaptiveInfoV2
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.window.core.layout.WindowWidthSizeClass
 import kotlinx.coroutines.launch
 import prasad.vennam.moneypilot.R
 import prasad.vennam.moneypilot.data.UserPreferences
@@ -65,14 +72,18 @@ fun ReportsTabScreen(
     var showFormSheet by remember { mutableStateOf(false) }
     var budgetToEdit by remember { mutableStateOf<Budget?>(null) }
 
+    val adaptiveInfo = currentWindowAdaptiveInfoV2()
+    val isExpanded = adaptiveInfo.windowSizeClass.windowWidthSizeClass == WindowWidthSizeClass.EXPANDED
+
     val lazyListState = rememberLazyListState()
+    val lazyGridState = rememberLazyGridState()
     var isFabVisible by remember { mutableStateOf(true) }
     var previousIndex by remember { mutableIntStateOf(0) }
     var previousOffset by remember { mutableIntStateOf(0) }
 
-    LaunchedEffect(lazyListState.firstVisibleItemIndex, lazyListState.firstVisibleItemScrollOffset) {
-        val currentIndex = lazyListState.firstVisibleItemIndex
-        val currentOffset = lazyListState.firstVisibleItemScrollOffset
+    LaunchedEffect(lazyListState.firstVisibleItemIndex, lazyListState.firstVisibleItemScrollOffset, lazyGridState.firstVisibleItemIndex, lazyGridState.firstVisibleItemScrollOffset) {
+        val currentIndex = if (isExpanded) lazyGridState.firstVisibleItemIndex else lazyListState.firstVisibleItemIndex
+        val currentOffset = if (isExpanded) lazyGridState.firstVisibleItemScrollOffset else lazyListState.firstVisibleItemScrollOffset
         if (currentIndex == 0 && currentOffset == 0) {
             isFabVisible = true
         } else if (currentIndex > previousIndex || (currentIndex == previousIndex && currentOffset > previousOffset)) {
@@ -199,6 +210,8 @@ fun ReportsTabScreen(
                     BudgetContent(
                         budgetProgresses = budgetProgresses,
                         lazyListState = lazyListState,
+                        lazyGridState = lazyGridState,
+                        isExpanded = isExpanded,
                         isPremium = isPremium,
                         onEditBudget = { budget ->
                             budgetToEdit = budget
@@ -269,6 +282,8 @@ fun ReportsTabScreen(
 fun BudgetContent(
     budgetProgresses: List<BudgetProgress>,
     lazyListState: LazyListState,
+    lazyGridState: androidx.compose.foundation.lazy.grid.LazyGridState,
+    isExpanded: Boolean,
     onEditBudget: (Budget) -> Unit,
     onDeleteBudget: (Budget) -> Unit,
     isPremium: Boolean,
@@ -278,47 +293,96 @@ fun BudgetContent(
     val currentMonth = calendar.get(Calendar.MONTH)
     val currentYear = calendar.get(Calendar.YEAR)
 
-    LazyColumn(
-        state = lazyListState,
-        modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(24.dp),
-        verticalArrangement = Arrangement.spacedBy(20.dp),
-    ) {
-        item {
-            BudgetHeaderSection(budgetProgresses, currentMonth, currentYear)
-        }
-
-        item {
-            Text(
-                stringResource(R.string.monthly_budgets),
-                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-        }
-
-        if (budgetProgresses.isEmpty()) {
-            item {
-                EmptyBudgetState()
+    if (isExpanded) {
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(2),
+            state = lazyGridState,
+            modifier = modifier.fillMaxSize(),
+            contentPadding = PaddingValues(24.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp),
+            horizontalArrangement = Arrangement.spacedBy(20.dp),
+        ) {
+            item(span = { GridItemSpan(2) }) {
+                BudgetHeaderSection(budgetProgresses, currentMonth, currentYear)
             }
-        } else {
-            items(budgetProgresses, key = { it.budget.id }) { itemState ->
-                PremiumBudgetCard(
-                    budgetProgress = itemState,
-                    onEdit = { onEditBudget(itemState.budget) },
-                    onDelete = { onDeleteBudget(itemState.budget) },
+
+            item(span = { GridItemSpan(2) }) {
+                Text(
+                    stringResource(R.string.monthly_budgets),
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
             }
-        }
 
-        if (!isPremium) {
+            if (budgetProgresses.isEmpty()) {
+                item(span = { GridItemSpan(2) }) {
+                    EmptyBudgetState()
+                }
+            } else {
+                items(budgetProgresses, key = { it.budget.id }) { itemState ->
+                    PremiumBudgetCard(
+                        budgetProgress = itemState,
+                        onEdit = { onEditBudget(itemState.budget) },
+                        onDelete = { onDeleteBudget(itemState.budget) },
+                    )
+                }
+            }
+
+            if (!isPremium) {
+                item(span = { GridItemSpan(2) }) {
+                    AdBannerView(
+                        isPremium = isPremium,
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(top = 16.dp),
+                    )
+                }
+            }
+        }
+    } else {
+        LazyColumn(
+            state = lazyListState,
+            modifier = modifier.fillMaxSize(),
+            contentPadding = PaddingValues(24.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp),
+        ) {
             item {
-                AdBannerView(
-                    isPremium = isPremium,
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(top = 16.dp),
+                BudgetHeaderSection(budgetProgresses, currentMonth, currentYear)
+            }
+
+            item {
+                Text(
+                    stringResource(R.string.monthly_budgets),
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
+            }
+
+            if (budgetProgresses.isEmpty()) {
+                item {
+                    EmptyBudgetState()
+                }
+            } else {
+                items(budgetProgresses, key = { it.budget.id }) { itemState ->
+                    PremiumBudgetCard(
+                        budgetProgress = itemState,
+                        onEdit = { onEditBudget(itemState.budget) },
+                        onDelete = { onDeleteBudget(itemState.budget) },
+                    )
+                }
+            }
+
+            if (!isPremium) {
+                item {
+                    AdBannerView(
+                        isPremium = isPremium,
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(top = 16.dp),
+                    )
+                }
             }
         }
     }

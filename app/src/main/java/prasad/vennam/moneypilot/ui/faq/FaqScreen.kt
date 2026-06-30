@@ -14,6 +14,9 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -28,6 +31,8 @@ import androidx.compose.material.icons.automirrored.rounded.ShowChart
 import androidx.compose.material.icons.automirrored.rounded.Subject
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
+import androidx.compose.material3.adaptive.currentWindowAdaptiveInfoV2
+import androidx.window.core.layout.WindowWidthSizeClass
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -170,8 +175,12 @@ fun FaqScreen(
     val context = LocalContext.current
     var showContactSheet by remember { mutableStateOf(false) }
 
+    val adaptiveInfo = currentWindowAdaptiveInfoV2()
+    val isExpanded = adaptiveInfo.windowSizeClass.windowWidthSizeClass == WindowWidthSizeClass.EXPANDED
+
     // Track which FAQ item is expanded: category index -> item index
     val expandedStates = remember { mutableStateMapOf<String, Boolean>() }
+    var selectedCategoryIndex by remember { mutableStateOf(0) }
 
     Scaffold(
         topBar = {
@@ -207,28 +216,120 @@ fun FaqScreen(
         },
         containerColor = MaterialTheme.colorScheme.background,
     ) { innerPadding ->
-        LazyColumn(
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding),
-            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 100.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp),
-        ) {
-            // Hero header
-            item {
-                FaqHeroCard()
-            }
+        if (isExpanded) {
+            Row(
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding)
+                        .padding(16.dp),
+                horizontalArrangement = Arrangement.spacedBy(24.dp)
+            ) {
+                // Left pane: categories list selector
+                Column(
+                    modifier =
+                        Modifier
+                            .weight(1f)
+                            .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    FaqHeroCard()
 
-            // Categories
-            faqCategories.forEachIndexed { catIdx, category ->
-                item(key = "cat_$catIdx") {
+                    Text(
+                        text = "Categories",
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                        modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
+                    )
+
+                    faqCategories.forEachIndexed { index, category ->
+                        val isSelected = selectedCategoryIndex == index
+                        Card(
+                            onClick = { selectedCategoryIndex = index },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(16.dp),
+                            colors =
+                                CardDefaults.cardColors(
+                                    containerColor =
+                                        if (isSelected) {
+                                            MaterialTheme.colorScheme.primaryContainer
+                                        } else {
+                                            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
+                                        }
+                                ),
+                            border =
+                                if (isSelected) {
+                                    BorderStroke(1.dp, MaterialTheme.colorScheme.primary)
+                                } else {
+                                    null
+                                }
+                        ) {
+                            Row(
+                                modifier =
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .padding(16.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = category.icon,
+                                    contentDescription = null,
+                                    tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Spacer(modifier = Modifier.width(16.dp))
+                                Text(
+                                    text = category.title,
+                                    style =
+                                        MaterialTheme.typography.bodyLarge.copy(
+                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.SemiBold
+                                        ),
+                                    color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // Right pane: Question & answers list for selected category
+                Column(
+                    modifier =
+                        Modifier
+                            .weight(1.5f)
+                            .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(20.dp)
+                ) {
+                    val category = faqCategories[selectedCategoryIndex]
                     FaqCategorySection(
                         category = category,
                         expandedStates = expandedStates,
-                        categoryKey = "cat_$catIdx",
+                        categoryKey = "cat_$selectedCategoryIndex",
                         analyticsHelper = analyticsHelper,
                     )
+                }
+            }
+        } else {
+            LazyColumn(
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding),
+                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 100.dp),
+                verticalArrangement = Arrangement.spacedBy(20.dp),
+            ) {
+                // Hero header
+                item {
+                    FaqHeroCard()
+                }
+
+                // Categories
+                faqCategories.forEachIndexed { catIdx, category ->
+                    item(key = "cat_$catIdx") {
+                        FaqCategorySection(
+                            category = category,
+                            expandedStates = expandedStates,
+                            categoryKey = "cat_$catIdx",
+                            analyticsHelper = analyticsHelper,
+                        )
+                    }
                 }
             }
         }

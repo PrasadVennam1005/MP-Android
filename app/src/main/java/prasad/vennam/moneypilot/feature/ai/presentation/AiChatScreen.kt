@@ -57,11 +57,18 @@ import prasad.vennam.moneypilot.feature.ai.model.AiAction
 import prasad.vennam.moneypilot.feature.ai.model.Author
 import prasad.vennam.moneypilot.feature.ai.model.ChatMessage
 import prasad.vennam.moneypilot.feature.ai.model.LlmState
+import prasad.vennam.moneypilot.ui.ai.InsightsContent
+import prasad.vennam.moneypilot.ui.ai.generateSmartInsights
 import prasad.vennam.moneypilot.ui.components.BannerPlaceholder
 import prasad.vennam.moneypilot.ui.components.BaseBottomSheet
+import prasad.vennam.moneypilot.ui.viewmodel.AnalyticsViewModel
 import prasad.vennam.moneypilot.util.AnalyticsConstants
 import prasad.vennam.moneypilot.util.AnalyticsHelper
+import prasad.vennam.moneypilot.util.LocalCurrencyCode
 import prasad.vennam.moneypilot.util.TrackScreen
+import androidx.window.core.layout.WindowWidthSizeClass
+import androidx.compose.material3.adaptive.currentWindowAdaptiveInfoV2
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -69,18 +76,37 @@ fun AiChatScreen(
     onBackClick: () -> Unit,
     analyticsHelper: AnalyticsHelper,
     viewModel: AiViewModel = hiltViewModel(),
+    analyticsViewModel: AnalyticsViewModel = hiltViewModel(),
 ) {
     TrackScreen(analyticsHelper, AnalyticsConstants.Screen.AI_CHAT)
     val messages by viewModel.messages.collectAsState()
     val aiState by viewModel.aiState.collectAsState(LlmState.Idle)
     val downloadProgress by viewModel.downloadProgress.collectAsState(0f)
     val pendingAction by viewModel.pendingAction.collectAsState()
+    
+    val analyticsUiState by analyticsViewModel.uiState.collectAsState()
+    val aiRecState by analyticsViewModel.aiRecommendation.collectAsState()
+    val currencyCode = LocalCurrencyCode.current
+    
+    val adaptiveInfo = currentWindowAdaptiveInfoV2()
+    val isExpanded = adaptiveInfo.windowSizeClass.windowWidthSizeClass == WindowWidthSizeClass.EXPANDED
+    val gridState = rememberLazyGridState()
+
+    val insights =
+        remember(analyticsUiState, currencyCode) {
+            if (analyticsUiState.isLoading) emptyList() else generateSmartInsights(analyticsUiState, currencyCode)
+        }
+
+    LaunchedEffect(analyticsUiState.isLoading, currencyCode) {
+        if (!analyticsUiState.isLoading) {
+            analyticsViewModel.generateAiRecommendation(currencyCode)
+        }
+    }
 
     var inputText by remember { mutableStateOf("") }
     val listState = rememberLazyListState()
     val snackbarHostState = remember { SnackbarHostState() }
     val focusRequester = remember { FocusRequester() }
-    val scope = rememberCoroutineScope()
     var showSuggestionsBottomSheet by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
@@ -314,197 +340,251 @@ fun AiChatScreen(
                     .fillMaxSize()
                     .background(MaterialTheme.colorScheme.background),
         ) {
-            if (aiState is LlmState.Idle) {
-                Box(
-                    modifier =
-                        Modifier
-                            .fillMaxSize()
-                            .padding(24.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Card(
-                        colors =
-                            CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
-                            ),
-                        shape = RoundedCornerShape(24.dp),
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.15f)),
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(24.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                        ) {
-                            Box(
-                                modifier =
-                                    Modifier
-                                        .size(72.dp)
-                                        .clip(CircleShape)
-                                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.08f)),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                Icon(
-                                    Icons.Rounded.CloudDownload,
-                                    null,
-                                    modifier = Modifier.size(36.dp),
-                                    tint = MaterialTheme.colorScheme.primary,
-                                )
-                            }
-                            Spacer(modifier = Modifier.height(16.dp))
-                            Text(
-                                stringResource(R.string.ai_download_required_title),
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface,
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                stringResource(R.string.ai_download_required_desc),
-                                style = MaterialTheme.typography.bodyMedium,
-                                textAlign = TextAlign.Center,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
-                            )
-                            Spacer(modifier = Modifier.height(24.dp))
-
-                            Box(
-                                modifier =
-                                    Modifier
-                                        .fillMaxWidth()
-                                        .height(48.dp)
-                                        .clip(RoundedCornerShape(16.dp))
-                                        .background(
-                                            Brush.linearGradient(
-                                                listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.tertiary),
-                                            ),
-                                        ).clickable {
-                                            analyticsHelper.logEvent(AnalyticsConstants.Event.AI_CHAT_MODEL_DOWNLOAD_CLICKED)
-                                            viewModel.downloadModel()
-                                        },
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                Text(
-                                    stringResource(R.string.download_model_btn),
-                                    color = Color.White,
-                                    fontWeight = FontWeight.Bold,
-                                    style = MaterialTheme.typography.labelLarge,
-                                )
-                            }
-                        }
-                    }
-                }
-            } else if (aiState is LlmState.Downloading) {
-                Box(
-                    modifier =
-                        Modifier
-                            .fillMaxSize()
-                            .padding(24.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Card(
-                        colors =
-                            CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
-                            ),
-                        shape = RoundedCornerShape(24.dp),
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.15f)),
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(24.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                        ) {
-                            val progressPercent = (downloadProgress * 100).toInt()
-                            CircularProgressIndicator(
-                                progress = { downloadProgress },
-                                strokeWidth = 6.dp,
-                                modifier = Modifier.size(72.dp),
-                                color = MaterialTheme.colorScheme.primary,
-                                trackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
-                            )
-                            Spacer(modifier = Modifier.height(20.dp))
-                            Text(
-                                stringResource(R.string.downloading_model_title),
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface,
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                stringResource(R.string.downloading_progress_desc, progressPercent),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
-                            )
-                            Spacer(modifier = Modifier.height(16.dp))
-                            LinearProgressIndicator(
-                                progress = { downloadProgress },
-                                modifier =
-                                    Modifier
-                                        .fillMaxWidth()
-                                        .height(6.dp)
-                                        .clip(CircleShape),
-                                color = MaterialTheme.colorScheme.primary,
-                                trackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
-                            )
-                        }
-                    }
-                }
-            } else if (aiState is LlmState.Initializing) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        CircularProgressIndicator(
-                            strokeWidth = 4.dp,
-                            modifier = Modifier.size(48.dp),
-                            color = MaterialTheme.colorScheme.primary,
+            if (isExpanded) {
+                Row(modifier = Modifier.fillMaxSize()) {
+                    Box(modifier = Modifier.weight(1.2f)) {
+                        InsightsContent(
+                            uiState = analyticsUiState,
+                            aiRecState = aiRecState,
+                            insights = insights,
+                            currencyCode = currencyCode,
+                            isExpanded = false,
+                            gridState = gridState,
+                            analyticsHelper = analyticsHelper,
+                            onNavigateToAiChat = {},
+                            modifier = Modifier.fillMaxSize()
                         )
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text(
-                            stringResource(R.string.initializing_llm_title),
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    }
+                    VerticalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.1f))
+                    Box(modifier = Modifier.weight(1f)) {
+                        AiChatBody(
+                            aiState = aiState,
+                            downloadProgress = downloadProgress,
+                            messages = messages,
+                            listState = listState,
+                            analyticsHelper = analyticsHelper,
+                            onSuggestionClick = { text ->
+                                inputText = text
+                                try {
+                                    focusRequester.requestFocus()
+                                } catch (e: Exception) {}
+                            },
+                            viewModel = viewModel
                         )
                     }
                 }
             } else {
-                if (messages.isEmpty()) {
-                    WelcomeScreen(
-                        analyticsHelper = analyticsHelper,
-                        onSuggestionClick = { text ->
-                            inputText = text
-                            try {
-                                focusRequester.requestFocus()
-                            } catch (e: Exception) {
-                                // Focus request might fail if node is not attached yet
-                            }
-                        },
-                    )
-                } else {
-                    LazyColumn(
-                        state = listState,
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(top = 16.dp, bottom = 80.dp, start = 16.dp, end = 16.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                AiChatBody(
+                    aiState = aiState,
+                    downloadProgress = downloadProgress,
+                    messages = messages,
+                    listState = listState,
+                    analyticsHelper = analyticsHelper,
+                    onSuggestionClick = { text ->
+                        inputText = text
+                        try {
+                            focusRequester.requestFocus()
+                        } catch (e: Exception) {}
+                    },
+                    viewModel = viewModel
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun AiChatBody(
+    aiState: LlmState,
+    downloadProgress: Float,
+    messages: List<ChatMessage>,
+    listState: androidx.compose.foundation.lazy.LazyListState,
+    analyticsHelper: AnalyticsHelper,
+    onSuggestionClick: (String) -> Unit,
+    viewModel: AiViewModel
+) {
+    if (aiState is LlmState.Idle) {
+        Box(
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(24.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            Card(
+                colors =
+                    CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                    ),
+                shape = RoundedCornerShape(24.dp),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.15f)),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Column(
+                    modifier = Modifier.padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Box(
+                        modifier =
+                            Modifier
+                                .size(72.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.08f)),
+                        contentAlignment = Alignment.Center,
                     ) {
-                        items(messages, key = { it.id }) { message ->
-                            var visible by remember { mutableStateOf(false) }
-                            LaunchedEffect(Unit) {
-                                visible = true
-                            }
-                            AnimatedVisibility(
-                                visible = visible,
-                                enter =
-                                    fadeIn(animationSpec = tween(400)) +
-                                        slideInVertically(
-                                            initialOffsetY = { it / 3 },
-                                            animationSpec = tween(400, easing = FastOutSlowInEasing),
-                                        ),
-                            ) {
-                                ChatBubble(message)
-                            }
-                        }
+                        Icon(
+                            Icons.Rounded.CloudDownload,
+                            null,
+                            modifier = Modifier.size(36.dp),
+                            tint = MaterialTheme.colorScheme.primary,
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        stringResource(R.string.ai_download_required_title),
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        stringResource(R.string.ai_download_required_desc),
+                        style = MaterialTheme.typography.bodyMedium,
+                        textAlign = TextAlign.Center,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                    )
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    Box(
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .height(48.dp)
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(
+                                    Brush.linearGradient(
+                                        listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.tertiary),
+                                    ),
+                                ).clickable {
+                                    analyticsHelper.logEvent(AnalyticsConstants.Event.AI_CHAT_MODEL_DOWNLOAD_CLICKED)
+                                    viewModel.downloadModel()
+                                },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            stringResource(R.string.download_model_btn),
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold,
+                            style = MaterialTheme.typography.labelLarge,
+                        )
+                    }
+                }
+            }
+        }
+    } else if (aiState is LlmState.Downloading) {
+        Box(
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(24.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            Card(
+                colors =
+                    CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                    ),
+                shape = RoundedCornerShape(24.dp),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.15f)),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Column(
+                    modifier = Modifier.padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    val progressPercent = (downloadProgress * 100).toInt()
+                    CircularProgressIndicator(
+                        progress = { downloadProgress },
+                        strokeWidth = 6.dp,
+                        modifier = Modifier.size(72.dp),
+                        color = MaterialTheme.colorScheme.primary,
+                        trackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                    )
+                    Spacer(modifier = Modifier.height(20.dp))
+                    Text(
+                        stringResource(R.string.downloading_model_title),
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        stringResource(R.string.downloading_progress_desc, progressPercent),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    LinearProgressIndicator(
+                        progress = { downloadProgress },
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .height(6.dp)
+                                .clip(CircleShape),
+                        color = MaterialTheme.colorScheme.primary,
+                        trackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                    )
+                }
+            }
+        }
+    } else if (aiState is LlmState.Initializing) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center,
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                CircularProgressIndicator(
+                    strokeWidth = 4.dp,
+                    modifier = Modifier.size(48.dp),
+                    color = MaterialTheme.colorScheme.primary,
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    stringResource(R.string.initializing_llm_title),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+    } else {
+        if (messages.isEmpty()) {
+            WelcomeScreen(
+                analyticsHelper = analyticsHelper,
+                onSuggestionClick = onSuggestionClick,
+            )
+        } else {
+            LazyColumn(
+                state = listState,
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(top = 16.dp, bottom = 80.dp, start = 16.dp, end = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                items(messages, key = { it.id }) { message ->
+                    var visible by remember { mutableStateOf(false) }
+                    LaunchedEffect(Unit) {
+                        visible = true
+                    }
+                    AnimatedVisibility(
+                        visible = visible,
+                        enter =
+                            fadeIn(animationSpec = tween(400)) +
+                                slideInVertically(
+                                    initialOffsetY = { it / 3 },
+                                    animationSpec = tween(400, easing = FastOutSlowInEasing),
+                                ),
+                    ) {
+                        ChatBubble(message)
                     }
                 }
             }

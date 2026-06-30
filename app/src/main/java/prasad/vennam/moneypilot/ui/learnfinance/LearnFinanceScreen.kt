@@ -18,6 +18,14 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material3.adaptive.currentWindowAdaptiveInfoV2
+import androidx.window.core.layout.WindowWidthSizeClass
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Bookmark
@@ -76,6 +84,11 @@ fun LearnFinanceScreen(
     val uiState by viewModel.uiState.collectAsState()
     var isSearchActive by remember { mutableStateOf(false) }
     val focusRequester = remember { FocusRequester() }
+
+    val adaptiveInfo = currentWindowAdaptiveInfoV2()
+    val isExpanded = adaptiveInfo.windowSizeClass.windowWidthSizeClass == WindowWidthSizeClass.EXPANDED
+    val lazyListState = rememberLazyListState()
+    val lazyGridState = rememberLazyGridState()
 
     if (isSearchActive) {
         BackHandler {
@@ -172,74 +185,157 @@ fun LearnFinanceScreen(
                 onCategorySelected = { viewModel.onCategorySelected(it) },
             )
 
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(bottom = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                if (featuredArticles.isNotEmpty()) {
-                    item {
+            if (isExpanded) {
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(2),
+                    state = lazyGridState,
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(bottom = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    if (featuredArticles.isNotEmpty()) {
+                        item(span = { GridItemSpan(2) }) {
+                            Text(
+                                text = stringResource(R.string.featured),
+                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                            )
+                        }
+                        item(span = { GridItemSpan(2) }) {
+                            LazyRow(
+                                contentPadding = PaddingValues(horizontal = 16.dp),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                items(featuredArticles, key = { "featured_${it.id}" }) { article ->
+                                    FeaturedArticleCard(
+                                        article = article,
+                                        onClick = { onArticleClick(article.id) },
+                                    )
+                                }
+                            }
+                        }
+                        item(span = { GridItemSpan(2) }) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                        }
+
+                        // AdMob banner
+                        item(span = { GridItemSpan(2) }) {
+                            AdBannerView(
+                                isPremium = isPremium,
+                                modifier =
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 16.dp),
+                            )
+                        }
+                    }
+
+                    item(span = { GridItemSpan(2) }) {
                         Text(
-                            text = stringResource(R.string.featured),
+                            text = stringResource(R.string.articles),
                             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                         )
-                        LazyRow(
-                            contentPadding = PaddingValues(horizontal = 16.dp),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp),
-                            modifier = Modifier.fillMaxWidth(),
-                        ) {
-                            items(featuredArticles, key = { "featured_${it.id}" }) { article ->
-                                FeaturedArticleCard(
+                    }
+
+                    if (uiState.articles.isEmpty()) {
+                        item(span = { GridItemSpan(2) }) {
+                            Box(
+                                modifier =
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .height(200.dp),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Text(stringResource(R.string.no_articles_found), style = MaterialTheme.typography.bodyLarge)
+                            }
+                        }
+                    } else {
+                        items(uiState.articles, key = { it.id }) { article ->
+                            Box(modifier = Modifier.padding(horizontal = 16.dp)) {
+                                ArticleItem(
                                     article = article,
+                                    isBookmarked = uiState.bookmarkedIds.contains(article.id),
+                                    onBookmarkClick = { viewModel.toggleBookmark(article.id) },
                                     onClick = { onArticleClick(article.id) },
                                 )
                             }
                         }
-                        Spacer(modifier = Modifier.height(8.dp))
-                    }
-
-                    // AdMob banner — shown to non-premium users below Featured
-                    item {
-                        AdBannerView(
-                            isPremium = isPremium,
-                            modifier =
-                                Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 16.dp),
-                        )
                     }
                 }
+            } else {
+                LazyColumn(
+                    state = lazyListState,
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(bottom = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    if (featuredArticles.isNotEmpty()) {
+                        item {
+                            Text(
+                                text = stringResource(R.string.featured),
+                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                            )
+                            LazyRow(
+                                contentPadding = PaddingValues(horizontal = 16.dp),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                items(featuredArticles, key = { "featured_${it.id}" }) { article ->
+                                    FeaturedArticleCard(
+                                        article = article,
+                                        onClick = { onArticleClick(article.id) },
+                                    )
+                                }
+                            }
+                            Spacer(modifier = Modifier.height(8.dp))
+                        }
 
-                item {
-                    Text(
-                        text = stringResource(R.string.articles),
-                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                    )
-                }
-
-                if (uiState.articles.isEmpty()) {
-                    item {
-                        Box(
-                            modifier =
-                                Modifier
-                                    .fillMaxWidth()
-                                    .height(200.dp),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Text(stringResource(R.string.no_articles_found), style = MaterialTheme.typography.bodyLarge)
+                        // AdMob banner — shown to non-premium users below Featured
+                        item {
+                            AdBannerView(
+                                isPremium = isPremium,
+                                modifier =
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 16.dp),
+                            )
                         }
                     }
-                } else {
-                    items(uiState.articles, key = { it.id }) { article ->
-                        Box(modifier = Modifier.padding(horizontal = 16.dp)) {
-                            ArticleItem(
-                                article = article,
-                                isBookmarked = uiState.bookmarkedIds.contains(article.id),
-                                onBookmarkClick = { viewModel.toggleBookmark(article.id) },
-                                onClick = { onArticleClick(article.id) },
-                            )
+
+                    item {
+                        Text(
+                            text = stringResource(R.string.articles),
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                        )
+                    }
+
+                    if (uiState.articles.isEmpty()) {
+                        item {
+                            Box(
+                                modifier =
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .height(200.dp),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Text(stringResource(R.string.no_articles_found), style = MaterialTheme.typography.bodyLarge)
+                            }
+                        }
+                    } else {
+                        items(uiState.articles, key = { it.id }) { article ->
+                            Box(modifier = Modifier.padding(horizontal = 16.dp)) {
+                                ArticleItem(
+                                    article = article,
+                                    isBookmarked = uiState.bookmarkedIds.contains(article.id),
+                                    onBookmarkClick = { viewModel.toggleBookmark(article.id) },
+                                    onClick = { onArticleClick(article.id) },
+                                )
+                            }
                         }
                     }
                 }

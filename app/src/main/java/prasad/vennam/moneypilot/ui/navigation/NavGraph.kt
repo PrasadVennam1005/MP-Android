@@ -120,6 +120,9 @@ fun moneyPilotNavEntry(
                     onNavigateToSavingGoals = {
                         backStack.add(Destination.SavingGoals)
                     },
+                    onNavigateToSubscriptions = {
+                        backStack.add(Destination.Subscriptions)
+                    },
                     onNavigateToNews = {
                         backStack.add(Destination.FinancialNews)
                     },

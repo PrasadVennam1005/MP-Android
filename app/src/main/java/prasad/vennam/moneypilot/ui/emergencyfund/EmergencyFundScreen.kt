@@ -47,6 +47,8 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.adaptive.currentWindowAdaptiveInfoV2
+import androidx.window.core.layout.WindowWidthSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -98,6 +100,9 @@ fun EmergencyFundScreen(
     val monthlyExpenses = emergencyFundState?.monthlyExpenses ?: 0.0
     val targetMonths = emergencyFundState?.targetMonths ?: 6
     val currentSaved = emergencyFundState?.currentSaved ?: 0.0
+
+    val adaptiveInfo = currentWindowAdaptiveInfoV2()
+    val isExpanded = adaptiveInfo.windowSizeClass.windowWidthSizeClass == WindowWidthSizeClass.EXPANDED
 
     var showInfoSheet by remember { mutableStateOf(false) }
     var showSetupForm by remember { mutableStateOf(false) }
@@ -329,296 +334,596 @@ fun EmergencyFundScreen(
                 }
             } else {
                 // Premium Progress Visual Dashboard
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    // Gauge Visualizer Card
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = MaterialTheme.shapes.extraLarge,
-                        colors =
-                            CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.surface,
-                            ),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                if (isExpanded) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(24.dp)
                     ) {
+                        // Left Pane: Gauge visualizer card + action buttons
                         Column(
-                            modifier =
-                                Modifier
-                                    .fillMaxWidth()
-                                    .padding(24.dp),
+                            modifier = Modifier.weight(1f),
                             horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
                         ) {
-                            Box(
-                                contentAlignment = Alignment.Center,
-                                modifier = Modifier.size(200.dp),
+                            // Gauge Visualizer Card
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = MaterialTheme.shapes.extraLarge,
+                                colors =
+                                    CardDefaults.cardColors(
+                                        containerColor = MaterialTheme.colorScheme.surface,
+                                    ),
+                                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
                             ) {
-                                val animatedPercent by animateFloatAsState(
-                                    targetValue = percentAchieved,
-                                    animationSpec = tween(durationMillis = 1000),
-                                )
+                                Column(
+                                    modifier =
+                                        Modifier
+                                            .fillMaxWidth()
+                                            .padding(24.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                ) {
+                                    Box(
+                                        contentAlignment = Alignment.Center,
+                                        modifier = Modifier.size(200.dp),
+                                    ) {
+                                        val animatedPercent by animateFloatAsState(
+                                            targetValue = percentAchieved,
+                                            animationSpec = tween(durationMillis = 1000),
+                                        )
 
-                                val trackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f)
-                                val sweepColor = MaterialTheme.colorScheme.secondary
+                                        val trackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f)
+                                        val sweepColor = MaterialTheme.colorScheme.secondary
 
-                                val density = androidx.compose.ui.platform.LocalDensity.current
-                                val gaugeStroke =
-                                    remember(density) {
-                                        Stroke(width = with(density) { 16.dp.toPx() }, cap = StrokeCap.Round)
+                                        val density = androidx.compose.ui.platform.LocalDensity.current
+                                        val gaugeStroke =
+                                            remember(density) {
+                                                Stroke(width = with(density) { 16.dp.toPx() }, cap = StrokeCap.Round)
+                                            }
+                                        val sweepGradientBrush =
+                                            remember(sweepColor) {
+                                                Brush.sweepGradient(
+                                                    listOf(
+                                                        sweepColor.copy(alpha = 0.6f),
+                                                        sweepColor,
+                                                    ),
+                                                )
+                                            }
+
+                                        // Circular Gauge Canvas
+                                        Canvas(modifier = Modifier.size(170.dp)) {
+                                            // Track circle
+                                            drawCircle(
+                                                color = trackColor,
+                                                style = gaugeStroke,
+                                            )
+                                            // Progress sweep arc
+                                            drawArc(
+                                                brush = sweepGradientBrush,
+                                                startAngle = -90f,
+                                                sweepAngle = (animatedPercent / 100f) * 360f,
+                                                useCenter = false,
+                                                style = gaugeStroke,
+                                            )
+                                        }
+
+                                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                            Text(
+                                                text = "${percentAchieved.toInt()}%",
+                                                style =
+                                                    MaterialTheme.typography.headlineLarge.copy(
+                                                        fontWeight = FontWeight.Bold,
+                                                        fontSize = 38.sp,
+                                                    ),
+                                                color = MaterialTheme.colorScheme.secondary,
+                                            )
+                                            Spacer(modifier = Modifier.height(2.dp))
+                                            Text(
+                                                text = stringResource(R.string.current_progress),
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color =
+                                                    MaterialTheme.colorScheme.onSurfaceVariant.copy(
+                                                        alpha = 0.6f,
+                                                    ),
+                                            )
+                                        }
                                     }
-                                val sweepGradientBrush =
-                                    remember(sweepColor) {
-                                        Brush.sweepGradient(
-                                            listOf(
-                                                sweepColor.copy(alpha = 0.6f),
-                                                sweepColor,
+
+                                    Spacer(modifier = Modifier.height(16.dp))
+
+                                    Text(
+                                        text =
+                                            stringResource(
+                                                R.string.safety_net_achieved,
+                                                coverageMonths,
                                             ),
+                                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                        textAlign = TextAlign.Center,
+                                    )
+
+                                    Spacer(modifier = Modifier.height(4.dp))
+
+                                    Text(
+                                        text =
+                                            stringResource(
+                                                R.string.safety_net_months_target,
+                                                targetMonths,
+                                            ),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                                        textAlign = TextAlign.Center,
+                                    )
+                                }
+                            }
+
+                            // Action buttons
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            ) {
+                                OutlinedButton(
+                                    onClick = { showWithdrawSheet = true },
+                                    shape = MaterialTheme.shapes.large,
+                                    modifier = Modifier.weight(1f),
+                                    colors =
+                                        ButtonDefaults.outlinedButtonColors(
+                                            contentColor = MaterialTheme.colorScheme.error,
+                                        ),
+                                    border =
+                                        BorderStroke(
+                                            1.dp,
+                                            MaterialTheme.colorScheme.error.copy(alpha = 0.5f),
+                                        ),
+                                ) {
+                                    Text(
+                                        text = stringResource(R.string.withdraw),
+                                        fontWeight = FontWeight.Bold,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                    )
+                                }
+
+                                Button(
+                                    onClick = { showDepositSheet = true },
+                                    shape = MaterialTheme.shapes.large,
+                                    modifier = Modifier.weight(1f),
+                                    colors =
+                                        ButtonDefaults.buttonColors(
+                                            containerColor = MaterialTheme.colorScheme.secondary,
+                                            contentColor = MaterialTheme.colorScheme.onSecondary,
+                                        ),
+                                ) {
+                                    Text(
+                                        text = stringResource(R.string.deposit),
+                                        fontWeight = FontWeight.Bold,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                    )
+                                }
+                            }
+                        }
+
+                        // Right Pane: Detail statistics cards + remaining target card
+                        Column(
+                            modifier = Modifier.weight(1.2f),
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            // Detail statistics cards
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            ) {
+                                Card(
+                                    modifier = Modifier.weight(1f),
+                                    shape = MaterialTheme.shapes.large,
+                                    colors =
+                                        CardDefaults.cardColors(
+                                            containerColor = MaterialTheme.colorScheme.surface,
+                                        ),
+                                ) {
+                                    Column(modifier = Modifier.padding(16.dp)) {
+                                        Text(
+                                            text = stringResource(R.string.saved_amount),
+                                            style = MaterialTheme.typography.labelMedium,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                                        )
+                                        Spacer(modifier = Modifier.height(6.dp))
+                                        Text(
+                                            text = currentSavedFormatted,
+                                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                            color = MaterialTheme.colorScheme.secondary,
+                                        )
+                                    }
+                                }
+
+                                Card(
+                                    modifier = Modifier.weight(1f),
+                                    shape = MaterialTheme.shapes.large,
+                                    colors =
+                                        CardDefaults.cardColors(
+                                            containerColor = MaterialTheme.colorScheme.surface,
+                                        ),
+                                ) {
+                                    Column(modifier = Modifier.padding(16.dp)) {
+                                        Text(
+                                            text = stringResource(R.string.target_amount),
+                                            style = MaterialTheme.typography.labelMedium,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                                        )
+                                        Spacer(modifier = Modifier.height(6.dp))
+                                        Text(
+                                            text = targetGoalFormatted,
+                                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                            color = MaterialTheme.colorScheme.onSurface,
+                                        )
+                                    }
+                                }
+                            }
+
+                            // Remaining card
+                            if (remainingToSave > 0) {
+                                Card(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = MaterialTheme.shapes.large,
+                                    colors =
+                                        CardDefaults.cardColors(
+                                            containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.15f),
+                                        ),
+                                ) {
+                                    Row(
+                                        modifier =
+                                            Modifier
+                                                .fillMaxWidth()
+                                                .padding(16.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Rounded.Info,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.error,
+                                            modifier = Modifier.size(20.dp),
+                                        )
+                                        Spacer(modifier = Modifier.width(12.dp))
+                                        Column {
+                                            Text(
+                                                text = stringResource(R.string.remaining_target),
+                                                style = MaterialTheme.typography.labelMedium,
+                                                color = MaterialTheme.colorScheme.error,
+                                            )
+                                            Text(
+                                                text = remainingToSaveFormatted,
+                                                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                                                color = MaterialTheme.colorScheme.error,
+                                            )
+                                        }
+                                    }
+                                }
+                            } else {
+                                Card(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = MaterialTheme.shapes.large,
+                                    colors =
+                                        CardDefaults.cardColors(
+                                            containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                                        ),
+                                ) {
+                                    Row(
+                                        modifier =
+                                            Modifier
+                                                .fillMaxWidth()
+                                                .padding(16.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Rounded.CheckCircle,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                                            modifier = Modifier.size(24.dp),
+                                        )
+                                        Spacer(modifier = Modifier.width(12.dp))
+                                        Text(
+                                            text = "Safety Net fully funded! Amazing job.",
+                                            style =
+                                                MaterialTheme.typography.bodyMedium.copy(
+                                                    fontWeight = FontWeight.SemiBold,
+                                                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                                ),
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        // Gauge Visualizer Card
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = MaterialTheme.shapes.extraLarge,
+                            colors =
+                                CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.surface,
+                                ),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                        ) {
+                            Column(
+                                modifier =
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .padding(24.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                            ) {
+                                Box(
+                                    contentAlignment = Alignment.Center,
+                                    modifier = Modifier.size(200.dp),
+                                ) {
+                                    val animatedPercent by animateFloatAsState(
+                                        targetValue = percentAchieved,
+                                        animationSpec = tween(durationMillis = 1000),
+                                    )
+
+                                    val trackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f)
+                                    val sweepColor = MaterialTheme.colorScheme.secondary
+
+                                    val density = androidx.compose.ui.platform.LocalDensity.current
+                                    val gaugeStroke =
+                                        remember(density) {
+                                            Stroke(width = with(density) { 16.dp.toPx() }, cap = StrokeCap.Round)
+                                        }
+                                    val sweepGradientBrush =
+                                        remember(sweepColor) {
+                                            Brush.sweepGradient(
+                                                listOf(
+                                                    sweepColor.copy(alpha = 0.6f),
+                                                    sweepColor,
+                                                ),
+                                            )
+                                        }
+
+                                    // Circular Gauge Canvas
+                                    Canvas(modifier = Modifier.size(170.dp)) {
+                                        // Track circle
+                                        drawCircle(
+                                            color = trackColor,
+                                            style = gaugeStroke,
+                                        )
+                                        // Progress sweep arc
+                                        drawArc(
+                                            brush = sweepGradientBrush,
+                                            startAngle = -90f,
+                                            sweepAngle = (animatedPercent / 100f) * 360f,
+                                            useCenter = false,
+                                            style = gaugeStroke,
                                         )
                                     }
 
-                                // Circular Gauge Canvas
-                                Canvas(modifier = Modifier.size(170.dp)) {
-                                    // Track circle
-                                    drawCircle(
-                                        color = trackColor,
-                                        style = gaugeStroke,
-                                    )
-                                    // Progress sweep arc
-                                    drawArc(
-                                        brush = sweepGradientBrush,
-                                        startAngle = -90f,
-                                        sweepAngle = (animatedPercent / 100f) * 360f,
-                                        useCenter = false,
-                                        style = gaugeStroke,
-                                    )
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                        Text(
+                                            text = "${percentAchieved.toInt()}%",
+                                            style =
+                                                MaterialTheme.typography.headlineLarge.copy(
+                                                    fontWeight = FontWeight.Bold,
+                                                    fontSize = 38.sp,
+                                                ),
+                                            color = MaterialTheme.colorScheme.secondary,
+                                        )
+                                        Spacer(modifier = Modifier.height(2.dp))
+                                        Text(
+                                            text = stringResource(R.string.current_progress),
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color =
+                                                MaterialTheme.colorScheme.onSurfaceVariant.copy(
+                                                    alpha = 0.6f,
+                                                ),
+                                        )
+                                    }
                                 }
 
-                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Text(
-                                        text = "${percentAchieved.toInt()}%",
-                                        style =
-                                            MaterialTheme.typography.headlineLarge.copy(
-                                                fontWeight = FontWeight.Bold,
-                                                fontSize = 38.sp,
-                                            ),
-                                        color = MaterialTheme.colorScheme.secondary,
-                                    )
-                                    Spacer(modifier = Modifier.height(2.dp))
-                                    Text(
-                                        text = stringResource(R.string.current_progress),
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color =
-                                            MaterialTheme.colorScheme.onSurfaceVariant.copy(
-                                                alpha = 0.6f,
-                                            ),
-                                    )
-                                }
-                            }
+                                Spacer(modifier = Modifier.height(16.dp))
 
-                            Spacer(modifier = Modifier.height(16.dp))
-
-                            Text(
-                                text =
-                                    stringResource(
-                                        R.string.safety_net_achieved,
-                                        coverageMonths,
-                                    ),
-                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                                color = MaterialTheme.colorScheme.onSurface,
-                                textAlign = TextAlign.Center,
-                            )
-
-                            Spacer(modifier = Modifier.height(4.dp))
-
-                            Text(
-                                text =
-                                    stringResource(
-                                        R.string.safety_net_months_target,
-                                        targetMonths,
-                                    ),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                                textAlign = TextAlign.Center,
-                            )
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    // Detail statistics cards
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    ) {
-                        Card(
-                            modifier = Modifier.weight(1f),
-                            shape = MaterialTheme.shapes.large,
-                            colors =
-                                CardDefaults.cardColors(
-                                    containerColor = MaterialTheme.colorScheme.surface,
-                                ),
-                        ) {
-                            Column(modifier = Modifier.padding(16.dp)) {
                                 Text(
-                                    text = stringResource(R.string.saved_amount),
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                                )
-                                Spacer(modifier = Modifier.height(6.dp))
-                                Text(
-                                    text = currentSavedFormatted,
-                                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                                    color = MaterialTheme.colorScheme.secondary,
-                                )
-                            }
-                        }
-
-                        Card(
-                            modifier = Modifier.weight(1f),
-                            shape = MaterialTheme.shapes.large,
-                            colors =
-                                CardDefaults.cardColors(
-                                    containerColor = MaterialTheme.colorScheme.surface,
-                                ),
-                        ) {
-                            Column(modifier = Modifier.padding(16.dp)) {
-                                Text(
-                                    text = stringResource(R.string.target_amount),
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                                )
-                                Spacer(modifier = Modifier.height(6.dp))
-                                Text(
-                                    text = targetGoalFormatted,
+                                    text =
+                                        stringResource(
+                                            R.string.safety_net_achieved,
+                                            coverageMonths,
+                                        ),
                                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                                     color = MaterialTheme.colorScheme.onSurface,
+                                    textAlign = TextAlign.Center,
+                                )
+
+                                Spacer(modifier = Modifier.height(4.dp))
+
+                                Text(
+                                    text =
+                                        stringResource(
+                                            R.string.safety_net_months_target,
+                                            targetMonths,
+                                        ),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                                    textAlign = TextAlign.Center,
                                 )
                             }
                         }
-                    }
 
-                    Spacer(modifier = Modifier.height(12.dp))
+                        Spacer(modifier = Modifier.height(16.dp))
 
-                    // Remaining card
-                    if (remainingToSave > 0) {
-                        Card(
+                        // Detail statistics cards
+                        Row(
                             modifier = Modifier.fillMaxWidth(),
-                            shape = MaterialTheme.shapes.large,
-                            colors =
-                                CardDefaults.cardColors(
-                                    containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.15f),
-                                ),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
                         ) {
-                            Row(
-                                modifier =
-                                    Modifier
-                                        .fillMaxWidth()
-                                        .padding(16.dp),
-                                verticalAlignment = Alignment.CenterVertically,
+                            Card(
+                                modifier = Modifier.weight(1f),
+                                shape = MaterialTheme.shapes.large,
+                                colors =
+                                    CardDefaults.cardColors(
+                                        containerColor = MaterialTheme.colorScheme.surface,
+                                    ),
                             ) {
-                                Icon(
-                                    imageVector = Icons.Rounded.Info,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.error,
-                                    modifier = Modifier.size(20.dp),
-                                )
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Column {
+                                Column(modifier = Modifier.padding(16.dp)) {
                                     Text(
-                                        text = stringResource(R.string.remaining_target),
+                                        text = stringResource(R.string.saved_amount),
                                         style = MaterialTheme.typography.labelMedium,
-                                        color = MaterialTheme.colorScheme.error,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                                     )
+                                    Spacer(modifier = Modifier.height(6.dp))
                                     Text(
-                                        text = remainingToSaveFormatted,
-                                        style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-                                        color = MaterialTheme.colorScheme.error,
+                                        text = currentSavedFormatted,
+                                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                        color = MaterialTheme.colorScheme.secondary,
+                                    )
+                                }
+                            }
+
+                            Card(
+                                modifier = Modifier.weight(1f),
+                                shape = MaterialTheme.shapes.large,
+                                colors =
+                                    CardDefaults.cardColors(
+                                        containerColor = MaterialTheme.colorScheme.surface,
+                                    ),
+                            ) {
+                                Column(modifier = Modifier.padding(16.dp)) {
+                                    Text(
+                                        text = stringResource(R.string.target_amount),
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                                    )
+                                    Spacer(modifier = Modifier.height(6.dp))
+                                    Text(
+                                        text = targetGoalFormatted,
+                                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                        color = MaterialTheme.colorScheme.onSurface,
                                     )
                                 }
                             }
                         }
-                    } else {
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = MaterialTheme.shapes.large,
-                            colors =
-                                CardDefaults.cardColors(
-                                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                                ),
-                        ) {
-                            Row(
-                                modifier =
-                                    Modifier
-                                        .fillMaxWidth()
-                                        .padding(16.dp),
-                                verticalAlignment = Alignment.CenterVertically,
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        // Remaining card
+                        if (remainingToSave > 0) {
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = MaterialTheme.shapes.large,
+                                colors =
+                                    CardDefaults.cardColors(
+                                        containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.15f),
+                                    ),
                             ) {
-                                Icon(
-                                    imageVector = Icons.Rounded.CheckCircle,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onSecondaryContainer,
-                                    modifier = Modifier.size(24.dp),
-                                )
-                                Spacer(modifier = Modifier.width(12.dp))
+                                Row(
+                                    modifier =
+                                        Modifier
+                                            .fillMaxWidth()
+                                            .padding(16.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Rounded.Info,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.error,
+                                        modifier = Modifier.size(20.dp),
+                                    )
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Column {
+                                        Text(
+                                            text = stringResource(R.string.remaining_target),
+                                            style = MaterialTheme.typography.labelMedium,
+                                            color = MaterialTheme.colorScheme.error,
+                                        )
+                                        Text(
+                                            text = remainingToSaveFormatted,
+                                            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                                            color = MaterialTheme.colorScheme.error,
+                                        )
+                                    }
+                                }
+                            }
+                        } else {
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = MaterialTheme.shapes.large,
+                                colors =
+                                    CardDefaults.cardColors(
+                                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                                    ),
+                            ) {
+                                Row(
+                                    modifier =
+                                        Modifier
+                                            .fillMaxWidth()
+                                            .padding(16.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Rounded.CheckCircle,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                                        modifier = Modifier.size(24.dp),
+                                    )
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Text(
+                                        text = "Safety Net fully funded! Amazing job.",
+                                        style =
+                                            MaterialTheme.typography.bodyMedium.copy(
+                                                fontWeight = FontWeight.SemiBold,
+                                                color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                            ),
+                                    )
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(32.dp))
+
+                        // Action buttons
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        ) {
+                            OutlinedButton(
+                                onClick = { showWithdrawSheet = true },
+                                shape = MaterialTheme.shapes.large,
+                                modifier = Modifier.weight(1f),
+                                colors =
+                                    ButtonDefaults.outlinedButtonColors(
+                                        contentColor = MaterialTheme.colorScheme.error,
+                                    ),
+                                border =
+                                    BorderStroke(
+                                        1.dp,
+                                        MaterialTheme.colorScheme.error.copy(alpha = 0.5f),
+                                    ),
+                            ) {
                                 Text(
-                                    text = "Safety Net fully funded! Amazing job.",
-                                    style =
-                                        MaterialTheme.typography.bodyMedium.copy(
-                                            fontWeight = FontWeight.SemiBold,
-                                            color = MaterialTheme.colorScheme.onSecondaryContainer,
-                                        ),
+                                    text = stringResource(R.string.withdraw),
+                                    fontWeight = FontWeight.Bold,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                )
+                            }
+
+                            Button(
+                                onClick = { showDepositSheet = true },
+                                shape = MaterialTheme.shapes.large,
+                                modifier = Modifier.weight(1f),
+                                colors =
+                                    ButtonDefaults.buttonColors(
+                                        containerColor = MaterialTheme.colorScheme.secondary,
+                                        contentColor = MaterialTheme.colorScheme.onSecondary,
+                                    ),
+                            ) {
+                                Text(
+                                    text = stringResource(R.string.deposit),
+                                    fontWeight = FontWeight.Bold,
+                                    style = MaterialTheme.typography.bodyMedium,
                                 )
                             }
                         }
+                        Spacer(modifier = Modifier.height(40.dp))
                     }
-
-                    Spacer(modifier = Modifier.height(32.dp))
-
-                    // Action buttons
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    ) {
-                        OutlinedButton(
-                            onClick = { showWithdrawSheet = true },
-                            shape = MaterialTheme.shapes.large,
-                            modifier = Modifier.weight(1f),
-                            colors =
-                                ButtonDefaults.outlinedButtonColors(
-                                    contentColor = MaterialTheme.colorScheme.error,
-                                ),
-                            border =
-                                BorderStroke(
-                                    1.dp,
-                                    MaterialTheme.colorScheme.error.copy(alpha = 0.5f),
-                                ),
-                        ) {
-                            Text(
-                                text = stringResource(R.string.withdraw),
-                                fontWeight = FontWeight.Bold,
-                                style = MaterialTheme.typography.bodyMedium,
-                            )
-                        }
-
-                        Button(
-                            onClick = { showDepositSheet = true },
-                            shape = MaterialTheme.shapes.large,
-                            modifier = Modifier.weight(1f),
-                            colors =
-                                ButtonDefaults.buttonColors(
-                                    containerColor = MaterialTheme.colorScheme.secondary,
-                                    contentColor = MaterialTheme.colorScheme.onSecondary,
-                                ),
-                        ) {
-                            Text(
-                                text = stringResource(R.string.deposit),
-                                fontWeight = FontWeight.Bold,
-                                style = MaterialTheme.typography.bodyMedium,
-                            )
-                        }
-                    }
-                    Spacer(modifier = Modifier.height(40.dp))
                 }
             }
         }

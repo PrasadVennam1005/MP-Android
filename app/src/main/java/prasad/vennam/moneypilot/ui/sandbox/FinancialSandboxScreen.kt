@@ -20,6 +20,7 @@ import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.TrendingUp
 import androidx.compose.material3.*
+import androidx.compose.material3.adaptive.currentWindowAdaptiveInfoV2
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -34,6 +35,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.window.core.layout.WindowWidthSizeClass
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -54,6 +56,9 @@ fun FinancialSandboxScreen(
 ) {
     TrackScreen(analyticsHelper, AnalyticsConstants.Screen.FINANCIAL_SANDBOX)
     val defaultsState by viewModel.defaults.collectAsState()
+    
+    val adaptiveInfo = currentWindowAdaptiveInfoV2()
+    val isExpanded = adaptiveInfo.windowSizeClass.windowWidthSizeClass == WindowWidthSizeClass.EXPANDED
 
     var incomeInput by remember { mutableStateOf("") }
     var expenseInput by remember { mutableStateOf("") }
@@ -145,459 +150,601 @@ fun FinancialSandboxScreen(
         },
         containerColor = MaterialTheme.colorScheme.background,
     ) { innerPadding ->
-        Column(
-            modifier =
-                Modifier
+        if (isExpanded) {
+            Row(
+                modifier = Modifier
                     .fillMaxSize()
                     .padding(innerPadding)
-                    .verticalScroll(rememberScrollState())
                     .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp),
-        ) {
-            // Edit Base Income / Expenses card (expandable)
-            AnimatedVisibility(
-                visible = isEditingBaseValues,
-                enter = fadeIn(tween(300)),
-                exit = fadeOut(tween(200)),
+                horizontalArrangement = Arrangement.spacedBy(24.dp)
             ) {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = MaterialTheme.shapes.extraLarge,
-                    colors =
-                        CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                        ),
-                ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp),
-                    ) {
-                        Text(
-                            stringResource(R.string.sandbox_base_inputs_title, defaultsState.currencyCode),
-                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                        )
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        ) {
-                            OutlinedTextField(
-                                value = incomeInput,
-                                onValueChange = { incomeInput = it },
-                                label = { Text(stringResource(R.string.sandbox_monthly_income)) },
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
-                                keyboardActions = KeyboardActions(onNext = {
-                                    focusManager.moveFocus(androidx.compose.ui.focus.FocusDirection.Right)
-                                }),
-                                modifier = Modifier.weight(1f),
-                                shape = MaterialTheme.shapes.large,
-                            )
-                            OutlinedTextField(
-                                value = expenseInput,
-                                onValueChange = { expenseInput = it },
-                                label = { Text(stringResource(R.string.sandbox_monthly_expense)) },
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
-                                keyboardActions = KeyboardActions(onDone = {
-                                    keyboardController?.hide()
-                                    focusManager.clearFocus()
-                                    isEditingBaseValues = false
-                                }),
-                                modifier = Modifier.weight(1f),
-                                shape = MaterialTheme.shapes.large,
-                            )
-                        }
-                        Button(
-                            onClick = { isEditingBaseValues = false },
-                            modifier = Modifier.align(Alignment.End),
-                            shape = MaterialTheme.shapes.large,
-                        ) {
-                            Text(stringResource(R.string.sandbox_done))
-                        }
-                    }
-                }
-            }
-
-            // Overview/Base Savings summary Row
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                BaseMetricCard(
-                    title = stringResource(R.string.sandbox_monthly_savings),
-                    value = "$currencySymbol${formatDouble(currentSavings)}",
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.weight(1f),
-                )
-                BaseMetricCard(
-                    title = stringResource(R.string.sandbox_optimized_savings),
-                    value = "$currencySymbol${formatDouble(optimizedSavings)}",
-                    color = MaterialTheme.colorScheme.secondary,
-                    modifier = Modifier.weight(1f),
-                )
-            }
-
-            // Input Sliders section
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = MaterialTheme.shapes.extraLarge,
-                colors =
-                    CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surface,
-                    ),
-                elevation = CardDefaults.cardElevation(defaultElevation = 0.5.dp),
-            ) {
+                // Left Pane: Controls
                 Column(
-                    modifier = Modifier.padding(20.dp),
-                    verticalArrangement = Arrangement.spacedBy(20.dp),
+                    modifier = Modifier
+                        .weight(1f)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(20.dp)
                 ) {
-                    // Sliders Header
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Icon(
-                            Icons.AutoMirrored.Rounded.TrendingUp,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(22.dp),
-                        )
-                        Spacer(Modifier.width(10.dp))
-                        Text(
-                            stringResource(R.string.sandbox_scenario_params),
-                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                            color = MaterialTheme.colorScheme.onSurface,
-                        )
-                    }
-
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-
-                    // Slider 1: Expense Cut
-                    Column {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Text(
-                                stringResource(R.string.expense_cut),
-                                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                            Text(
-                                stringResource(
-                                    R.string.sandbox_saved_per_month,
-                                    "${expenseCutPercent.roundToInt()}%",
-                                    "$currencySymbol${formatDouble(cutAmount)}",
-                                ),
-                                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
-                                color = MaterialTheme.colorScheme.primary,
-                            )
-                        }
-                        Slider(
-                            value = expenseCutPercent,
-                            onValueChange = { expenseCutPercent = it },
-                            valueRange = 0f..50f,
-                            steps = 9,
-                            colors =
-                                SliderDefaults.colors(
-                                    thumbColor = MaterialTheme.colorScheme.primary,
-                                    activeTrackColor = MaterialTheme.colorScheme.primary,
-                                    inactiveTrackColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f),
-                                    activeTickColor = Color.Transparent,
-                                    inactiveTickColor = Color.Transparent,
-                                ),
-                        )
-                    }
-
-                    // Slider 2: Target Savings Goal
-                    Column {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Text(
-                                stringResource(R.string.target_savings),
-                                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                            Text(
-                                "$currencySymbol${formatDouble(targetSavingsGoal.toDouble())}",
-                                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
-                                color = MaterialTheme.colorScheme.secondary,
-                            )
-                        }
-                        Slider(
-                            value = targetSavingsGoal,
-                            onValueChange = { targetSavingsGoal = it },
-                            valueRange = 5000f..500000f,
-                            steps = 99,
-                            colors =
-                                SliderDefaults.colors(
-                                    thumbColor = MaterialTheme.colorScheme.secondary,
-                                    activeTrackColor = MaterialTheme.colorScheme.secondary,
-                                    inactiveTrackColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.4f),
-                                    activeTickColor = Color.Transparent,
-                                    inactiveTickColor = Color.Transparent,
-                                ),
-                        )
-                    }
-
-                    // Slider 3: Expected ROI
-                    Column {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Text(
-                                stringResource(R.string.annual_return),
-                                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                            Text(
-                                "${(expectedRoi * 10).roundToInt() / 10.0}%",
-                                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
-                                color = MaterialTheme.colorScheme.tertiary,
-                            )
-                        }
-                        Slider(
-                            value = expectedRoi,
-                            onValueChange = { expectedRoi = it },
-                            valueRange = 3f..15f,
-                            steps = 24,
-                            colors =
-                                SliderDefaults.colors(
-                                    thumbColor = MaterialTheme.colorScheme.tertiary,
-                                    activeTrackColor = MaterialTheme.colorScheme.tertiary,
-                                    inactiveTrackColor = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.2f),
-                                    activeTickColor = Color.Transparent,
-                                    inactiveTickColor = Color.Transparent,
-                                ),
-                        )
-                    }
-                }
-            }
-
-            // Highlights Results Card
-            SandboxResultsCard(
-                currentMonths = currentMonthsToGoal,
-                optimizedMonths = optimizedMonthsToGoal,
-                cutAmount = cutAmount,
-                currencySymbol = currencySymbol,
-            )
-
-            // Projections Canvas Line Chart
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = MaterialTheme.shapes.extraLarge,
-                colors =
-                    CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surface,
-                    ),
-                elevation = CardDefaults.cardElevation(defaultElevation = 0.5.dp),
-            ) {
-                Column(
-                    modifier = Modifier.padding(20.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp),
-                ) {
-                    Text(
-                        stringResource(R.string.sandbox_growth_projection),
-                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                        color = MaterialTheme.colorScheme.onSurface,
+                    SandboxInputs(
+                        isEditingBaseValues = isEditingBaseValues,
+                        incomeInput = incomeInput,
+                        onIncomeChange = { incomeInput = it },
+                        expenseInput = expenseInput,
+                        onExpenseChange = { expenseInput = it },
+                        currencyCode = defaultsState.currencyCode,
+                        focusManager = focusManager,
+                        keyboardController = keyboardController,
+                        onDoneEditing = { isEditingBaseValues = false }
                     )
 
-                    // Legend Row
+                    SliderControls(
+                        expenseCutPercent = expenseCutPercent,
+                        onExpenseCutChange = { expenseCutPercent = it },
+                        targetSavingsGoal = targetSavingsGoal,
+                        onTargetSavingsChange = { targetSavingsGoal = it },
+                        expectedRoi = expectedRoi,
+                        onRoiChange = { expectedRoi = it },
+                        currencySymbol = currencySymbol,
+                        cutAmount = cutAmount
+                    )
+                }
+
+                // Right Pane: Visualization & Results
+                Column(
+                    modifier = Modifier
+                        .weight(1.2f)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(20.dp)
+                ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(16.dp),
-                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
-                        LegendItem(
-                            label = stringResource(R.string.current_trajectory),
+                        BaseMetricCard(
+                            title = stringResource(R.string.sandbox_monthly_savings),
+                            value = "$currencySymbol${formatDouble(currentSavings)}",
                             color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.weight(1f),
                         )
-                        LegendItem(
-                            label = stringResource(R.string.optimized_trajectory),
+                        BaseMetricCard(
+                            title = stringResource(R.string.sandbox_optimized_savings),
+                            value = "$currencySymbol${formatDouble(optimizedSavings)}",
                             color = MaterialTheme.colorScheme.secondary,
+                            modifier = Modifier.weight(1f),
                         )
                     }
 
-                    Spacer(Modifier.height(8.dp))
+                    SandboxResultsCard(
+                        currentMonths = currentMonthsToGoal,
+                        optimizedMonths = optimizedMonthsToGoal,
+                        cutAmount = cutAmount,
+                        currencySymbol = currencySymbol,
+                    )
 
-                    // Custom Line Chart Canvas
-                    val primaryColor = MaterialTheme.colorScheme.primary
-                    val secondaryColor = MaterialTheme.colorScheme.secondary
-                    val gridColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
-                    val labelColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                    ProjectionChart(
+                        optimizedProjection = optimizedProjection,
+                        currentProjection = currentProjection,
+                        targetSavingsGoal = targetSavingsGoal,
+                        currencySymbol = currencySymbol,
+                        yearLabels = yearLabels
+                    )
+                }
+            }
+        } else {
+            Column(
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding)
+                        .verticalScroll(rememberScrollState())
+                        .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(20.dp),
+            ) {
+                SandboxInputs(
+                    isEditingBaseValues = isEditingBaseValues,
+                    incomeInput = incomeInput,
+                    onIncomeChange = { incomeInput = it },
+                    expenseInput = expenseInput,
+                    onExpenseChange = { expenseInput = it },
+                    currencyCode = defaultsState.currencyCode,
+                    focusManager = focusManager,
+                    keyboardController = keyboardController,
+                    onDoneEditing = { isEditingBaseValues = false }
+                )
 
-                    val density = androidx.compose.ui.platform.LocalDensity.current
-                    val labelColorArgb = labelColor.toArgb()
-                    val textPaintY =
-                        remember(density, labelColorArgb) {
-                            android.graphics.Paint().apply {
-                                color = labelColorArgb
-                                textSize = with(density) { 10.sp.toPx() }
-                                textAlign = android.graphics.Paint.Align.RIGHT
-                            }
-                        }
-                    val textPaintX =
-                        remember(density, labelColorArgb) {
-                            android.graphics.Paint().apply {
-                                color = labelColorArgb
-                                textSize = with(density) { 10.sp.toPx() }
-                                textAlign = android.graphics.Paint.Align.CENTER
-                            }
-                        }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    BaseMetricCard(
+                        title = stringResource(R.string.sandbox_monthly_savings),
+                        value = "$currencySymbol${formatDouble(currentSavings)}",
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.weight(1f),
+                    )
+                    BaseMetricCard(
+                        title = stringResource(R.string.sandbox_optimized_savings),
+                        value = "$currencySymbol${formatDouble(optimizedSavings)}",
+                        color = MaterialTheme.colorScheme.secondary,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
 
-                    val currentPath = remember { Path() }
-                    val optimizedPath = remember { Path() }
-                    val currentFillPath = remember { Path() }
-                    val optimizedFillPath = remember { Path() }
+                SliderControls(
+                    expenseCutPercent = expenseCutPercent,
+                    onExpenseCutChange = { expenseCutPercent = it },
+                    targetSavingsGoal = targetSavingsGoal,
+                    onTargetSavingsChange = { targetSavingsGoal = it },
+                    expectedRoi = expectedRoi,
+                    onRoiChange = { expectedRoi = it },
+                    currencySymbol = currencySymbol,
+                    cutAmount = cutAmount
+                )
 
-                    val lineStroke =
-                        remember(density) {
-                            Stroke(width = with(density) { 3.dp.toPx() }, cap = StrokeCap.Round)
-                        }
+                SandboxResultsCard(
+                    currentMonths = currentMonthsToGoal,
+                    optimizedMonths = optimizedMonthsToGoal,
+                    cutAmount = cutAmount,
+                    currencySymbol = currencySymbol,
+                )
 
-                    val dashPathEffect =
-                        remember {
-                            PathEffect.dashPathEffect(floatArrayOf(10f, 10f), 0f)
-                        }
+                ProjectionChart(
+                    optimizedProjection = optimizedProjection,
+                    currentProjection = currentProjection,
+                    targetSavingsGoal = targetSavingsGoal,
+                    currencySymbol = currencySymbol,
+                    yearLabels = yearLabels
+                )
+            }
+        }
+    }
+}
 
-                    Canvas(
-                        modifier =
-                            Modifier
-                                .fillMaxWidth()
-                                .height(200.dp),
-                    ) {
-                        val width = size.width
-                        val height = size.height
-                        val paddingLeft = 45.sp.toPx()
-                        val paddingBottom = 24.sp.toPx()
-                        val chartWidth = width - paddingLeft
-                        val chartHeight = height - paddingBottom
+@Composable
+private fun SandboxInputs(
+    isEditingBaseValues: Boolean,
+    incomeInput: String,
+    onIncomeChange: (String) -> Unit,
+    expenseInput: String,
+    onExpenseChange: (String) -> Unit,
+    currencyCode: String,
+    focusManager: androidx.compose.ui.focus.FocusManager,
+    keyboardController: androidx.compose.ui.platform.SoftwareKeyboardController?,
+    onDoneEditing: () -> Unit
+) {
+    AnimatedVisibility(
+        visible = isEditingBaseValues,
+        enter = fadeIn(tween(300)),
+        exit = fadeOut(tween(200)),
+    ) {
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = MaterialTheme.shapes.extraLarge,
+            colors =
+                CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                ),
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Text(
+                    stringResource(R.string.sandbox_base_inputs_title, currencyCode),
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    OutlinedTextField(
+                        value = incomeInput,
+                        onValueChange = onIncomeChange,
+                        label = { Text(stringResource(R.string.sandbox_monthly_income)) },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
+                        keyboardActions = KeyboardActions(onNext = {
+                            focusManager.moveFocus(androidx.compose.ui.focus.FocusDirection.Right)
+                        }),
+                        modifier = Modifier.weight(1f),
+                        shape = MaterialTheme.shapes.large,
+                    )
+                    OutlinedTextField(
+                        value = expenseInput,
+                        onValueChange = onExpenseChange,
+                        label = { Text(stringResource(R.string.sandbox_monthly_expense)) },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
+                        keyboardActions = KeyboardActions(onDone = {
+                            keyboardController?.hide()
+                            focusManager.clearFocus()
+                            onDoneEditing()
+                        }),
+                        modifier = Modifier.weight(1f),
+                        shape = MaterialTheme.shapes.large,
+                    )
+                }
+                Button(
+                    onClick = onDoneEditing,
+                    modifier = Modifier.align(Alignment.End),
+                    shape = MaterialTheme.shapes.large,
+                ) {
+                    Text(stringResource(R.string.sandbox_done))
+                }
+            }
+        }
+    }
+}
 
-                        // Find Max Value for scaling the Y axis
-                        val maxVal = (optimizedProjection.maxOrNull() ?: 1.0).coerceAtLeast(targetSavingsGoal.toDouble()) * 1.1
+@Composable
+private fun SliderControls(
+    expenseCutPercent: Float,
+    onExpenseCutChange: (Float) -> Unit,
+    targetSavingsGoal: Float,
+    onTargetSavingsChange: (Float) -> Unit,
+    expectedRoi: Float,
+    onRoiChange: (Float) -> Unit,
+    currencySymbol: String,
+    cutAmount: Double
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.extraLarge,
+        colors =
+            CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surface,
+            ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.5.dp),
+    ) {
+        Column(
+            modifier = Modifier.padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp),
+        ) {
+            // Sliders Header
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(
+                    Icons.AutoMirrored.Rounded.TrendingUp,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(22.dp),
+                )
+                Spacer(Modifier.width(10.dp))
+                Text(
+                    stringResource(R.string.sandbox_scenario_params),
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+            }
 
-                        // Draw Grid lines
-                        val gridCount = 4
-                        for (i in 0..gridCount) {
-                            val y = chartHeight - (chartHeight * (i.toFloat() / gridCount))
-                            drawLine(
-                                color = gridColor,
-                                start = Offset(paddingLeft, y),
-                                end = Offset(width, y),
-                                strokeWidth = 1.dp.toPx(),
-                            )
-                        }
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
 
-                        // Draw Y Axis labels
-                        for (i in 0..gridCount) {
-                            val y = chartHeight - (chartHeight * (i.toFloat() / gridCount))
-                            val value = maxVal * (i.toFloat() / gridCount)
-                            val label = "$currencySymbol${formatCompact(value)}"
-                            drawContext.canvas.nativeCanvas.drawText(
-                                label,
-                                paddingLeft - 6.dp.toPx(),
-                                y + 4.dp.toPx(),
-                                textPaintY,
-                            )
-                        }
+            // Slider 1: Expense Cut
+            Column {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        stringResource(R.string.expense_cut),
+                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Text(
+                        stringResource(
+                            R.string.sandbox_saved_per_month,
+                            "${expenseCutPercent.roundToInt()}%",
+                            "$currencySymbol${formatDouble(cutAmount)}",
+                        ),
+                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                }
+                Slider(
+                    value = expenseCutPercent,
+                    onValueChange = onExpenseCutChange,
+                    valueRange = 0f..50f,
+                    steps = 9,
+                    colors =
+                        SliderDefaults.colors(
+                            thumbColor = MaterialTheme.colorScheme.primary,
+                            activeTrackColor = MaterialTheme.colorScheme.primary,
+                            inactiveTrackColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f),
+                            activeTickColor = Color.Transparent,
+                            inactiveTickColor = Color.Transparent,
+                        ),
+                )
+            }
 
-                        // Draw X Axis labels (Years 0, 2, 4, 6, 8, 10)
-                        val yearSteps = 5
-                        for (i in 0..yearSteps) {
-                            val year = i * 2
-                            val x = paddingLeft + (chartWidth * (year.toFloat() / 10))
-                            val label = yearLabels.getOrElse(i) { "${year}Y" }
-                            drawContext.canvas.nativeCanvas.drawText(
-                                label,
-                                x,
-                                height - 4.dp.toPx(),
-                                textPaintX,
-                            )
-                        }
+            // Slider 2: Target Savings Goal
+            Column {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        stringResource(R.string.target_savings),
+                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Text(
+                        "$currencySymbol${formatDouble(targetSavingsGoal.toDouble())}",
+                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.secondary,
+                    )
+                }
+                Slider(
+                    value = targetSavingsGoal,
+                    onValueChange = onTargetSavingsChange,
+                    valueRange = 5000f..500000f,
+                    steps = 99,
+                    colors =
+                        SliderDefaults.colors(
+                            thumbColor = MaterialTheme.colorScheme.secondary,
+                            activeTrackColor = MaterialTheme.colorScheme.secondary,
+                            inactiveTrackColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.4f),
+                            activeTickColor = Color.Transparent,
+                            inactiveTickColor = Color.Transparent,
+                        ),
+                )
+            }
 
-                        // Generate Paths for plotting
-                        currentPath.reset()
-                        optimizedPath.reset()
+            // Slider 3: Expected ROI
+            Column {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        stringResource(R.string.annual_return),
+                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Text(
+                        "${(expectedRoi * 10).roundToInt() / 10.0}%",
+                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.tertiary,
+                    )
+                }
+                Slider(
+                    value = expectedRoi,
+                    onValueChange = onRoiChange,
+                    valueRange = 3f..15f,
+                    steps = 24,
+                    colors =
+                        SliderDefaults.colors(
+                            thumbColor = MaterialTheme.colorScheme.tertiary,
+                            activeTrackColor = MaterialTheme.colorScheme.tertiary,
+                            inactiveTrackColor = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.2f),
+                            activeTickColor = Color.Transparent,
+                            inactiveTickColor = Color.Transparent,
+                        ),
+                )
+            }
+        }
+    }
+}
 
-                        currentProjection.forEachIndexed { index, balance ->
-                            val x = paddingLeft + (chartWidth * (index.toFloat() / (currentProjection.size - 1)))
-                            val y = chartHeight - (chartHeight * (balance / maxVal).toFloat())
-                            if (index == 0) {
-                                currentPath.moveTo(x, y)
-                            } else {
-                                currentPath.lineTo(x, y)
-                            }
-                        }
+@Composable
+private fun ProjectionChart(
+    optimizedProjection: List<Double>,
+    currentProjection: List<Double>,
+    targetSavingsGoal: Float,
+    currencySymbol: String,
+    yearLabels: List<String>
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.extraLarge,
+        colors =
+            CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surface,
+            ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.5.dp),
+    ) {
+        Column(
+            modifier = Modifier.padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            Text(
+                stringResource(R.string.sandbox_growth_projection),
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                color = MaterialTheme.colorScheme.onSurface,
+            )
 
-                        optimizedProjection.forEachIndexed { index, balance ->
-                            val x = paddingLeft + (chartWidth * (index.toFloat() / (optimizedProjection.size - 1)))
-                            val y = chartHeight - (chartHeight * (balance / maxVal).toFloat())
-                            if (index == 0) {
-                                optimizedPath.moveTo(x, y)
-                            } else {
-                                optimizedPath.lineTo(x, y)
-                            }
-                        }
+            // Legend Row
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                LegendItem(
+                    label = stringResource(R.string.current_trajectory),
+                    color = MaterialTheme.colorScheme.primary,
+                )
+                LegendItem(
+                    label = stringResource(R.string.optimized_trajectory),
+                    color = MaterialTheme.colorScheme.secondary,
+                )
+            }
 
-                        // 1. Draw gradient filled paths under curves (premium shading)
-                        currentFillPath.reset()
-                        currentFillPath.addPath(currentPath)
-                        currentFillPath.lineTo(paddingLeft + chartWidth, chartHeight)
-                        currentFillPath.lineTo(paddingLeft, chartHeight)
-                        currentFillPath.close()
+            Spacer(Modifier.height(8.dp))
 
-                        drawPath(
-                            path = currentFillPath,
-                            brush =
-                                Brush.verticalGradient(
-                                    colors = listOf(primaryColor.copy(alpha = 0.15f), Color.Transparent),
-                                    startY = 0f,
-                                    endY = chartHeight,
-                                ),
-                        )
+            // Custom Line Chart Canvas
+            val primaryColor = MaterialTheme.colorScheme.primary
+            val secondaryColor = MaterialTheme.colorScheme.secondary
+            val gridColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
+            val labelColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
 
-                        optimizedFillPath.reset()
-                        optimizedFillPath.addPath(optimizedPath)
-                        optimizedFillPath.lineTo(paddingLeft + chartWidth, chartHeight)
-                        optimizedFillPath.lineTo(paddingLeft, chartHeight)
-                        optimizedFillPath.close()
-
-                        drawPath(
-                            path = optimizedFillPath,
-                            brush =
-                                Brush.verticalGradient(
-                                    colors = listOf(secondaryColor.copy(alpha = 0.25f), Color.Transparent),
-                                    startY = 0f,
-                                    endY = chartHeight,
-                                ),
-                        )
-
-                        // 2. Draw lines on top of fills
-                        drawPath(
-                            path = currentPath,
-                            color = primaryColor,
-                            style = lineStroke,
-                        )
-                        drawPath(
-                            path = optimizedPath,
-                            color = secondaryColor,
-                            style = lineStroke,
-                        )
-
-                        // Draw Target savings goal dashed line
-                        val targetY = chartHeight - (chartHeight * (targetSavingsGoal / maxVal).toFloat())
-                        drawLine(
-                            color = Color(0xFFE5A93C),
-                            start = Offset(paddingLeft, targetY),
-                            end = Offset(width, targetY),
-                            strokeWidth = 1.5.dp.toPx(),
-                            pathEffect = dashPathEffect,
-                        )
+            val density = androidx.compose.ui.platform.LocalDensity.current
+            val labelColorArgb = labelColor.toArgb()
+            val textPaintY =
+                remember(density, labelColorArgb) {
+                    android.graphics.Paint().apply {
+                        color = labelColorArgb
+                        textSize = with(density) { 10.sp.toPx() }
+                        textAlign = android.graphics.Paint.Align.RIGHT
                     }
                 }
+            val textPaintX =
+                remember(density, labelColorArgb) {
+                    android.graphics.Paint().apply {
+                        color = labelColorArgb
+                        textSize = with(density) { 10.sp.toPx() }
+                        textAlign = android.graphics.Paint.Align.CENTER
+                    }
+                }
+
+            val currentPath = remember { Path() }
+            val optimizedPath = remember { Path() }
+            val currentFillPath = remember { Path() }
+            val optimizedFillPath = remember { Path() }
+
+            val lineStroke =
+                remember(density) {
+                    Stroke(width = with(density) { 3.dp.toPx() }, cap = StrokeCap.Round)
+                }
+
+            val dashPathEffect =
+                remember {
+                    PathEffect.dashPathEffect(floatArrayOf(10f, 10f), 0f)
+                }
+
+            Canvas(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .height(200.dp),
+            ) {
+                val width = size.width
+                val height = size.height
+                val paddingLeft = 45.sp.toPx()
+                val paddingBottom = 24.sp.toPx()
+                val chartWidth = width - paddingLeft
+                val chartHeight = height - paddingBottom
+
+                // Find Max Value for scaling the Y axis
+                val maxVal = (optimizedProjection.maxOrNull() ?: 1.0).coerceAtLeast(targetSavingsGoal.toDouble()) * 1.1
+
+                // Draw Grid lines
+                val gridCount = 4
+                for (i in 0..gridCount) {
+                    val y = chartHeight - (chartHeight * (i.toFloat() / gridCount))
+                    drawLine(
+                        color = gridColor,
+                        start = Offset(paddingLeft, y),
+                        end = Offset(width, y),
+                        strokeWidth = 1.dp.toPx(),
+                    )
+                }
+
+                // Draw Y Axis labels
+                for (i in 0..gridCount) {
+                    val y = chartHeight - (chartHeight * (i.toFloat() / gridCount))
+                    val value = maxVal * (i.toFloat() / gridCount)
+                    val label = "$currencySymbol${formatCompact(value)}"
+                    drawContext.canvas.nativeCanvas.drawText(
+                        label,
+                        paddingLeft - 6.dp.toPx(),
+                        y + 4.dp.toPx(),
+                        textPaintY,
+                    )
+                }
+
+                // Draw X Axis labels (Years 0, 2, 4, 6, 8, 10)
+                val yearSteps = 5
+                for (i in 0..yearSteps) {
+                    val year = i * 2
+                    val x = paddingLeft + (chartWidth * (year.toFloat() / 10))
+                    val label = yearLabels.getOrElse(i) { "${year}Y" }
+                    drawContext.canvas.nativeCanvas.drawText(
+                        label,
+                        x,
+                        height - 4.dp.toPx(),
+                        textPaintX,
+                    )
+                }
+
+                // Generate Paths for plotting
+                currentPath.reset()
+                optimizedPath.reset()
+
+                currentProjection.forEachIndexed { index, balance ->
+                    val x = paddingLeft + (chartWidth * (index.toFloat() / (currentProjection.size - 1)))
+                    val y = chartHeight - (chartHeight * (balance / maxVal).toFloat())
+                    if (index == 0) {
+                        currentPath.moveTo(x, y)
+                    } else {
+                        currentPath.lineTo(x, y)
+                    }
+                }
+
+                optimizedProjection.forEachIndexed { index, balance ->
+                    val x = paddingLeft + (chartWidth * (index.toFloat() / (optimizedProjection.size - 1)))
+                    val y = chartHeight - (chartHeight * (balance / maxVal).toFloat())
+                    if (index == 0) {
+                        optimizedPath.moveTo(x, y)
+                    } else {
+                        optimizedPath.lineTo(x, y)
+                    }
+                }
+
+                // 1. Draw gradient filled paths under curves (premium shading)
+                currentFillPath.reset()
+                currentFillPath.addPath(currentPath)
+                currentFillPath.lineTo(paddingLeft + chartWidth, chartHeight)
+                currentFillPath.lineTo(paddingLeft, chartHeight)
+                currentFillPath.close()
+
+                drawPath(
+                    path = currentFillPath,
+                    brush =
+                        Brush.verticalGradient(
+                            colors = listOf(primaryColor.copy(alpha = 0.15f), Color.Transparent),
+                            startY = 0f,
+                            endY = chartHeight,
+                        ),
+                )
+
+                optimizedFillPath.reset()
+                optimizedFillPath.addPath(optimizedPath)
+                optimizedFillPath.lineTo(paddingLeft + chartWidth, chartHeight)
+                optimizedFillPath.lineTo(paddingLeft, chartHeight)
+                optimizedFillPath.close()
+
+                drawPath(
+                    path = optimizedFillPath,
+                    brush =
+                        Brush.verticalGradient(
+                            colors = listOf(secondaryColor.copy(alpha = 0.25f), Color.Transparent),
+                            startY = 0f,
+                            endY = chartHeight,
+                        ),
+                )
+
+                // 2. Draw lines on top of fills
+                drawPath(
+                    path = currentPath,
+                    color = primaryColor,
+                    style = lineStroke,
+                )
+                drawPath(
+                    path = optimizedPath,
+                    color = secondaryColor,
+                    style = lineStroke,
+                )
+
+                // Draw Target savings goal dashed line
+                val targetY = chartHeight - (chartHeight * (targetSavingsGoal / maxVal).toFloat())
+                drawLine(
+                    color = Color(0xFFE5A93C),
+                    start = Offset(paddingLeft, targetY),
+                    end = Offset(width, targetY),
+                    strokeWidth = 1.5.dp.toPx(),
+                    pathEffect = dashPathEffect,
+                )
             }
         }
     }

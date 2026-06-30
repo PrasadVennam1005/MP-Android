@@ -66,6 +66,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.adaptive.currentWindowAdaptiveInfoV2
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -86,6 +87,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.window.core.layout.WindowWidthSizeClass
 import androidx.credentials.CredentialManager
 import androidx.credentials.GetCredentialRequest
 import androidx.credentials.exceptions.GetCredentialCancellationException
@@ -109,12 +111,15 @@ import prasad.vennam.moneypilot.ui.dashboard.components.CategoryBreakdownBottomS
 import prasad.vennam.moneypilot.ui.dashboard.components.DashboardTopBar
 import prasad.vennam.moneypilot.ui.dashboard.components.ExpenseChartCard
 import prasad.vennam.moneypilot.ui.dashboard.components.KPISection
+import prasad.vennam.moneypilot.ui.dashboard.components.CalendarFilterRow
+import prasad.vennam.moneypilot.ui.dashboard.components.CalendarFilterBottomSheet
 import prasad.vennam.moneypilot.ui.dashboard.components.LearnFinancePromoCard
 import prasad.vennam.moneypilot.ui.dashboard.components.LoanSection
 import prasad.vennam.moneypilot.ui.dashboard.components.PaymentAppsSection
 import prasad.vennam.moneypilot.ui.dashboard.components.QuickActionSection
 import prasad.vennam.moneypilot.ui.dashboard.components.RecentTransactionsCard
 import prasad.vennam.moneypilot.ui.dashboard.components.SectionHeader
+import prasad.vennam.moneypilot.ui.dashboard.components.SubscriptionSection
 import prasad.vennam.moneypilot.ui.settings.LoginRequiredDialog
 import prasad.vennam.moneypilot.ui.viewmodel.DashboardViewModel
 import prasad.vennam.moneypilot.ui.viewmodel.MainViewModel
@@ -147,6 +152,7 @@ fun DashboardScreen(
     onNavigateToAiChat: () -> Unit,
     onNavigateToEmergencyFund: () -> Unit,
     onNavigateToSavingGoals: () -> Unit,
+    onNavigateToSubscriptions: () -> Unit,
     onNavigateToNews: () -> Unit,
     onNavigateToSandbox: () -> Unit,
     onNavigateToEmiCalculator: () -> Unit,
@@ -156,8 +162,6 @@ fun DashboardScreen(
     TrackScreen(analyticsHelper, AnalyticsConstants.Screen.DASHBOARD)
 
     val dashboardState by dashboardViewModel.uiState.collectAsState()
-    val savingGoalViewModel: SavingGoalViewModel = hiltViewModel()
-    val savingGoals by savingGoalViewModel.allSavingGoals.collectAsState()
     val userData by mainViewModel.userData.collectAsState()
     val isPremium by mainViewModel.isPremium.collectAsState()
     val isDevToolEnabled by mainViewModel.isDevToolEnabled.collectAsState()
@@ -190,6 +194,16 @@ fun DashboardScreen(
 
     val restoreState by mainViewModel.restoreState.collectAsState()
     val currencyCode by mainViewModel.currency.collectAsState()
+
+    val hasEnoughData = remember(dashboardState) {
+        dashboardState.recentTransactions.isNotEmpty() ||
+            dashboardState.loans.isNotEmpty() ||
+            dashboardState.totalInvestment > 0 ||
+            dashboardState.budgetProgresses.isNotEmpty()
+    }
+    val showAds = !isPremium && hasEnoughData
+    val adaptiveInfo = currentWindowAdaptiveInfoV2()
+    val isExpanded = adaptiveInfo.windowSizeClass.windowWidthSizeClass != WindowWidthSizeClass.COMPACT
 
     val notificationViewModel: NotificationViewModel = hiltViewModel()
     val notifications by notificationViewModel.notifications.collectAsState()
@@ -321,6 +335,7 @@ fun DashboardScreen(
 
     var showBreakdownSheet by remember { mutableStateOf(false) }
     var showPendingReviewSheet by remember { mutableStateOf(false) }
+    var showCalendarFilterSheet by remember { mutableStateOf(false) }
 
     LaunchedEffect(dashboardState.pendingTransactions) {
         if (dashboardState.pendingTransactions.isEmpty()) {
@@ -456,7 +471,7 @@ fun DashboardScreen(
                 ) {
                     // Sticky banner — stays pinned at top while content scrolls below
                     AdBannerView(
-                        isPremium = isPremium,
+                        isPremium = !showAds,
                         modifier = Modifier.fillMaxWidth(),
                     )
 
@@ -470,6 +485,17 @@ fun DashboardScreen(
                             TimeFrameSelector(
                                 selectedTimeFrame = dashboardState.selectedTimeFrame,
                                 onTimeFrameSelected = { dashboardViewModel.setTimeFrame(it) },
+                            )
+                        }
+
+                        item {
+                            CalendarFilterRow(
+                                selectedTimeFrame = dashboardState.selectedTimeFrame,
+                                selectedMonth = dashboardState.selectedMonth,
+                                selectedYear = dashboardState.selectedYear,
+                                onPrevious = { dashboardViewModel.navigatePrevious() },
+                                onNext = { dashboardViewModel.navigateNext() },
+                                onClickedFilter = { showCalendarFilterSheet = true }
                             )
                         }
 
@@ -541,8 +567,17 @@ fun DashboardScreen(
                                 savings = dashboardState.savings,
                                 investment = dashboardState.totalInvestment,
                                 currentInvestmentValue = dashboardState.currentInvestmentValue,
+                                savingsRate = dashboardState.savingsRate,
+                                totalDebt = dashboardState.totalDebt,
                                 timeFrame = dashboardState.selectedTimeFrame,
                             )
+                        }
+
+                        // Ad 1: Inline Ad between KPI and Quick Actions
+                        if (showAds) {
+                            item {
+                                AdBannerView(isPremium = false)
+                            }
                         }
 
                         item {
@@ -609,32 +644,102 @@ fun DashboardScreen(
                         }
 
                         item {
-                            DashboardEmergencyFundCard(
-                                emergencyFund = dashboardState.emergencyFund,
-                                currencyCode = currencyCode,
-                                onClick = {
-                                    analyticsHelper.logEvent(AnalyticsConstants.Event.EMERGENCY_FUND_CARD_CLICKED)
-                                    onNavigateToEmergencyFund()
-                                },
-                            )
+                            if (isExpanded) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(24.dp)
+                                ) {
+                                    Box(modifier = Modifier.weight(1f)) {
+                                        DashboardEmergencyFundCard(
+                                            emergencyFund = dashboardState.emergencyFund,
+                                            currencyCode = currencyCode,
+                                            onClick = {
+                                                analyticsHelper.logEvent(AnalyticsConstants.Event.EMERGENCY_FUND_CARD_CLICKED)
+                                                onNavigateToEmergencyFund()
+                                            },
+                                        )
+                                    }
+                                    Box(modifier = Modifier.weight(1f)) {
+                                        DashboardSavingGoalsCard(
+                                            savingGoals = dashboardState.savingGoals,
+                                            currencyCode = currencyCode,
+                                            onClick = {
+                                                analyticsHelper.logEvent(AnalyticsConstants.Event.SAVING_GOALS_CARD_CLICKED)
+                                                onNavigateToSavingGoals()
+                                            },
+                                        )
+                                    }
+                                }
+                            } else {
+                                DashboardEmergencyFundCard(
+                                    emergencyFund = dashboardState.emergencyFund,
+                                    currencyCode = currencyCode,
+                                    onClick = {
+                                        analyticsHelper.logEvent(AnalyticsConstants.Event.EMERGENCY_FUND_CARD_CLICKED)
+                                        onNavigateToEmergencyFund()
+                                    },
+                                )
+                            }
                         }
 
-                        item {
-                            DashboardSavingGoalsCard(
-                                savingGoals = savingGoals,
-                                currencyCode = currencyCode,
-                                onClick = {
-                                    analyticsHelper.logEvent(AnalyticsConstants.Event.SAVING_GOALS_CARD_CLICKED)
-                                    onNavigateToSavingGoals()
-                                },
-                            )
+                        if (!isExpanded) {
+                            item {
+                                DashboardSavingGoalsCard(
+                                    savingGoals = dashboardState.savingGoals,
+                                    currencyCode = currencyCode,
+                                    onClick = {
+                                        analyticsHelper.logEvent(AnalyticsConstants.Event.SAVING_GOALS_CARD_CLICKED)
+                                        onNavigateToSavingGoals()
+                                    },
+                                )
+                            }
                         }
 
-                        item {
-                            PaymentAppsSection(currencyCode = currencyCode)
+                        if (isExpanded) {
+                            item {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(24.dp),
+                                    verticalAlignment = Alignment.Bottom
+                                ) {
+                                    Box(modifier = Modifier.weight(1f)) {
+                                        if (dashboardState.subscriptions.isNotEmpty()) {
+                                            SubscriptionSection(
+                                                subscriptions = dashboardState.subscriptions,
+                                                currencyCode = currencyCode,
+                                                onViewAll = onNavigateToSubscriptions,
+                                            )
+                                        }
+                                    }
+                                    Box(modifier = Modifier.weight(1f)) {
+                                        PaymentAppsSection(currencyCode = currencyCode)
+                                    }
+                                }
+                            }
+                        } else {
+                            if (dashboardState.subscriptions.isNotEmpty()) {
+                                item {
+                                    SubscriptionSection(
+                                        subscriptions = dashboardState.subscriptions,
+                                        currencyCode = currencyCode,
+                                        onViewAll = onNavigateToSubscriptions,
+                                    )
+                                }
+                            }
+
+                            // Ad 2: Mid-screen ad after important status cards
+                            if (showAds) {
+                                item {
+                                    AdBannerView(isPremium = false)
+                                }
+                            }
+
+                            item {
+                                PaymentAppsSection(currencyCode = currencyCode)
+                            }
                         }
 
-                        if (dashboardState.loans.isNotEmpty()) {
+                        if (!isExpanded && dashboardState.loans.isNotEmpty()) {
                             item {
                                 LoanSection(
                                     loans = dashboardState.loans,
@@ -644,23 +749,66 @@ fun DashboardScreen(
                             }
                         }
 
-                        if (dashboardState.spendingByCategory.isNotEmpty()) {
+                        // Ad 3: Pre-footer ad after large data sections
+                        if (showAds) {
                             item {
-                                SectionHeader(
-                                    title = stringResource(R.string.expense_breakdown),
-                                    onInfoClick =
-                                        if (dashboardState.spendingByCategory.size > 10) {
-                                            { showBreakdownSheet = true }
-                                        } else {
-                                            null
-                                        },
-                                )
-                                Spacer(modifier = Modifier.size(12.dp))
-                                ExpenseChartCard(dashboardState.spendingByCategory, chartColors, stringResource(R.string.other))
+                                AdBannerView(isPremium = false)
                             }
                         }
 
-                        if (dashboardState.budgetProgresses.isNotEmpty()) {
+                        if (dashboardState.spendingByCategory.isNotEmpty()) {
+                            item {
+                                if (isExpanded) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(24.dp)
+                                    ) {
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            SectionHeader(
+                                                title = stringResource(R.string.expense_breakdown),
+                                                onInfoClick =
+                                                if (dashboardState.spendingByCategory.size > 10) {
+                                                    { showBreakdownSheet = true }
+                                                } else {
+                                                    null
+                                                },
+                                            )
+                                            Spacer(modifier = Modifier.size(12.dp))
+                                            ExpenseChartCard(dashboardState.spendingByCategory, chartColors, stringResource(R.string.other))
+                                        }
+
+                                        if (dashboardState.budgetProgresses.isNotEmpty()) {
+                                            Column(modifier = Modifier.weight(1f)) {
+                                                SectionHeader(
+                                                    title = stringResource(R.string.budget_progress),
+                                                    onActionClick = {
+                                                        analyticsHelper.logEvent(AnalyticsConstants.Event.BUDGET_SEE_ALL_CLICKED)
+                                                        onNavigateToBudgets()
+                                                    },
+                                                )
+                                                BudgetProgressSection(dashboardState.budgetProgresses, unknownString)
+                                            }
+                                        }
+                                    }
+                                } else {
+                                    Column {
+                                        SectionHeader(
+                                            title = stringResource(R.string.expense_breakdown),
+                                            onInfoClick =
+                                            if (dashboardState.spendingByCategory.size > 10) {
+                                                { showBreakdownSheet = true }
+                                            } else {
+                                                null
+                                            },
+                                        )
+                                        Spacer(modifier = Modifier.size(12.dp))
+                                        ExpenseChartCard(dashboardState.spendingByCategory, chartColors, stringResource(R.string.other))
+                                    }
+                                }
+                            }
+                        }
+
+                        if (!isExpanded && dashboardState.budgetProgresses.isNotEmpty()) {
                             item {
                                 SectionHeader(
                                     title = stringResource(R.string.budget_progress),
@@ -675,14 +823,52 @@ fun DashboardScreen(
 
                         if (dashboardState.recentTransactions.isNotEmpty()) {
                             item {
-                                SectionHeader(
-                                    title = stringResource(R.string.recent_transactions),
-                                    onActionClick = {
-                                        analyticsHelper.logEvent(AnalyticsConstants.Event.HISTORY_SEE_ALL_CLICKED)
-                                        onNavigateToHistory()
-                                    },
-                                )
-                                RecentTransactionsCard(dashboardState.recentTransactions, dashboardState.categories)
+                                if (isExpanded) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(24.dp)
+                                    ) {
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            SectionHeader(
+                                                title = stringResource(R.string.recent_transactions),
+                                                onActionClick = {
+                                                    analyticsHelper.logEvent(AnalyticsConstants.Event.HISTORY_SEE_ALL_CLICKED)
+                                                    onNavigateToHistory()
+                                                },
+                                            )
+                                            RecentTransactionsCard(dashboardState.recentTransactions, dashboardState.categories)
+                                        }
+
+                                        if (dashboardState.loans.isNotEmpty()) {
+                                            Column(modifier = Modifier.weight(1f)) {
+                                                LoanSection(
+                                                    loans = dashboardState.loans,
+                                                    currencyCode = currencyCode,
+                                                    onViewAll = onNavigateToLoans,
+                                                )
+                                            }
+                                        } else if (dashboardState.subscriptions.isNotEmpty()) {
+                                            Column(modifier = Modifier.weight(1f)) {
+                                                SubscriptionSection(
+                                                    subscriptions = dashboardState.subscriptions,
+                                                    currencyCode = currencyCode,
+                                                    onViewAll = onNavigateToSubscriptions,
+                                                )
+                                            }
+                                        }
+                                    }
+                                } else {
+                                    Column {
+                                        SectionHeader(
+                                            title = stringResource(R.string.recent_transactions),
+                                            onActionClick = {
+                                                analyticsHelper.logEvent(AnalyticsConstants.Event.HISTORY_SEE_ALL_CLICKED)
+                                                onNavigateToHistory()
+                                            },
+                                        )
+                                        RecentTransactionsCard(dashboardState.recentTransactions, dashboardState.categories)
+                                    }
+                                }
                             }
                         }
 
@@ -733,6 +919,20 @@ fun DashboardScreen(
                 dashboardViewModel.dismissTransaction(pending)
             },
             onDismissRequest = { showPendingReviewSheet = false },
+        )
+    }
+
+    if (showCalendarFilterSheet) {
+        CalendarFilterBottomSheet(
+            timeFrame = dashboardState.selectedTimeFrame,
+            selectedMonth = dashboardState.selectedMonth,
+            selectedYear = dashboardState.selectedYear,
+            onDismiss = { showCalendarFilterSheet = false },
+            onSelected = { month, year ->
+                dashboardViewModel.setMonth(month)
+                dashboardViewModel.setYear(year)
+                showCalendarFilterSheet = false
+            }
         )
     }
 }

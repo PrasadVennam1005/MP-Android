@@ -9,6 +9,13 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material3.adaptive.currentWindowAdaptiveInfoV2
+import androidx.window.core.layout.WindowWidthSizeClass
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -58,6 +65,29 @@ fun SubscriptionScreen(
     val categories by viewModel.allCategories.collectAsState()
     val currencyCode = LocalCurrencyCode.current
 
+    val adaptiveInfo = currentWindowAdaptiveInfoV2()
+    val isExpanded = adaptiveInfo.windowSizeClass.windowWidthSizeClass == WindowWidthSizeClass.EXPANDED
+
+    val lazyListState = rememberLazyListState()
+    val lazyGridState = rememberLazyGridState()
+    var isFabVisible by remember { mutableStateOf(true) }
+    var previousIndex by remember { mutableIntStateOf(0) }
+    var previousOffset by remember { mutableIntStateOf(0) }
+
+    LaunchedEffect(lazyListState.firstVisibleItemIndex, lazyListState.firstVisibleItemScrollOffset, lazyGridState.firstVisibleItemIndex, lazyGridState.firstVisibleItemScrollOffset) {
+        val currentIndex = if (isExpanded) lazyGridState.firstVisibleItemIndex else lazyListState.firstVisibleItemIndex
+        val currentOffset = if (isExpanded) lazyGridState.firstVisibleItemScrollOffset else lazyListState.firstVisibleItemScrollOffset
+        if (currentIndex == 0 && currentOffset == 0) {
+            isFabVisible = true
+        } else if (currentIndex > previousIndex || (currentIndex == previousIndex && currentOffset > previousOffset)) {
+            isFabVisible = false
+        } else if (currentIndex < previousIndex || (currentOffset < previousOffset)) {
+            isFabVisible = true
+        }
+        previousIndex = currentIndex
+        previousOffset = currentOffset
+    }
+
     var showFormSheet by remember { mutableStateOf(false) }
     var selectedSubscriptionForEdit by remember { mutableStateOf<Subscription?>(null) }
 
@@ -85,16 +115,18 @@ fun SubscriptionScreen(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(
-                onClick = {
-                    selectedSubscriptionForEdit = null
-                    showFormSheet = true
-                },
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary,
-                shape = MaterialTheme.shapes.large,
-            ) {
-                Icon(Icons.Rounded.Add, contentDescription = stringResource(R.string.add_subscription))
+            if (isFabVisible) {
+                FloatingActionButton(
+                    onClick = {
+                        selectedSubscriptionForEdit = null
+                        showFormSheet = true
+                    },
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary,
+                    shape = MaterialTheme.shapes.large,
+                ) {
+                    Icon(Icons.Rounded.Add, contentDescription = stringResource(R.string.add_subscription))
+                }
             }
         },
         containerColor = MaterialTheme.colorScheme.background,
@@ -107,8 +139,40 @@ fun SubscriptionScreen(
         ) {
             if (subscriptions.isEmpty()) {
                 EmptySubscriptionsState()
+            } else if (isExpanded) {
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(2),
+                    state = lazyGridState,
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    items(subscriptions, key = { it.id }) { subscription ->
+                        SubscriptionCard(
+                            subscription = subscription,
+                            category = categories.find { it.id == subscription.categoryId },
+                            currencyCode = currencyCode,
+                            onEdit = {
+                                selectedSubscriptionForEdit = subscription
+                                showFormSheet = true
+                            },
+                            onDelete = {
+                                analyticsHelper.logEvent(
+                                    AnalyticsConstants.Event.SUBSCRIPTION_DELETED,
+                                    mapOf(
+                                        AnalyticsConstants.Param.SUBSCRIPTION_NAME to subscription.name,
+                                        AnalyticsConstants.Param.SUBSCRIPTION_AMOUNT to subscription.amount.toMajorUnit,
+                                    ),
+                                )
+                                viewModel.deleteSubscription(subscription)
+                            },
+                        )
+                    }
+                }
             } else {
                 LazyColumn(
+                    state = lazyListState,
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),

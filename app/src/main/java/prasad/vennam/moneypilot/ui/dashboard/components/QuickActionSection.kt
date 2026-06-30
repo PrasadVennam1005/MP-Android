@@ -33,6 +33,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.adaptive.currentWindowAdaptiveInfoV2
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -47,6 +48,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.window.core.layout.WindowWidthSizeClass
 import prasad.vennam.moneypilot.R
 
 @Composable
@@ -63,115 +65,61 @@ fun QuickActionSection(
     onNavigateToCurrencyConverter: () -> Unit,
     isGuest: Boolean,
 ) {
+    val adaptiveInfo = currentWindowAdaptiveInfoV2()
+    val isExpanded = adaptiveInfo.windowSizeClass.windowWidthSizeClass != WindowWidthSizeClass.COMPACT
+    
+    val actions = listOf(
+        QuickActionData(stringResource(R.string.expense), Icons.Rounded.RemoveCircleOutline, MaterialTheme.colorScheme.error, onAddExpense),
+        QuickActionData(stringResource(R.string.income), Icons.Rounded.AddCircleOutline, MaterialTheme.colorScheme.secondary, onAddIncome),
+        QuickActionData(stringResource(R.string.investment), Icons.Rounded.AccountBalanceWallet, MaterialTheme.colorScheme.primary, onAddInvestment),
+        QuickActionData(stringResource(R.string.loans), Icons.Rounded.AccountBalanceWallet, MaterialTheme.colorScheme.tertiary, onAddLoan),
+        QuickActionData(stringResource(R.string.scan), Icons.Rounded.Camera, MaterialTheme.colorScheme.outline, onScanReceipt, isGuest),
+        QuickActionData(stringResource(R.string.emergency_fund), Icons.Rounded.Shield, Color(0xFF067F68), onNavigateToEmergencyFund),
+        QuickActionData(stringResource(R.string.news), Icons.AutoMirrored.Rounded.Article, Color(0xFFF57C00), onNavigateToNews),
+        QuickActionData(stringResource(R.string.sandbox), Icons.Rounded.Calculate, Color(0xFF8E24AA), onNavigateToSandbox),
+        QuickActionData(stringResource(R.string.emi_calculator), Icons.Rounded.Calculate, Color(0xFF0288D1), onNavigateToEmiCalculator),
+        QuickActionData("Converter", Icons.Rounded.CurrencyExchange, MaterialTheme.colorScheme.primary, onNavigateToCurrencyConverter)
+    )
+
+    val columns = if (isExpanded) 5 else 3
+
     Column {
         SectionHeader(stringResource(R.string.quick_actions))
-        Row(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(top = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            QuickActionButton(
-                stringResource(R.string.expense),
-                Icons.Rounded.RemoveCircleOutline,
-                MaterialTheme.colorScheme.error,
-                onAddExpense,
-                Modifier.weight(1f),
-            )
-            QuickActionButton(
-                stringResource(R.string.income),
-                Icons.Rounded.AddCircleOutline,
-                MaterialTheme.colorScheme.secondary,
-                onAddIncome,
-                Modifier.weight(1f),
-            )
-            QuickActionButton(
-                stringResource(R.string.investment),
-                Icons.Rounded.AccountBalanceWallet,
-                MaterialTheme.colorScheme.primary,
-                onAddInvestment,
-                Modifier.weight(1f),
-            )
-        }
-        Row(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(top = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            QuickActionButton(
-                stringResource(R.string.loans),
-                Icons.Rounded.AccountBalanceWallet,
-                MaterialTheme.colorScheme.tertiary,
-                onAddLoan,
-                Modifier.weight(1f),
-            )
-            QuickActionButton(
-                stringResource(R.string.scan),
-                Icons.Rounded.Camera,
-                MaterialTheme.colorScheme.outline,
-                onScanReceipt,
-                Modifier.weight(1f),
-                isGuest,
-            )
-            QuickActionButton(
-                stringResource(R.string.emergency_fund),
-                Icons.Rounded.Shield,
-                Color(0xFF067F68),
-                onNavigateToEmergencyFund,
-                Modifier.weight(1f),
-            )
-        }
-        Row(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(top = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            QuickActionButton(
-                stringResource(R.string.news),
-                Icons.AutoMirrored.Rounded.Article,
-                Color(0xFFF57C00),
-                onNavigateToNews,
-                Modifier.weight(1f),
-            )
-            QuickActionButton(
-                stringResource(R.string.sandbox),
-                Icons.Rounded.Calculate,
-                Color(0xFF8E24AA),
-                onNavigateToSandbox,
-                Modifier.weight(1f),
-            )
-            QuickActionButton(
-                stringResource(R.string.emi_calculator),
-                Icons.Rounded.Calculate,
-                Color(0xFF0288D1),
-                onNavigateToEmiCalculator,
-                Modifier.weight(1f),
-            )
-        }
-        Row(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(top = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            QuickActionButton(
-                "Converter",
-                Icons.Rounded.CurrencyExchange,
-                MaterialTheme.colorScheme.primary,
-                onNavigateToCurrencyConverter,
-                Modifier.weight(1f),
-            )
-            Spacer(modifier = Modifier.weight(1f))
-            Spacer(modifier = Modifier.weight(1f))
+        actions.chunked(columns).forEach { rowActions ->
+            Row(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(top = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                rowActions.forEach { action ->
+                    QuickActionButton(
+                        action.label,
+                        action.icon,
+                        action.color,
+                        action.onClick,
+                        Modifier.weight(1f),
+                        action.disabled
+                    )
+                }
+                if (rowActions.size < columns) {
+                    repeat(columns - rowActions.size) {
+                        Spacer(modifier = Modifier.weight(1f))
+                    }
+                }
+            }
         }
     }
 }
+
+data class QuickActionData(
+    val label: String,
+    val icon: ImageVector,
+    val color: Color,
+    val onClick: () -> Unit,
+    val disabled: Boolean = false,
+)
 
 @Composable
 fun QuickActionButton(

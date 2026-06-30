@@ -20,12 +20,16 @@ private val DarkColorScheme =
         onSecondaryContainer = OnSecondaryContainerDark,
         tertiary = TertiaryDark,
         onTertiary = OnTertiaryDark,
+        tertiaryContainer = TertiaryContainerDark,
+        onTertiaryContainer = OnTertiaryContainerDark,
         background = BackgroundDark,
         onBackground = OnBackgroundDark,
         surface = SurfaceDark,
         onSurface = OnSurfaceDark,
         error = ErrorLight,
         onError = OnErrorLight,
+        errorContainer = ErrorContainerDark,
+        onErrorContainer = OnErrorContainerDark,
     )
 
 private val LightColorScheme =
@@ -40,12 +44,16 @@ private val LightColorScheme =
         onSecondaryContainer = OnSecondaryContainerLight,
         tertiary = TertiaryLight,
         onTertiary = OnTertiaryLight,
+        tertiaryContainer = TertiaryContainerLight,
+        onTertiaryContainer = OnTertiaryContainerLight,
         background = BackgroundLight,
         onBackground = OnBackgroundLight,
         surface = SurfaceLight,
         onSurface = OnSurfaceLight,
         error = ErrorLight,
         onError = OnErrorLight,
+        errorContainer = ErrorContainerLight,
+        onErrorContainer = OnErrorContainerLight,
     )
 
 // Premium Shapes: Cards 20dp, Buttons/Inputs 16dp
