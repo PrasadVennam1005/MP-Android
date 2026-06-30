@@ -29,6 +29,8 @@ import androidx.compose.material.icons.automirrored.rounded.TrendingUp
 import androidx.compose.material.icons.rounded.AccountBalance
 import androidx.compose.material.icons.rounded.AccountBalanceWallet
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.ArrowDropDown
+import androidx.compose.material.icons.rounded.ArrowDropUp
 import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.Badge
 import androidx.compose.material.icons.rounded.Business
@@ -306,8 +308,8 @@ fun LoanScreen(
             RecordPaymentDialog(
                 loan = loanToPay!!,
                 onDismiss = { loanToPay = null },
-                onConfirm = { amount, isExtra, note ->
-                    viewModel.recordLoanPayment(loanToPay!!.id, amount, isExtra, note)
+                onConfirm = { amount, isExtra, note, paymentMode ->
+                    viewModel.recordLoanPayment(loanToPay!!.id, amount, isExtra, note, paymentMode)
                     loanToPay = null
                 },
             )
@@ -710,11 +712,13 @@ fun FullWidthLoanCard(
 fun RecordPaymentDialog(
     loan: Loan,
     onDismiss: () -> Unit,
-    onConfirm: (Long, Boolean, String) -> Unit,
+    onConfirm: (Long, Boolean, String, String) -> Unit,
 ) {
     var amount by remember { mutableStateOf(loan.emiAmount.toMajorUnit.toString()) }
     var isExtra by remember { mutableStateOf(false) }
     var note by remember { mutableStateOf("") }
+    var paymentMode by remember { mutableStateOf("UPI") }
+    var expandedPaymentMode by remember { mutableStateOf(false) }
     val currencyCode = LocalCurrencyCode.current
     val focusManager = LocalFocusManager.current
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -741,6 +745,40 @@ fun RecordPaymentDialog(
                     Checkbox(checked = isExtra, onCheckedChange = { isExtra = it })
                     Text(stringResource(R.string.extra_payment_top_up))
                 }
+                
+                Box(modifier = Modifier.fillMaxWidth()) {
+                    OutlinedTextField(
+                        value = paymentMode,
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Payment Mode") },
+                        trailingIcon = {
+                            IconButton(onClick = { expandedPaymentMode = !expandedPaymentMode }) {
+                                Icon(
+                                    imageVector = if (expandedPaymentMode) Icons.Rounded.ArrowDropUp else Icons.Rounded.ArrowDropDown,
+                                    contentDescription = "Select Payment Mode"
+                                )
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth().clickable { expandedPaymentMode = true },
+                    )
+                    DropdownMenu(
+                        expanded = expandedPaymentMode,
+                        onDismissRequest = { expandedPaymentMode = false },
+                        modifier = Modifier.fillMaxWidth(0.9f)
+                    ) {
+                        prasad.vennam.moneypilot.util.PaymentModes.ALL.forEach { mode ->
+                            DropdownMenuItem(
+                                text = { Text(mode) },
+                                onClick = {
+                                    paymentMode = mode
+                                    expandedPaymentMode = false
+                                }
+                            )
+                        }
+                    }
+                }
+
                 OutlinedTextField(
                     value = note,
                     onValueChange = { note = it },
@@ -753,7 +791,7 @@ fun RecordPaymentDialog(
                             keyboardController?.hide()
                             focusManager.clearFocus()
                             val amt = amount.toDoubleOrNull() ?: 0.0
-                            onConfirm((amt * 100).toLong(), isExtra, note)
+                            onConfirm((amt * 100).toLong(), isExtra, note, paymentMode)
                         }
                     ),
                     modifier = Modifier.fillMaxWidth(),
@@ -763,7 +801,7 @@ fun RecordPaymentDialog(
         confirmButton = {
             Button(onClick = {
                 val amt = amount.toDoubleOrNull() ?: 0.0
-                onConfirm((amt * 100).toLong(), isExtra, note)
+                onConfirm((amt * 100).toLong(), isExtra, note, paymentMode)
             }) {
                 Text(stringResource(R.string.confirm_payment))
             }

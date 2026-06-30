@@ -98,6 +98,8 @@ object DatabaseModule {
                 MoneyPilotDatabase.MIGRATION_1_2,
                 MoneyPilotDatabase.MIGRATION_2_3,
                 MoneyPilotDatabase.MIGRATION_3_4,
+                MoneyPilotDatabase.MIGRATION_4_5,
+                MoneyPilotDatabase.MIGRATION_5_6,
             ).fallbackToDestructiveMigration(true)
             .addCallback(
                 object : RoomDatabase.Callback() {

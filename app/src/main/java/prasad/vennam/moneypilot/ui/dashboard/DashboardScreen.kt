@@ -113,6 +113,7 @@ import prasad.vennam.moneypilot.ui.dashboard.components.ExpenseChartCard
 import prasad.vennam.moneypilot.ui.dashboard.components.KPISection
 import prasad.vennam.moneypilot.ui.dashboard.components.CalendarFilterRow
 import prasad.vennam.moneypilot.ui.dashboard.components.CalendarFilterBottomSheet
+import prasad.vennam.moneypilot.ui.dashboard.components.CreditCardBillCard
 import prasad.vennam.moneypilot.ui.dashboard.components.LearnFinancePromoCard
 import prasad.vennam.moneypilot.ui.dashboard.components.LoanSection
 import prasad.vennam.moneypilot.ui.dashboard.components.PaymentAppsSection
@@ -555,6 +556,24 @@ fun DashboardScreen(
                                             modifier = Modifier.size(24.dp),
                                         )
                                     }
+                                }
+                            }
+                        }
+
+                        dashboardState.creditCardBill?.let { ccBill ->
+                            if (!ccBill.isPaid) {
+                                item {
+                                    CreditCardBillCard(
+                                        billState = ccBill,
+                                        onPayClick = {
+                                            dashboardViewModel.payCreditCardBill(
+                                                amount = ccBill.billAmount,
+                                                month = ccBill.previousMonth,
+                                                year = ccBill.previousYear,
+                                                currencyCode = ccBill.currencyCode
+                                            )
+                                        }
+                                    )
                                 }
                             }
                         }

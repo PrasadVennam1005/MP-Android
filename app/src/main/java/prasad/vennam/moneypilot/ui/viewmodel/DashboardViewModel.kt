@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -43,6 +44,16 @@ data class BudgetProgress(
     val progress: Float,
 )
 
+data class CreditCardBillState(
+    val hasBill: Boolean,
+    val billAmount: Double,
+    val billMonthName: String,
+    val isPaid: Boolean,
+    val currencyCode: String,
+    val previousMonth: Int,
+    val previousYear: Int,
+)
+
 data class DashboardState(
     val isLoading: Boolean = true,
     val todayExpense: Double = 0.0,
@@ -66,6 +77,7 @@ data class DashboardState(
     val selectedYear: Int = Calendar.getInstance().get(Calendar.YEAR),
     val pendingTransactions: List<PendingTransaction> = emptyList(),
     val isLearnFinanceEnabled: Boolean = false,
+    val creditCardBill: CreditCardBillState? = null,
     val errorMessage: String? = null,
 )
 
@@ -102,6 +114,7 @@ class DashboardViewModel
         private val getPendingTransactionsUseCase: GetPendingTransactionsUseCase,
         private val approvePendingTransactionUseCase: ApprovePendingTransactionUseCase,
         private val dismissPendingTransactionUseCase: DismissPendingTransactionUseCase,
+        private val saveTransactionUseCase: SaveTransactionUseCase,
         private val remoteConfigHelper: RemoteConfigHelper,
     ) : ViewModel() {
         private val _selectedTimeFrame = MutableStateFlow(TimeFrame.MONTHLY)
@@ -335,6 +348,42 @@ class DashboardViewModel
                         BudgetProgress(budget, category, spent, budgetConverted, progress)
                     }
 
+                // Credit Card Bill details for the previous month
+                val prevMonth = if (selMonth == 0) 11 else selMonth - 1
+                val prevYear = if (selMonth == 0) selYear - 1 else selYear
+                val prevMonthName = java.text.DateFormatSymbols.getInstance().months[prevMonth]
+
+                val ccTransactionsPrevMonth = transactions.filter {
+                    val transCal = Calendar.getInstance().apply { timeInMillis = it.timestamp }
+                    it.type == TransactionType.EXPENSE &&
+                        it.paymentMode == "Credit Card" &&
+                        transCal.get(Calendar.MONTH) == prevMonth &&
+                        transCal.get(Calendar.YEAR) == prevYear
+                }
+                val ccBillAmount = ccTransactionsPrevMonth.sumOf { convertAmount(it.amount, it.currencyCode) }
+
+                // Check if paid in the selected month
+                val searchPaidToken = "Credit Card Bill Payment: $prevMonthName $prevYear"
+                val isBillPaid = ccBillAmount == 0.0 || transactions.any {
+                    val transCal = Calendar.getInstance().apply { timeInMillis = it.timestamp }
+                    it.type == TransactionType.EXPENSE &&
+                        transCal.get(Calendar.MONTH) == selMonth &&
+                        transCal.get(Calendar.YEAR) == selYear &&
+                        it.note.contains(searchPaidToken, ignoreCase = true)
+                }
+
+                val creditCardBill = if (ccBillAmount > 0.0) {
+                    CreditCardBillState(
+                        hasBill = true,
+                        billAmount = ccBillAmount,
+                        billMonthName = prevMonthName,
+                        isPaid = isBillPaid,
+                        currencyCode = currentCurrencyCode,
+                        previousMonth = prevMonth,
+                        previousYear = prevYear
+                    )
+                } else null
+
                 DashboardState(
                     isLoading = false,
                     todayExpense = todayExpense,
@@ -358,6 +407,7 @@ class DashboardViewModel
                     selectedYear = selYear,
                     pendingTransactions = data.pendingTransactions,
                     isLearnFinanceEnabled = remoteConfigHelper.isLearnFinanceEnabled(),
+                    creditCardBill = creditCardBill,
                 )
             }.flowOn(Dispatchers.Default)
                 .catch { e ->
@@ -368,6 +418,24 @@ class DashboardViewModel
                     started = SharingStarted.WhileSubscribed(5000),
                     initialValue = DashboardState(isLoading = true),
                 )
+
+        fun payCreditCardBill(amount: Double, month: Int, year: Int, currencyCode: String) {
+            viewModelScope.launch {
+                val categories = getCategoriesUseCase().first()
+                val categoryId = categories.find { it.name.equals("Bills", ignoreCase = true) }?.id
+                val monthName = java.text.DateFormatSymbols.getInstance().months[month]
+                val transaction = Transaction(
+                    amount = (amount * 100).toLong(), // Convert to minor units
+                    timestamp = System.currentTimeMillis(),
+                    categoryId = categoryId,
+                    note = "Credit Card Bill Payment: $monthName $year",
+                    type = TransactionType.EXPENSE,
+                    paymentMode = "UPI",
+                    currencyCode = currencyCode
+                )
+                saveTransactionUseCase(transaction)
+            }
+        }
 
         fun addLoan(
             name: String,
@@ -425,6 +493,7 @@ class DashboardViewModel
             amount: Long,
             isExtra: Boolean = false,
             note: String = "",
+            paymentMode: String = "Cash",
         ) {
             viewModelScope.launch {
                 val payment =
@@ -434,6 +503,7 @@ class DashboardViewModel
                         date = System.currentTimeMillis(),
                         isExtraPayment = isExtra,
                         note = note,
+                        paymentMode = paymentMode,
                     )
                 loanRepository.insertLoanPayment(payment)
             }

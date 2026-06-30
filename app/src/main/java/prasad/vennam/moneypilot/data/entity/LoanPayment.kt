@@ -24,4 +24,5 @@ data class LoanPayment(
     val date: Long,
     val isExtraPayment: Boolean = false,
     val note: String = "",
+    val paymentMode: String = "Cash",
 )

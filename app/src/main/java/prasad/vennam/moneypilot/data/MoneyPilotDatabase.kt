@@ -49,7 +49,7 @@ import prasad.vennam.moneypilot.data.entity.Transaction
         Subscription::class,
         SavingGoal::class,
     ],
-    version = 4,
+    version = 6,
     exportSchema = true,
 )
 @TypeConverters(Converters::class)
@@ -136,6 +136,21 @@ abstract class MoneyPilotDatabase : RoomDatabase() {
                     )
                 """,
                     )
+                }
+            }
+
+        val MIGRATION_4_5 =
+            object : androidx.room.migration.Migration(4, 5) {
+                override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+                    db.execSQL("ALTER TABLE `loan_payments` ADD COLUMN `paymentMode` TEXT NOT NULL DEFAULT 'Cash'")
+                }
+            }
+
+        val MIGRATION_5_6 =
+            object : androidx.room.migration.Migration(5, 6) {
+                override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+                    db.execSQL("ALTER TABLE `transactions` ADD COLUMN `loanPaymentId` INTEGER DEFAULT NULL")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_transactions_loanPaymentId` ON `transactions` (`loanPaymentId`)")
                 }
             }
     }

@@ -86,6 +86,16 @@ object DemoDataSeeder {
                     type = TransactionType.EXPENSE,
                     currencyCode = "INR",
                 ),
+                Transaction(
+                    amount = 1500000L, // ₹15,000.00
+                    timestamp = now - 30 * oneDayMs, // May 2026
+                    categoryId = shoppingId,
+                    subCategory = "Shopping",
+                    paymentMode = "Credit Card",
+                    note = "Amazon Premium Shopping",
+                    type = TransactionType.EXPENSE,
+                    currencyCode = "INR",
+                ),
             )
         transactions.forEach { transactionRepository.insertTransaction(it) }
 

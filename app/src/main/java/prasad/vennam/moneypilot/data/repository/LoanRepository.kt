@@ -38,7 +38,7 @@ class LoanRepository
 
         suspend fun insertLoanPayment(payment: LoanPayment) {
             database.withTransaction {
-                loanPaymentDao.insertPayment(payment)
+                val paymentId = loanPaymentDao.insertPayment(payment)
                 // Update outstanding amount
                 val loan = loanDao.getLoanById(payment.loanId)
                 loan?.let {
@@ -72,7 +72,9 @@ class LoanRepository
                             categoryId = categoryId,
                             note = if (payment.note.isNotBlank()) payment.note else "EMI Payment: ${it.name}",
                             type = TransactionType.EXPENSE,
+                            paymentMode = payment.paymentMode,
                             currencyCode = it.currencyCode,
+                            loanPaymentId = paymentId,
                         )
                     transactionDao.insertTransaction(transaction)
 
@@ -89,6 +91,11 @@ class LoanRepository
         suspend fun deleteLoanPayment(payment: LoanPayment) {
             database.withTransaction {
                 loanPaymentDao.deletePayment(payment)
+                // Delete associated transaction if it exists
+                val transaction = transactionDao.getTransactionByLoanPaymentId(payment.id)
+                transaction?.let {
+                    transactionDao.deleteTransaction(it)
+                }
                 // Update outstanding amount
                 val loan = loanDao.getLoanById(payment.loanId)
                 loan?.let {
