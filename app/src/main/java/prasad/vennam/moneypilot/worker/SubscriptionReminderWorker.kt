@@ -86,7 +86,7 @@ class SubscriptionReminderWorker
                                         category = "Alerts",
                                         timestamp = System.currentTimeMillis(),
                                         isRead = false,
-                                        url = null,
+                                        url = "moneypilot://subscription/log?id=${subscription.id}",
                                     )
                                 notificationDao.insertNotification(dbNotification)
 

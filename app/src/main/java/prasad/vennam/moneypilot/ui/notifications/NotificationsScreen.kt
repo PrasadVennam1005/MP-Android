@@ -82,6 +82,8 @@ fun NotificationsScreen(
         )
     }
 
+    var subscriptionToLog by remember { mutableStateOf<Notification?>(null) }
+
     val notificationAlertsEnabled = stringResource(R.string.notification_alerts_enabled)
     val notificationPermissionDenied = stringResource(R.string.notification_permission_denied)
     val permissionLauncher =
@@ -323,6 +325,7 @@ fun NotificationsScreen(
                                     }
                                 },
                                 onNavigateToWeb = onNavigateToWeb,
+                                onLogSubscriptionClick = { subscriptionToLog = it },
                             )
                         }
                     }
@@ -352,6 +355,7 @@ fun NotificationsScreen(
                                     }
                                 },
                                 onNavigateToWeb = onNavigateToWeb,
+                                onLogSubscriptionClick = { subscriptionToLog = it },
                             )
                         }
                     }
@@ -388,6 +392,41 @@ fun NotificationsScreen(
             tonalElevation = 6.dp,
         )
     }
+
+    if (subscriptionToLog != null) {
+        val notification = subscriptionToLog!!
+        val subscriptionName = notification.title.substringAfter("Subscription Due:").trim()
+        AlertDialog(
+            onDismissRequest = { subscriptionToLog = null },
+            title = { Text(stringResource(R.string.approve_log_payment_title)) },
+            text = { Text(stringResource(R.string.approve_log_payment_message, subscriptionName)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        val parsedId = notification.url?.substringAfter("id=")?.toLongOrNull()
+                        viewModel.logSubscriptionPayment(
+                            notificationId = notification.id,
+                            subscriptionId = parsedId,
+                            subscriptionNameFallback = subscriptionName
+                        )
+                        Toast.makeText(
+                            context,
+                            context.resources.getString(R.string.subscription_logged_success, subscriptionName),
+                            Toast.LENGTH_SHORT
+                        ).show()
+                        subscriptionToLog = null
+                    }
+                ) {
+                    Text(stringResource(R.string.approve))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { subscriptionToLog = null }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            }
+        )
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -397,6 +436,7 @@ fun SwipeToDismissNotification(
     onDismiss: () -> Unit,
     onBookmark: () -> Unit,
     onNavigateToWeb: (url: String, title: String) -> Unit,
+    onLogSubscriptionClick: (Notification) -> Unit,
 ) {
     var isRemoved by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
@@ -480,6 +520,7 @@ fun SwipeToDismissNotification(
                 NotificationItemCard(
                     notification = item,
                     onNavigateToWeb = onNavigateToWeb,
+                    onLogSubscriptionClick = onLogSubscriptionClick,
                 )
             },
         )
@@ -490,6 +531,7 @@ fun SwipeToDismissNotification(
 fun NotificationItemCard(
     notification: Notification,
     onNavigateToWeb: (url: String, title: String) -> Unit,
+    onLogSubscriptionClick: (Notification) -> Unit,
 ) {
     val categoryAlertsStr = stringResource(R.string.category_alerts)
     val categorySyncStr = stringResource(R.string.category_sync)
@@ -506,12 +548,19 @@ fun NotificationItemCard(
             }
         }
 
+    val isSubscriptionLog = remember(notification.url, notification.title) {
+        notification.url?.startsWith("moneypilot://subscription/log") == true ||
+            notification.title.startsWith("Subscription Due:", ignoreCase = true)
+    }
+
     Card(
         modifier =
             Modifier
                 .fillMaxWidth()
                 .then(
-                    if (!notification.url.isNullOrBlank()) {
+                    if (isSubscriptionLog) {
+                        Modifier.clickable { onLogSubscriptionClick(notification) }
+                    } else if (!notification.url.isNullOrBlank()) {
                         Modifier.clickable { onNavigateToWeb(notification.url, notification.title) }
                     } else {
                         Modifier
@@ -543,7 +592,7 @@ fun NotificationItemCard(
                 }
             }
 
-            Spacer(modifier = Modifier.width(16.dp))
+            Spacer(modifier = Modifier.width(12.dp))
 
             Column(modifier = Modifier.weight(1f)) {
                 Row(
@@ -557,11 +606,20 @@ fun NotificationItemCard(
                         color = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.weight(1f),
                     )
-                    Spacer(modifier = Modifier.width(16.dp))
+                    val timeAgo =
+                        remember(notification.timestamp) {
+                            val diff = System.currentTimeMillis() - notification.timestamp
+                            when {
+                                diff < 60000 -> "just now"
+                                diff < 3600000 -> "${diff / 60000}m ago"
+                                diff < 86400000 -> "${diff / 3600000}h ago"
+                                else -> "${diff / 86400000}d ago"
+                            }
+                        }
                     Text(
-                        text = formatTime(notification.timestamp),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                        text = timeAgo,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
                     )
                 }
@@ -571,7 +629,37 @@ fun NotificationItemCard(
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                if (!notification.url.isNullOrBlank()) {
+                if (isSubscriptionLog) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Button(
+                        onClick = {
+                            onLogSubscriptionClick(notification)
+                        },
+                        colors =
+                            ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                                contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                            ),
+                        shape = MaterialTheme.shapes.medium,
+                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp),
+                        modifier = Modifier.height(36.dp),
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.CheckCircle,
+                                contentDescription = null,
+                                modifier = Modifier.size(14.dp),
+                            )
+                            Text(
+                                "Approve & Log",
+                                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                            )
+                        }
+                    }
+                } else if (!notification.url.isNullOrBlank()) {
                     Spacer(modifier = Modifier.height(12.dp))
                     Button(
                         onClick = {

@@ -884,4 +884,9 @@
     <!-- Delete Budget Confirmation -->
     <string name="delete_budget_title">Delete Budget</string>
     <string name="delete_budget_confirm">Are you sure you want to delete this budget?</string>
+
+    <!-- Subscription Notification Actions -->
+    <string name="approve_log_payment_title">Approve &amp; Log Payment</string>
+    <string name="approve_log_payment_message">Do you want to log the payment for subscription \"%1$s\" and advance its billing cycle?</string>
+    <string name="subscription_logged_success">Logged payment for %1$s successfully!</string>
 </resources>

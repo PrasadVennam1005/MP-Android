@@ -72,6 +72,18 @@ class MainActivity : FragmentActivity() {
     @Inject
     lateinit var billingManager: BillingManager
 
+    private var onNewIntentListener: ((android.content.Intent) -> Unit)? = null
+
+    fun setOnNewIntentListener(listener: (android.content.Intent) -> Unit) {
+        onNewIntentListener = listener
+    }
+
+    override fun onNewIntent(intent: android.content.Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        onNewIntentListener?.invoke(intent)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -251,6 +263,39 @@ fun MoneyPilotApp(
     val isLoggedIn by mainViewModel.isLoggedIn.collectAsState(initial = false)
 
     val context = androidx.compose.ui.platform.LocalContext.current
+
+    var navigateToNotifications by remember { mutableStateOf(false) }
+
+    DisposableEffect(context) {
+        val mainActivity = context as? MainActivity
+        // Check initial intent
+        val initialIntent = mainActivity?.intent
+        if (initialIntent?.getBooleanExtra("navigate_to_notifications", false) == true) {
+            navigateToNotifications = true
+            initialIntent.removeExtra("navigate_to_notifications")
+        }
+
+        // Listen for new intents
+        mainActivity?.setOnNewIntentListener { newIntent ->
+            if (newIntent.getBooleanExtra("navigate_to_notifications", false)) {
+                navigateToNotifications = true
+                newIntent.removeExtra("navigate_to_notifications")
+            }
+        }
+
+        onDispose {
+            mainActivity?.setOnNewIntentListener {}
+        }
+    }
+
+    LaunchedEffect(isLoggedIn, currentDestination, navigateToNotifications) {
+        if (isLoggedIn && navigateToNotifications && currentDestination != null && currentDestination !is Destination.Auth) {
+            if (backStack.none { it is Destination.Notifications }) {
+                backStack.add(Destination.Notifications)
+            }
+            navigateToNotifications = false
+        }
+    }
     val interstitialAdManager =
         remember {
             prasad.vennam.moneypilot.ads
