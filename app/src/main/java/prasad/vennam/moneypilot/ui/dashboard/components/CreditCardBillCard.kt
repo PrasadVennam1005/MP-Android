@@ -35,8 +35,8 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.LocalConfiguration
 import prasad.vennam.moneypilot.ui.viewmodel.CreditCardBillState
-import java.util.Locale
 
 @Composable
 fun CreditCardBillCard(
@@ -57,7 +57,7 @@ fun CreditCardBillCard(
         label = "cc_glow_alpha"
     )
 
-    val formattedAmount = String.format(Locale.getDefault(), "%,.2f", billState.billAmount)
+    val formattedAmount = String.format(LocalConfiguration.current.locales[0], "%,.2f", billState.billAmount)
 
     Box(
         modifier = modifier

@@ -53,6 +53,7 @@ import prasad.vennam.moneypilot.ui.viewmodel.NotificationViewModel
 import prasad.vennam.moneypilot.util.AnalyticsConstants
 import prasad.vennam.moneypilot.util.AnalyticsHelper
 import prasad.vennam.moneypilot.util.TrackScreen
+import androidx.compose.ui.platform.LocalConfiguration
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -81,15 +82,17 @@ fun NotificationsScreen(
         )
     }
 
+    val notificationAlertsEnabled = stringResource(R.string.notification_alerts_enabled)
+    val notificationPermissionDenied = stringResource(R.string.notification_permission_denied)
     val permissionLauncher =
         rememberLauncherForActivityResult(
             contract = ActivityResultContracts.RequestPermission(),
         ) { isGranted: Boolean ->
             isPermissionGranted = isGranted
             if (isGranted) {
-                Toast.makeText(context, context.getString(R.string.notification_alerts_enabled), Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, notificationAlertsEnabled, Toast.LENGTH_SHORT).show()
             } else {
-                Toast.makeText(context, context.getString(R.string.notification_permission_denied), Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, notificationPermissionDenied, Toast.LENGTH_SHORT).show()
             }
         }
 
@@ -660,11 +663,12 @@ private fun formatTime(timestamp: Long): String {
     val now = Calendar.getInstance()
     val time = Calendar.getInstance().apply { time = date }
 
+    val locale = LocalConfiguration.current.locales[0]
     return if (now.get(Calendar.DATE) == time.get(Calendar.DATE)) {
-        SimpleDateFormat("hh:mm a", Locale.getDefault()).format(date)
+        SimpleDateFormat("hh:mm a", locale).format(date)
     } else if (now.get(Calendar.DATE) - time.get(Calendar.DATE) == 1) {
         stringResource(R.string.yesterday)
     } else {
-        SimpleDateFormat("MMM dd", Locale.getDefault()).format(date)
+        SimpleDateFormat("MMM dd", locale).format(date)
     }
 }

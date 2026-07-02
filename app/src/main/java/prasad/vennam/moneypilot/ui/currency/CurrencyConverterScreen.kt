@@ -82,6 +82,9 @@ fun CurrencyConverterScreen(
     val configuration = LocalConfiguration.current
     val isTablet = configuration.screenWidthDp >= 600
 
+    val copiedToClipboardText = stringResource(prasad.vennam.moneypilot.R.string.copied_result_to_clipboard)
+    val shareConversionTitle = stringResource(prasad.vennam.moneypilot.R.string.share_conversion_title)
+
     var rotationAngle by remember { mutableStateOf(0f) }
     val animatedRotation by animateFloatAsState(
         targetValue = rotationAngle,
@@ -362,9 +365,9 @@ fun CurrencyConverterScreen(
                                     val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                                     val clip = ClipData.newPlainText("Conversion Result", "${uiState.amount} ${uiState.fromCurrency} = ${uiState.convertedAmount} ${uiState.toCurrency}")
                                     clipboard.setPrimaryClip(clip)
-                                    Toast.makeText(context, context.getString(prasad.vennam.moneypilot.R.string.copied_result_to_clipboard), Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(context, copiedToClipboardText, Toast.LENGTH_SHORT).show()
                                 },
-                                onShareClick = {
+                                onShareClick = @Suppress("LocalContextGetResourceValueCall") {
                                     val shareIntent =
                                         Intent().apply {
                                             action = Intent.ACTION_SEND
@@ -381,7 +384,7 @@ fun CurrencyConverterScreen(
                                             )
                                             type = "text/plain"
                                         }
-                                    context.startActivity(Intent.createChooser(shareIntent, context.getString(prasad.vennam.moneypilot.R.string.share_conversion_title)))
+                                    context.startActivity(Intent.createChooser(shareIntent, shareConversionTitle))
                                 },
                                 onAlertClick = { showRateAlertSheet = true },
                             )

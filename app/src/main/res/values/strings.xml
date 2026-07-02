@@ -107,7 +107,7 @@
     <string name="eg_stock_symbol">e.g. RELIANCE.NS</string>
     <string name="units">Units</string>
     <string name="quantity">Quantity</string>
-    <string name="interest_rate_percent">Interest Rate (% Annual)</string>
+    <string name="interest_rate_percent">Interest Rate (%% Annual)</string>
     <string name="appreciation_rate_percent">Appreciation Rate (% Year)</string>
     <string name="fetching_price_on">Fetching price on %1$s…</string>
     <string name="quantity_filled_price">Quantity filled · price on %1$s was %2$s</string>

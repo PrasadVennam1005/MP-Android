@@ -198,6 +198,11 @@ fun SettingsScreen(
     val credentialManager = remember { CredentialManager.create(context) }
     val restoreState by mainViewModel.restoreState.collectAsState()
 
+    val enableBiometricLockText = stringResource(R.string.enable_biometric_lock)
+    val enableBiometricSubtitleText = stringResource(R.string.enable_biometric_subtitle)
+    val authRequiresRestartText = stringResource(R.string.auth_requires_restart)
+    val disableSmsTrackingMsg = stringResource(R.string.disable_sms_tracking_msg)
+
     val authLauncher =
         rememberLauncherForActivityResult(
             contract = ActivityResultContracts.StartActivityForResult(),
@@ -560,16 +565,16 @@ fun SettingsScreen(
                                 if (checked) {
                                     prasad.vennam.moneypilot.util.BiometricHelper.authenticate(
                                         activity = activity,
-                                        title = context.getString(R.string.enable_biometric_lock),
-                                        subtitle = context.getString(R.string.enable_biometric_subtitle),
+                                        title = enableBiometricLockText,
+                                        subtitle = enableBiometricSubtitleText,
                                         onSuccess = { mainViewModel.setIsBiometricEnabled(true) },
-                                        onError = { Toast.makeText(context, context.getString(R.string.auth_failed, it), Toast.LENGTH_SHORT).show() },
+                                        onError = { @Suppress("LocalContextGetResourceValueCall") Toast.makeText(context, context.getString(R.string.auth_failed, it), Toast.LENGTH_SHORT).show() },
                                     )
                                 } else {
                                     mainViewModel.setIsBiometricEnabled(false)
                                 }
                             } else {
-                                Toast.makeText(context, context.getString(R.string.auth_requires_restart), Toast.LENGTH_LONG).show()
+                                Toast.makeText(context, authRequiresRestartText, Toast.LENGTH_LONG).show()
                             }
                         },
                     )
@@ -615,7 +620,7 @@ fun SettingsScreen(
                             if (checked) {
                                 smsPermissionLauncher.launch(Manifest.permission.RECEIVE_SMS)
                             } else {
-                                Toast.makeText(context, context.getString(R.string.disable_sms_tracking_msg), Toast.LENGTH_LONG).show()
+                                Toast.makeText(context, disableSmsTrackingMsg, Toast.LENGTH_LONG).show()
                                 val intent =
                                     Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
                                         data = Uri.fromParts("package", context.packageName, null)

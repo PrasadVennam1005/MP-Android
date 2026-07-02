@@ -130,6 +130,9 @@ fun AddEditTransactionScreen(
     }
 
     val context = androidx.compose.ui.platform.LocalContext.current
+    val invalidFormatText = stringResource(R.string.invalid_format)
+    val amountCannotExceedText = stringResource(R.string.amount_cannot_exceed)
+    val unknownCategoryText = stringResource(R.string.unknown)
 
     Scaffold(
         topBar = {
@@ -227,9 +230,9 @@ fun AddEditTransactionScreen(
                         {
                             val text =
                                 when {
-                                    amountVal == null -> context.getString(R.string.invalid_format)
+                                    amountVal == null -> invalidFormatText
                                     amountVal <= 0.0 -> stringResource(R.string.amount_error_desc)
-                                    else -> context.getString(R.string.amount_cannot_exceed)
+                                    else -> amountCannotExceedText
                                 }
                             Text(text)
                         }
@@ -291,7 +294,7 @@ fun AddEditTransactionScreen(
                     val amountValue = formState.amount.toDoubleOrNull() ?: return@Button
                     if (amountValue <= 0) return@Button
 
-                    val categoryName = categories.find { it.id == formState.categoryId }?.name ?: context.getString(R.string.unknown)
+                    val categoryName = categories.find { it.id == formState.categoryId }?.name ?: unknownCategoryText
 
                     // Analytics: Track successful add/edit only after validation passes
                     analyticsHelper.logEvent(

@@ -105,6 +105,11 @@ fun AuthScreen(
     var isSplash by rememberSaveable { mutableStateOf(!skipSplash) }
     var loginError by remember { mutableStateOf<String?>(null) }
 
+    val loginErrorNoAccounts = stringResource(R.string.login_error_no_accounts)
+    val loginErrorCancelled = stringResource(R.string.login_error_cancelled)
+    val loginErrorFailed = stringResource(R.string.login_error_failed)
+    val loginErrorGeneric = stringResource(R.string.login_error_generic)
+
     val transitionProgress by animateFloatAsState(
         targetValue = if (isSplash) 0f else 1f,
         animationSpec = tween(durationMillis = 800, easing = FastOutSlowInEasing),
@@ -316,16 +321,16 @@ fun AuthScreen(
                                             }
                                         } catch (e: NoCredentialException) {
                                             Log.e("AuthScreen", "Login failed: No credentials available", e)
-                                            loginError = context.getString(R.string.login_error_no_accounts)
+                                            loginError = loginErrorNoAccounts
                                         } catch (e: GetCredentialCancellationException) {
                                             Log.d("AuthScreen", "Login cancelled by user")
-                                            loginError = context.getString(R.string.login_error_cancelled)
+                                            loginError = loginErrorCancelled
                                         } catch (e: GetCredentialException) {
                                             Log.e("AuthScreen", "Login failed: ${e.message}")
-                                            loginError = context.getString(R.string.login_error_failed)
+                                            loginError = loginErrorFailed
                                         } catch (e: Exception) {
                                             Log.e("AuthScreen", "Error: ${e.message}")
-                                            loginError = context.getString(R.string.login_error_generic)
+                                            loginError = loginErrorGeneric
                                         } finally {
                                             isLoading = false
                                         }

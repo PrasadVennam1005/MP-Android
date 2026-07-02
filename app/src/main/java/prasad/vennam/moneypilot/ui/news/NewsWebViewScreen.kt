@@ -56,6 +56,7 @@ fun NewsWebViewScreen(
     var currentTitle by remember { mutableStateOf(title) }
     var progress by remember { mutableIntStateOf(0) }
     var webViewInstance by remember { mutableStateOf<WebView?>(null) }
+    val shareArticleLabel = stringResource(R.string.share_article)
 
     val isBookmarked =
         remember(uiState.bookmarks, currentUrl) {
@@ -133,7 +134,7 @@ fun NewsWebViewScreen(
                                         putExtra(Intent.EXTRA_TEXT, "$currentTitle\n$currentUrl")
                                         type = "text/plain"
                                     }
-                                val shareIntent = Intent.createChooser(sendIntent, context.getString(R.string.share_article))
+                                val shareIntent = Intent.createChooser(sendIntent, shareArticleLabel)
                                 context.startActivity(shareIntent)
                             } catch (e: Exception) {
                                 // ignore

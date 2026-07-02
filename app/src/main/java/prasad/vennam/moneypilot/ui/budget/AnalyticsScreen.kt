@@ -37,6 +37,7 @@ import prasad.vennam.moneypilot.ui.viewmodel.AssetAllocation
 import prasad.vennam.moneypilot.ui.viewmodel.FinancialInsight
 import prasad.vennam.moneypilot.ui.viewmodel.InsightType
 import prasad.vennam.moneypilot.ui.viewmodel.TimeFilter
+import androidx.compose.ui.platform.LocalConfiguration
 import prasad.vennam.moneypilot.util.AnalyticsConstants
 import prasad.vennam.moneypilot.util.AnalyticsHelper
 import prasad.vennam.moneypilot.util.CurrencyFormatter
@@ -77,7 +78,7 @@ fun AnalyticsScreen(
                 modifier =
                     Modifier
                         .fillMaxSize(),
-                contentPadding = PaddingValues(16.dp),
+                contentPadding = innerPadding,
                 verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
                 if (!isPremium) {
@@ -131,7 +132,7 @@ fun AnalyticsScreen(
                                 currencySymbol =
                                     java.util.Currency
                                         .getInstance(currencyCode)
-                                        .getSymbol(java.util.Locale.getDefault()),
+                                        .getSymbol(LocalConfiguration.current.locales[0]),
                             )
                         }
                     }

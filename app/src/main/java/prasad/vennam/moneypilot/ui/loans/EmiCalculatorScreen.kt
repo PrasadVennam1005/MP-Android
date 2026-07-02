@@ -86,6 +86,7 @@ fun EmiCalculatorScreen(
     }
 
     val state by viewModel.uiState.collectAsState()
+    val emiReportSubject = stringResource(R.string.emi_report_subject)
 
     Scaffold(
         topBar = {
@@ -166,7 +167,7 @@ fun EmiCalculatorScreen(
 
                             ShareHelper.shareText(
                                 context = context,
-                                subject = context.getString(R.string.emi_report_subject),
+                                subject = emiReportSubject,
                                 text = shareText,
                             )
                         },

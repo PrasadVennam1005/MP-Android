@@ -15,6 +15,7 @@ import prasad.vennam.moneypilot.util.CurrencyFormatter
 import prasad.vennam.moneypilot.util.toMajorUnit
 import java.text.SimpleDateFormat
 import java.util.*
+import androidx.compose.ui.platform.LocalConfiguration
 
 @Composable
 fun LoanSection(
@@ -46,7 +47,7 @@ fun LoanCard(
     loan: Loan,
     currencyCode: String,
 ) {
-    val dateFormatter = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
+    val dateFormatter = SimpleDateFormat("dd MMM yyyy", LocalConfiguration.current.locales[0])
 
     Card(
         modifier =
