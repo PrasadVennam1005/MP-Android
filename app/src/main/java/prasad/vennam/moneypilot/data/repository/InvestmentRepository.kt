@@ -19,4 +19,6 @@ class InvestmentRepository
         suspend fun updateInvestment(investment: Investment) = investmentDao.updateInvestment(investment)
 
         suspend fun deleteInvestment(investment: Investment) = investmentDao.deleteInvestment(investment)
+
+        suspend fun getInvestmentById(id: Long): Investment? = investmentDao.getInvestmentById(id)
     }

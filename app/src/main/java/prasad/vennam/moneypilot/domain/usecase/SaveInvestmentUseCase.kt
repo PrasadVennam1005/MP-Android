@@ -13,10 +13,11 @@ class SaveInvestmentUseCase
     ) {
         suspend operator fun invoke(investment: Investment) {
             userPreferences.setSynced(false)
-            if (investment.id == 0L) {
-                repository.insertInvestment(investment)
+            val investmentToSave = investment.copy(lastUpdated = System.currentTimeMillis())
+            if (investment.id == 0L || repository.getInvestmentById(investment.id) == null) {
+                repository.insertInvestment(investmentToSave)
             } else {
-                repository.updateInvestment(investment)
+                repository.updateInvestment(investmentToSave)
             }
         }
     }

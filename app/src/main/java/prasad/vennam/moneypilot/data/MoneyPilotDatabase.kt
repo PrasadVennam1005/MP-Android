@@ -3,6 +3,7 @@ package prasad.vennam.moneypilot.data
 import androidx.room.Database
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
+import androidx.sqlite.db.SupportSQLiteDatabase
 import prasad.vennam.moneypilot.data.dao.BookmarkedArticleDao
 import prasad.vennam.moneypilot.data.dao.BookmarkedFinanceArticleDao
 import prasad.vennam.moneypilot.data.dao.BudgetDao
@@ -49,7 +50,7 @@ import prasad.vennam.moneypilot.data.entity.Transaction
         Subscription::class,
         SavingGoal::class,
     ],
-    version = 6,
+    version = 11,
     exportSchema = true,
 )
 @TypeConverters(Converters::class)
@@ -85,14 +86,14 @@ abstract class MoneyPilotDatabase : RoomDatabase() {
     companion object {
         val MIGRATION_1_2 =
             object : androidx.room.migration.Migration(1, 2) {
-                override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+                override fun migrate(db: SupportSQLiteDatabase) {
                     db.execSQL("CREATE TABLE IF NOT EXISTS `bookmarked_finance_articles` (`articleId` TEXT NOT NULL, `bookmarkedAt` INTEGER NOT NULL, PRIMARY KEY(`articleId`))")
                 }
             }
 
         val MIGRATION_2_3 =
             object : androidx.room.migration.Migration(2, 3) {
-                override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+                override fun migrate(db: SupportSQLiteDatabase) {
                     db.execSQL("ALTER TABLE `transactions` ADD COLUMN `lastUpdated` INTEGER NOT NULL DEFAULT 0")
                     db.execSQL("ALTER TABLE `categories` ADD COLUMN `lastUpdated` INTEGER NOT NULL DEFAULT 0")
                     db.execSQL("ALTER TABLE `budgets` ADD COLUMN `lastUpdated` INTEGER NOT NULL DEFAULT 0")
@@ -102,7 +103,7 @@ abstract class MoneyPilotDatabase : RoomDatabase() {
 
         val MIGRATION_3_4 =
             object : androidx.room.migration.Migration(3, 4) {
-                override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+                override fun migrate(db: SupportSQLiteDatabase) {
                     db.execSQL(
                         """
                     CREATE TABLE IF NOT EXISTS `subscriptions` (
@@ -141,16 +142,68 @@ abstract class MoneyPilotDatabase : RoomDatabase() {
 
         val MIGRATION_4_5 =
             object : androidx.room.migration.Migration(4, 5) {
-                override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+                override fun migrate(db: SupportSQLiteDatabase) {
                     db.execSQL("ALTER TABLE `loan_payments` ADD COLUMN `paymentMode` TEXT NOT NULL DEFAULT 'Cash'")
                 }
             }
 
         val MIGRATION_5_6 =
             object : androidx.room.migration.Migration(5, 6) {
-                override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
-                    db.execSQL("ALTER TABLE `transactions` ADD COLUMN `loanPaymentId` INTEGER DEFAULT NULL")
-                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_transactions_loanPaymentId` ON `transactions` (`loanPaymentId`)")
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    // Safe column addition for Transactions
+                    try {
+                        db.execSQL("ALTER TABLE `transactions` ADD COLUMN `loanPaymentId` INTEGER DEFAULT NULL")
+                    } catch (ignored: Exception) {}
+                    
+                    try {
+                        db.execSQL("CREATE INDEX IF NOT EXISTS `index_transactions_loanPaymentId` ON `transactions` (`loanPaymentId`)")
+                    } catch (ignored: Exception) {}
+
+                    // IMPORTANT: This was missing and caused the integrity error
+                    try {
+                        db.execSQL("ALTER TABLE `loans` ADD COLUMN `lastUpdated` INTEGER NOT NULL DEFAULT 0")
+                    } catch (ignored: Exception) {}
+                }
+            }
+
+        val MIGRATION_6_7 =
+            object : androidx.room.migration.Migration(6, 7) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    // Placeholder for future schema refinement
+                }
+            }
+
+        val MIGRATION_7_8 =
+            object : androidx.room.migration.Migration(7, 8) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    // No-op: Placeholder for future schema refinement
+                }
+            }
+
+        val MIGRATION_8_9 =
+            object : androidx.room.migration.Migration(8, 9) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    // No-op: Placeholder for future schema refinement
+                }
+            }
+
+        val MIGRATION_9_10 =
+            object : androidx.room.migration.Migration(9, 10) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    // No-op: Placeholder for future schema refinement
+                }
+            }
+
+        val MIGRATION_10_11 =
+            object : androidx.room.migration.Migration(10, 11) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    // Final safety check for any columns that might have been missed in messy dev cycles
+                    try {
+                        db.execSQL("ALTER TABLE `loans` ADD COLUMN `startDate` INTEGER NOT NULL DEFAULT 0")
+                    } catch (ignored: Exception) {}
+                    try {
+                        db.execSQL("ALTER TABLE `loans` ADD COLUMN `lastUpdated` INTEGER NOT NULL DEFAULT 0")
+                    } catch (ignored: Exception) {}
                 }
             }
     }

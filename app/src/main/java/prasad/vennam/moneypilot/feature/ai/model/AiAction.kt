@@ -64,13 +64,13 @@ fun AiAction.displaySummary(): String =
     when (this) {
         is AiAction.AddTransaction -> {
             val typeLabel = if (type == TransactionType.EXPENSE) "Expense" else "Income"
-            val dateLabel =
-                when (dateOffset) {
-                    0 -> "today"
-                    -1 -> "yesterday"
-                    else -> "$dateOffset days ago"
-                }
-            "Add ₹$amount $typeLabel · $categoryName · \"$note\" · $dateLabel"
+            val noteDisplay = if (note.isBlank()) "(no note)" else "\"$note\""
+            val dateLabel = when (dateOffset) {
+                0 -> "today"
+                -1 -> "yesterday"
+                else -> "${kotlin.math.abs(dateOffset)} days ago"
+            }
+            "Add ₹$amount $typeLabel · $categoryName · $noteDisplay · $dateLabel"
         }
         is AiAction.AddInvestment ->
             "Add ₹$investedAmount investment in $name ($type)"

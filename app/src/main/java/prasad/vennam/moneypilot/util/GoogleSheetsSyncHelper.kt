@@ -9,6 +9,7 @@ import com.squareup.moshi.JsonClass
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
@@ -62,6 +63,9 @@ object GoogleSheetsSyncHelper {
             )
             analyticsHelper.logEvent(AnalyticsConstants.Event.SYNC_STARTED)
             try {
+                if (isRestore) {
+                    userPreferences.clearDeletedTransactionIds()
+                }
                 val account = android.accounts.Account(email, "com.google")
                 val scopeString = "oauth2:https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.metadata.readonly"
                 val token = GoogleAuthUtil.getToken(context, account, scopeString)
@@ -159,6 +163,7 @@ object GoogleSheetsSyncHelper {
                         "GoogleSheetsSyncHelper",
                         "performTwoWaySync: Sync sequence successfully completed",
                     )
+                    userPreferences.clearDeletedTransactionIds()
                     analyticsHelper.logEvent(AnalyticsConstants.Event.SYNC_SUCCESS)
                 } catch (e: SheetStructureBrokenException) {
                     analyticsHelper.logEvent(AnalyticsConstants.Event.SYNC_FAILURE)
@@ -186,6 +191,7 @@ object GoogleSheetsSyncHelper {
                         loanDao = repository.loanDao,
                         loanPaymentDao = repository.loanPaymentDao,
                     )
+                    userPreferences.clearDeletedTransactionIds()
                 }
 
                 SyncResult.Success
@@ -322,7 +328,25 @@ object GoogleSheetsSyncHelper {
         userPreferences: UserPreferences,
         valueRanges: List<ValueRange>,
     ) {
-        for (vr in valueRanges) {
+        val order = listOf(
+            "Categories",
+            "Loans",
+            "Budgets",
+            "Investments",
+            "EmergencyFund",
+            "Subscriptions",
+            "SavingGoals",
+            "Transactions",
+            "LoanPayments"
+        )
+
+        val sortedValueRanges = valueRanges.sortedBy { vr ->
+            val rangeName = vr.range.orEmpty()
+            val idx = order.indexOfFirst { rangeName.contains(it) }
+            if (idx != -1) idx else order.size
+        }
+
+        for (vr in sortedValueRanges) {
             val range = vr.range ?: continue
             val values = vr.values ?: continue
 
@@ -466,11 +490,17 @@ object GoogleSheetsSyncHelper {
                     "GoogleSheetsSyncHelper",
                     "mergeCloudDataIntoLocal: Parsing ${values.size} transactions...",
                 )
+                val deletedIds = userPreferences.deletedTransactionIds.first()
                 val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
                 val localTransactions: Map<Long, Transaction> = transactionDao.getAllTransactionsSync().associateBy { it.id }
                 for (row in values) {
                     val idStr = row.getOrNull(0)?.toString().orEmpty()
                     val id = idStr.toDoubleOrNull()?.toLong() ?: 0L
+                    
+                    if (deletedIds.contains(id.toString())) {
+                        Log.d("GoogleSheetsSyncHelper", "mergeCloudDataIntoLocal: Skipping deleted transaction ID: $id")
+                        continue
+                    }
                     val dateStr = row.getOrNull(1)?.toString().orEmpty()
                     val typeStr = row.getOrNull(2)?.toString().orEmpty()
                     val categoryId =
@@ -566,106 +596,125 @@ object GoogleSheetsSyncHelper {
                 }
 
             } else if (range.contains("Subscriptions")) {
+                Log.d("GoogleSheetsSyncHelper", "mergeCloudDataIntoLocal: Parsing ${values.size} subscriptions...")
+                val localSubscriptions = subscriptionDao.getAllSubscriptionsSync().associateBy { it.id }
                 for (row in values) {
                     try {
-                        val id = row.getOrNull(0)?.toString()?.toLongOrNull() ?: continue
+                        val id = row.getOrNull(0)?.toString()?.toDoubleOrNull()?.toLong() ?: continue
                         val name = row.getOrNull(1)?.toString() ?: continue
-                        val amount = row.getOrNull(2)?.toString()?.toLongOrNull() ?: 0L
+                        val amount = row.getOrNull(2)?.toString()?.toDoubleOrNull()?.toLong() ?: 0L
                         val billingCycle = row.getOrNull(3)?.toString() ?: "Monthly"
-                        val nextPaymentDate = row.getOrNull(4)?.toString()?.toLongOrNull() ?: 0L
+                        val nextPaymentDate = row.getOrNull(4)?.toString()?.toDoubleOrNull()?.toLong() ?: 0L
                         val paymentMode = row.getOrNull(5)?.toString() ?: "UPI"
-                        val categoryId = row.getOrNull(6)?.toString()?.toLongOrNull()
-                        val isNotificationEnabled = row.getOrNull(7)?.toString()?.toBooleanStrictOrNull() ?: true
-                        val lastUpdated = row.getOrNull(8)?.toString()?.toLongOrNull() ?: System.currentTimeMillis()
+                        val categoryId = row.getOrNull(6)?.toString()?.toDoubleOrNull()?.toLong()
+                        val isNotificationEnabled = row.getOrNull(7)?.toString()?.toBoolean() ?: true
+                        val lastUpdated = row.getOrNull(8)?.toString()?.toDoubleOrNull()?.toLong() ?: System.currentTimeMillis()
 
-                        subscriptionDao.insertSubscription(
-                            prasad.vennam.moneypilot.data.entity.Subscription(
-                                id = id,
-                                name = name,
-                                amount = amount,
-                                billingCycle = billingCycle,
-                                nextPaymentDate = nextPaymentDate,
-                                paymentMode = paymentMode,
-                                categoryId = categoryId,
-                                isNotificationEnabled = isNotificationEnabled,
-                                lastUpdated = lastUpdated
+                        val localSub = localSubscriptions[id]
+                        if (localSub == null || lastUpdated > localSub.lastUpdated) {
+                            subscriptionDao.insertSubscription(
+                                prasad.vennam.moneypilot.data.entity.Subscription(
+                                    id = id,
+                                    name = name,
+                                    amount = amount,
+                                    billingCycle = billingCycle,
+                                    nextPaymentDate = nextPaymentDate,
+                                    paymentMode = paymentMode,
+                                    categoryId = categoryId,
+                                    isNotificationEnabled = isNotificationEnabled,
+                                    lastUpdated = lastUpdated
+                                )
                             )
-                        )
+                        }
                     } catch (e: Exception) { Log.w("GoogleSheetsSyncHelper", "Failed to parse Subscription row: $row", e) }
                 }
             } else if (range.contains("SavingGoals")) {
+                Log.d("GoogleSheetsSyncHelper", "mergeCloudDataIntoLocal: Parsing ${values.size} saving goals...")
+                val localGoals = savingGoalDao.getAllSavingGoalsSync().associateBy { it.id }
                 for (row in values) {
                     try {
-                        val id = row.getOrNull(0)?.toString()?.toLongOrNull() ?: continue
+                        val id = row.getOrNull(0)?.toString()?.toDoubleOrNull()?.toLong() ?: continue
                         val name = row.getOrNull(1)?.toString() ?: continue
-                        val targetAmount = row.getOrNull(2)?.toString()?.toLongOrNull() ?: 0L
-                        val currentSavedAmount = row.getOrNull(3)?.toString()?.toLongOrNull() ?: 0L
-                        val deadline = row.getOrNull(4)?.toString()?.toLongOrNull() ?: 0L
+                        val targetAmount = row.getOrNull(2)?.toString()?.toDoubleOrNull()?.toLong() ?: 0L
+                        val currentSavedAmount = row.getOrNull(3)?.toString()?.toDoubleOrNull()?.toLong() ?: 0L
+                        val deadline = row.getOrNull(4)?.toString()?.toDoubleOrNull()?.toLong() ?: 0L
                         val colorHex = row.getOrNull(5)?.toString() ?: "#3F51B5"
                         val iconName = row.getOrNull(6)?.toString() ?: "Savings"
-                        val isCompleted = row.getOrNull(7)?.toString()?.toBooleanStrictOrNull() ?: false
-                        val lastUpdated = row.getOrNull(8)?.toString()?.toLongOrNull() ?: System.currentTimeMillis()
+                        val isCompleted = row.getOrNull(7)?.toString()?.toBoolean() ?: false
+                        val lastUpdated = row.getOrNull(8)?.toString()?.toDoubleOrNull()?.toLong() ?: System.currentTimeMillis()
 
-                        savingGoalDao.insertSavingGoal(
-                            prasad.vennam.moneypilot.data.entity.SavingGoal(
-                                id = id,
-                                name = name,
-                                targetAmount = targetAmount,
-                                currentSavedAmount = currentSavedAmount,
-                                deadline = deadline,
-                                colorHex = colorHex,
-                                iconName = iconName,
-                                isCompleted = isCompleted,
-                                lastUpdated = lastUpdated
+                        val localGoal = localGoals[id]
+                        if (localGoal == null || lastUpdated > localGoal.lastUpdated) {
+                            savingGoalDao.insertSavingGoal(
+                                prasad.vennam.moneypilot.data.entity.SavingGoal(
+                                    id = id,
+                                    name = name,
+                                    targetAmount = targetAmount,
+                                    currentSavedAmount = currentSavedAmount,
+                                    deadline = deadline,
+                                    colorHex = colorHex,
+                                    iconName = iconName,
+                                    isCompleted = isCompleted,
+                                    lastUpdated = lastUpdated
+                                )
                             )
-                        )
+                        }
                     } catch (e: Exception) { Log.w("GoogleSheetsSyncHelper", "Failed to parse SavingGoal row: $row", e) }
                 }
             } else if (range.contains("Loans")) {
+                Log.d("GoogleSheetsSyncHelper", "mergeCloudDataIntoLocal: Parsing ${values.size} loans...")
+                val localLoans = loanDao.getAllLoansSync().associateBy { it.id }
                 for (row in values) {
                     try {
-                        val id = row.getOrNull(0)?.toString()?.toLongOrNull() ?: continue
+                        val id = row.getOrNull(0)?.toString()?.toDoubleOrNull()?.toLong() ?: continue
                         val name = row.getOrNull(1)?.toString() ?: continue
-                        val totalAmount = row.getOrNull(2)?.toString()?.toLongOrNull() ?: 0L
-                        val outstandingAmount = row.getOrNull(3)?.toString()?.toLongOrNull() ?: 0L
-                        val emiAmount = row.getOrNull(4)?.toString()?.toLongOrNull() ?: 0L
-                        val nextEmiDate = row.getOrNull(5)?.toString()?.toLongOrNull() ?: 0L
+                        val totalAmount = row.getOrNull(2)?.toString()?.toDoubleOrNull()?.toLong() ?: 0L
+                        val outstandingAmount = row.getOrNull(3)?.toString()?.toDoubleOrNull()?.toLong() ?: 0L
+                        val emiAmount = row.getOrNull(4)?.toString()?.toDoubleOrNull()?.toLong() ?: 0L
+                        val nextEmiDate = row.getOrNull(5)?.toString()?.toDoubleOrNull()?.toLong() ?: 0L
                         val currencyCode = row.getOrNull(6)?.toString() ?: "INR"
                         val lenderName = row.getOrNull(7)?.toString() ?: ""
                         val interestRate = row.getOrNull(8)?.toString()?.toDoubleOrNull() ?: 0.0
-                        val tenureMonths = row.getOrNull(9)?.toString()?.toIntOrNull() ?: 12
-                        val dueDayOfMonth = row.getOrNull(10)?.toString()?.toIntOrNull() ?: 1
-                        val isNotificationEnabled = row.getOrNull(11)?.toString()?.toBooleanStrictOrNull() ?: true
-                        val startDate = row.getOrNull(12)?.toString()?.toLongOrNull() ?: System.currentTimeMillis()
+                        val tenureMonths = row.getOrNull(9)?.toString()?.toDoubleOrNull()?.toInt() ?: 12
+                        val dueDayOfMonth = row.getOrNull(10)?.toString()?.toDoubleOrNull()?.toInt() ?: 1
+                        val isNotificationEnabled = row.getOrNull(11)?.toString()?.toBoolean() ?: true
+                        val startDate = row.getOrNull(12)?.toString()?.toDoubleOrNull()?.toLong() ?: System.currentTimeMillis()
+                        val lastUpdatedVal = row.getOrNull(13)?.toString()?.toDoubleOrNull()?.toLong() ?: System.currentTimeMillis()
 
-                        loanDao.insertLoan(
-                            prasad.vennam.moneypilot.data.entity.Loan(
-                                id = id,
-                                name = name,
-                                totalAmount = totalAmount,
-                                outstandingAmount = outstandingAmount,
-                                emiAmount = emiAmount,
-                                nextEmiDate = nextEmiDate,
-                                currencyCode = currencyCode,
-                                lenderName = lenderName,
-                                interestRate = interestRate,
-                                tenureMonths = tenureMonths,
-                                dueDayOfMonth = dueDayOfMonth,
-                                isNotificationEnabled = isNotificationEnabled,
-                                startDate = startDate
+                        val localLoan = localLoans[id]
+                        if (localLoan == null || lastUpdatedVal > localLoan.lastUpdated) {
+                            loanDao.insertLoan(
+                                prasad.vennam.moneypilot.data.entity.Loan(
+                                    id = id,
+                                    name = name,
+                                    totalAmount = totalAmount,
+                                    outstandingAmount = outstandingAmount,
+                                    emiAmount = emiAmount,
+                                    nextEmiDate = nextEmiDate,
+                                    currencyCode = currencyCode,
+                                    lenderName = lenderName,
+                                    interestRate = interestRate,
+                                    tenureMonths = tenureMonths,
+                                    dueDayOfMonth = dueDayOfMonth,
+                                    isNotificationEnabled = isNotificationEnabled,
+                                    startDate = startDate,
+                                    lastUpdated = lastUpdatedVal
+                                )
                             )
-                        )
+                        }
                     } catch (e: Exception) { Log.w("GoogleSheetsSyncHelper", "Failed to parse Loan row: $row", e) }
                 }
             } else if (range.contains("LoanPayments")) {
+                Log.d("GoogleSheetsSyncHelper", "mergeCloudDataIntoLocal: Parsing ${values.size} loan payments...")
                 for (row in values) {
                     try {
-                        val id = row.getOrNull(0)?.toString()?.toLongOrNull() ?: continue
-                        val loanId = row.getOrNull(1)?.toString()?.toLongOrNull() ?: continue
-                        val amount = row.getOrNull(2)?.toString()?.toLongOrNull() ?: 0L
-                        val date = row.getOrNull(3)?.toString()?.toLongOrNull() ?: 0L
-                        val isExtraPayment = row.getOrNull(4)?.toString()?.toBooleanStrictOrNull() ?: false
+                        val id = row.getOrNull(0)?.toString()?.toDoubleOrNull()?.toLong() ?: continue
+                        val loanId = row.getOrNull(1)?.toString()?.toDoubleOrNull()?.toLong() ?: continue
+                        val amount = row.getOrNull(2)?.toString()?.toDoubleOrNull()?.toLong() ?: 0L
+                        val date = row.getOrNull(3)?.toString()?.toDoubleOrNull()?.toLong() ?: 0L
+                        val isExtraPayment = row.getOrNull(4)?.toString()?.toBoolean() ?: false
                         val note = row.getOrNull(5)?.toString() ?: ""
+                        val paymentMode = row.getOrNull(6)?.toString() ?: "Cash"
 
                         loanPaymentDao.insertPayment(
                             prasad.vennam.moneypilot.data.entity.LoanPayment(
@@ -674,12 +723,12 @@ object GoogleSheetsSyncHelper {
                                 amount = amount,
                                 date = date,
                                 isExtraPayment = isExtraPayment,
-                                note = note
+                                note = note,
+                                paymentMode = paymentMode
                             )
                         )
                     } catch (e: Exception) { Log.w("GoogleSheetsSyncHelper", "Failed to parse LoanPayment row: $row", e) }
                 }
-
             }
         }
     }
@@ -848,11 +897,11 @@ object GoogleSheetsSyncHelper {
         val sgRows = mutableListOf<List<Any>>(listOf("ID", "Name", "Target Amount", "Current Saved Amount", "Deadline", "Color Hex", "Icon Name", "Is Completed", "Last Updated"))
         for (sg in savingGoals) sgRows.add(listOf(sg.id, sg.name, sg.targetAmount, sg.currentSavedAmount, sg.deadline, sg.colorHex, sg.iconName, sg.isCompleted, sg.lastUpdated))
 
-        val lRows = mutableListOf<List<Any>>(listOf("ID", "Name", "Total Amount", "Outstanding Amount", "EMI Amount", "Next EMI Date", "Currency Code", "Lender Name", "Interest Rate", "Tenure Months", "Due Day of Month", "Is Notification Enabled", "Start Date"))
-        for (l in loans) lRows.add(listOf(l.id, l.name, l.totalAmount, l.outstandingAmount, l.emiAmount, l.nextEmiDate, l.currencyCode, l.lenderName, l.interestRate, l.tenureMonths, l.dueDayOfMonth, l.isNotificationEnabled, l.startDate))
+        val lRows = mutableListOf<List<Any>>(listOf("ID", "Name", "Total Amount", "Outstanding Amount", "EMI Amount", "Next EMI Date", "Currency Code", "Lender Name", "Interest Rate", "Tenure Months", "Due Day of Month", "Is Notification Enabled", "Start Date", "Last Updated"))
+        for (l in loans) lRows.add(listOf(l.id, l.name, l.totalAmount, l.outstandingAmount, l.emiAmount, l.nextEmiDate, l.currencyCode, l.lenderName, l.interestRate, l.tenureMonths, l.dueDayOfMonth, l.isNotificationEnabled, l.startDate, l.lastUpdated))
 
-        val lpRows = mutableListOf<List<Any>>(listOf("ID", "Loan ID", "Amount", "Date", "Is Extra Payment", "Note"))
-        for (lp in loanPayments) lpRows.add(listOf(lp.id, lp.loanId, lp.amount, lp.date, lp.isExtraPayment, lp.note))
+        val lpRows = mutableListOf<List<Any>>(listOf("ID", "Loan ID", "Amount", "Date", "Is Extra Payment", "Note", "Payment Mode"))
+        for (lp in loanPayments) lpRows.add(listOf(lp.id, lp.loanId, lp.amount, lp.date, lp.isExtraPayment, lp.note, lp.paymentMode))
 
         val bodyMap =
             mapOf(
@@ -864,6 +913,10 @@ object GoogleSheetsSyncHelper {
                         mapOf("range" to "Budgets!A1", "values" to bRows),
                         mapOf("range" to "Investments!A1", "values" to iRows),
                         mapOf("range" to "EmergencyFund!A1", "values" to efRows),
+                        mapOf("range" to "Subscriptions!A1", "values" to subRows),
+                        mapOf("range" to "SavingGoals!A1", "values" to sgRows),
+                        mapOf("range" to "Loans!A1", "values" to lRows),
+                        mapOf("range" to "LoanPayments!A1", "values" to lpRows),
                     ),
             )
         val moshi = Moshi.Builder().addLast(KotlinJsonAdapterFactory()).build()

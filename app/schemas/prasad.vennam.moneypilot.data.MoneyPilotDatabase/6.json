@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 6,
-    "identityHash": "549e107130e36f370d0df76b811cd705",
+    "identityHash": "f32e5d7a1eb19291695d8b7200c111f2",
     "entities": [
       {
         "tableName": "categories",
@@ -392,7 +392,7 @@
       },
       {
         "tableName": "loans",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL, `totalAmount` INTEGER NOT NULL, `outstandingAmount` INTEGER NOT NULL, `emiAmount` INTEGER NOT NULL, `nextEmiDate` INTEGER NOT NULL, `currencyCode` TEXT NOT NULL, `lenderName` TEXT NOT NULL, `interestRate` REAL NOT NULL, `tenureMonths` INTEGER NOT NULL, `dueDayOfMonth` INTEGER NOT NULL, `isNotificationEnabled` INTEGER NOT NULL, `startDate` INTEGER NOT NULL)",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL, `totalAmount` INTEGER NOT NULL, `outstandingAmount` INTEGER NOT NULL, `emiAmount` INTEGER NOT NULL, `nextEmiDate` INTEGER NOT NULL, `currencyCode` TEXT NOT NULL, `lenderName` TEXT NOT NULL, `interestRate` REAL NOT NULL, `tenureMonths` INTEGER NOT NULL, `dueDayOfMonth` INTEGER NOT NULL, `isNotificationEnabled` INTEGER NOT NULL, `startDate` INTEGER NOT NULL, `lastUpdated` INTEGER NOT NULL)",
         "fields": [
           {
             "fieldPath": "id",
@@ -469,6 +469,12 @@
           {
             "fieldPath": "startDate",
             "columnName": "startDate",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "lastUpdated",
+            "columnName": "lastUpdated",
             "affinity": "INTEGER",
             "notNull": true
           }
@@ -872,7 +878,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '549e107130e36f370d0df76b811cd705')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'f32e5d7a1eb19291695d8b7200c111f2')"
     ]
   }
 }

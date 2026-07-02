@@ -321,7 +321,26 @@
     <string name="downloading_model_title">Downloading AI Model…</string>
     <string name="downloading_progress_desc">Downloading model assets… %1$d%% complete.</string>
     <string name="initializing_llm_title">Initializing LLM Engine…</string>
-    
+    <string name="suggestions">Suggestions</string>
+    <string name="explore_suggestions">Explore Suggestions</string>
+    <string name="explore_suggestions_desc">Tap a prompt to insert it into the chat input</string>
+    <string name="date_offset_label">Date Offset (0=Today, -1=Yesterday)</string>
+    <string name="first_emi_due_days">First EMI Due (Days)</string>
+    <string name="ad_sponsored">SPONSORED</string>
+    <string name="category_wealth">Wealth</string>
+    <string name="suggestion_food_expense">Add food expense of 500 from Swiggy</string>
+    <string name="suggestion_fuel_expense">Spent 1200 on petrol today</string>
+    <string name="suggestion_salary_income">Received salary of 75000</string>
+    <string name="suggestion_shopping_expense">Log shopping expense of 3500 on Amazon</string>
+    <string name="suggestion_fd_investment">Invested 25000 in FD today</string>
+    <string name="suggestion_stock_investment">Bought HDFC stock for 15k</string>
+    <string name="suggestion_mf_investment">Invested 10000 in Mutual Fund</string>
+    <string name="suggestion_gold_investment">Bought Gold for 5000 today</string>
+    <string name="suggestion_home_loan">Add SBI Home Loan of 30L, EMI 45000</string>
+    <string name="suggestion_personal_loan">Add personal loan of 50k</string>
+    <string name="suggestion_car_loan">Add car loan of 12L, EMI 22000</string>
+    <string name="suggestion_loans_summary">Show active loans summary</string>
+
     <string name="status_offline">Offline</string>
     <string name="status_initializing">Initializing…</string>
     <string name="status_ready">Ready &amp; Secure</string>
@@ -764,6 +783,8 @@
     <string name="no_category_notifications">No %1$s Notifications</string>
     <string name="empty_notifications_desc">When alerts, budget targets, or backups trigger, you\'ll see them listed here.</string>
     <string name="yesterday">Yesterday</string>
+    <string name="today">Today</string>
+    <string name="days_ago">%1$d days ago</string>
     <string name="invested_amount">Invested: %1$s</string>
 
     <!-- Learn Finance -->
@@ -816,4 +837,51 @@
     <string name="one_time">One-time</string>
     <string name="prepayment_amount">Prepayment Amount</string>
     <string name="months_saved_format">%1$s Mo</string>
+    <string name="send">Send</string>
+
+    <!-- AI Chat: error / feedback strings (replaces hardcoded English in ViewModel/Repo) -->
+    <string name="ai_failed_to_send">Failed to send: %1$s</string>
+    <string name="ai_error_prefix">Error: %1$s</string>
+    <string name="ai_action_cancelled">Action cancelled.</string>
+    <string name="ai_expense_added">₹%1$d Expense added successfully!</string>
+    <string name="ai_income_added">₹%1$d Income added successfully!</string>
+    <string name="ai_investment_added">Investment \"%1$s\" added successfully!</string>
+    <string name="ai_loan_added">Loan \"%1$s\" added successfully!</string>
+    <string name="ai_not_ready">AI not ready. Please try again later.</string>
+
+    <!-- AI Chat: send button label when confirming a pending action -->
+    <string name="send_message">Send message</string>
+    <string name="confirm_action">Confirm action</string>
+
+    <!-- AI Chat: field hint/placeholder texts for the edit card -->
+    <string name="hint_category">e.g. Food, Transport…</string>
+    <string name="hint_note">e.g. Swiggy, salary…</string>
+    <string name="hint_loan_name">e.g. SBI Home Loan</string>
+    <string name="hint_investment_name">e.g. HDFC Top 100 Fund</string>
+
+    <!-- AI Chat: category validation -->
+    <string name="category_required">Category is required</string>
+
+    <!-- AI Chat: consent dialog for cloud (Gemini) AI feature -->
+    <string name="ai_consent_title">Enable AI Assistant</string>
+    <string name="ai_consent_desc">To answer your questions, MoneyPilot sends a summary of your recent financial data to Google Gemini. No data is stored by Google beyond the request. Do you agree?</string>
+    <string name="ai_consent_agree">I Agree</string>
+    <string name="ai_consent_decline">No Thanks</string>
+    <string name="ai_consent_declined_msg">AI assistant requires your consent to work.</string>
+    <string name="unknown_error">Unknown error</string>
+
+    <string name="ai_rate_limited_title">Free Tier Limit Exceeded</string>
+    <string name="ai_rate_limited_desc">You have exceeded the Gemini API free tier limits. To continue chatting offline, you can download the local Gemma model (1.5 GB) directly to your device.</string>
+
+    <!-- Delete Transaction Confirmation -->
+    <string name="delete_transaction_title">Delete Transaction</string>
+    <string name="delete_transaction_confirm">Are you sure you want to delete this transaction?</string>
+
+    <!-- Delete Investment Confirmation -->
+    <string name="delete_investment_title">Delete Investment</string>
+    <string name="delete_investment_confirm">Are you sure you want to delete this investment?</string>
+
+    <!-- Delete Budget Confirmation -->
+    <string name="delete_budget_title">Delete Budget</string>
+    <string name="delete_budget_confirm">Are you sure you want to delete this budget?</string>
 </resources>

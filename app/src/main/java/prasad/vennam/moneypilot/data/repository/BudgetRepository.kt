@@ -24,4 +24,6 @@ class BudgetRepository
             categoryId: Long,
             period: String,
         ): Budget? = budgetDao.getBudget(categoryId, period)
+
+        suspend fun getBudgetById(id: Long): Budget? = budgetDao.getBudgetById(id)
     }

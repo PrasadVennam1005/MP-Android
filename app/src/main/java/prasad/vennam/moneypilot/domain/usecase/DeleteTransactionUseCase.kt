@@ -12,6 +12,7 @@ class DeleteTransactionUseCase
         private val userPreferences: UserPreferences,
     ) {
         suspend operator fun invoke(transaction: Transaction) {
+            userPreferences.addDeletedTransactionId(transaction.id.toString())
             userPreferences.setSynced(false)
             repository.deleteTransaction(transaction)
         }

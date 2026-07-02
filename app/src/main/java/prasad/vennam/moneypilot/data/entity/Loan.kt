@@ -18,4 +18,5 @@ data class Loan(
     val dueDayOfMonth: Int = 1,
     val isNotificationEnabled: Boolean = true,
     val startDate: Long = System.currentTimeMillis(),
+    val lastUpdated: Long = System.currentTimeMillis(),
 )

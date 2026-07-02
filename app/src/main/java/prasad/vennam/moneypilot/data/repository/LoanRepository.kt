@@ -7,10 +7,12 @@ import prasad.vennam.moneypilot.data.dao.CategoryDao
 import prasad.vennam.moneypilot.data.dao.LoanDao
 import prasad.vennam.moneypilot.data.dao.LoanPaymentDao
 import prasad.vennam.moneypilot.data.dao.TransactionDao
+import prasad.vennam.moneypilot.data.UserPreferences
 import prasad.vennam.moneypilot.data.entity.Loan
 import prasad.vennam.moneypilot.data.entity.LoanPayment
 import prasad.vennam.moneypilot.data.entity.Transaction
 import prasad.vennam.moneypilot.data.entity.TransactionType
+import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -22,6 +24,8 @@ class LoanRepository
         private val loanPaymentDao: LoanPaymentDao,
         private val transactionDao: TransactionDao,
         private val categoryDao: CategoryDao,
+        private val exchangeRateRepo: ExchangeRateRepository,
+        private val userPreferences: UserPreferences,
         private val database: MoneyPilotDatabase,
     ) {
         val allLoans: Flow<List<Loan>> = loanDao.getAllLoans()
@@ -51,11 +55,30 @@ class LoanRepository
                 // Fetch the loan first to check outstanding amount
                 val loan = loanDao.getLoanById(payment.loanId)
                 loan?.let { currentLoan ->
+                    // Currency Conversion logic:
+                    // If payment currency differs from loan currency, convert payment amount to loan currency principal
+                    var amountInLoanCurrency = payment.amount
+                    if (payment.paymentMode != "Cash" && payment.paymentMode.isNotEmpty()) {
+                        val ratesMap = exchangeRateRepo.allRates.first()
+                        
+                        // We need the payment currency. Assume payment is in User's preferred currency.
+                        val userCurrency = userPreferences.currency.first()
+                        
+                        if (userCurrency != currentLoan.currencyCode) {
+                            val rateUser = ratesMap[userCurrency] ?: 1.0
+                            val rateLoan = ratesMap[currentLoan.currencyCode] ?: 1.0
+                            
+                            // Amount / RateUser = USD. USD * RateLoan = Loan Currency.
+                            val amountInUSD = payment.amount.toDouble() / rateUser
+                            amountInLoanCurrency = (amountInUSD * rateLoan).toLong()
+                        }
+                    }
+
                     // Guard: Cap payment amount at current outstanding balance
-                    val cappedAmount = if (payment.amount > currentLoan.outstandingAmount) {
+                    val cappedAmount = if (amountInLoanCurrency > currentLoan.outstandingAmount) {
                         currentLoan.outstandingAmount
                     } else {
-                        payment.amount
+                        amountInLoanCurrency
                     }
 
                     if (cappedAmount <= 0) return@withTransaction

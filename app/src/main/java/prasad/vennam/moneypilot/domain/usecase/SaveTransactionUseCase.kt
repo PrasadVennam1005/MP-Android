@@ -12,11 +12,13 @@ class SaveTransactionUseCase
         private val userPreferences: UserPreferences,
     ) {
         suspend operator fun invoke(transaction: Transaction) {
+            userPreferences.removeDeletedTransactionId(transaction.id.toString())
             userPreferences.setSynced(false)
-            if (transaction.id == 0L) {
-                repository.insertTransaction(transaction)
+            val transactionToSave = transaction.copy(lastUpdated = System.currentTimeMillis())
+            if (transaction.id == 0L || repository.getTransactionById(transaction.id) == null) {
+                repository.insertTransaction(transactionToSave)
             } else {
-                repository.updateTransaction(transaction)
+                repository.updateTransaction(transactionToSave)
             }
         }
     }

@@ -9,12 +9,14 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -24,6 +26,9 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfoV2
 import androidx.window.core.layout.WindowWidthSizeClass
 import androidx.compose.material.icons.Icons
@@ -179,82 +184,100 @@ fun LearnFinanceScreen(
             }
 
         Column(modifier = Modifier.padding(padding)) {
-            CategoryTabs(
-                categories = uiState.categories,
-                selectedCategory = uiState.selectedCategory,
-                onCategorySelected = { viewModel.onCategorySelected(it) },
-            )
-
             if (isExpanded) {
-                LazyVerticalGrid(
-                    columns = GridCells.Fixed(2),
-                    state = lazyGridState,
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(bottom = 16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    if (featuredArticles.isNotEmpty()) {
-                        item(span = { GridItemSpan(2) }) {
+                Row(modifier = Modifier.fillMaxSize()) {
+                    // Left Pane: Navigation & Categories
+                    Surface(
+                        modifier = Modifier
+                            .width(280.dp)
+                            .fillMaxHeight(),
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .padding(16.dp)
+                                .verticalScroll(rememberScrollState()),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
                             Text(
-                                text = stringResource(R.string.featured),
-                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                                text = stringResource(R.string.category),
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(bottom = 8.dp)
                             )
-                        }
-                        item(span = { GridItemSpan(2) }) {
-                            LazyRow(
-                                contentPadding = PaddingValues(horizontal = 16.dp),
-                                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                                modifier = Modifier.fillMaxWidth(),
-                            ) {
-                                items(featuredArticles, key = { "featured_${it.id}" }) { article ->
-                                    FeaturedArticleCard(
-                                        article = article,
-                                        onClick = { onArticleClick(article.id) },
-                                    )
-                                }
+                            
+                            CategorySidebarItem(
+                                label = stringResource(R.string.all),
+                                isSelected = uiState.selectedCategory == null,
+                                onClick = { viewModel.onCategorySelected(null) }
+                            )
+                            
+                            uiState.categories.forEach { category ->
+                                CategorySidebarItem(
+                                    label = category,
+                                    isSelected = uiState.selectedCategory == category,
+                                    onClick = { viewModel.onCategorySelected(category) }
+                                )
                             }
-                        }
-                        item(span = { GridItemSpan(2) }) {
-                            Spacer(modifier = Modifier.height(8.dp))
-                        }
-
-                        // AdMob banner
-                        item(span = { GridItemSpan(2) }) {
+                            
+                            Spacer(modifier = Modifier.height(24.dp))
+                            
+                            // Ad banner in sidebar for tablet
                             AdBannerView(
                                 isPremium = isPremium,
-                                modifier =
-                                    Modifier
-                                        .fillMaxWidth()
-                                        .padding(horizontal = 16.dp),
+                                modifier = Modifier.fillMaxWidth()
                             )
                         }
                     }
 
-                    item(span = { GridItemSpan(2) }) {
-                        Text(
-                            text = stringResource(R.string.articles),
-                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                        )
-                    }
-
-                    if (uiState.articles.isEmpty()) {
-                        item(span = { GridItemSpan(2) }) {
-                            Box(
-                                modifier =
-                                    Modifier
-                                        .fillMaxWidth()
-                                        .height(200.dp),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                Text(stringResource(R.string.no_articles_found), style = MaterialTheme.typography.bodyLarge)
+                    // Right Pane: Article Content Grid
+                    LazyVerticalGrid(
+                        columns = GridCells.Fixed(2),
+                        state = lazyGridState,
+                        modifier = Modifier.weight(1f).fillMaxHeight(),
+                        contentPadding = PaddingValues(24.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    ) {
+                        if (featuredArticles.isNotEmpty() && uiState.searchQuery.isEmpty()) {
+                            item(span = { GridItemSpan(2) }) {
+                                Text(
+                                    text = stringResource(R.string.featured),
+                                    style = MaterialTheme.typography.headlineSmall,
+                                    fontWeight = FontWeight.Bold,
+                                )
+                            }
+                            items(featuredArticles, key = { "featured_${it.id}" }) { article ->
+                                FeaturedArticleCard(
+                                    article = article,
+                                    onClick = { onArticleClick(article.id) },
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            }
+                            item(span = { GridItemSpan(2) }) {
+                                Spacer(modifier = Modifier.height(8.dp))
                             }
                         }
-                    } else {
-                        items(uiState.articles, key = { it.id }) { article ->
-                            Box(modifier = Modifier.padding(horizontal = 16.dp)) {
+
+                        item(span = { GridItemSpan(2) }) {
+                            Text(
+                                text = if (uiState.searchQuery.isNotEmpty()) stringResource(R.string.search_articles) else stringResource(R.string.articles),
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold,
+                            )
+                        }
+
+                        if (uiState.articles.isEmpty()) {
+                            item(span = { GridItemSpan(2) }) {
+                                Box(
+                                    modifier = Modifier.fillMaxWidth().height(200.dp),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Text(stringResource(R.string.no_articles_found), style = MaterialTheme.typography.bodyLarge)
+                                }
+                            }
+                        } else {
+                            items(uiState.articles, key = { it.id }) { article ->
                                 ArticleItem(
                                     article = article,
                                     isBookmarked = uiState.bookmarkedIds.contains(article.id),
@@ -266,6 +289,13 @@ fun LearnFinanceScreen(
                     }
                 }
             } else {
+                // Mobile Layout: Vertical
+                CategoryTabs(
+                    categories = uiState.categories,
+                    selectedCategory = uiState.selectedCategory,
+                    onCategorySelected = { viewModel.onCategorySelected(it) },
+                )
+
                 LazyColumn(
                     state = lazyListState,
                     modifier = Modifier.fillMaxSize(),
@@ -294,7 +324,7 @@ fun LearnFinanceScreen(
                             Spacer(modifier = Modifier.height(8.dp))
                         }
 
-                        // AdMob banner — shown to non-premium users below Featured
+                        // AdMob banner
                         item {
                             AdBannerView(
                                 isPremium = isPremium,
@@ -345,16 +375,38 @@ fun LearnFinanceScreen(
 }
 
 @Composable
+fun CategorySidebarItem(
+    label: String,
+    isSelected: Boolean,
+    onClick: () -> Unit
+) {
+    Surface(
+        onClick = onClick,
+        color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
+        shape = RoundedCornerShape(12.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Text(
+            text = label,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+            style = MaterialTheme.typography.bodyLarge,
+            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+            color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+@Composable
 fun FeaturedArticleCard(
     article: FinanceArticle,
     onClick: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     Card(
-        modifier =
-            Modifier
-                .width(280.dp)
-                .height(160.dp)
-                .clickable(onClick = onClick),
+        modifier = modifier
+            .widthIn(max = 400.dp)
+            .height(160.dp)
+            .clickable(onClick = onClick),
         shape = MaterialTheme.shapes.large,
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
     ) {

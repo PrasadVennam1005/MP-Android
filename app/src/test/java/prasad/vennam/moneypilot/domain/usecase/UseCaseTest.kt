@@ -17,6 +17,7 @@ import org.mockito.Mockito.`when` as whenever
 
 class UseCaseTest {
     private val transactionRepository = mock(TransactionRepository::class.java)
+    private val categoryRepository = mock(CategoryRepository::class.java)
     private val budgetRepository = mock(BudgetRepository::class.java)
     private val investmentRepository = mock(InvestmentRepository::class.java)
     private val loanRepository = mock(LoanRepository::class.java)
@@ -90,7 +91,7 @@ class UseCaseTest {
             saveTransactionUseCase(transaction)
 
             verify(userPreferences).setSynced(false)
-            verify(transactionRepository).insertTransaction(transaction)
+            verify(transactionRepository).insertTransaction(org.mockito.Mockito.any(Transaction::class.java) ?: transaction)
         }
 
     @Test
@@ -108,11 +109,12 @@ class UseCaseTest {
                     paymentMode = "Card",
                     currencyCode = "INR",
                 )
+            whenever(transactionRepository.getTransactionById(5L)).thenReturn(transaction)
 
             saveTransactionUseCase(transaction)
 
             verify(userPreferences).setSynced(false)
-            verify(transactionRepository).updateTransaction(transaction)
+            verify(transactionRepository).updateTransaction(org.mockito.Mockito.any(Transaction::class.java) ?: transaction)
         }
 
     @Test
@@ -152,7 +154,7 @@ class UseCaseTest {
             saveBudgetUseCase(budget)
 
             verify(userPreferences).setSynced(false)
-            verify(budgetRepository).insertBudget(budget)
+            verify(budgetRepository).insertBudget(org.mockito.Mockito.any(Budget::class.java) ?: budget)
         }
 
     @Test
@@ -166,11 +168,12 @@ class UseCaseTest {
                     period = "Monthly",
                     currencyCode = "INR",
                 )
+            whenever(budgetRepository.getBudgetById(4L)).thenReturn(budget)
 
             saveBudgetUseCase(budget)
 
             verify(userPreferences).setSynced(false)
-            verify(budgetRepository).updateBudget(budget)
+            verify(budgetRepository).updateBudget(org.mockito.Mockito.any(Budget::class.java) ?: budget)
         }
 
     @Test
@@ -267,7 +270,7 @@ class UseCaseTest {
             saveInvestmentUseCase(investment)
 
             verify(userPreferences).setSynced(false)
-            verify(investmentRepository).insertInvestment(investment)
+            verify(investmentRepository).insertInvestment(org.mockito.Mockito.any(Investment::class.java) ?: investment)
         }
 
     @Test
@@ -282,11 +285,12 @@ class UseCaseTest {
                     currentValue = 65000,
                     currencyCode = "INR",
                 )
+            whenever(investmentRepository.getInvestmentById(2L)).thenReturn(investment)
 
             saveInvestmentUseCase(investment)
 
             verify(userPreferences).setSynced(false)
-            verify(investmentRepository).updateInvestment(investment)
+            verify(investmentRepository).updateInvestment(org.mockito.Mockito.any(Investment::class.java) ?: investment)
         }
 
     @Test
@@ -319,10 +323,10 @@ class UseCaseTest {
                     color = 0xFFF44336,
                     isExpense = true,
                 )
-            val useCase = SaveCategoryUseCase(transactionRepository, userPreferences)
+            val useCase = SaveCategoryUseCase(categoryRepository, userPreferences)
             useCase(category)
             verify(userPreferences).setSynced(false)
-            verify(transactionRepository).insertCategory(category)
+            verify(categoryRepository).insertCategory(category)
         }
 
     @Test
@@ -336,10 +340,10 @@ class UseCaseTest {
                     color = 0xFFF44336,
                     isExpense = true,
                 )
-            val useCase = DeleteCategoryUseCase(transactionRepository, userPreferences)
+            val useCase = DeleteCategoryUseCase(categoryRepository, userPreferences)
             useCase(category)
             verify(userPreferences).setSynced(false)
-            verify(transactionRepository).deleteCategory(category)
+            verify(categoryRepository).deleteCategory(category)
         }
 
     @Test

@@ -8,6 +8,9 @@ import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -19,6 +22,7 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
+import prasad.vennam.moneypilot.feature.ai.model.CloudResult
 import prasad.vennam.moneypilot.feature.ai.model.LlmResponse
 
 /**
@@ -35,6 +39,7 @@ import prasad.vennam.moneypilot.feature.ai.model.LlmResponse
 class LlmService(
     private val context: Context,
 ) {
+    private val serviceScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
     private var engine: Engine? = null
     private var conversation: Conversation? = null
     private val client = OkHttpClient()
@@ -166,7 +171,6 @@ class LlmService(
         return response
     }
 
-    @OptIn(kotlinx.coroutines.DelicateCoroutinesApi::class)
     fun generateResponseStreaming(prompt: String) {
         Log.d(TAG, "generateResponseStreaming called. Prompt length: ${prompt.length}")
         val eng =
@@ -183,7 +187,7 @@ class LlmService(
         conversation = convo
         accumulated.clear()
 
-        GlobalScope.launch(Dispatchers.Default) {
+        serviceScope.launch {
             try {
                 Log.d(TAG, "Starting token collection. Prompt preview: ${prompt.take(150)}...")
                 var tokenCount = 0
@@ -202,24 +206,32 @@ class LlmService(
         }
     }
 
-    @OptIn(kotlinx.coroutines.DelicateCoroutinesApi::class)
-    fun generateCloudResponseStreaming(prompt: String) {
+    fun generateCloudResponseStreaming(prompt: String, onRateLimited: () -> Unit = {}) {
         Log.d(TAG, "generateCloudResponseStreaming called. Prompt length: ${prompt.length}")
         accumulated.clear()
         _partialResponses.tryEmit(LlmResponse("Thinking...", false))
 
-        GlobalScope.launch(Dispatchers.Default) {
+        serviceScope.launch {
             try {
-                val response = generateCloudResponse(prompt)
-                if (response != null) {
-                    accumulated.clear()
-                    accumulated.append(response)
-                    _partialResponses.tryEmit(LlmResponse(accumulated.toString(), false))
-                    _partialResponses.tryEmit(LlmResponse(accumulated.toString(), true))
-                } else {
-                    val errMsg = "Cloud AI is currently unavailable. Please check your internet connection or try again later."
-                    _partialResponses.tryEmit(LlmResponse(errMsg, false))
-                    _partialResponses.tryEmit(LlmResponse(errMsg, true))
+                when (val result = generateCloudResponse(prompt)) {
+                    is CloudResult.Success -> {
+                        accumulated.clear()
+                        accumulated.append(result.text)
+                        _partialResponses.tryEmit(LlmResponse(accumulated.toString(), false))
+                        _partialResponses.tryEmit(LlmResponse(accumulated.toString(), true))
+                    }
+                    is CloudResult.RateLimited -> {
+                        Log.w(TAG, "generateCloudResponseStreaming: Gemini rate limit hit (429)")
+                        // Signal to caller that quota is exceeded so UI can offer local download
+                        onRateLimited()
+                        // Emit a done signal so the typing indicator is dismissed
+                        _partialResponses.tryEmit(LlmResponse("", true))
+                    }
+                    is CloudResult.Unavailable -> {
+                        val errMsg = "Cloud AI is currently unavailable. Please check your internet connection or try again later."
+                        _partialResponses.tryEmit(LlmResponse(errMsg, false))
+                        _partialResponses.tryEmit(LlmResponse(errMsg, true))
+                    }
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Error during cloud streaming generation", e)
@@ -230,7 +242,7 @@ class LlmService(
         }
     }
 
-    suspend fun generateCloudResponse(prompt: String): String? =
+    suspend fun generateCloudResponse(prompt: String): CloudResult =
         withContext(Dispatchers.IO) {
             val apiKey =
                 prasad.vennam.moneypilot.BuildConfig.GEMINI_API_KEY
@@ -238,7 +250,7 @@ class LlmService(
                     .removeSurrounding("\"")
             if (apiKey.isBlank()) {
                 Log.d(TAG, "generateCloudResponse: GEMINI_API_KEY is empty/placeholder, skipping cloud fallback")
-                return@withContext null
+                return@withContext CloudResult.Unavailable
             }
 
             Log.d(TAG, "generateCloudResponse: Sending query to Gemini API Cloud")
@@ -279,9 +291,16 @@ class LlmService(
                 client.newCall(request).execute().use { response ->
                     val body = response.body.string()
                     Log.d(TAG, "generateCloudResponse: HTTP code = ${response.code}")
+
+                    // Detect free-tier quota exhaustion
+                    if (response.code == 429) {
+                        Log.w(TAG, "generateCloudResponse: 429 Rate Limited — free-tier quota exceeded")
+                        return@withContext CloudResult.RateLimited
+                    }
+
                     if (!response.isSuccessful || body.isEmpty()) {
                         Log.e(TAG, "generateCloudResponse failed: code=${response.code}, body=$body")
-                        return@withContext null
+                        return@withContext CloudResult.Unavailable
                     }
                     val moshi = Moshi.Builder().addLast(KotlinJsonAdapterFactory()).build()
                     val geminiResponse = moshi.adapter(GeminiResponse::class.java).fromJson(body)
@@ -294,16 +313,17 @@ class LlmService(
                             ?.firstOrNull()
                             ?.text
                     Log.d(TAG, "generateCloudResponse: Successfully parsed response of length: ${responseText?.length ?: 0}")
-                    responseText
+                    if (responseText != null) CloudResult.Success(responseText) else CloudResult.Unavailable
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "generateCloudResponse Exception: ${e.message}", e)
-                null
+                CloudResult.Unavailable
             }
         }
 
     fun close() {
         safeCloseEngine()
+        serviceScope.cancel()
     }
 
     private fun safeCloseEngine() {
@@ -322,6 +342,8 @@ class LlmService(
             engine = null
         }
     }
+
+    fun isLocalModelReady(): Boolean = engine != null
 
     companion object {
         private const val TAG = "LlmService"

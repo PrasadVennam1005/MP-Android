@@ -212,12 +212,16 @@ class ParserTests {
         runBlocking {
             val mockContext = mock(android.content.Context::class.java)
             whenever(mockContext.applicationContext).thenReturn(mockContext)
+            val mockPrefs = mock(android.content.SharedPreferences::class.java)
+            whenever(mockContext.getSharedPreferences(org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.anyInt()))
+                .thenReturn(mockPrefs)
 
             val mockLlmService = mock(prasad.vennam.moneypilot.feature.ai.service.LlmService::class.java)
             val mockTxRepo = mock(TransactionRepository::class.java)
             val mockBudgetRepo = mock(BudgetRepository::class.java)
             val mockInvRepo = mock(InvestmentRepository::class.java)
             val mockLoanRepo = mock(LoanRepository::class.java)
+            val mockCategoryRepo = mock(CategoryRepository::class.java)
 
             val mockWorkManager = mock(androidx.work.impl.WorkManagerImpl::class.java)
 
@@ -254,6 +258,7 @@ class ParserTests {
                     context = mockContext,
                     llmService = mockLlmService,
                     transactionRepository = mockTxRepo,
+                    categoryRepository = mockCategoryRepo,
                     budgetRepository = mockBudgetRepo,
                     investmentRepository = mockInvRepo,
                     loanRepository = mockLoanRepo,
@@ -347,12 +352,16 @@ class ParserTests {
         runBlocking {
             val mockContext = mock(android.content.Context::class.java)
             whenever(mockContext.applicationContext).thenReturn(mockContext)
+            val mockPrefs = mock(android.content.SharedPreferences::class.java)
+            whenever(mockContext.getSharedPreferences(org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.anyInt()))
+                .thenReturn(mockPrefs)
 
             val mockLlmService = mock(prasad.vennam.moneypilot.feature.ai.service.LlmService::class.java)
             val mockTxRepo = mock(TransactionRepository::class.java)
             val mockBudgetRepo = mock(BudgetRepository::class.java)
             val mockInvRepo = mock(InvestmentRepository::class.java)
             val mockLoanRepo = mock(LoanRepository::class.java)
+            val mockCategoryRepo = mock(CategoryRepository::class.java)
             val mockWorkManager = mock(androidx.work.impl.WorkManagerImpl::class.java)
 
             whenever(mockLlmService.partialResponses).thenReturn(
@@ -383,6 +392,7 @@ class ParserTests {
                     context = mockContext,
                     llmService = mockLlmService,
                     transactionRepository = mockTxRepo,
+                    categoryRepository = mockCategoryRepo,
                     budgetRepository = mockBudgetRepo,
                     investmentRepository = mockInvRepo,
                     loanRepository = mockLoanRepo,

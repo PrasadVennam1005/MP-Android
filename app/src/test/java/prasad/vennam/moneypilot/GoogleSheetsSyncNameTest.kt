@@ -7,6 +7,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.mockito.Mockito.mock
+import org.mockito.Mockito.`when` as whenever
 import prasad.vennam.moneypilot.data.MoneyPilotDatabase
 import prasad.vennam.moneypilot.data.UserPreferences
 import prasad.vennam.moneypilot.data.dao.BudgetDao
@@ -15,6 +16,9 @@ import prasad.vennam.moneypilot.data.dao.EmergencyFundDao
 import prasad.vennam.moneypilot.data.dao.InvestmentDao
 import prasad.vennam.moneypilot.data.dao.LoanDao
 import prasad.vennam.moneypilot.data.dao.TransactionDao
+import prasad.vennam.moneypilot.data.dao.SubscriptionDao
+import prasad.vennam.moneypilot.data.dao.SavingGoalDao
+import prasad.vennam.moneypilot.data.dao.LoanPaymentDao
 import prasad.vennam.moneypilot.data.entity.Budget
 import prasad.vennam.moneypilot.data.entity.Category
 import prasad.vennam.moneypilot.data.entity.EmergencyFund
@@ -42,6 +46,7 @@ class GoogleSheetsSyncNameTest {
         runBlocking {
             val (repository, fakes) = createMockRepository()
             val mockUserPrefs = mock(UserPreferences::class.java)
+            whenever(mockUserPrefs.deletedTransactionIds).thenReturn(kotlinx.coroutines.flow.flowOf(emptySet<String>()))
 
             // Local has older category
             val localCategory = Category(id = 1L, name = "Food", iconName = "ic_food", color = 0L, isExpense = true, lastUpdated = 1000L)
@@ -65,6 +70,10 @@ class GoogleSheetsSyncNameTest {
                 fakes.investmentDao,
                 fakes.transactionDao,
                 fakes.emergencyFundDao,
+                mock(SubscriptionDao::class.java),
+                mock(SavingGoalDao::class.java),
+                mock(LoanDao::class.java),
+                mock(LoanPaymentDao::class.java),
                 mockUserPrefs,
                 cloudValues,
             )
@@ -80,6 +89,7 @@ class GoogleSheetsSyncNameTest {
         runBlocking {
             val (repository, fakes) = createMockRepository()
             val mockUserPrefs = mock(UserPreferences::class.java)
+            whenever(mockUserPrefs.deletedTransactionIds).thenReturn(kotlinx.coroutines.flow.flowOf(emptySet<String>()))
 
             // Local has newer category
             val localCategory = Category(id = 1L, name = "Food", iconName = "ic_food", color = 0L, isExpense = true, lastUpdated = 3000L)
@@ -103,6 +113,10 @@ class GoogleSheetsSyncNameTest {
                 fakes.investmentDao,
                 fakes.transactionDao,
                 fakes.emergencyFundDao,
+                mock(SubscriptionDao::class.java),
+                mock(SavingGoalDao::class.java),
+                mock(LoanDao::class.java),
+                mock(LoanPaymentDao::class.java),
                 mockUserPrefs,
                 cloudValues,
             )
@@ -116,6 +130,7 @@ class GoogleSheetsSyncNameTest {
         runBlocking {
             val (repository, fakes) = createMockRepository()
             val mockUserPrefs = mock(UserPreferences::class.java)
+            whenever(mockUserPrefs.deletedTransactionIds).thenReturn(kotlinx.coroutines.flow.flowOf(emptySet<String>()))
 
             // Local has older transaction
             val localTransaction = Transaction(id = 101L, amount = 1000L, timestamp = 1718971200000L, categoryId = 1L, paymentMode = "Cash", note = "Snack", type = TransactionType.EXPENSE, currencyCode = "INR", subCategory = "Fast Food", lastUpdated = 1000L)
@@ -139,6 +154,10 @@ class GoogleSheetsSyncNameTest {
                 fakes.investmentDao,
                 fakes.transactionDao,
                 fakes.emergencyFundDao,
+                mock(SubscriptionDao::class.java),
+                mock(SavingGoalDao::class.java),
+                mock(LoanDao::class.java),
+                mock(LoanPaymentDao::class.java),
                 mockUserPrefs,
                 cloudValues,
             )
@@ -154,6 +173,7 @@ class GoogleSheetsSyncNameTest {
         runBlocking {
             val (repository, fakes) = createMockRepository()
             val mockUserPrefs = mock(UserPreferences::class.java)
+            whenever(mockUserPrefs.deletedTransactionIds).thenReturn(kotlinx.coroutines.flow.flowOf(emptySet<String>()))
 
             // Local has newer transaction
             val localTransaction = Transaction(id = 101L, amount = 1000L, timestamp = 1718971200000L, categoryId = 1L, paymentMode = "Cash", note = "Snack", type = TransactionType.EXPENSE, currencyCode = "INR", subCategory = "Fast Food", lastUpdated = 3000L)
@@ -177,6 +197,10 @@ class GoogleSheetsSyncNameTest {
                 fakes.investmentDao,
                 fakes.transactionDao,
                 fakes.emergencyFundDao,
+                mock(SubscriptionDao::class.java),
+                mock(SavingGoalDao::class.java),
+                mock(LoanDao::class.java),
+                mock(LoanPaymentDao::class.java),
                 mockUserPrefs,
                 cloudValues,
             )
@@ -231,6 +255,12 @@ class GoogleSheetsSyncNameTest {
         override fun getTransactionsByCategory(categoryId: Long): Flow<List<Transaction>> = emptyFlow()
 
         override suspend fun getTransactionById(id: Long): Transaction? = transactions.find { it.id == id }
+
+        override suspend fun getTransactionByLoanPaymentId(loanPaymentId: Long): Transaction? = null
+
+        override suspend fun deleteTransactionsByLoanId(loanId: Long) {
+            // no-op
+        }
     }
 
     private class FakeBudgetDao : BudgetDao {
@@ -257,6 +287,12 @@ class GoogleSheetsSyncNameTest {
             categoryId: Long,
             period: String,
         ): Budget? = budgets.find { it.categoryId == categoryId && it.period == period }
+
+        override suspend fun deleteBudgetsByCategoryId(categoryId: Long) {
+            // no-op
+        }
+
+        override suspend fun getBudgetById(id: Long): Budget? = budgets.find { it.id == id }
     }
 
     private class FakeInvestmentDao : InvestmentDao {
@@ -278,6 +314,8 @@ class GoogleSheetsSyncNameTest {
         override suspend fun deleteInvestment(investment: Investment) {
             investments.remove(investment)
         }
+
+        override suspend fun getInvestmentById(id: Long): Investment? = investments.find { it.id == id }
     }
 
     private class FakeEmergencyFundDao : EmergencyFundDao {
@@ -313,6 +351,9 @@ class GoogleSheetsSyncNameTest {
         val emergencyFundDao = FakeEmergencyFundDao()
 
         val loanDao = mock(LoanDao::class.java)
+        val subscriptionDao = mock(SubscriptionDao::class.java)
+        val savingGoalDao = mock(SavingGoalDao::class.java)
+        val loanPaymentDao = mock(LoanPaymentDao::class.java)
         val database = mock(MoneyPilotDatabase::class.java)
 
         val fakes =
@@ -332,6 +373,9 @@ class GoogleSheetsSyncNameTest {
                 investmentDao,
                 loanDao,
                 emergencyFundDao,
+                subscriptionDao,
+                savingGoalDao,
+                loanPaymentDao,
                 database,
             )
 

@@ -9,6 +9,16 @@ interface AiRepository {
     val state: StateFlow<LlmState>
     val downloadProgress: StateFlow<Float>
 
+    /**
+     * Whether the user has opted in to sending financial context to the cloud Gemini API.
+     * If false, cloud requests must not be made.
+     */
+    val isUserConsentGranted: StateFlow<Boolean>
+    val isLocalModelAvailable: StateFlow<Boolean>
+
+    /** Persist the user's cloud AI consent choice. */
+    suspend fun setUserConsent(granted: Boolean)
+
     suspend fun initialize()
 
     suspend fun downloadModel()

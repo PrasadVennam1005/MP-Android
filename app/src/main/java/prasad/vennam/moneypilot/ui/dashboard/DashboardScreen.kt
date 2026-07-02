@@ -1,7 +1,7 @@
 package prasad.vennam.moneypilot.ui.dashboard
 
-import prasad.vennam.moneypilot.ui.components.BaseBottomSheet
 import android.app.Activity
+import android.content.Intent
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -30,7 +30,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -49,7 +48,6 @@ import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Shield
 import androidx.compose.material.icons.rounded.TrackChanges
-import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -87,13 +85,14 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.window.core.layout.WindowWidthSizeClass
+import androidx.core.net.toUri
 import androidx.credentials.CredentialManager
 import androidx.credentials.GetCredentialRequest
 import androidx.credentials.exceptions.GetCredentialCancellationException
 import androidx.credentials.exceptions.GetCredentialException
 import androidx.credentials.exceptions.NoCredentialException
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.window.core.layout.WindowWidthSizeClass
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
@@ -106,14 +105,15 @@ import prasad.vennam.moneypilot.data.entity.TimeFrame
 import prasad.vennam.moneypilot.data.entity.TransactionType
 import prasad.vennam.moneypilot.ui.budget.utils.getCategoryIcon
 import prasad.vennam.moneypilot.ui.components.AdBannerView
+import prasad.vennam.moneypilot.ui.components.BaseBottomSheet
 import prasad.vennam.moneypilot.ui.dashboard.components.BudgetProgressSection
+import prasad.vennam.moneypilot.ui.dashboard.components.CalendarFilterBottomSheet
+import prasad.vennam.moneypilot.ui.dashboard.components.CalendarFilterRow
 import prasad.vennam.moneypilot.ui.dashboard.components.CategoryBreakdownBottomSheet
+import prasad.vennam.moneypilot.ui.dashboard.components.CreditCardBillCard
 import prasad.vennam.moneypilot.ui.dashboard.components.DashboardTopBar
 import prasad.vennam.moneypilot.ui.dashboard.components.ExpenseChartCard
 import prasad.vennam.moneypilot.ui.dashboard.components.KPISection
-import prasad.vennam.moneypilot.ui.dashboard.components.CalendarFilterRow
-import prasad.vennam.moneypilot.ui.dashboard.components.CalendarFilterBottomSheet
-import prasad.vennam.moneypilot.ui.dashboard.components.CreditCardBillCard
 import prasad.vennam.moneypilot.ui.dashboard.components.LearnFinancePromoCard
 import prasad.vennam.moneypilot.ui.dashboard.components.LoanSection
 import prasad.vennam.moneypilot.ui.dashboard.components.PaymentAppsSection
@@ -126,7 +126,6 @@ import prasad.vennam.moneypilot.ui.viewmodel.DashboardViewModel
 import prasad.vennam.moneypilot.ui.viewmodel.MainViewModel
 import prasad.vennam.moneypilot.ui.viewmodel.NotificationViewModel
 import prasad.vennam.moneypilot.ui.viewmodel.RestoreState
-import prasad.vennam.moneypilot.ui.viewmodel.SavingGoalViewModel
 import prasad.vennam.moneypilot.util.AnalyticsConstants
 import prasad.vennam.moneypilot.util.AnalyticsHelper
 import prasad.vennam.moneypilot.util.CurrencyFormatter
@@ -566,6 +565,23 @@ fun DashboardScreen(
                                     CreditCardBillCard(
                                         billState = ccBill,
                                         onPayClick = {
+                                            // Trigger intent with installed payment apps
+                                            val amountStr = String.format(java.util.Locale.US, "%.2f", ccBill.billAmount)
+                                            val uri = if (ccBill.currencyCode == "INR") {
+                                                "upi://pay?am=$amountStr&cu=INR&tn=Credit Card Bill: ${ccBill.billMonthName}".toUri()
+                                            } else {
+                                                // Fallback for other currencies if needed, or generic UPI
+                                                "upi://pay?am=$amountStr&cu=${ccBill.currencyCode}".toUri()
+                                            }
+                                            
+                                            val intent = Intent(Intent.ACTION_VIEW, uri)
+                                            val chooser = Intent.createChooser(intent, "Pay Credit Card Bill via")
+                                            try {
+                                                context.startActivity(chooser)
+                                            } catch (e: Exception) {
+                                                Toast.makeText(context, "No payment apps found", Toast.LENGTH_SHORT).show()
+                                            }
+
                                             dashboardViewModel.payCreditCardBill(
                                                 amount = ccBill.billAmount,
                                                 month = ccBill.previousMonth,

@@ -7,6 +7,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -37,6 +38,7 @@ import androidx.compose.material.icons.rounded.FilterList
 import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.SearchOff
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -166,25 +168,40 @@ fun HistoryScreen(
     val filteredTransactions =
         remember(transactions, searchQuery, selectedCategoryId, selectedPaymentMode, activeType, categories) {
             val categoryMap = categories.associateBy { it.id }
+            val query = searchQuery.trim().lowercase(java.util.Locale.getDefault())
+            
             transactions.filter { transaction ->
                 val matchesType = transaction.type == activeType
-                val matchesSearch =
-                    transaction.note.contains(searchQuery, ignoreCase = true) ||
-                        categoryMap[transaction.categoryId]?.name?.contains(
-                            searchQuery,
-                            ignoreCase = true,
-                        ) == true
+                
+                // Matches note or category name
+                val matchesText = transaction.note.contains(query, ignoreCase = true) ||
+                        categoryMap[transaction.categoryId]?.name?.contains(query, ignoreCase = true) == true
+                
+                // Matches amount (e.g., search "500" matches 500.00 or 5.00 depending on units)
+                val amountStr = (transaction.amount / 100.0).toString()
+                val matchesAmount = query.isNotEmpty() && (
+                    amountStr.contains(query) || 
+                    amountStr.replace(".", "").contains(query)
+                )
+
+                val matchesSearch = matchesText || matchesAmount
+                
                 val matchesCategory =
                     selectedCategoryId == null || transaction.categoryId == selectedCategoryId
                 val matchesPayment =
                     selectedPaymentMode == null || transaction.paymentMode == selectedPaymentMode
 
-                matchesType && matchesSearch && matchesCategory && matchesPayment
+                matchesType && (query.isEmpty() || matchesSearch) && matchesCategory && matchesPayment
             }
         }
 
     Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHostState) },
+        snackbarHost = {
+            SnackbarHost(
+                hostState = snackbarHostState,
+                modifier = Modifier.navigationBarsPadding()
+            )
+        },
         topBar = {
             Column(modifier = Modifier.background(MaterialTheme.colorScheme.background)) {
                 TopAppBar(
@@ -307,7 +324,7 @@ fun HistoryScreen(
                     item(span = { GridItemSpan(maxLineSpan) }) {
                         AdBannerView(isPremium = isPremium, modifier = Modifier.fillMaxWidth())
                     }
-                    items(transactionItemStates, key = { it.transaction.id }) { itemState ->
+                    items(transactionItemStates, key = { "${it.transaction.id}_${it.transaction.lastUpdated}" }) { itemState ->
                         val deletedMessage = stringResource(R.string.transaction_deleted)
                         val undoLabel = stringResource(R.string.undo)
                         SwipeableTransactionCard(
@@ -342,7 +359,7 @@ fun HistoryScreen(
                     item {
                         AdBannerView(isPremium = isPremium, modifier = Modifier.fillMaxWidth())
                     }
-                    items(transactionItemStates, key = { it.transaction.id }) { itemState ->
+                    items(transactionItemStates, key = { "${it.transaction.id}_${it.transaction.lastUpdated}" }) { itemState ->
                         val deletedMessage = stringResource(R.string.transaction_deleted)
                         val undoLabel = stringResource(R.string.undo)
                         SwipeableTransactionCard(
@@ -446,12 +463,48 @@ fun SwipeableTransactionCard(
     val dismissState = rememberSwipeToDismissBoxState()
     val scope = rememberCoroutineScope()
 
+    var showConfirmDialog by remember { mutableStateOf(false) }
+    
+    if (showConfirmDialog) {
+        AlertDialog(
+            onDismissRequest = {
+                showConfirmDialog = false
+                scope.launch { dismissState.reset() }
+            },
+            title = { Text(text = stringResource(R.string.delete_transaction_title)) },
+            text = { Text(text = stringResource(R.string.delete_transaction_confirm)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showConfirmDialog = false
+                        scope.launch {
+                            dismissState.snapTo(SwipeToDismissBoxValue.Settled)
+                            onDelete()
+                        }
+                    }
+                ) {
+                    Text(text = stringResource(R.string.delete))
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        showConfirmDialog = false
+                        scope.launch { dismissState.reset() }
+                    }
+                ) {
+                    Text(text = stringResource(R.string.cancel))
+                }
+            }
+        )
+    }
+
     SwipeToDismissBox(
         state = dismissState,
         onDismiss = { direction ->
             when (direction) {
                 SwipeToDismissBoxValue.EndToStart -> {
-                    onDelete()
+                    showConfirmDialog = true
                 }
                 SwipeToDismissBoxValue.StartToEnd -> {
                     onEdit()

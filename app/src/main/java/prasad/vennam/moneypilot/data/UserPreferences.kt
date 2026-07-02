@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
@@ -83,6 +84,7 @@ class UserPreferences
         private val rateAlertsKey =
             androidx.datastore.preferences.core
                 .stringPreferencesKey("currency_rate_alerts")
+        private val deletedTransactionIdsKey = stringSetPreferencesKey("deleted_transaction_ids")
 
         val isLoggedIn: Flow<Boolean> =
             context.dataStore.data
@@ -176,6 +178,12 @@ class UserPreferences
                 .map { preferences ->
                     val raw = preferences[rateAlertsKey] ?: ""
                     parseRateAlerts(raw)
+                }
+
+        val deletedTransactionIds: Flow<Set<String>> =
+            context.dataStore.data
+                .map { preferences ->
+                    preferences[deletedTransactionIdsKey] ?: emptySet()
                 }
 
         private fun parseRateAlerts(raw: String): List<RateAlert> {
@@ -434,6 +442,26 @@ class UserPreferences
         suspend fun saveCurrencyBasket(basket: List<String>) {
             context.dataStore.edit { preferences ->
                 preferences[currencyBasketKey] = basket.joinToString(",")
+            }
+        }
+
+        suspend fun addDeletedTransactionId(id: String) {
+            context.dataStore.edit { preferences ->
+                val current = preferences[deletedTransactionIdsKey] ?: emptySet()
+                preferences[deletedTransactionIdsKey] = current + id
+            }
+        }
+
+        suspend fun removeDeletedTransactionId(id: String) {
+            context.dataStore.edit { preferences ->
+                val current = preferences[deletedTransactionIdsKey] ?: emptySet()
+                preferences[deletedTransactionIdsKey] = current - id
+            }
+        }
+
+        suspend fun clearDeletedTransactionIds() {
+            context.dataStore.edit { preferences ->
+                preferences.remove(deletedTransactionIdsKey)
             }
         }
     }

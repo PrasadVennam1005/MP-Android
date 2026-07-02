@@ -1,6 +1,7 @@
 package prasad.vennam.moneypilot.feature.ai.data
 
 import android.content.Context
+import android.content.SharedPreferences
 import android.util.Log
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
@@ -9,6 +10,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
+import prasad.vennam.moneypilot.R
 import prasad.vennam.moneypilot.data.entity.Investment
 import prasad.vennam.moneypilot.data.entity.Loan
 import prasad.vennam.moneypilot.data.entity.Transaction
@@ -17,6 +19,7 @@ import prasad.vennam.moneypilot.data.repository.*
 import prasad.vennam.moneypilot.feature.ai.domain.AiActionParser
 import prasad.vennam.moneypilot.feature.ai.domain.AiRepository
 import prasad.vennam.moneypilot.feature.ai.model.AiAction
+import prasad.vennam.moneypilot.feature.ai.model.CloudResult
 import prasad.vennam.moneypilot.feature.ai.model.LlmState
 import prasad.vennam.moneypilot.feature.ai.service.LlmService
 import prasad.vennam.moneypilot.util.ParsedReceipt
@@ -47,13 +50,44 @@ class AiRepositoryImpl
 
         private val downloadMutex = Mutex()
 
+        // --- Consent (opt-in) for cloud AI ---
+        private val prefs: SharedPreferences by lazy {
+            context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        }
+        private val _isUserConsentGranted = MutableStateFlow(
+            prefs.getBoolean(PREF_CONSENT_GRANTED, false)
+        )
+        override val isUserConsentGranted: StateFlow<Boolean> = _isUserConsentGranted.asStateFlow()
+
+        private val _isLocalModelAvailable = MutableStateFlow(false)
+        override val isLocalModelAvailable: StateFlow<Boolean> = _isLocalModelAvailable.asStateFlow()
+
+        override suspend fun setUserConsent(granted: Boolean) {
+            prefs.edit().putBoolean(PREF_CONSENT_GRANTED, granted).apply()
+            _isUserConsentGranted.value = granted
+        }
+
         internal var geminiApiKeyProvider: () -> String = { prasad.vennam.moneypilot.BuildConfig.GEMINI_API_KEY }
 
-        private val isCloudEnabled: Boolean
+        /**
+         * True when a valid Gemini API key is configured.
+         * Consent is NOT required for this check — the key is bundled server-side by us, not
+         * user-provided. The consent dialog only applies if we ever ask users to bring their own key.
+         */
+        private val isCloudKeyAvailable: Boolean
             get() {
                 val apiKey = geminiApiKeyProvider().trim().removeSurrounding("\"")
                 return apiKey.isNotBlank()
             }
+
+        /**
+         * Legacy helper kept for the download-card gating logic.
+         * Cloud is "enabled" when the key is available and the user has opted in.
+         * After the rate-limit fix the chat itself always tries cloud first without requiring consent,
+         * but we keep this for backward-compat code paths that explicitly check consent.
+         */
+        private val isCloudEnabled: Boolean
+            get() = isCloudKeyAvailable && _isUserConsentGranted.value
 
         // Emulator detection: use a small, CPU-compatible model
         private val isEmulator: Boolean by lazy {
@@ -106,6 +140,7 @@ class AiRepositoryImpl
 
         init {
             Log.d(TAG, "AiRepositoryImpl created. isEmulator=$isEmulator, modelFile=$modelFileName")
+            _isLocalModelAvailable.value = getModelFile().exists() && getModelFile().length() > 0L
 
             // Listen to local model generation responses
             llmService.partialResponses
@@ -141,6 +176,7 @@ class AiRepositoryImpl
                             if (_state.value is LlmState.Downloading || _state.value is LlmState.Idle || _state.value is LlmState.Error) {
                                 Log.d(TAG, "Background download succeeded. Initializing model...")
                                 _downloadProgress.value = 1f
+                                _isLocalModelAvailable.value = true
                                 _state.value = LlmState.Idle // Reset downloading state to allow initialization
                                 initialize()
                             }
@@ -181,47 +217,60 @@ class AiRepositoryImpl
         }
 
         override suspend fun initialize() {
-            if (_state.value is LlmState.Ready || _state.value is LlmState.Initializing || _state.value is LlmState.Downloading) return
+            if (_state.value is LlmState.Ready ||
+                _state.value is LlmState.Initializing ||
+                _state.value is LlmState.Downloading
+            ) return
 
             val modelFile = getModelFile()
-            Log.d(TAG, "Initializing with model: ${modelFile.absolutePath} (exists=${modelFile.exists()}, size=${modelFile.length()})")
+            Log.d(TAG, "Initializing. model=${modelFile.absolutePath} exists=${modelFile.exists()} size=${modelFile.length()}")
 
-            if (!modelFile.exists() || modelFile.length() == 0L) {
-                if (isCloudEnabled) {
-                    Log.d(TAG, "Model file not found, but cloud is enabled. Transitioning to Ready.")
+            // --- Priority 1: Gemini Cloud (free tier, no model download needed) ---
+            if (isCloudKeyAvailable) {
+                Log.d(TAG, "Gemini API key present — using cloud as primary AI. State -> Ready (cloud).")
+                _state.value = LlmState.Ready()
+                // If the local model also exists, quietly initialise it in the background
+                // so subsequent calls can fall back to it without a download.
+                if (modelFile.exists() && modelFile.length() > 0L) {
+                    _state.value = LlmState.Initializing
+                    try {
+                        llmService.initialize(modelFile.absolutePath)
+                        Log.d(TAG, "Local model also loaded successfully (background).")
+                    } catch (e: Exception) {
+                        Log.w(TAG, "Local model background init failed (non-fatal, cloud still active): ${e.message}")
+                    }
                     _state.value = LlmState.Ready()
-                } else {
-                    Log.d(TAG, "Model file not found — staying Idle so UI can prompt download.")
-                    _state.value = LlmState.Idle
                 }
+                return
+            }
+
+            // --- Priority 2: Local Gemma model (no API key configured) ---
+            if (!modelFile.exists() || modelFile.length() == 0L) {
+                Log.d(TAG, "No API key and no local model — staying Idle so UI can prompt download.")
+                _state.value = LlmState.Idle
                 return
             }
 
             _state.value = LlmState.Initializing
             try {
-                Log.d(TAG, "Calling LlmService.initialize...")
+                Log.d(TAG, "Calling LlmService.initialize (local model)...")
                 llmService.initialize(modelFile.absolutePath)
                 _state.value = LlmState.Ready()
-                Log.d(TAG, "Model initialized successfully. State → Ready")
+                Log.d(TAG, "Local model initialized successfully. State -> Ready")
             } catch (e: Exception) {
-                Log.e(TAG, "Model initialization failed: ${e.message}", e)
-                if (isCloudEnabled) {
-                    Log.w(TAG, "Local model initialization failed, but cloud is enabled. Transitioning to Ready.")
-                    _state.value = LlmState.Ready()
-                } else {
-                    val friendlyMsg =
-                        when {
-                            e.message?.contains("OOM", ignoreCase = true) == true ||
-                                e.message?.contains("out of memory", ignoreCase = true) == true ->
-                                "Not enough RAM to load this model. Try restarting the app or device."
-                            e.message?.contains("No such file", ignoreCase = true) == true ->
-                                "Model file not found. Please re-download the model."
-                            e.message?.contains("Incompatible", ignoreCase = true) == true ->
-                                "Model format incompatible with this device. Please contact support."
-                            else -> "AI engine failed to start. ${e.message ?: "Unknown error"}"
-                        }
-                    _state.value = LlmState.Error(friendlyMsg)
-                }
+                Log.e(TAG, "Local model initialization failed: ${e.message}", e)
+                val friendlyMsg =
+                    when {
+                        e.message?.contains("OOM", ignoreCase = true) == true ||
+                            e.message?.contains("out of memory", ignoreCase = true) == true ->
+                            "Not enough RAM to load this model. Try restarting the app or device."
+                        e.message?.contains("No such file", ignoreCase = true) == true ->
+                            "Model file not found. Please re-download the model."
+                        e.message?.contains("Incompatible", ignoreCase = true) == true ->
+                            "Model format incompatible with this device. Please contact support."
+                        else -> "AI engine failed to start. ${e.message ?: "Unknown error"}"
+                    }
+                _state.value = LlmState.Error(friendlyMsg)
             }
         }
 
@@ -396,19 +445,48 @@ class AiRepositoryImpl
         }
 
         override suspend fun sendMessage(prompt: String) {
-            val isReady = _state.value is LlmState.Ready || _state.value is LlmState.Generating
+            val isLocalReady = _state.value is LlmState.Ready || _state.value is LlmState.Generating
 
-            if (!isReady && !isCloudEnabled) {
-                _state.value = LlmState.Error("AI not ready and no API Key configured.")
+            if (!isLocalReady && !isCloudKeyAvailable) {
+                _state.value = LlmState.Error(context.getString(R.string.ai_not_ready))
                 return
             }
 
             try {
                 val contextPrompt = buildFinancialContext(prompt) + prompt + "<end_of_turn>\n<start_of_turn>model\n"
-                if (isReady && getModelFile().exists()) {
-                    llmService.generateResponseStreaming(contextPrompt)
-                } else {
-                    llmService.generateCloudResponseStreaming(contextPrompt)
+
+                val localModelExists = getModelFile().exists() && getModelFile().length() > 0L
+                val localModelReady = localModelExists && llmService.isLocalModelReady()
+
+                when {
+                    // Priority 1: Local Gemma model is loaded and ready — fastest, fully private
+                    isLocalReady && localModelReady -> {
+                        Log.d(TAG, "sendMessage: using local Gemma model")
+                        llmService.generateResponseStreaming(contextPrompt)
+                    }
+
+                    // Priority 2: Gemini cloud API (free tier)
+                    isCloudKeyAvailable -> {
+                        if (!isUserConsentGranted.value) {
+                            Log.w(TAG, "sendMessage: Cloud consent not granted, blocking cloud request.")
+                            _state.value = LlmState.Error(context.getString(R.string.ai_consent_declined_msg))
+                            return@sendMessage
+                        }
+                        Log.d(TAG, "sendMessage: using Gemini cloud API")
+                        llmService.generateCloudResponseStreaming(
+                            prompt = contextPrompt,
+                            onRateLimited = {
+                                // Free-tier quota exhausted — prompt user to download local model
+                                Log.w(TAG, "sendMessage: Gemini quota exceeded — transitioning to RateLimited")
+                                _state.value = LlmState.RateLimited
+                            },
+                        )
+                    }
+
+                    // Fallback: should not normally reach here
+                    else -> {
+                        _state.value = LlmState.Error(context.getString(R.string.ai_not_ready))
+                    }
                 }
             } catch (e: Exception) {
                 _state.value = LlmState.Error("Generation failed: ${e.message}")
@@ -441,9 +519,13 @@ class AiRepositoryImpl
                                     currencyCode = "INR",
                                 ),
                             )
-                            val typeLabel = if (action.type == TransactionType.EXPENSE) "Expense" else "Income"
+                            val successMsg = if (action.type == TransactionType.EXPENSE) {
+                                context.getString(R.string.ai_expense_added, action.amount)
+                            } else {
+                                context.getString(R.string.ai_income_added, action.amount)
+                            }
                             _state.value = LlmState.Ready()
-                            Result.success("\u20b9${action.amount} $typeLabel added successfully!")
+                            Result.success(successMsg)
                         }
 
                         is AiAction.AddInvestment -> {
@@ -458,7 +540,7 @@ class AiRepositoryImpl
                                 ),
                             )
                             _state.value = LlmState.Ready()
-                            Result.success("Investment \"${action.name}\" added successfully!")
+                            Result.success(context.getString(R.string.ai_investment_added, action.name))
                         }
 
                         is AiAction.AddLoan -> {
@@ -476,7 +558,7 @@ class AiRepositoryImpl
                                 ),
                             )
                             _state.value = LlmState.Ready()
-                            Result.success("Loan \"${action.name}\" added successfully!")
+                            Result.success(context.getString(R.string.ai_loan_added, action.name))
                         }
                     }
                 } catch (e: Exception) {
@@ -547,9 +629,9 @@ class AiRepositoryImpl
 
         override suspend fun generateShortAdvice(summary: String): String =
             kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
-                val isReady = _state.value is LlmState.Ready
+                val isLocalReady = _state.value is LlmState.Ready
 
-                if (!isReady && !isCloudEnabled) {
+                if (!isLocalReady && !isCloudKeyAvailable) {
                     return@withContext ""
                 }
                 try {
@@ -560,11 +642,23 @@ class AiRepositoryImpl
                             "Keep it direct and action-oriented. Do not include tags or markup.<end_of_turn>\n" +
                             "<start_of_turn>model\n"
 
+                    val localModelExists = getModelFile().exists() && getModelFile().length() > 0L
+                    val localModelReady = localModelExists && llmService.isLocalModelReady()
                     val response =
-                        if (isReady) {
+                        if (isLocalReady && localModelReady) {
                             llmService.generateResponse(contextPrompt).trim()
+                        } else if (isUserConsentGranted.value) {
+                            when (val result = llmService.generateCloudResponse(contextPrompt)) {
+                                is CloudResult.Success -> result.text.trim()
+                                is CloudResult.RateLimited -> {
+                                    Log.w(TAG, "generateShortAdvice: Gemini quota exceeded")
+                                    ""
+                                }
+                                is CloudResult.Unavailable -> ""
+                            }
                         } else {
-                            llmService.generateCloudResponse(contextPrompt)?.trim() ?: ""
+                            Log.d(TAG, "generateShortAdvice: Cloud consent not granted, skipping background cloud AI call")
+                            ""
                         }
                     Log.d(TAG, "AI Advice generated: $response")
                     response
@@ -576,10 +670,10 @@ class AiRepositoryImpl
 
         override suspend fun parseReceiptText(ocrText: String): ParsedReceipt? =
             withContext(Dispatchers.Default) {
-                val isReady = _state.value is LlmState.Ready
+                val isLocalReady = _state.value is LlmState.Ready
 
-                if (!isReady && !isCloudEnabled) {
-                    Log.d(TAG, "parseReceiptText ignored: LLM is not ready and no Cloud Fallback key available.")
+                if (!isLocalReady && !isCloudKeyAvailable) {
+                    Log.d(TAG, "parseReceiptText ignored: LLM is not ready and no Cloud API key available.")
                     return@withContext null
                 }
                 try {
@@ -595,16 +689,25 @@ class AiRepositoryImpl
                             append(ocrText)
                             append("<end_of_turn>\n<start_of_turn>model\n")
                         }
+
+                    val localModelExists = getModelFile().exists() && getModelFile().length() > 0L
                     val response =
-                        if (isReady) {
+                        if (isLocalReady && localModelExists) {
                             Log.d(TAG, "Running parseReceiptText locally via LiteRT")
                             llmService.generateResponse(prompt).trim()
                         } else {
-                            Log.d(TAG, "Running parseReceiptText via Cloud Fallback")
-                            llmService.generateCloudResponse(prompt)?.trim()
+                            Log.d(TAG, "Running parseReceiptText via Cloud API")
+                            when (val result = llmService.generateCloudResponse(prompt)) {
+                                is CloudResult.Success -> result.text.trim()
+                                is CloudResult.RateLimited -> {
+                                    Log.w(TAG, "parseReceiptText: Gemini quota exceeded")
+                                    return@withContext null
+                                }
+                                is CloudResult.Unavailable -> return@withContext null
+                            }
                         }
 
-                    if (response.isNullOrEmpty()) {
+                    if (response.isEmpty()) {
                         Log.w(TAG, "Received empty response from LLM")
                         return@withContext null
                     }
@@ -632,6 +735,8 @@ class AiRepositoryImpl
 
         companion object {
             private const val TAG = "AiRepository"
+            private const val PREFS_NAME = "ai_chat_prefs"
+            private const val PREF_CONSENT_GRANTED = "cloud_consent_granted"
             const val EMULATOR_MODEL_FILE = "gemma3-1b-it-int4.litertlm"
             const val EMULATOR_MODEL_URL =
                 "https://huggingface.co/adiagarwal/nanochat-models/resolve/main/Gemma3-1B-IT/gemma3-1b-it-int4.litertlm"

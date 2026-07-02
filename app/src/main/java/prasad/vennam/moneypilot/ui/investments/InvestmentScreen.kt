@@ -100,7 +100,12 @@ fun InvestmentScreen(
         }
 
     Scaffold(
-        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
+        snackbarHost = {
+            SnackbarHost(
+                hostState = snackbarHostState,
+                modifier = Modifier.navigationBarsPadding()
+            )
+        },
         topBar = {
             TopAppBar(
                 title = {
@@ -242,7 +247,7 @@ fun InvestmentScreen(
                                     EmptyInvestmentState()
                                 }
                             } else {
-                                items(investments, key = { it.id }) { investment ->
+                                items(investments, key = { "${it.id}_${it.lastUpdated}" }) { investment ->
                                     val deletedMessage = stringResource(R.string.investment_deleted)
                                     val undoLabel = stringResource(R.string.undo)
                                     SwipeableInvestmentCard(
@@ -300,7 +305,7 @@ fun InvestmentScreen(
                                     EmptyInvestmentState()
                                 }
                             } else {
-                                items(investments, key = { it.id }) { investment ->
+                                items(investments, key = { "${it.id}_${it.lastUpdated}" }) { investment ->
                                     val deletedMessage = stringResource(R.string.investment_deleted)
                                     val undoLabel = stringResource(R.string.undo)
                                     SwipeableInvestmentCard(

@@ -266,7 +266,7 @@ object ReceiptParser {
                                 if (parsed != null) {
                                     return parsed.time
                                 }
-                            } catch (__: Exception) {
+                            } catch (ignored: Exception) {
                             }
                         }
                     }

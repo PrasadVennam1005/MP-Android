@@ -13,10 +13,11 @@ class SaveBudgetUseCase
     ) {
         suspend operator fun invoke(budget: Budget) {
             userPreferences.setSynced(false)
-            if (budget.id == 0L) {
-                repository.insertBudget(budget)
+            val budgetToSave = budget.copy(lastUpdated = System.currentTimeMillis())
+            if (budget.id == 0L || repository.getBudgetById(budget.id) == null) {
+                repository.insertBudget(budgetToSave)
             } else {
-                repository.updateBudget(budget)
+                repository.updateBudget(budgetToSave)
             }
         }
     }

@@ -8,6 +8,8 @@ data class ChatMessage(
     val content: String,
     val author: Author,
     val timestamp: Long = System.currentTimeMillis(),
+    /** True while the AI is still generating a response — shows the typing indicator instead of [content]. */
+    val isTyping: Boolean = false,
 )
 
 enum class Author {
@@ -39,6 +41,12 @@ sealed interface LlmState {
         val action: prasad.vennam.moneypilot.feature.ai.model.AiAction,
         val displayText: String,
     ) : LlmState
+
+    /**
+     * Gemini API free-tier quota was exceeded (HTTP 429).
+     * The UI should offer the user to download the local Gemma model.
+     */
+    object RateLimited : LlmState
 }
 
 data class LlmResponse(

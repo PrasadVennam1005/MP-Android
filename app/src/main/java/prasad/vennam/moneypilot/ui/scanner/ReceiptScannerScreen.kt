@@ -956,7 +956,7 @@ private fun getDownscaledInputImage(
 
         InputImage.fromBitmap(bitmap, rotationDegrees)
     } catch (e: Exception) {
-        e.printStackTrace()
+        android.util.Log.e("ReceiptScannerScreen", "Error preparing input image", e)
         null
     }
 }

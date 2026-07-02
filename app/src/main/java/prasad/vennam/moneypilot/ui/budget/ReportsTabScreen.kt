@@ -5,6 +5,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -104,7 +105,12 @@ fun ReportsTabScreen(
 
     Scaffold(
         modifier = modifier,
-        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
+        snackbarHost = {
+            SnackbarHost(
+                hostState = snackbarHostState,
+                modifier = Modifier.navigationBarsPadding()
+            )
+        },
         topBar = {
             TopAppBar(
                 title = {
@@ -319,7 +325,7 @@ fun BudgetContent(
                     EmptyBudgetState()
                 }
             } else {
-                items(budgetProgresses, key = { it.budget.id }) { itemState ->
+                items(budgetProgresses, key = { "${it.budget.id}_${it.budget.lastUpdated}" }) { itemState ->
                     PremiumBudgetCard(
                         budgetProgress = itemState,
                         onEdit = { onEditBudget(itemState.budget) },
@@ -364,7 +370,7 @@ fun BudgetContent(
                     EmptyBudgetState()
                 }
             } else {
-                items(budgetProgresses, key = { it.budget.id }) { itemState ->
+                items(budgetProgresses, key = { "${it.budget.id}_${it.budget.lastUpdated}" }) { itemState ->
                     PremiumBudgetCard(
                         budgetProgress = itemState,
                         onEdit = { onEditBudget(itemState.budget) },
