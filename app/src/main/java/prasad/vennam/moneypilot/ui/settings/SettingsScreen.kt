@@ -41,6 +41,7 @@ import androidx.compose.material.icons.rounded.DarkMode
 import androidx.compose.material.icons.rounded.DeleteForever
 import androidx.compose.material.icons.rounded.FileDownload
 import androidx.compose.material.icons.rounded.Flag
+import androidx.compose.material.icons.rounded.FormatSize
 import androidx.compose.material.icons.rounded.Gavel
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.LightMode
@@ -183,6 +184,7 @@ fun SettingsScreen(
     var showGoalSheet by remember { mutableStateOf(false) }
 
     var showThemeDialog by remember { mutableStateOf(false) }
+    var showFontScaleDialog by remember { mutableStateOf(false) }
     var showDeleteAccountConfirmation by remember { mutableStateOf(false) }
     var isDeletingAccount by remember { mutableStateOf(false) }
     var showDemoConfirmDialog by remember { mutableStateOf(false) }
@@ -193,6 +195,14 @@ fun SettingsScreen(
             UserPreferences.ThemeMode.LIGHT -> stringResource(R.string.light_mode)
             UserPreferences.ThemeMode.DARK -> stringResource(R.string.dark_mode)
             else -> stringResource(R.string.system_default)
+        }
+    val fontScale by mainViewModel.fontScale.collectAsState()
+    val fontScaleSubtitle =
+        when (fontScale) {
+            0.85f -> stringResource(R.string.font_scale_small)
+            1.15f -> stringResource(R.string.font_scale_large)
+            1.3f -> stringResource(R.string.font_scale_extra_large)
+            else -> stringResource(R.string.font_scale_default)
         }
     var pendingFeatureName by remember { mutableStateOf("") }
     val credentialManager = remember { CredentialManager.create(context) }
@@ -531,19 +541,18 @@ fun SettingsScreen(
                             }
                         },
                     )
-                    SettingsItem(
-                        icon = Icons.Rounded.NotificationsActive,
-                        title = stringResource(R.string.recurring_subscriptions),
-                        subtitle = stringResource(R.string.subscriptions_subtitle),
-                        onClick = {
-                            onNavigateToSubscriptions()
-                        },
-                    )
+
                     SettingsItem(
                         icon = Icons.Rounded.Palette,
                         title = stringResource(R.string.theme),
                         subtitle = themeSubtitle,
                         onClick = { showThemeDialog = true },
+                    )
+                    SettingsItem(
+                        icon = Icons.Rounded.FormatSize,
+                        title = stringResource(R.string.app_font_size),
+                        subtitle = fontScaleSubtitle,
+                        onClick = { showFontScaleDialog = true },
                     )
                 }
             }
@@ -676,7 +685,7 @@ fun SettingsScreen(
                 }
             }
 
-            if (isGuest || prasad.vennam.moneypilot.BuildConfig.DEBUG) {
+            if (prasad.vennam.moneypilot.BuildConfig.FLAVOR == "dev") {
                 item { SectionDivider() }
 
                 item {
@@ -688,14 +697,12 @@ fun SettingsScreen(
                             checked = isDevToolEnabled,
                             onCheckedChange = { mainViewModel.setDevToolEnabled(it) },
                         )
-                        if (isGuest) {
-                            SettingsItem(
-                                icon = Icons.Rounded.PlayArrow,
-                                title = stringResource(R.string.load_demo_data),
-                                subtitle = stringResource(R.string.load_demo_data_subtitle),
-                                onClick = { showDemoConfirmDialog = true },
-                            )
-                        }
+                        SettingsItem(
+                            icon = Icons.Rounded.PlayArrow,
+                            title = stringResource(R.string.load_demo_data),
+                            subtitle = stringResource(R.string.load_demo_data_subtitle),
+                            onClick = { showDemoConfirmDialog = true },
+                        )
                     }
                 }
             }
@@ -950,6 +957,105 @@ fun SettingsScreen(
             confirmButton = {},
             dismissButton = {
                 TextButton(onClick = { showThemeDialog = false }) {
+                    Text(stringResource(R.string.close))
+                }
+            },
+            shape = RoundedCornerShape(20.dp),
+            containerColor = MaterialTheme.colorScheme.surface,
+            tonalElevation = 6.dp,
+        )
+    }
+
+    if (showFontScaleDialog) {
+        AlertDialog(
+            onDismissRequest = { showFontScaleDialog = false },
+            title = {
+                Text(
+                    stringResource(R.string.choose_font_size),
+                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                )
+            },
+            text = {
+                Column(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    val scales =
+                        listOf(
+                            Triple(
+                                0.85f,
+                                stringResource(R.string.font_scale_small),
+                                Icons.Rounded.FormatSize,
+                            ),
+                            Triple(
+                                1.0f,
+                                stringResource(R.string.font_scale_default),
+                                Icons.Rounded.FormatSize,
+                            ),
+                            Triple(
+                                1.15f,
+                                stringResource(R.string.font_scale_large),
+                                Icons.Rounded.FormatSize,
+                            ),
+                            Triple(
+                                1.3f,
+                                stringResource(R.string.font_scale_extra_large),
+                                Icons.Rounded.FormatSize,
+                            ),
+                        )
+                    scales.forEach { (scale, name, icon) ->
+                        val isSelected = fontScale == scale
+                        Surface(
+                            onClick = {
+                                mainViewModel.setFontScale(scale)
+                                showFontScaleDialog = false
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = MaterialTheme.shapes.medium,
+                            color = if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f) else Color.Transparent,
+                            border =
+                                BorderStroke(
+                                    width = 1.dp,
+                                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
+                                ),
+                        ) {
+                            Row(
+                                modifier =
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .padding(16.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    Icon(
+                                        imageVector = icon,
+                                        contentDescription = null,
+                                        tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Text(name, style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold))
+                                }
+                                if (isSelected) {
+                                    Icon(
+                                        imageVector = Icons.Rounded.Check,
+                                        contentDescription = "Selected",
+                                        tint = MaterialTheme.colorScheme.primary,
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { showFontScaleDialog = false }) {
                     Text(stringResource(R.string.close))
                 }
             },

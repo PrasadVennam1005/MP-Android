@@ -24,6 +24,7 @@ import androidx.compose.material.icons.rounded.Calculate
 import androidx.compose.material.icons.rounded.Camera
 import androidx.compose.material.icons.rounded.CurrencyExchange
 import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material.icons.rounded.NotificationsActive
 import androidx.compose.material.icons.rounded.RemoveCircleOutline
 import androidx.compose.material.icons.rounded.Shield
 import androidx.compose.material3.CardDefaults
@@ -63,6 +64,7 @@ fun QuickActionSection(
     onNavigateToSandbox: () -> Unit,
     onNavigateToEmiCalculator: () -> Unit,
     onNavigateToCurrencyConverter: () -> Unit,
+    onNavigateToSubscriptions: () -> Unit,
     isGuest: Boolean,
 ) {
     val adaptiveInfo = currentWindowAdaptiveInfoV2()
@@ -78,7 +80,8 @@ fun QuickActionSection(
         QuickActionData(stringResource(R.string.news), Icons.AutoMirrored.Rounded.Article, Color(0xFFF57C00), onNavigateToNews),
         QuickActionData(stringResource(R.string.sandbox), Icons.Rounded.Calculate, Color(0xFF8E24AA), onNavigateToSandbox),
         QuickActionData(stringResource(R.string.emi_calculator), Icons.Rounded.Calculate, Color(0xFF0288D1), onNavigateToEmiCalculator),
-        QuickActionData("Converter", Icons.Rounded.CurrencyExchange, MaterialTheme.colorScheme.primary, onNavigateToCurrencyConverter)
+        QuickActionData("Converter", Icons.Rounded.CurrencyExchange, MaterialTheme.colorScheme.primary, onNavigateToCurrencyConverter),
+        QuickActionData(stringResource(R.string.subscriptions), Icons.Rounded.NotificationsActive, Color(0xFFE91E63), onNavigateToSubscriptions)
     )
 
     val columns = if (isExpanded) 5 else 3

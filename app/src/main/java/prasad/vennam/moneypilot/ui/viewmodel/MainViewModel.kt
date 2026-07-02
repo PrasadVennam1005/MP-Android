@@ -112,6 +112,11 @@ class MainViewModel
             userPreferences.themeMode
                 .stateIn(viewModelScope, SharingStarted.Eagerly, 0)
 
+        val fontScale: StateFlow<Float> =
+            userPreferences.fontScale
+                .stateIn(viewModelScope, SharingStarted.Eagerly, 1.0f)
+
+
         private val _restoreState = MutableStateFlow<RestoreState>(RestoreState.Idle)
         val restoreState: StateFlow<RestoreState> = _restoreState.asStateFlow()
 
@@ -143,6 +148,12 @@ class MainViewModel
         fun setDevToolEnabled(enabled: Boolean) {
             viewModelScope.launch {
                 userPreferences.setDevToolEnabled(enabled)
+            }
+        }
+
+        fun setFontScale(scale: Float) {
+            viewModelScope.launch {
+                userPreferences.setFontScale(scale)
             }
         }
 

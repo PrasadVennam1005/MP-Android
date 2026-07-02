@@ -889,4 +889,19 @@
     <string name="approve_log_payment_title">Approve &amp; Log Payment</string>
     <string name="approve_log_payment_message">Do you want to log the payment for subscription \"%1$s\" and advance its billing cycle?</string>
     <string name="subscription_logged_success">Logged payment for %1$s successfully!</string>
+
+    <!-- Quote Card Actions -->
+    <string name="daily_motivation">Daily Motivation</string>
+    <string name="quote_copied">Quote copied to clipboard!</string>
+    <string name="share_quote">Share Quote</string>
+    <string name="shuffle_quote">Shuffle Quote</string>
+    <string name="copy">Copy</string>
+
+    <!-- Font Size Settings -->
+    <string name="app_font_size">App Font Size</string>
+    <string name="choose_font_size">Choose Font Size</string>
+    <string name="font_scale_small">Small</string>
+    <string name="font_scale_default">Default</string>
+    <string name="font_scale_large">Large</string>
+    <string name="font_scale_extra_large">Extra Large</string>
 </resources>

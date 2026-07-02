@@ -70,6 +70,7 @@ val PremiumShapes =
 fun MoneyPilotTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     dynamicColor: Boolean = false,
+    fontScale: Float = 1.0f,
     content: @Composable () -> Unit,
 ) {
     val colorScheme =
@@ -85,7 +86,7 @@ fun MoneyPilotTheme(
 
     MaterialTheme(
         colorScheme = colorScheme,
-        typography = Typography,
+        typography = getScaledTypography(fontScale),
         shapes = PremiumShapes,
         content = content,
     )

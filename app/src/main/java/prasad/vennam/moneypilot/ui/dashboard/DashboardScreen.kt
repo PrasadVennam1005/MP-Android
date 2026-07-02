@@ -118,6 +118,7 @@ import prasad.vennam.moneypilot.ui.dashboard.components.LearnFinancePromoCard
 import prasad.vennam.moneypilot.ui.dashboard.components.LoanSection
 import prasad.vennam.moneypilot.ui.dashboard.components.PaymentAppsSection
 import prasad.vennam.moneypilot.ui.dashboard.components.QuickActionSection
+import prasad.vennam.moneypilot.ui.dashboard.components.QuoteCard
 import prasad.vennam.moneypilot.ui.dashboard.components.RecentTransactionsCard
 import prasad.vennam.moneypilot.ui.dashboard.components.SectionHeader
 import prasad.vennam.moneypilot.ui.dashboard.components.SubscriptionSection
@@ -197,9 +198,9 @@ fun DashboardScreen(
 
     val hasEnoughData = remember(dashboardState) {
         dashboardState.recentTransactions.isNotEmpty() ||
-            dashboardState.loans.isNotEmpty() ||
-            dashboardState.totalInvestment > 0 ||
-            dashboardState.budgetProgresses.isNotEmpty()
+                dashboardState.loans.isNotEmpty() ||
+                dashboardState.totalInvestment > 0 ||
+                dashboardState.budgetProgresses.isNotEmpty()
     }
     val showAds = !isPremium && hasEnoughData
     val adaptiveInfo = currentWindowAdaptiveInfoV2()
@@ -573,7 +574,7 @@ fun DashboardScreen(
                                                 // Fallback for other currencies if needed, or generic UPI
                                                 "upi://pay?am=$amountStr&cu=${ccBill.currencyCode}".toUri()
                                             }
-                                            
+
                                             val intent = Intent(Intent.ACTION_VIEW, uri)
                                             val chooser = Intent.createChooser(intent, "Pay Credit Card Bill via")
                                             try {
@@ -609,6 +610,16 @@ fun DashboardScreen(
                         }
 
                         // Ad 1: Inline Ad between KPI and Quick Actions
+
+                        item {
+                            val quote = remember(context) {
+                                prasad.vennam.moneypilot.util.QuotesManager.getQuoteOfTheDay(context)
+                            }
+                            quote?.let { q ->
+                                QuoteCard(initialQuote = q)
+                            }
+                        }
+
                         if (showAds) {
                             item {
                                 AdBannerView(isPremium = false)
@@ -656,6 +667,10 @@ fun DashboardScreen(
                                 onNavigateToCurrencyConverter = {
                                     analyticsHelper.logEvent(AnalyticsConstants.Event.QUICK_ACTION_CLICKED, mapOf(AnalyticsConstants.Param.ACTION to "currency_converter"))
                                     onNavigateToCurrencyConverter()
+                                },
+                                onNavigateToSubscriptions = {
+                                    analyticsHelper.logEvent(AnalyticsConstants.Event.QUICK_ACTION_CLICKED, mapOf(AnalyticsConstants.Param.ACTION to "subscriptions"))
+                                    onNavigateToSubscriptions()
                                 },
                                 isGuest = isGuest && !prasad.vennam.moneypilot.BuildConfig.DEBUG && !isDevToolEnabled,
                             )
@@ -802,11 +817,11 @@ fun DashboardScreen(
                                             SectionHeader(
                                                 title = stringResource(R.string.expense_breakdown),
                                                 onInfoClick =
-                                                if (dashboardState.spendingByCategory.size > 10) {
-                                                    { showBreakdownSheet = true }
-                                                } else {
-                                                    null
-                                                },
+                                                    if (dashboardState.spendingByCategory.size > 10) {
+                                                        { showBreakdownSheet = true }
+                                                    } else {
+                                                        null
+                                                    },
                                             )
                                             Spacer(modifier = Modifier.size(12.dp))
                                             ExpenseChartCard(dashboardState.spendingByCategory, chartColors, stringResource(R.string.other))
@@ -830,11 +845,11 @@ fun DashboardScreen(
                                         SectionHeader(
                                             title = stringResource(R.string.expense_breakdown),
                                             onInfoClick =
-                                            if (dashboardState.spendingByCategory.size > 10) {
-                                                { showBreakdownSheet = true }
-                                            } else {
-                                                null
-                                            },
+                                                if (dashboardState.spendingByCategory.size > 10) {
+                                                    { showBreakdownSheet = true }
+                                                } else {
+                                                    null
+                                                },
                                         )
                                         Spacer(modifier = Modifier.size(12.dp))
                                         ExpenseChartCard(dashboardState.spendingByCategory, chartColors, stringResource(R.string.other))
@@ -1050,7 +1065,8 @@ fun FloatingAiBot(
                 .graphicsLayer {
                     scaleX = scale
                     scaleY = scale
-                }.clickable { onClick() },
+                }
+                .clickable { onClick() },
         shape = CircleShape,
         color = Color.Transparent,
         shadowElevation = 12.dp,
@@ -1600,7 +1616,8 @@ fun PendingReviewBottomSheet(
                                             .background(
                                                 color = MaterialTheme.colorScheme.surfaceVariant,
                                                 shape = RoundedCornerShape(8.dp),
-                                            ).padding(8.dp)
+                                            )
+                                            .padding(8.dp)
                                             .fillMaxWidth(),
                                 )
                             }
@@ -1747,85 +1764,85 @@ fun autoMatchCategory(
         if (isExpense) {
             when {
                 nameLower.contains("uber") ||
-                    nameLower.contains("ola") ||
-                    nameLower.contains("lyft") ||
-                    nameLower.contains("taxi") ||
-                    nameLower.contains("metro") ||
-                    nameLower.contains("rail") ||
-                    nameLower.contains("train") ||
-                    nameLower.contains("fuel") ||
-                    nameLower.contains("petrol") ||
-                    nameLower.contains("diesel") ||
-                    nameLower.contains("gas station") -> "Transport"
+                        nameLower.contains("ola") ||
+                        nameLower.contains("lyft") ||
+                        nameLower.contains("taxi") ||
+                        nameLower.contains("metro") ||
+                        nameLower.contains("rail") ||
+                        nameLower.contains("train") ||
+                        nameLower.contains("fuel") ||
+                        nameLower.contains("petrol") ||
+                        nameLower.contains("diesel") ||
+                        nameLower.contains("gas station") -> "Transport"
 
                 nameLower.contains("starbucks") ||
-                    nameLower.contains("swiggy") ||
-                    nameLower.contains("zomato") ||
-                    nameLower.contains("ubereats") ||
-                    nameLower.contains("food") ||
-                    nameLower.contains("restaurant") ||
-                    nameLower.contains("cafe") ||
-                    nameLower.contains("dining") ||
-                    nameLower.contains("pizza") ||
-                    nameLower.contains("mcdonald") ||
-                    nameLower.contains("burger") -> "Food"
+                        nameLower.contains("swiggy") ||
+                        nameLower.contains("zomato") ||
+                        nameLower.contains("ubereats") ||
+                        nameLower.contains("food") ||
+                        nameLower.contains("restaurant") ||
+                        nameLower.contains("cafe") ||
+                        nameLower.contains("dining") ||
+                        nameLower.contains("pizza") ||
+                        nameLower.contains("mcdonald") ||
+                        nameLower.contains("burger") -> "Food"
 
                 nameLower.contains("netflix") ||
-                    nameLower.contains("spotify") ||
-                    nameLower.contains("youtube") ||
-                    nameLower.contains("disney") ||
-                    nameLower.contains("prime video") ||
-                    nameLower.contains("movie") ||
-                    nameLower.contains("cinema") ||
-                    nameLower.contains("game") ||
-                    nameLower.contains("steam") ||
-                    nameLower.contains("epic") ||
-                    nameLower.contains("entertainment") -> "Entertainment"
+                        nameLower.contains("spotify") ||
+                        nameLower.contains("youtube") ||
+                        nameLower.contains("disney") ||
+                        nameLower.contains("prime video") ||
+                        nameLower.contains("movie") ||
+                        nameLower.contains("cinema") ||
+                        nameLower.contains("game") ||
+                        nameLower.contains("steam") ||
+                        nameLower.contains("epic") ||
+                        nameLower.contains("entertainment") -> "Entertainment"
 
                 nameLower.contains("amazon") ||
-                    nameLower.contains("flipkart") ||
-                    nameLower.contains("myntra") ||
-                    nameLower.contains("shopping") ||
-                    nameLower.contains("store") ||
-                    nameLower.contains("supermarket") ||
-                    nameLower.contains("grocery") ||
-                    nameLower.contains("walmart") ||
-                    nameLower.contains("target") -> "Shopping"
+                        nameLower.contains("flipkart") ||
+                        nameLower.contains("myntra") ||
+                        nameLower.contains("shopping") ||
+                        nameLower.contains("store") ||
+                        nameLower.contains("supermarket") ||
+                        nameLower.contains("grocery") ||
+                        nameLower.contains("walmart") ||
+                        nameLower.contains("target") -> "Shopping"
 
                 nameLower.contains("hospital") ||
-                    nameLower.contains("clinic") ||
-                    nameLower.contains("medical") ||
-                    nameLower.contains("pharmacy") ||
-                    nameLower.contains("doctor") ||
-                    nameLower.contains("dentist") ||
-                    nameLower.contains("health") ||
-                    nameLower.contains("medicine") -> "Health"
+                        nameLower.contains("clinic") ||
+                        nameLower.contains("medical") ||
+                        nameLower.contains("pharmacy") ||
+                        nameLower.contains("doctor") ||
+                        nameLower.contains("dentist") ||
+                        nameLower.contains("health") ||
+                        nameLower.contains("medicine") -> "Health"
 
                 nameLower.contains("electricity") || nameLower.contains("water bill") || nameLower.contains("power") -> "Utilities"
 
                 nameLower.contains("airtel") ||
-                    nameLower.contains("jio") ||
-                    nameLower.contains("bill") ||
-                    nameLower.contains("recharge") ||
-                    nameLower.contains("internet") ||
-                    nameLower.contains("wifi") ||
-                    nameLower.contains("mobile") -> "Bills"
+                        nameLower.contains("jio") ||
+                        nameLower.contains("bill") ||
+                        nameLower.contains("recharge") ||
+                        nameLower.contains("internet") ||
+                        nameLower.contains("wifi") ||
+                        nameLower.contains("mobile") -> "Bills"
 
                 nameLower.contains("rent") || nameLower.contains("housing") || nameLower.contains("apartment") -> "Housing"
 
                 nameLower.contains("school") ||
-                    nameLower.contains("college") ||
-                    nameLower.contains("university") ||
-                    nameLower.contains("course") ||
-                    nameLower.contains("udemy") ||
-                    nameLower.contains("education") -> "Education"
+                        nameLower.contains("college") ||
+                        nameLower.contains("university") ||
+                        nameLower.contains("course") ||
+                        nameLower.contains("udemy") ||
+                        nameLower.contains("education") -> "Education"
 
                 nameLower.contains("flight") ||
-                    nameLower.contains("hotel") ||
-                    nameLower.contains("travel") ||
-                    nameLower.contains("trip") ||
-                    nameLower.contains("booking") ||
-                    nameLower.contains("airbnb") -> "Travel"
+                        nameLower.contains("hotel") ||
+                        nameLower.contains("travel") ||
+                        nameLower.contains("trip") ||
+                        nameLower.contains("booking") ||
+                        nameLower.contains("airbnb") -> "Travel"
 
                 nameLower.contains("insurance") || nameLower.contains("lic") -> "Insurance"
 
@@ -1836,11 +1853,11 @@ fun autoMatchCategory(
                 nameLower.contains("salary") || nameLower.contains("payroll") || nameLower.contains("wage") -> "Salary"
                 nameLower.contains("freelance") || nameLower.contains("gigs") || nameLower.contains("consulting") -> "Freelance"
                 nameLower.contains("interest") ||
-                    nameLower.contains("dividend") ||
-                    nameLower.contains("mutual fund") ||
-                    nameLower.contains("stock") ||
-                    nameLower.contains("crypto") ||
-                    nameLower.contains("investment") -> "Investments"
+                        nameLower.contains("dividend") ||
+                        nameLower.contains("mutual fund") ||
+                        nameLower.contains("stock") ||
+                        nameLower.contains("crypto") ||
+                        nameLower.contains("investment") -> "Investments"
 
                 nameLower.contains("rental") || nameLower.contains("tenant") -> "Rental"
                 nameLower.contains("gift") || nameLower.contains("present") -> "Gifts"

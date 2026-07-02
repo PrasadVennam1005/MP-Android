@@ -113,6 +113,7 @@ class MainActivity : FragmentActivity() {
                 mainViewModel.checkLoanReminders()
             }
             val themeMode by mainViewModel.themeMode.collectAsState()
+            val fontScale by mainViewModel.fontScale.collectAsState()
             val isBiometricEnabled by mainViewModel.isBiometricEnabled.collectAsState()
             // isAuthenticated tracks whether user passed biometric check.
             var isAuthenticated by remember { mutableStateOf(false) }
@@ -161,7 +162,7 @@ class MainActivity : FragmentActivity() {
                     UserPreferences.ThemeMode.DARK -> true
                     else -> androidx.compose.foundation.isSystemInDarkTheme()
                 }
-            MoneyPilotTheme(darkTheme = darkTheme) {
+            MoneyPilotTheme(darkTheme = darkTheme, fontScale = fontScale) {
                 // Wrap the main app and the biometric lock screen in a Box overlay structure.
                 // This keeps MoneyPilotApp composed in memory, preserving navigation backstack and screen state
                 // instead of resetting it back to the home/first screen when locking.

@@ -85,6 +85,9 @@ class UserPreferences
             androidx.datastore.preferences.core
                 .stringPreferencesKey("currency_rate_alerts")
         private val deletedTransactionIdsKey = stringSetPreferencesKey("deleted_transaction_ids")
+        private val fontScaleKey =
+            androidx.datastore.preferences.core
+                .floatPreferencesKey("font_scale")
 
         val isLoggedIn: Flow<Boolean> =
             context.dataStore.data
@@ -120,6 +123,12 @@ class UserPreferences
             context.dataStore.data
                 .map { preferences ->
                     preferences[themeModeKey] ?: 0 // Default to SYSTEM (0)
+                }
+
+        val fontScale: Flow<Float> =
+            context.dataStore.data
+                .map { preferences ->
+                    preferences[fontScaleKey] ?: 1.0f
                 }
 
         val hasSeededNotifications: Flow<Boolean> =
@@ -320,6 +329,12 @@ class UserPreferences
         suspend fun setThemeMode(mode: Int) {
             context.dataStore.edit { preferences ->
                 preferences[themeModeKey] = mode
+            }
+        }
+
+        suspend fun setFontScale(scale: Float) {
+            context.dataStore.edit { preferences ->
+                preferences[fontScaleKey] = scale
             }
         }
 
