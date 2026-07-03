@@ -1,2 +1,19 @@
 json_key_file("./play-service-account.json")
+
+# Default fallback package name
 package_name("prasad.vennam.moneypilot.android")
+
+# Dev lane overrides
+for_lane :distribute_dev do
+  package_name("prasad.vennam.moneypilot.dev")
+end
+
+# Prod lane overrides
+for_lane :distribute_prod do
+  package_name("prasad.vennam.moneypilot.android")
+end
+
+for_lane :beta do
+  package_name("prasad.vennam.moneypilot.android")
+end
+
