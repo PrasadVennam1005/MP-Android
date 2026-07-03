@@ -42,3 +42,7 @@ google-services.json
 
 # Release builds folder
 /builds/
+
+# Credentials / Service Accounts
+play-service-account.json
+

@@ -33,6 +33,9 @@
 -keep class prasad.vennam.moneypilot.data.entity.** { *; }
 -keep class prasad.vennam.moneypilot.data.model.** { *; }
 -keep class prasad.vennam.moneypilot.util.FinancePriceFetcher$** { *; }
+-keep class prasad.vennam.moneypilot.feature.ai.model.** { *; }
+-keep class prasad.vennam.moneypilot.feature.ai.service.** { *; }
+-keep class prasad.vennam.moneypilot.util.QuotesManager$Quote { *; }
 
 # SQLCipher for Android
 -keep class net.sqlcipher.** { *; }

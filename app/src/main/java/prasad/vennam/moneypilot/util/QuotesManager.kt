@@ -1,12 +1,14 @@
 package prasad.vennam.moneypilot.util
 
 import android.content.Context
+import com.squareup.moshi.JsonClass
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.Types
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import java.io.IOException
 
 object QuotesManager {
+    @JsonClass(generateAdapter = true)
     data class Quote(
         val quote: String,
         val author: String

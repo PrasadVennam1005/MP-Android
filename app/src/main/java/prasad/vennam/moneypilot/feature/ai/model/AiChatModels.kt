@@ -1,5 +1,8 @@
 package prasad.vennam.moneypilot.feature.ai.model
 
+import com.squareup.moshi.JsonClass
+
+@JsonClass(generateAdapter = true)
 data class ChatMessage(
     val id: String =
         java.util.UUID

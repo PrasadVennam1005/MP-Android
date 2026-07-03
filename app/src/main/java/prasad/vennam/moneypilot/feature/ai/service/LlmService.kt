@@ -38,6 +38,7 @@ import prasad.vennam.moneypilot.feature.ai.model.LlmResponse
  */
 class LlmService(
     private val context: Context,
+    private val moshi: Moshi,
 ) {
     private val serviceScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
     private var engine: Engine? = null
@@ -302,7 +303,6 @@ class LlmService(
                         Log.e(TAG, "generateCloudResponse failed: code=${response.code}, body=$body")
                         return@withContext CloudResult.Unavailable
                     }
-                    val moshi = Moshi.Builder().addLast(KotlinJsonAdapterFactory()).build()
                     val geminiResponse = moshi.adapter(GeminiResponse::class.java).fromJson(body)
                     val responseText =
                         geminiResponse

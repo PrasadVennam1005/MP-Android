@@ -1,6 +1,7 @@
 package prasad.vennam.moneypilot.feature.ai.di
 
 import android.content.Context
+import com.squareup.moshi.Moshi
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -19,7 +20,8 @@ object AiModule {
     @Singleton
     fun provideLlmService(
         @ApplicationContext context: Context,
-    ): LlmService = LlmService(context)
+        moshi: Moshi,
+    ): LlmService = LlmService(context, moshi)
 
     @Provides
     @Singleton

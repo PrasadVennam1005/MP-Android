@@ -1,0 +1,42 @@
+default_platform(:android)
+
+platform :android do
+  desc "Deploy a new version to the Google Play Store (Internal Track)"
+  lane :beta do
+    gradle(
+      task: "bundle",
+      flavor: "prod",
+      build_type: "Release"
+    )
+    upload_to_play_store(
+      track: "internal",
+      skip_upload_apk: true
+    )
+  end
+
+  desc "Distribute Production Release APK to Firebase App Distribution"
+  lane :distribute_prod do
+    gradle(
+      task: "assemble",
+      flavor: "prod",
+      build_type: "Release"
+    )
+    firebase_app_distribution(
+      app: "1:769875296764:android:11f8cb2f63409ceb9f3279",
+      release_notes: "Showcase Production Release"
+    )
+  end
+
+  desc "Distribute Dev Debug APK to Firebase App Distribution"
+  lane :distribute_dev do
+    gradle(
+      task: "assemble",
+      flavor: "dev",
+      build_type: "Debug"
+    )
+    firebase_app_distribution(
+      app: "1:769875296764:android:10235416b424bdb09f3279",
+      release_notes: "Showcase Developer Build"
+    )
+  end
+end
