@@ -102,21 +102,36 @@ object NotificationParser {
         val fullText = "$title $text".replace("\n", " ").trim()
         val lowerText = fullText.lowercase(Locale.getDefault())
 
-        // 1. Extract Amount
+        // 1. Discard non-financial alerts (OTPs, simple security checks, etc.) early
+        val isOtp = lowerText.contains("otp") || lowerText.contains("verification code") || lowerText.contains("one time password") || lowerText.contains("one-time password")
+        if (isOtp) return null
+
+        // 2. Extract Amount (utilizing lookback check to prioritize transaction over balance)
         val amount = extractAmount(fullText) ?: return null
 
-        // 2. Extract Type (default to EXPENSE/debit as it's the most common case)
-        val type =
-            when {
-                incomeKeywords.any { lowerText.contains(it) } -> "INCOME"
-                expenseKeywords.any { lowerText.contains(it) } -> "EXPENSE"
-                else -> "EXPENSE"
+        // 3. Classify transaction type and check if it contains actual debit/credit keywords
+        val hasIncomeKeyword = incomeKeywords.any { lowerText.contains(it) }
+        val hasExpenseKeyword = expenseKeywords.any { lowerText.contains(it) }
+        
+        // Discard simple balance queries or limit alerts that are not transactions
+        if (!hasIncomeKeyword && !hasExpenseKeyword) {
+            val isBalanceAlert = lowerText.contains("balance") || lowerText.contains("bal:") || lowerText.contains("available") || lowerText.contains("avl bal")
+            val isLimitAlert = lowerText.contains("limit")
+            if (isBalanceAlert || isLimitAlert) {
+                return null
             }
+        }
 
-        // 3. Extract Merchant
+        val type = when {
+            hasIncomeKeyword -> "INCOME"
+            hasExpenseKeyword -> "EXPENSE"
+            else -> "EXPENSE"
+        }
+
+        // 4. Extract Merchant
         val merchant = extractMerchant(fullText) ?: getAppNameFromPackage(packageName)
 
-        // 4. Extract Bank/Source Account info
+        // 5. Extract Bank/Source Account info
         val bankAccount = extractBankAccount(fullText) ?: getAppNameFromPackage(packageName)
 
         return ParsedNotification(
@@ -128,21 +143,60 @@ object NotificationParser {
     }
 
     private fun extractAmount(text: String): Double? {
+        val lowerText = text.lowercase(Locale.getDefault())
+        val balanceKeywords = listOf("bal", "balance", "available", "avl")
+        val txKeywords = listOf("debited", "credited", "spent", "paid", "charged", "received", "sent", "withdrawn", "purchase", "payment", "txn", "debit", "credit")
+
+        val candidates = mutableListOf<Pair<Double, Int>>()
+
+        // prefix matches
         var matcher = amountPrefixPattern.matcher(text)
-        if (matcher.find()) {
-            matcher.group(1)?.replace(",", "")?.toDoubleOrNull()?.let {
-                if (it > 0) return it
+        while (matcher.find()) {
+            val amount = matcher.group(1)?.replace(",", "")?.toDoubleOrNull()
+            if (amount != null && amount > 0) {
+                candidates.add(Pair(amount, matcher.start()))
             }
         }
 
+        // suffix matches
         matcher = amountSuffixPattern.matcher(text)
-        if (matcher.find()) {
-            matcher.group(1)?.replace(",", "")?.toDoubleOrNull()?.let {
-                if (it > 0) return it
+        while (matcher.find()) {
+            val amount = matcher.group(1)?.replace(",", "")?.toDoubleOrNull()
+            if (amount != null && amount > 0) {
+                candidates.add(Pair(amount, matcher.start()))
             }
         }
 
-        return null
+        if (candidates.isEmpty()) return null
+        if (candidates.size == 1) return candidates[0].first
+
+        // Sort by occurrence index
+        candidates.sortBy { it.second }
+
+        var bestCandidate: Pair<Double, Int>? = null
+        var bestScore = -1
+
+        for (candidate in candidates) {
+            val index = candidate.second
+            val startLookback = maxOf(0, index - 25)
+            val lookbackText = lowerText.substring(startLookback, index)
+
+            val isPrecededByBalance = balanceKeywords.any { lookbackText.contains(it) }
+            val isPrecededByTx = txKeywords.any { lookbackText.contains(it) }
+
+            val score = when {
+                isPrecededByBalance -> 0
+                isPrecededByTx -> 2
+                else -> 1
+            }
+
+            if (score > bestScore) {
+                bestScore = score
+                bestCandidate = candidate
+            }
+        }
+
+        return bestCandidate?.first ?: candidates.firstOrNull()?.first
     }
 
     private fun extractMerchant(text: String): String? {
