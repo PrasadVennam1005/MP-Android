@@ -5,32 +5,26 @@ service cloud.firestore {
 
     // Helper functions
     function isAuthenticated() {
-      return request.auth != null && request.auth.token.email != null;
-    }
-
-    function isGroupMember(groupId) {
-      return isAuthenticated() && 
-        request.auth.token.email in get(/databases/$(database)/documents/cosplit_groups/$(groupId)).data.members;
+      return request.auth != null;
     }
 
     // Users Collection
     match /users/{email} {
       allow read: if isAuthenticated();
-      allow write: if isAuthenticated() && email == request.auth.token.email;
+      allow write: if isAuthenticated() && (request.auth.token.email == null || email.matches('(?i)^' + request.auth.token.email + '$'));
     }
 
     // CoSplit Groups Collection
     match /cosplit_groups/{groupId} {
-      allow read: if isAuthenticated() && request.auth.token.email in resource.data.members;
-      allow create: if isAuthenticated() && request.auth.token.email in request.resource.data.members;
-      allow update: if isAuthenticated() && request.auth.token.email in resource.data.members;
-      allow delete: if isAuthenticated() && resource.data.createdBy == request.auth.uid;
-    }
+      allow read: if isAuthenticated() && (request.auth.token.email in resource.data.members);
+      allow create: if isAuthenticated() && (request.auth.token.email in request.resource.data.members);
+      allow update: if isAuthenticated() && (request.auth.token.email in resource.data.members);
+      allow delete: if isAuthenticated() && resource.data.createdById == request.auth.uid;
 
-    // CoSplit Expenses Collection
-    match /cosplit_expenses/{expenseId} {
-      allow read, update, delete: if isAuthenticated() && isGroupMember(resource.data.groupId);
-      allow create: if isAuthenticated() && isGroupMember(request.resource.data.groupId);
+      // Expenses Subcollection
+      match /expenses/{expenseId} {
+        allow read, write: if isAuthenticated() && (request.auth.token.email in get(/databases/$(database)/documents/cosplit_groups/$(groupId)).data.members);
+      }
     }
   }
 }
