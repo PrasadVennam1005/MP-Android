@@ -1,5 +1,6 @@
 package prasad.vennam.moneypilot.feature.cosplit.data.repository
 
+import android.util.Log
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.channels.awaitClose
@@ -23,17 +24,26 @@ class CoSplitRepositoryImpl @Inject constructor() : CoSplitRepository {
     private fun ensureFirebaseAuthenticated() {
         val auth = FirebaseAuth.getInstance()
         if (auth.currentUser == null) {
-            // Sign in anonymously to guarantee valid Firebase UID for rules
+            Log.d("CoSplitRepository", "No user authenticated in Firebase Auth. Initiating anonymous sign in.")
             auth.signInAnonymously()
+                .addOnSuccessListener {
+                    Log.d("CoSplitRepository", "Anonymous sign in successful. UID: ${it.user?.uid}")
+                }
+                .addOnFailureListener { e ->
+                    Log.e("CoSplitRepository", "Anonymous sign in failed", e)
+                }
         }
     }
 
     override fun getGroups(userEmail: String): Flow<List<CoSplitGroup>> = callbackFlow {
+        val email = userEmail.trim().lowercase()
+        Log.d("CoSplitRepository", "Listening to groups for email: $email")
         val query = firestore.collection("cosplit_groups")
-            .whereArrayContains("members", userEmail.trim().lowercase())
+            .whereArrayContains("members", email)
 
         val listener = query.addSnapshotListener { snapshot, error ->
             if (error != null) {
+                Log.e("CoSplitRepository", "Error in getGroups snapshot listener", error)
                 close(error)
                 return@addSnapshotListener
             }
@@ -55,6 +65,7 @@ class CoSplitRepositoryImpl @Inject constructor() : CoSplitRepository {
         creatorId: String,
         creatorEmail: String
     ): Result<String> = runCatching {
+        Log.d("CoSplitRepository", "createGroup: name='$name', members=$members, creatorId='$creatorId', creatorEmail='$creatorEmail'")
         val cleanMembers = (members + creatorEmail)
             .map { it.trim().lowercase() }
             .distinct()
@@ -78,6 +89,8 @@ class CoSplitRepositoryImpl @Inject constructor() : CoSplitRepository {
         )
         groupRef.set(group).await()
         groupRef.id
+    }.onFailure { e ->
+        Log.e("CoSplitRepository", "createGroup failed: ${e.message}", e)
     }
 
     override fun getExpenses(groupId: String): Flow<List<CoSplitExpense>> = callbackFlow {
