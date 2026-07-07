@@ -5,6 +5,7 @@ import android.content.Intent
 import android.net.Uri
 import android.appwidget.AppWidgetManager
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.datastore.preferences.core.Preferences
@@ -45,12 +46,12 @@ class CoPilotGlanceWidget : GlanceAppWidget() {
 
 @Composable
 private fun WidgetContent(context: Context, spentText: String, recentText: String) {
-    val bgColor = ColorProvider(android.graphics.Color.parseColor("#0F101A"))
-    val primaryBlue = ColorProvider(android.graphics.Color.parseColor("#2563EB"))
-    val secondaryBtnColor = ColorProvider(android.graphics.Color.parseColor("#1E293B"))
-    val white = ColorProvider(android.graphics.Color.parseColor("#FFFFFF"))
-    val grey = ColorProvider(android.graphics.Color.parseColor("#88FFFFFF"))
-    val lightGrey = ColorProvider(android.graphics.Color.parseColor("#E2E8F0"))
+    val bgColor = ColorProvider(Color(0xFF0F101A))
+    val primaryBlue = ColorProvider(Color(0xFF2563EB))
+    val secondaryBtnColor = ColorProvider(Color(0xFF1E293B))
+    val white = ColorProvider(Color(0xFFFFFFFF))
+    val grey = ColorProvider(Color(0x88FFFFFF))
+    val lightGrey = ColorProvider(Color(0xFFE2E8F0))
 
     Column(
         modifier = GlanceModifier
@@ -93,7 +94,7 @@ private fun WidgetContent(context: Context, spentText: String, recentText: Strin
             modifier = GlanceModifier
                 .fillMaxWidth()
                 .height(1.dp)
-                .background(ColorProvider(android.graphics.Color.parseColor("#1AFFFFFF")))
+                .background(ColorProvider(Color(0x1AFFFFFF)))
         ) {}
         Spacer(modifier = GlanceModifier.height(8.dp))
 
@@ -143,7 +144,7 @@ private fun WidgetContent(context: Context, spentText: String, recentText: Strin
             modifier = GlanceModifier
                 .fillMaxWidth()
                 .height(1.dp)
-                .background(ColorProvider(android.graphics.Color.parseColor("#1AFFFFFF")))
+                .background(ColorProvider(Color(0x1AFFFFFF)))
         ) {}
         Spacer(modifier = GlanceModifier.height(8.dp))
 
