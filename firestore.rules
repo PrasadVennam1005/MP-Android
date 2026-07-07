@@ -1,0 +1,36 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null && request.auth.token.email != null;
+    }
+
+    function isGroupMember(groupId) {
+      return isAuthenticated() && 
+        request.auth.token.email in get(/databases/$(database)/documents/cosplit_groups/$(groupId)).data.members;
+    }
+
+    // Users Collection
+    match /users/{email} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && email == request.auth.token.email;
+    }
+
+    // CoSplit Groups Collection
+    match /cosplit_groups/{groupId} {
+      allow read: if isAuthenticated() && request.auth.token.email in resource.data.members;
+      allow create: if isAuthenticated() && request.auth.token.email in request.resource.data.members;
+      allow update: if isAuthenticated() && request.auth.token.email in resource.data.members;
+      allow delete: if isAuthenticated() && resource.data.createdBy == request.auth.uid;
+    }
+
+    // CoSplit Expenses Collection
+    match /cosplit_expenses/{expenseId} {
+      allow read, update, delete: if isAuthenticated() && isGroupMember(resource.data.groupId);
+      allow create: if isAuthenticated() && isGroupMember(request.resource.data.groupId);
+    }
+  }
+}
