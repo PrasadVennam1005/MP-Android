@@ -10,14 +10,13 @@ service cloud.firestore {
 
     // Users Collection
     match /users/{email} {
-      allow read: if isAuthenticated();
-      allow write: if isAuthenticated() && (request.auth.token.email == null || email.matches('(?i)^' + request.auth.token.email + '$'));
+      allow read, write: if isAuthenticated();
     }
 
     // CoSplit Groups Collection
     match /cosplit_groups/{groupId} {
       allow read: if isAuthenticated() && (request.auth.token.email in resource.data.members);
-      allow create: if isAuthenticated() && (request.auth.token.email in request.resource.data.members);
+      allow create: if isAuthenticated();
       allow update: if isAuthenticated() && (request.auth.token.email in resource.data.members);
       allow delete: if isAuthenticated() && resource.data.createdById == request.auth.uid;
 
