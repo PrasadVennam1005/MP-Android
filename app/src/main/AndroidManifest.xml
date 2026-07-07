@@ -90,7 +90,8 @@
                 <data android:pathPrefix="/learn" />
                 <data android:pathPrefix="/article" />
                 <data android:pathPrefix="/moneypilot-legal" />
-                <data android:pathPrefix="/splitwise/join" />
+                <data android:pathPrefix="/cosplit" />
+                <data android:pathPrefix="/add-transaction" />
             </intent-filter>
         </activity>
 
@@ -130,6 +131,17 @@
             <intent-filter>
                 <action android:name="prasad.vennam.moneypilot.action.APPROVE_AND_LOG" />
             </intent-filter>
+        </receiver>
+
+        <receiver
+            android:name="prasad.vennam.moneypilot.ui.widget.CoPilotGlanceWidgetReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_copilot_info" />
         </receiver>
 
         <service

@@ -27,6 +27,7 @@ object DeepLinkMapper {
             "dashboard" -> Destination.Dashboard
             "insights" -> Destination.Insights
             "history" -> Destination.History
+            "add-transaction" -> Destination.AddEditTransaction()
             "premium" -> Destination.PremiumScreen
             "learn" -> Destination.LearnFinance
             "article" -> {
