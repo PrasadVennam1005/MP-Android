@@ -92,6 +92,9 @@ import androidx.credentials.exceptions.GetCredentialException
 import androidx.credentials.exceptions.NoCredentialException
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.GoogleAuthProvider
+import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import prasad.vennam.moneypilot.R
@@ -613,6 +616,17 @@ fun AuthScreen(
                                                             AnalyticsConstants.Event.LOGIN,
                                                             mapOf(AnalyticsConstants.Param.METHOD to "google"),
                                                         )
+                                                        
+                                                        // Authenticate to Firebase Auth with the Google credential
+                                                        try {
+                                                            val idToken = googleIdTokenCredential.idToken
+                                                            val credential = GoogleAuthProvider.getCredential(idToken, null)
+                                                            FirebaseAuth.getInstance().signInWithCredential(credential).await()
+                                                            Log.d("AuthScreen", "Firebase Auth sign-in successful with Google")
+                                                        } catch (e: Exception) {
+                                                            Log.e("AuthScreen", "Firebase Auth sign-in failed", e)
+                                                        }
+                                                        
                                                         mainViewModel.saveUserData(
                                                             UserPreferences.UserData(
                                                                 name = googleIdTokenCredential.displayName ?: "User",
