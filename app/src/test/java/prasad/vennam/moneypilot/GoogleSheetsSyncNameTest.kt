@@ -261,6 +261,17 @@ class GoogleSheetsSyncNameTest {
         override suspend fun deleteTransactionsByLoanId(loanId: Long) {
             // no-op
         }
+
+        override suspend fun countDuplicateTransactions(
+            startTime: Long,
+            endTime: Long,
+            amountMinor: Long,
+            merchant: String
+        ): Int {
+            return transactions.count { 
+                it.timestamp in startTime..endTime && it.amount == amountMinor && it.note == merchant
+            }
+        }
     }
 
     private class FakeBudgetDao : BudgetDao {

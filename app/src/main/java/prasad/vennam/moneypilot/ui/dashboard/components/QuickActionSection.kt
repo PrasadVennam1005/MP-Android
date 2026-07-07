@@ -25,6 +25,7 @@ import androidx.compose.material.icons.rounded.Camera
 import androidx.compose.material.icons.rounded.CurrencyExchange
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.NotificationsActive
+import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.RemoveCircleOutline
 import androidx.compose.material.icons.rounded.Shield
 import androidx.compose.material3.CardDefaults
@@ -65,6 +66,7 @@ fun QuickActionSection(
     onNavigateToEmiCalculator: () -> Unit,
     onNavigateToCurrencyConverter: () -> Unit,
     onNavigateToSubscriptions: () -> Unit,
+    onNavigateToCoSplit: () -> Unit,
     isGuest: Boolean,
 ) {
     val adaptiveInfo = currentWindowAdaptiveInfoV2()
@@ -76,6 +78,7 @@ fun QuickActionSection(
         QuickActionData(stringResource(R.string.investment), Icons.Rounded.AccountBalanceWallet, MaterialTheme.colorScheme.primary, onAddInvestment),
         QuickActionData(stringResource(R.string.loans), Icons.Rounded.AccountBalanceWallet, MaterialTheme.colorScheme.tertiary, onAddLoan),
         QuickActionData(stringResource(R.string.scan), Icons.Rounded.Camera, MaterialTheme.colorScheme.outline, onScanReceipt, isGuest),
+        QuickActionData("CoSplit", Icons.Rounded.Person, Color(0xFF00C853), onNavigateToCoSplit),
         QuickActionData(stringResource(R.string.emergency_fund), Icons.Rounded.Shield, Color(0xFF067F68), onNavigateToEmergencyFund),
         QuickActionData(stringResource(R.string.news), Icons.AutoMirrored.Rounded.Article, Color(0xFFF57C00), onNavigateToNews),
         QuickActionData(stringResource(R.string.sandbox), Icons.Rounded.Calculate, Color(0xFF8E24AA), onNavigateToSandbox),

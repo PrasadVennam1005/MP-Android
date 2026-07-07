@@ -2,6 +2,7 @@ package prasad.vennam.moneypilot.ui.navigation
 
 import android.app.Activity
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.runtime.LaunchedEffect
 import androidx.navigation3.runtime.NavBackStack
 import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.runtime.NavKey
@@ -145,6 +146,9 @@ fun moneyPilotNavEntry(
                     },
                     onNavigateToCurrencyConverter = {
                         backStack.add(Destination.CurrencyConverter)
+                    },
+                    onNavigateToCoSplit = {
+                        backStack.add(Destination.CoSplitGroups)
                     },
                     analyticsHelper = analyticsHelper,
                 )
@@ -469,6 +473,60 @@ fun moneyPilotNavEntry(
                 CurrencyConverterScreen(
                     onNavigateBack = onBack,
                     analyticsHelper = analyticsHelper,
+                )
+            }
+
+        is Destination.CoSplitGroups ->
+            NavEntry(key) {
+                val splitViewModel = androidx.lifecycle.viewmodel.compose.viewModel<prasad.vennam.moneypilot.feature.cosplit.ui.CoSplitViewModel>()
+                prasad.vennam.moneypilot.ui.cosplit.CoSplitGroupsScreen(
+                    viewModel = splitViewModel,
+                    onNavigateBack = onBack,
+                    onNavigateToGroup = { groupId ->
+                        backStack.add(Destination.CoSplitGroupDetail(groupId))
+                    }
+                )
+            }
+
+        is Destination.CoSplitGroupDetail ->
+            NavEntry(key) {
+                val splitViewModel = androidx.lifecycle.viewmodel.compose.viewModel<prasad.vennam.moneypilot.feature.cosplit.ui.CoSplitViewModel>()
+                LaunchedEffect(key.groupId) {
+                    splitViewModel.selectGroupById(key.groupId)
+                }
+                prasad.vennam.moneypilot.ui.cosplit.CoSplitGroupDetailScreen(
+                    viewModel = splitViewModel,
+                    onNavigateBack = onBack,
+                    onNavigateToAddExpense = {
+                        backStack.add(Destination.CoSplitAddExpense(key.groupId))
+                    }
+                )
+            }
+
+        is Destination.CoSplitAddExpense ->
+            NavEntry(key) {
+                val splitViewModel = androidx.lifecycle.viewmodel.compose.viewModel<prasad.vennam.moneypilot.feature.cosplit.ui.CoSplitViewModel>()
+                LaunchedEffect(key.groupId) {
+                    splitViewModel.selectGroupById(key.groupId)
+                }
+                prasad.vennam.moneypilot.ui.cosplit.CoSplitAddExpenseScreen(
+                    viewModel = splitViewModel,
+                    onNavigateBack = onBack
+                )
+            }
+
+        is Destination.CoSplitJoin ->
+            NavEntry(key) {
+                val splitViewModel = androidx.lifecycle.viewmodel.compose.viewModel<prasad.vennam.moneypilot.feature.cosplit.ui.CoSplitViewModel>()
+                prasad.vennam.moneypilot.ui.cosplit.CoSplitJoinScreen(
+                    viewModel = splitViewModel,
+                    groupId = key.groupId,
+                    groupName = key.groupName,
+                    onNavigateToGroup = { groupId ->
+                        backStack.remove(key)
+                        backStack.add(Destination.CoSplitGroupDetail(groupId))
+                    },
+                    onCancel = onBack
                 )
             }
 

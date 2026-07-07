@@ -104,4 +104,16 @@ sealed interface Destination : NavKey {
 
     @Serializable
     data object SavingGoals : Destination
+
+    @Serializable
+    data object CoSplitGroups : Destination
+
+    @Serializable
+    data class CoSplitGroupDetail(val groupId: String) : Destination
+
+    @Serializable
+    data class CoSplitAddExpense(val groupId: String) : Destination
+
+    @Serializable
+    data class CoSplitJoin(val groupId: String, val groupName: String) : Destination
 }

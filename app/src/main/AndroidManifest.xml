@@ -89,6 +89,8 @@
                 <data android:pathPrefix="/premium" />
                 <data android:pathPrefix="/learn" />
                 <data android:pathPrefix="/article" />
+                <data android:pathPrefix="/moneypilot-legal" />
+                <data android:pathPrefix="/splitwise/join" />
             </intent-filter>
         </activity>
 

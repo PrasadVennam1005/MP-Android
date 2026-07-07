@@ -16,4 +16,10 @@ abstract class RepositoryModule {
     abstract fun bindFinanceRepository(
         impl: FinanceRepositoryImpl,
     ): FinanceRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindCoSplitRepository(
+        impl: prasad.vennam.moneypilot.feature.cosplit.data.repository.CoSplitRepositoryImpl,
+    ): prasad.vennam.moneypilot.feature.cosplit.data.repository.CoSplitRepository
 }

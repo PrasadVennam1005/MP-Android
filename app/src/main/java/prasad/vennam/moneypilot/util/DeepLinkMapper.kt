@@ -37,6 +37,20 @@ object DeepLinkMapper {
                     Destination.LearnFinance
                 }
             }
+            "cosplit" -> {
+                val subPath = if (pathSegments.size > 1) pathSegments[1].lowercase() else null
+                if (subPath == "join") {
+                    val groupId = uri.getQueryParameter("groupId")
+                    val groupName = uri.getQueryParameter("name") ?: "Shared Group"
+                    if (groupId != null) {
+                        Destination.CoSplitJoin(groupId = groupId, groupName = groupName)
+                    } else {
+                        Destination.CoSplitGroups
+                    }
+                } else {
+                    Destination.CoSplitGroups
+                }
+            }
             else -> null
         }
     }

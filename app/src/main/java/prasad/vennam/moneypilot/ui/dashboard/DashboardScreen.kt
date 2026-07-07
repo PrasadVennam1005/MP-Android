@@ -159,6 +159,7 @@ fun DashboardScreen(
     onNavigateToEmiCalculator: () -> Unit,
     onNavigateToLearnFinance: () -> Unit,
     onNavigateToCurrencyConverter: () -> Unit,
+    onNavigateToCoSplit: () -> Unit,
 ) {
     TrackScreen(analyticsHelper, AnalyticsConstants.Screen.DASHBOARD)
 
@@ -671,6 +672,10 @@ fun DashboardScreen(
                                 onNavigateToSubscriptions = {
                                     analyticsHelper.logEvent(AnalyticsConstants.Event.QUICK_ACTION_CLICKED, mapOf(AnalyticsConstants.Param.ACTION to "subscriptions"))
                                     onNavigateToSubscriptions()
+                                },
+                                onNavigateToCoSplit = {
+                                    analyticsHelper.logEvent(AnalyticsConstants.Event.QUICK_ACTION_CLICKED, mapOf(AnalyticsConstants.Param.ACTION to "cosplit"))
+                                    onNavigateToCoSplit()
                                 },
                                 isGuest = isGuest && !prasad.vennam.moneypilot.BuildConfig.DEBUG && !isDevToolEnabled,
                             )

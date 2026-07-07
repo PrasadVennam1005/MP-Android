@@ -16,6 +16,7 @@ import prasad.vennam.moneypilot.domain.usecase.ClearAllDataUseCase
 import prasad.vennam.moneypilot.domain.usecase.RestoreBackupUseCase
 import prasad.vennam.moneypilot.util.DemoDataSeeder
 import prasad.vennam.moneypilot.util.SyncResult
+import com.google.firebase.firestore.FirebaseFirestore
 import javax.inject.Inject
 
 sealed interface RestoreState {
@@ -142,6 +143,25 @@ class MainViewModel
         ) {
             viewModelScope.launch {
                 userPreferences.saveUserData(userData)
+                
+                // Upsert user profile to Firestore for CoSplit features
+                val email = userData.email.trim().lowercase()
+                if (email.isNotEmpty()) {
+                    val profileMap = hashMapOf(
+                        "name" to userData.name,
+                        "email" to email,
+                        "photoUrl" to (userData.photoUrl ?: "")
+                    )
+                    FirebaseFirestore.getInstance().collection("users").document(email)
+                        .set(profileMap)
+                        .addOnSuccessListener {
+                            Log.d("MainViewModel", "User profile saved to Firestore")
+                        }
+                        .addOnFailureListener { e ->
+                            Log.e("MainViewModel", "Failed to save user profile", e)
+                        }
+                }
+                
                 onComplete()
             }
         }
