@@ -24,6 +24,7 @@ import androidx.glance.text.TextStyle
 import androidx.glance.color.ColorProvider
 import androidx.compose.ui.graphics.Color
 import prasad.vennam.moneypilot.R
+import androidx.core.net.toUri
 
 class CoPilotGlanceWidget : GlanceAppWidget() {
 
@@ -191,7 +192,7 @@ private fun WidgetContent(context: Context, spentText: String, recentText: Strin
                     .cornerRadius(12.dp)
                     .clickable(
                         actionStartActivity(
-                            Intent(Intent.ACTION_VIEW, Uri.parse("https://moneypilot.app/add-transaction")).apply {
+                            Intent(Intent.ACTION_VIEW, "https://moneypilot.app/add-transaction".toUri()).apply {
                                 `package` = context.packageName
                                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
                             }
@@ -229,7 +230,7 @@ private fun WidgetContent(context: Context, spentText: String, recentText: Strin
                     .cornerRadius(12.dp)
                     .clickable(
                         actionStartActivity(
-                            Intent(Intent.ACTION_VIEW, Uri.parse("https://moneypilot.app/cosplit")).apply {
+                            Intent(Intent.ACTION_VIEW, "https://moneypilot.app/cosplit".toUri()).apply {
                                 `package` = context.packageName
                                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
                             }
