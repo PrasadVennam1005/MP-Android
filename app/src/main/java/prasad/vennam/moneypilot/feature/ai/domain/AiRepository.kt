@@ -15,9 +15,12 @@ interface AiRepository {
      */
     val isUserConsentGranted: StateFlow<Boolean>
     val isLocalModelAvailable: StateFlow<Boolean>
+    val aiMode: StateFlow<Int>
 
     /** Persist the user's cloud AI consent choice. */
     suspend fun setUserConsent(granted: Boolean)
+
+    suspend fun setAiMode(mode: Int)
 
     suspend fun initialize()
 

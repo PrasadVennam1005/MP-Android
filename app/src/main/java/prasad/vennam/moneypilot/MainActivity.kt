@@ -109,6 +109,41 @@ class MainActivity : FragmentActivity() {
 
         setContent {
             val mainViewModel: MainViewModel = hiltViewModel()
+            
+            // Handle incoming deep link or notification redirect from initial intent
+            LaunchedEffect(Unit) {
+                intent?.let { intent ->
+                    if (intent.getBooleanExtra("navigate_to_notifications", false)) {
+                        mainViewModel.setPendingDeepLink(Destination.Notifications)
+                        intent.removeExtra("navigate_to_notifications")
+                    } else {
+                        intent.data?.let { uri ->
+                            prasad.vennam.moneypilot.util.DeepLinkMapper.fromUri(uri)?.let { destination ->
+                                mainViewModel.setPendingDeepLink(destination)
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Listen for deep links & notifications while app is in memory
+            DisposableEffect(Unit) {
+                val listener: (android.content.Intent) -> Unit = { newIntent ->
+                    if (newIntent.getBooleanExtra("navigate_to_notifications", false)) {
+                        mainViewModel.setPendingDeepLink(Destination.Notifications)
+                        newIntent.removeExtra("navigate_to_notifications")
+                    } else {
+                        newIntent.data?.let { uri ->
+                            prasad.vennam.moneypilot.util.DeepLinkMapper.fromUri(uri)?.let { destination ->
+                                mainViewModel.setPendingDeepLink(destination)
+                            }
+                        }
+                    }
+                }
+                setOnNewIntentListener(listener)
+                onDispose { setOnNewIntentListener { } }
+            }
+
             LaunchedEffect(Unit) {
                 mainViewModel.checkLoanReminders()
             }
@@ -262,39 +297,19 @@ fun MoneyPilotApp(
     val currencyCode by mainViewModel.currency.collectAsState(initial = defaultCurrency)
     val userData by mainViewModel.userData.collectAsState(initial = null)
     val isLoggedIn by mainViewModel.isLoggedIn.collectAsState(initial = false)
+    val pendingDeepLink by mainViewModel.pendingDeepLink.collectAsState()
 
     val context = androidx.compose.ui.platform.LocalContext.current
 
-    var navigateToNotifications by remember { mutableStateOf(false) }
-
-    DisposableEffect(context) {
-        val mainActivity = context as? MainActivity
-        // Check initial intent
-        val initialIntent = mainActivity?.intent
-        if (initialIntent?.getBooleanExtra("navigate_to_notifications", false) == true) {
-            navigateToNotifications = true
-            initialIntent.removeExtra("navigate_to_notifications")
-        }
-
-        // Listen for new intents
-        mainActivity?.setOnNewIntentListener { newIntent ->
-            if (newIntent.getBooleanExtra("navigate_to_notifications", false)) {
-                navigateToNotifications = true
-                newIntent.removeExtra("navigate_to_notifications")
+    // Handle Deep Link or Notification redirection
+    LaunchedEffect(isLoggedIn, pendingDeepLink, currentDestination, userData) {
+        if (isLoggedIn && pendingDeepLink != null && currentDestination != null && currentDestination !is Destination.Auth && userData != null) {
+            val email = userData?.email
+            val isGuest = email == "guest@moneypilot.app"
+            if (!isGuest) {
+                backStack.add(pendingDeepLink!!)
             }
-        }
-
-        onDispose {
-            mainActivity?.setOnNewIntentListener {}
-        }
-    }
-
-    LaunchedEffect(isLoggedIn, currentDestination, navigateToNotifications) {
-        if (isLoggedIn && navigateToNotifications && currentDestination != null && currentDestination !is Destination.Auth) {
-            if (backStack.none { it is Destination.Notifications }) {
-                backStack.add(Destination.Notifications)
-            }
-            navigateToNotifications = false
+            mainViewModel.consumePendingDeepLink()
         }
     }
     val interstitialAdManager =

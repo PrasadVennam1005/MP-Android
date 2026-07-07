@@ -9,7 +9,6 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import prasad.vennam.moneypilot.data.entity.PendingTransaction
 import prasad.vennam.moneypilot.data.repository.TransactionRepository
@@ -53,43 +52,15 @@ class SmsReceiver : BroadcastReceiver() {
             Log.d("SmsReceiver", "Parsed SMS successfully: type=${parsed.type}, merchant='$maskedMerchant', amount=${parsed.amount}")
         }
 
+        val pendingResult = goAsync()
         receiverScope.launch {
             try {
                 val now = System.currentTimeMillis()
-                val timeWindowMs = 10 * 60 * 1000 // 10 minutes duplicate check window
+                val timeWindowMs = 10L * 60 * 1000 // 10 minutes duplicate check window
 
-                // 1. Check pending transactions for duplicates
-                val currentPending = repository.allPendingTransactions.first()
-                val isPendingDuplicate =
-                    currentPending.any { pending ->
-                        Math.abs(pending.timestamp - now) < timeWindowMs &&
-                            Math.abs(pending.amount - parsed.amount) < 0.01 &&
-                            (
-                                pending.merchant.equals(parsed.merchant, ignoreCase = true) ||
-                                    pending.rawMessage.contains(parsed.merchant, ignoreCase = true)
-                            )
-                    }
-                if (isPendingDuplicate) {
+                if (repository.isDuplicateTransaction(now, timeWindowMs, parsed.amount, parsed.merchant)) {
                     if (prasad.vennam.moneypilot.BuildConfig.DEBUG) {
-                        Log.d("SmsReceiver", "Skipping duplicate SMS: already in pending queue")
-                    }
-                    return@launch
-                }
-
-                // 2. Check approved transactions for duplicates
-                val currentTransactions = repository.allTransactions.first()
-                val isTransactionDuplicate =
-                    currentTransactions.any { trans ->
-                        Math.abs(trans.timestamp - now) < timeWindowMs &&
-                            Math.abs(trans.amount.toMajorUnit - parsed.amount) < 0.01 &&
-                            (
-                                trans.note.equals(parsed.merchant, ignoreCase = true) ||
-                                    trans.note.contains(parsed.merchant, ignoreCase = true)
-                            )
-                    }
-                if (isTransactionDuplicate) {
-                    if (prasad.vennam.moneypilot.BuildConfig.DEBUG) {
-                        Log.d("SmsReceiver", "Skipping duplicate SMS: already in transactions database")
+                        Log.d("SmsReceiver", "Skipping duplicate SMS: already in pending or approved")
                     }
                     return@launch
                 }
@@ -110,6 +81,8 @@ class SmsReceiver : BroadcastReceiver() {
                 }
             } catch (e: Exception) {
                 Log.e("SmsReceiver", "Error saving SMS pending transaction", e)
+            } finally {
+                pendingResult.finish()
             }
         }
     }

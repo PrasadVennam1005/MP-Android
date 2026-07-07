@@ -7,7 +7,6 @@ import com.google.android.gms.auth.GoogleAuthUtil
 import com.google.android.gms.auth.UserRecoverableAuthException
 import com.squareup.moshi.JsonClass
 import com.squareup.moshi.Moshi
-import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
@@ -52,6 +51,7 @@ object GoogleSheetsSyncHelper {
         repository: DataManagementRepository,
         analyticsHelper: AnalyticsHelper,
         userPreferences: UserPreferences,
+        moshi: Moshi,
         spreadsheetId: String?,
         isRestore: Boolean = false,
         onSpreadsheetIdFound: suspend (String) -> Unit,
@@ -81,7 +81,7 @@ object GoogleSheetsSyncHelper {
                         "GoogleSheetsSyncHelper",
                         "performTwoWaySync: spreadsheetId is null/empty, searching Drive...",
                     )
-                    currentSpreadsheetId = findExistingSpreadsheet(token)
+                    currentSpreadsheetId = findExistingSpreadsheet(token, moshi)
                     if (currentSpreadsheetId != null) {
                         Log.d(
                             "GoogleSheetsSyncHelper",
@@ -93,7 +93,7 @@ object GoogleSheetsSyncHelper {
                             "GoogleSheetsSyncHelper",
                             "performTwoWaySync: No existing spreadsheet found. Creating a new one...",
                         )
-                        currentSpreadsheetId = createSpreadsheet(token)
+                        currentSpreadsheetId = createSpreadsheet(token, moshi)
                         Log.d(
                             "GoogleSheetsSyncHelper",
                             "performTwoWaySync: Created new spreadsheet with ID: $currentSpreadsheetId",
@@ -112,12 +112,12 @@ object GoogleSheetsSyncHelper {
                         "GoogleSheetsSyncHelper",
                         "performTwoWaySync: Verifying required sheets exist in $currentSpreadsheetId...",
                     )
-                    ensureRequiredSheetsExist(token, currentSpreadsheetId)
+                    ensureRequiredSheetsExist(token, currentSpreadsheetId, moshi)
                     Log.d(
                         "GoogleSheetsSyncHelper",
                         "performTwoWaySync: Running Two-Way Sync sequence. Downloading cloud data first...",
                     )
-                    val valueRanges = downloadSpreadsheetData(token, currentSpreadsheetId)
+                    val valueRanges = downloadSpreadsheetData(token, currentSpreadsheetId, moshi)
                     if (valueRanges != null) {
                         Log.d(
                             "GoogleSheetsSyncHelper",
@@ -149,6 +149,7 @@ object GoogleSheetsSyncHelper {
                     uploadLocalDataToSpreadsheet(
                         token = token,
                         spreadsheetId = currentSpreadsheetId,
+                        moshi = moshi,
                         categoryDao = repository.categoryDao,
                         budgetDao = repository.budgetDao,
                         investmentDao = repository.investmentDao,
@@ -172,7 +173,7 @@ object GoogleSheetsSyncHelper {
                         "performTwoWaySync: SheetStructureBrokenException caught. Recreating spreadsheet...",
                         e,
                     )
-                    val newId = createSpreadsheet(token)
+                    val newId = createSpreadsheet(token, moshi)
                     onSpreadsheetIdFound(newId)
                     Log.d(
                         "GoogleSheetsSyncHelper",
@@ -181,6 +182,7 @@ object GoogleSheetsSyncHelper {
                     uploadLocalDataToSpreadsheet(
                         token = token,
                         spreadsheetId = newId,
+                        moshi = moshi,
                         categoryDao = repository.categoryDao,
                         budgetDao = repository.budgetDao,
                         investmentDao = repository.investmentDao,
@@ -207,7 +209,7 @@ object GoogleSheetsSyncHelper {
             }
         }
 
-    private fun findExistingSpreadsheet(token: String): String? {
+    private fun findExistingSpreadsheet(token: String, moshi: Moshi): String? {
         val query = "mimeType='application/vnd.google-apps.spreadsheet' and name='MoneyPilot Backup' and trashed=false"
         val request =
             Request
@@ -221,13 +223,12 @@ object GoogleSheetsSyncHelper {
             if (!response.isSuccessful) return null
             if (bodyStr.isEmpty()) return null
 
-            val moshi = Moshi.Builder().addLast(KotlinJsonAdapterFactory()).build()
             val driveResponse = moshi.adapter(DriveFilesResponse::class.java).fromJson(bodyStr)
             return driveResponse?.files?.firstOrNull()?.id
         }
     }
 
-    private fun createSpreadsheet(token: String): String {
+    private fun createSpreadsheet(token: String, moshi: Moshi): String {
         val createBody =
             """
             {
@@ -252,14 +253,16 @@ object GoogleSheetsSyncHelper {
         client.newCall(request).execute().use { response ->
             val bodyStr = response.body.string()
             if (!response.isSuccessful) throw Exception("Failed to create spreadsheet")
-            val match = "\"spreadsheetId\"\\s*:\\s*\"([^\"]+)\"".toRegex().find(bodyStr)
-            return match?.groupValues?.get(1) ?: throw Exception("Could not parse spreadsheetId")
+            
+            val spreadsheet = moshi.adapter(SpreadsheetResponse::class.java).fromJson(bodyStr)
+            return spreadsheet?.spreadsheetId ?: throw Exception("Could not parse spreadsheetId")
         }
     }
 
     private fun downloadSpreadsheetData(
         token: String,
         spreadsheetId: String,
+        moshi: Moshi,
     ): List<ValueRange>? {
         Log.d(
             "GoogleSheetsSyncHelper",
@@ -304,7 +307,6 @@ object GoogleSheetsSyncHelper {
                 throw Exception("Failed to fetch values")
             }
             val bodyStr = response.body.string()
-            val moshi = Moshi.Builder().addLast(KotlinJsonAdapterFactory()).build()
             val batchResponse = moshi.adapter(BatchGetSpreadsheetResponse::class.java).fromJson(bodyStr)
             val ranges = batchResponse?.valueRanges
             Log.d(
@@ -492,12 +494,20 @@ object GoogleSheetsSyncHelper {
                 )
                 val deletedIds = userPreferences.deletedTransactionIds.first()
                 val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
-                val localTransactions: Map<Long, Transaction> = transactionDao.getAllTransactionsSync().associateBy { it.id }
+                val allLocalTransactions = transactionDao.getAllTransactionsSync()
+                val localTransactionsById: Map<Long, Transaction> = allLocalTransactions.associateBy { it.id }
+                
+                // Content-based lookup to avoid duplicates when ID is missing/zero in sheet
+                // Key format: "timestamp|amount|type|categoryId|note"
+                val localTransactionsByContent: Set<String> = allLocalTransactions.map { t ->
+                    "${t.timestamp}|${t.amount}|${t.type}|${t.categoryId}|${t.note}"
+                }.toSet()
+
                 for (row in values) {
                     val idStr = row.getOrNull(0)?.toString().orEmpty()
                     val id = idStr.toDoubleOrNull()?.toLong() ?: 0L
                     
-                    if (deletedIds.contains(id.toString())) {
+                    if (id != 0L && deletedIds.contains(id.toString())) {
                         Log.d("GoogleSheetsSyncHelper", "mergeCloudDataIntoLocal: Skipping deleted transaction ID: $id")
                         continue
                     }
@@ -510,7 +520,8 @@ object GoogleSheetsSyncHelper {
                             ?.toDoubleOrNull()
                             ?.toLong()
                     val paymentMode = row.getOrNull(4)?.toString().orEmpty()
-                    val amount = row.getOrNull(5)?.toString()?.toDoubleOrNull() ?: 0.0
+                    val amountMajor = row.getOrNull(5)?.toString()?.toDoubleOrNull() ?: 0.0
+                    val amountMinor = Math.round(amountMajor * 100)
                     val note = row.getOrNull(6)?.toString().orEmpty()
                     val currencyCode = row.getOrNull(7)?.toString().takeIf { !it.isNullOrBlank() } ?: "INR"
 
@@ -521,9 +532,7 @@ object GoogleSheetsSyncHelper {
                             ?.toString()
                             ?.toDoubleOrNull()
                             ?.toLong() ?: 0L
-                    val localTrans = localTransactions[id]
-                    val subCategory = if (row.size > 8) sheetSubCategory else (localTrans?.subCategory ?: "")
-
+                    
                     val timestamp =
                         try {
                             dateFormat.parse(dateStr)?.time ?: System.currentTimeMillis()
@@ -537,11 +546,23 @@ object GoogleSheetsSyncHelper {
                             TransactionType.EXPENSE
                         }
 
+                    // Deduplication check
+                    if (id == 0L) {
+                        val contentKey = "$timestamp|$amountMinor|$type|$categoryId|$note"
+                        if (localTransactionsByContent.contains(contentKey)) {
+                            Log.d("GoogleSheetsSyncHelper", "mergeCloudDataIntoLocal: Skipping duplicate transaction by content (no ID in sheet)")
+                            continue
+                        }
+                    }
+
+                    val localTrans = if (id != 0L) localTransactionsById[id] else null
+                    val subCategory = if (row.size > 8) sheetSubCategory else (localTrans?.subCategory ?: "")
+
                     if (localTrans == null || lastUpdated > localTrans.lastUpdated) {
                         transactionDao.insertTransaction(
                             Transaction(
                                 id = id,
-                                amount = (amount * 100).toLong(),
+                                amount = amountMinor,
                                 timestamp = timestamp,
                                 categoryId = categoryId,
                                 paymentMode = paymentMode,
@@ -736,6 +757,7 @@ object GoogleSheetsSyncHelper {
     private suspend fun uploadLocalDataToSpreadsheet(
         token: String,
         spreadsheetId: String,
+        moshi: Moshi,
         categoryDao: CategoryDao,
         budgetDao: BudgetDao,
         investmentDao: InvestmentDao,
@@ -919,7 +941,6 @@ object GoogleSheetsSyncHelper {
                         mapOf("range" to "LoanPayments!A1", "values" to lpRows),
                     ),
             )
-        val moshi = Moshi.Builder().addLast(KotlinJsonAdapterFactory()).build()
         val updateBody = moshi.adapter(Map::class.java).toJson(bodyMap)
 
         Log.d(
@@ -939,7 +960,7 @@ object GoogleSheetsSyncHelper {
         client.newCall(updateReq).execute().use { response ->
             Log.d(
                 "GoogleSheetsSyncHelper",
-                "uploadLocalDataToSpreadsheet: batchUpdate response code=${response.code}, message=${response.message}",
+                "uploadLocalDataToSpreadsheet: batchUpdate response code=${response.code}",
             )
             if (!response.isSuccessful) {
                 Log.e(
@@ -1022,6 +1043,7 @@ object GoogleSheetsSyncHelper {
     private fun ensureRequiredSheetsExist(
         token: String,
         spreadsheetId: String,
+        moshi: Moshi,
     ) {
         Log.d(
             "GoogleSheetsSyncHelper",
@@ -1050,9 +1072,8 @@ object GoogleSheetsSyncHelper {
 
                 val bodyStr = response.body.string()
 
-                // Extract all sheet titles using regex
-                val regex = "\"title\"\\s*:\\s*\"([^\"]+)\"".toRegex()
-                val existingTitles = regex.findAll(bodyStr).map { it.groupValues[1] }.toSet()
+                val metadata = moshi.adapter(SpreadsheetMetadata::class.java).fromJson(bodyStr)
+                val existingTitles = metadata?.sheets?.mapNotNull { it.properties?.title }?.toSet() ?: emptySet()
                 Log.d(
                     "GoogleSheetsSyncHelper",
                     "ensureRequiredSheetsExist: Existing sheets in spreadsheet: $existingTitles",
@@ -1125,6 +1146,26 @@ object GoogleSheetsSyncHelper {
         }
     }
 }
+
+@JsonClass(generateAdapter = true)
+data class SpreadsheetResponse(
+    val spreadsheetId: String,
+)
+
+@JsonClass(generateAdapter = true)
+data class SpreadsheetMetadata(
+    val sheets: List<Sheet>?,
+)
+
+@JsonClass(generateAdapter = true)
+data class Sheet(
+    val properties: SheetProperties?,
+)
+
+@JsonClass(generateAdapter = true)
+data class SheetProperties(
+    val title: String?,
+)
 
 @JsonClass(generateAdapter = true)
 data class DriveFilesResponse(

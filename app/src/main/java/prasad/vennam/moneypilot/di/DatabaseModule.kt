@@ -229,5 +229,6 @@ object DatabaseModule {
         repository: DataManagementRepository,
         userPreferences: UserPreferences,
         analyticsHelper: AnalyticsHelper,
-    ): BackupSyncManager = BackupSyncManagerImpl(repository, userPreferences, analyticsHelper)
+        moshi: com.squareup.moshi.Moshi,
+    ): BackupSyncManager = BackupSyncManagerImpl(repository, userPreferences, analyticsHelper, moshi)
 }

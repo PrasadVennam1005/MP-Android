@@ -18,6 +18,9 @@
     <string name="export_pdf">Export PDF</string>
     <string name="export_csv">Export CSV</string>
     <string name="sync_with_google_sheets">Sync with Google Sheets</string>
+    <string name="data_is_synced">Cloud data is up to date</string>
+    <string name="sync_now_desc">Force immediate backup to Google Sheets</string>
+    <string name="sync_started_msg">Sync started in background…</string>
     <string name="you_are_logging_out_with">You are logging out with unsynced local data. Sync to Google Sheets, export to CSV/PDF, or logout anyway?</string>
     <string name="unsynced_data_detected">Unsynced Data Detected</string>
     <string name="logout">Logout</string>

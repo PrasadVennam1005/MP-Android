@@ -79,6 +79,7 @@ import androidx.compose.material.icons.rounded.Payments
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.Save
 import androidx.compose.material.icons.rounded.Savings
+import androidx.compose.material.icons.rounded.Shield
 import androidx.compose.material.icons.rounded.ShoppingBag
 import androidx.compose.material.icons.rounded.Summarize
 import androidx.compose.material.icons.rounded.Warning
@@ -173,6 +174,7 @@ fun AiChatScreen(
     val aiState = uiState.llmState
     val downloadProgress = uiState.downloadProgress
     val pendingAction = uiState.pendingAction
+    val aiMode = uiState.aiMode
 
     val analyticsUiState by analyticsViewModel.uiState.collectAsState()
     val aiRecState by analyticsViewModel.aiRecommendation.collectAsState()
@@ -514,7 +516,8 @@ fun AiChatScreen(
                                 } catch (ignored: Exception) {
                                 }
                             },
-                            viewModel = viewModel
+                            viewModel = viewModel,
+                            aiMode = aiMode
                         )
                     }
                 }
@@ -532,13 +535,82 @@ fun AiChatScreen(
                         } catch (ignored: Exception) {
                         }
                     },
-                    viewModel = viewModel
+                    viewModel = viewModel,
+                    aiMode = aiMode
                 )
             }
         }
     }
 }
 
+
+@Composable
+fun AiSelectionDialog(
+    onSelection: (Int) -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = { /* Force selection */ },
+        title = {
+            Text(
+                "Customize Your AI Experience",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold
+            )
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                Text(
+                    "Choose how you'd like to interact with the MoneyPilot assistant. You can change this later in Settings.",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+
+                // Option 1: Local AI
+                Card(
+                    onClick = { onSelection(prasad.vennam.moneypilot.data.UserPreferences.AiMode.LOCAL) },
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.1f))
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Rounded.Shield, null, tint = MaterialTheme.colorScheme.primary)
+                            Spacer(Modifier.width(8.dp))
+                            Text("Private & Offline", fontWeight = FontWeight.Bold)
+                        }
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            "100% private. Data never leaves your phone. Works without internet. Requires 1.5GB download.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+
+                // Option 2: Cloud AI
+                Card(
+                    onClick = { onSelection(prasad.vennam.moneypilot.data.UserPreferences.AiMode.CLOUD) },
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f)),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.1f))
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Rounded.AutoAwesome, null, tint = MaterialTheme.colorScheme.primary)
+                            Spacer(Modifier.width(8.dp))
+                            Text("Fast & Powerful", fontWeight = FontWeight.Bold)
+                        }
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            "Instant start. Powered by Gemini Cloud. Requires active internet. Data summary shared with Google AI.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {},
+        shape = RoundedCornerShape(28.dp)
+    )
+}
 
 @Composable
 private fun DownloadModelCard(
@@ -629,8 +701,13 @@ private fun AiChatBody(
     analyticsHelper: AnalyticsHelper,
     onSuggestionClick: (String) -> Unit,
     viewModel: AiViewModel,
+    aiMode: Int,
 ) {
-    if (aiState is LlmState.Idle) {
+    if (aiMode == prasad.vennam.moneypilot.data.UserPreferences.AiMode.UNDECIDED) {
+        AiSelectionDialog(
+            onSelection = { viewModel.setAiMode(it) }
+        )
+    } else if (aiState is LlmState.Idle) {
         Box(
             modifier =
                 Modifier

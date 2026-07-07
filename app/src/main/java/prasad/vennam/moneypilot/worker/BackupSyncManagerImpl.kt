@@ -1,6 +1,7 @@
 package prasad.vennam.moneypilot.worker
 
 import android.content.Context
+import com.squareup.moshi.Moshi
 import prasad.vennam.moneypilot.data.UserPreferences
 import prasad.vennam.moneypilot.data.repository.DataManagementRepository
 import prasad.vennam.moneypilot.domain.usecase.BackupSyncManager
@@ -12,6 +13,7 @@ class BackupSyncManagerImpl(
     private val repository: DataManagementRepository,
     private val userPreferences: UserPreferences,
     private val analyticsHelper: AnalyticsHelper,
+    private val moshi: Moshi,
 ) : BackupSyncManager {
     override suspend fun performTwoWaySync(
         context: Context,
@@ -26,6 +28,7 @@ class BackupSyncManagerImpl(
             repository = repository,
             userPreferences = userPreferences,
             analyticsHelper = analyticsHelper,
+            moshi = moshi,
             spreadsheetId = spreadsheetId,
             isRestore = isRestore,
             onSpreadsheetIdFound = onSpreadsheetIdFound,

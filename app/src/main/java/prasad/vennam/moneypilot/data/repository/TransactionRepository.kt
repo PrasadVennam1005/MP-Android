@@ -106,4 +106,16 @@ class TransactionRepository
         suspend fun deletePendingTransaction(pending: PendingTransaction) = pendingTransactionDao.deletePendingTransaction(pending)
 
         suspend fun clearAllPendingTransactions() = pendingTransactionDao.clearAllPendingTransactions()
+
+        suspend fun isDuplicateTransaction(now: Long, timeWindowMs: Long, amountMajor: Double, merchant: String): Boolean {
+            val startTime = now - timeWindowMs
+            val endTime = now + timeWindowMs
+            val amountMinor = Math.round(amountMajor * 100)
+            
+            val countPending = pendingTransactionDao.countDuplicatePendingTransactions(startTime, endTime, amountMajor, merchant)
+            if (countPending > 0) return true
+            
+            val countTransactions = transactionDao.countDuplicateTransactions(startTime, endTime, amountMinor, merchant)
+            return countTransactions > 0
+        }
     }

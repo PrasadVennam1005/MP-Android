@@ -5,6 +5,7 @@ import android.app.Activity
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
 import android.provider.Settings
 import android.util.Log
 import android.widget.Toast
@@ -148,6 +149,7 @@ fun SettingsScreen(
     val currentTarget by mainViewModel.monthlySavingsTarget.collectAsState()
     val isBiometricEnabled by mainViewModel.isBiometricEnabled.collectAsState()
     val isDevToolEnabled by mainViewModel.isDevToolEnabled.collectAsState()
+    val isSyncingState by mainViewModel.isSyncing.collectAsState()
 
     val scope = rememberCoroutineScope()
     val isGuest = remember(userData) { userData?.email == "guest@moneypilot.app" }
@@ -376,6 +378,16 @@ fun SettingsScreen(
             }
         }
 
+    val notificationPermissionLauncher =
+        rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.RequestPermission(),
+        ) { isGranted ->
+            if (isGranted) {
+                mainViewModel.triggerSync()
+                Toast.makeText(context, context.getString(R.string.sync_started_msg), Toast.LENGTH_SHORT).show()
+            }
+        }
+
     val smsPermissionLauncher =
         rememberLauncherForActivityResult(
             contract = ActivityResultContracts.RequestPermission(),
@@ -553,6 +565,40 @@ fun SettingsScreen(
                         title = stringResource(R.string.app_font_size),
                         subtitle = fontScaleSubtitle,
                         onClick = { showFontScaleDialog = true },
+                    )
+
+                    SettingsItem(
+                        icon = Icons.Rounded.CloudSync,
+                        title = stringResource(R.string.sync_with_google_sheets),
+                        subtitle = if (isSynced) stringResource(R.string.data_is_synced) else stringResource(R.string.sync_now_desc),
+                        isLocked = isGuest,
+                        trailingContent = {
+                            if (isSyncingState) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(20.dp),
+                                    strokeWidth = 2.dp,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        },
+                        onClick = {
+                            checkGuestAction("Google Sheets Sync") {
+                                if (!isSyncingState) {
+                                    analyticsHelper.logEvent(AnalyticsConstants.Event.SETTINGS_SYNC_CLICKED)
+                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                        if (ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                                            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                                        } else {
+                                            mainViewModel.triggerSync()
+                                            Toast.makeText(context, context.getString(R.string.sync_started_msg), Toast.LENGTH_SHORT).show()
+                                        }
+                                    } else {
+                                        mainViewModel.triggerSync()
+                                        Toast.makeText(context, context.getString(R.string.sync_started_msg), Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                            }
+                        },
                     )
                 }
             }
@@ -1227,6 +1273,7 @@ fun SettingsItem(
     title: String,
     subtitle: String? = null,
     isLocked: Boolean = false,
+    trailingContent: @Composable (() -> Unit)? = null,
     onClick: () -> Unit,
 ) {
     Surface(
@@ -1278,6 +1325,8 @@ fun SettingsItem(
                     tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
                     modifier = Modifier.size(18.dp),
                 )
+            } else if (trailingContent != null) {
+                trailingContent()
             } else {
                 Icon(
                     imageVector = Icons.AutoMirrored.Rounded.KeyboardArrowRight,

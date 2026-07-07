@@ -1,24 +1,3 @@
-# Add project specific ProGuard rules here.
-# You can control the set of applied configuration files using the
-# proguardFiles setting in build.gradle.
-#
-# For more details, see
-#   http://developer.android.com/guide/developing/tools/proguard.html
-
-# If your project uses WebView with JS, uncomment the following
-# and specify the fully qualified class name to the JavaScript interface
-# class:
-#-keepclassmembers class fqcn.of.javascript.interface.for.webview {
-#   public *;
-#}
-
-# Uncomment this to preserve the line number information for
-# debugging stack traces.
-#-keepattributes SourceFile,LineNumberTable
-
-# If you keep the line number information, uncomment this to
-#-renamesourcefileattribute SourceFile
-
 # Retrofit
 -keepattributes Signature
 -keepattributes Exceptions
@@ -29,6 +8,15 @@
 # Moshi
 -keep class com.squareup.moshi.** { *; }
 -keep interface com.squareup.moshi.** { *; }
+
+# Keep generated JsonAdapters
+-keep class *JsonAdapter { *; }
+-keep class **JsonAdapter { *; }
+
+# Keep members of any class annotated with @JsonClass
+-keep @com.squareup.moshi.JsonClass class * { *; }
+-keep @com.squareup.moshi.JsonClass class ** { *; }
+
 # Keep data classes that Moshi will serialize/deserialize
 -keep class prasad.vennam.moneypilot.data.entity.** { *; }
 -keep class prasad.vennam.moneypilot.data.model.** { *; }
@@ -36,6 +24,7 @@
 -keep class prasad.vennam.moneypilot.feature.ai.model.** { *; }
 -keep class prasad.vennam.moneypilot.feature.ai.service.** { *; }
 -keep class prasad.vennam.moneypilot.util.QuotesManager$Quote { *; }
+-keep class prasad.vennam.moneypilot.util.ParsedReceipt { *; }
 
 # SQLCipher for Android
 -keep class net.sqlcipher.** { *; }

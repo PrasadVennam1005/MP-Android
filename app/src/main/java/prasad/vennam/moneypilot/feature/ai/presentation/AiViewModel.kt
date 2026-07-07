@@ -21,6 +21,7 @@ data class AiUiState(
     val downloadProgress: Float = 0f,
     val pendingAction: AiAction? = null,
     val isLocalModelAvailable: Boolean = false,
+    val aiMode: Int = prasad.vennam.moneypilot.data.UserPreferences.AiMode.UNDECIDED,
 )
 
 @HiltViewModel
@@ -52,13 +53,16 @@ class AiViewModel
                 aiRepository.downloadProgress,
                 _pendingAction,
                 aiRepository.isLocalModelAvailable,
-            ) { messages, llmState, downloadProgress, pendingAction, isLocalModelAvailable ->
+                aiRepository.aiMode
+            ) { args ->
+                @Suppress("UNCHECKED_CAST")
                 AiUiState(
-                    messages = messages,
-                    llmState = llmState,
-                    downloadProgress = downloadProgress,
-                    pendingAction = pendingAction,
-                    isLocalModelAvailable = isLocalModelAvailable,
+                    messages = args[0] as List<ChatMessage>,
+                    llmState = args[1] as LlmState,
+                    downloadProgress = args[2] as Float,
+                    pendingAction = args[3] as AiAction?,
+                    isLocalModelAvailable = args[4] as Boolean,
+                    aiMode = args[5] as Int
                 )
             }.stateIn(
                 scope = viewModelScope,
@@ -117,6 +121,15 @@ class AiViewModel
                     aiRepository.sendMessage(text)
                 } catch (e: Exception) {
                     updateLastAiMessage(context.getString(R.string.ai_failed_to_send, e.localizedMessage), isTyping = false)
+                }
+            }
+        }
+
+        fun setAiMode(mode: Int) {
+            viewModelScope.launch {
+                aiRepository.setAiMode(mode)
+                if (mode == prasad.vennam.moneypilot.data.UserPreferences.AiMode.LOCAL) {
+                    downloadModel()
                 }
             }
         }

@@ -75,6 +75,7 @@ object AnalyticsConstants {
         const val FLOATING_AI_BOT_CLICKED = "floating_ai_bot_clicked"
         const val LOAN_EMI_CALCULATOR_CLICKED = "loan_emi_calculator_clicked"
         const val SETTINGS_BIOMETRIC_TOGGLED = "settings_biometric_toggled"
+        const val SETTINGS_SYNC_CLICKED = "settings_sync_clicked"
         const val SETTINGS_NOTIFICATION_TRACKING_TOGGLED = "settings_notification_tracking_toggled"
         const val SETTINGS_SMS_TRACKING_TOGGLED = "settings_sms_tracking_toggled"
         const val FAQ_ASK_QUESTION_CLICKED = "faq_ask_question_clicked"

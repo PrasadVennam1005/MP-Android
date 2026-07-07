@@ -88,6 +88,27 @@ class UserPreferences
         private val fontScaleKey =
             androidx.datastore.preferences.core
                 .floatPreferencesKey("font_scale")
+        private val aiModeKey =
+            androidx.datastore.preferences.core
+                .intPreferencesKey("ai_mode")
+
+        object AiMode {
+            const val UNDECIDED = 0
+            const val LOCAL = 1
+            const val CLOUD = 2
+        }
+
+        val aiMode: Flow<Int> =
+            context.dataStore.data
+                .map { preferences ->
+                    preferences[aiModeKey] ?: 0 // UNDECIDED
+                }
+
+        suspend fun setAiMode(mode: Int) {
+            context.dataStore.edit { preferences ->
+                preferences[aiModeKey] = mode
+            }
+        }
 
         val isLoggedIn: Flow<Boolean> =
             context.dataStore.data

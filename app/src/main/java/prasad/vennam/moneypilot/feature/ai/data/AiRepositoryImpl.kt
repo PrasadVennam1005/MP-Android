@@ -3,14 +3,15 @@ package prasad.vennam.moneypilot.feature.ai.data
 import android.content.Context
 import android.content.SharedPreferences
 import android.util.Log
-import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import prasad.vennam.moneypilot.R
+import prasad.vennam.moneypilot.data.UserPreferences
 import prasad.vennam.moneypilot.data.entity.Investment
 import prasad.vennam.moneypilot.data.entity.Loan
 import prasad.vennam.moneypilot.data.entity.Transaction
@@ -28,7 +29,6 @@ import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
 
-@OptIn(DelicateCoroutinesApi::class)
 @Singleton
 class AiRepositoryImpl
     @Inject
@@ -42,6 +42,8 @@ class AiRepositoryImpl
         private val loanRepository: LoanRepository,
         private val remoteConfigHelper: prasad.vennam.moneypilot.util.RemoteConfigHelper,
     ) : AiRepository {
+        private val repositoryScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.Default)
+
         private val _state = MutableStateFlow<LlmState>(LlmState.Idle)
         override val state: StateFlow<LlmState> = _state.asStateFlow()
 
@@ -62,9 +64,17 @@ class AiRepositoryImpl
         private val _isLocalModelAvailable = MutableStateFlow(false)
         override val isLocalModelAvailable: StateFlow<Boolean> = _isLocalModelAvailable.asStateFlow()
 
+        private val _aiMode = MutableStateFlow<Int>(prasad.vennam.moneypilot.data.UserPreferences.AiMode.UNDECIDED)
+        override val aiMode: StateFlow<Int> = _aiMode.asStateFlow()
+
         override suspend fun setUserConsent(granted: Boolean) {
             prefs.edit().putBoolean(PREF_CONSENT_GRANTED, granted).apply()
             _isUserConsentGranted.value = granted
+        }
+
+        override suspend fun setAiMode(mode: Int) {
+            prefs.edit().putInt("pref_ai_mode", mode).apply()
+            _aiMode.value = mode
         }
 
         internal var geminiApiKeyProvider: () -> String = { prasad.vennam.moneypilot.BuildConfig.GEMINI_API_KEY }
@@ -141,6 +151,8 @@ class AiRepositoryImpl
         init {
             Log.d(TAG, "AiRepositoryImpl created. isEmulator=$isEmulator, modelFile=$modelFileName")
             _isLocalModelAvailable.value = getModelFile().exists() && getModelFile().length() > 0L
+            
+            _aiMode.value = prefs.getInt("pref_ai_mode", prasad.vennam.moneypilot.data.UserPreferences.AiMode.UNDECIDED)
 
             // Listen to local model generation responses
             llmService.partialResponses
@@ -159,7 +171,7 @@ class AiRepositoryImpl
                             _state.value = LlmState.Ready(cleanedText)
                         }
                     }
-                }.launchIn(kotlinx.coroutines.GlobalScope)
+                }.launchIn(repositoryScope)
 
             // Listen to background model download updates via WorkManager
             workManager
@@ -208,7 +220,7 @@ class AiRepositoryImpl
                             }
                         }
                     }
-                }.launchIn(kotlinx.coroutines.GlobalScope)
+                }.launchIn(repositoryScope)
         }
 
         private fun getModelFile(): File {
@@ -457,33 +469,44 @@ class AiRepositoryImpl
 
                 val localModelExists = getModelFile().exists() && getModelFile().length() > 0L
                 val localModelReady = localModelExists && llmService.isLocalModelReady()
+                
+                val currentMode = _aiMode.value
 
                 when {
-                    // Priority 1: Local Gemma model is loaded and ready — fastest, fully private
-                    isLocalReady && localModelReady -> {
+                    // Priority 1: Local Gemma model is requested or ready
+                    currentMode == UserPreferences.AiMode.LOCAL && localModelReady -> {
                         Log.d(TAG, "sendMessage: using local Gemma model")
                         llmService.generateResponseStreaming(contextPrompt)
                     }
 
-                    // Priority 2: Gemini cloud API (free tier)
-                    isCloudKeyAvailable -> {
-                        if (!isUserConsentGranted.value) {
-                            Log.w(TAG, "sendMessage: Cloud consent not granted, blocking cloud request.")
-                            _state.value = LlmState.Error(context.getString(R.string.ai_consent_declined_msg))
-                            return@sendMessage
-                        }
+                    // Priority 2: Gemini cloud API (requested)
+                    currentMode == UserPreferences.AiMode.CLOUD && isCloudKeyAvailable -> {
                         Log.d(TAG, "sendMessage: using Gemini cloud API")
                         llmService.generateCloudResponseStreaming(
                             prompt = contextPrompt,
                             onRateLimited = {
-                                // Free-tier quota exhausted — prompt user to download local model
-                                Log.w(TAG, "sendMessage: Gemini quota exceeded — transitioning to RateLimited")
+                                Log.w(TAG, "sendMessage: Gemini quota exceeded")
+                                _state.value = LlmState.RateLimited
+                            },
+                        )
+                    }
+                    
+                    // Fallback to local if Cloud is preferred but not available, or vice-versa
+                    localModelReady -> {
+                        Log.d(TAG, "sendMessage: fallback to local model")
+                        llmService.generateResponseStreaming(contextPrompt)
+                    }
+
+                    isCloudKeyAvailable -> {
+                        Log.d(TAG, "sendMessage: fallback to cloud API")
+                        llmService.generateCloudResponseStreaming(
+                            prompt = contextPrompt,
+                            onRateLimited = {
                                 _state.value = LlmState.RateLimited
                             },
                         )
                     }
 
-                    // Fallback: should not normally reach here
                     else -> {
                         _state.value = LlmState.Error(context.getString(R.string.ai_not_ready))
                     }
@@ -731,6 +754,7 @@ class AiRepositoryImpl
         override fun cleanup() {
             llmService.close()
             _state.value = LlmState.Idle
+            repositoryScope.cancel()
         }
 
         companion object {

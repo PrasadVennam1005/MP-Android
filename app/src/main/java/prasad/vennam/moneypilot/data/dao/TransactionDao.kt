@@ -27,6 +27,9 @@ interface TransactionDao {
     @Query("SELECT * FROM transactions WHERE id = :id")
     suspend fun getTransactionById(id: Long): Transaction?
 
+    @Query("SELECT COUNT(*) FROM transactions WHERE timestamp BETWEEN :startTime AND :endTime AND amount = :amountMinor AND note LIKE '%' || :merchant || '%'")
+    suspend fun countDuplicateTransactions(startTime: Long, endTime: Long, amountMinor: Long, merchant: String): Int
+
     @Query("SELECT * FROM transactions WHERE loanPaymentId = :loanPaymentId LIMIT 1")
     suspend fun getTransactionByLoanPaymentId(loanPaymentId: Long): Transaction?
 

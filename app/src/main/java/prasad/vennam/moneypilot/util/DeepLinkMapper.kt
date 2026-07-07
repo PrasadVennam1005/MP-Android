@@ -13,9 +13,14 @@ import prasad.vennam.moneypilot.ui.navigation.Destination
  */
 object DeepLinkMapper {
     fun fromUri(uri: Uri): Destination? {
-        if (uri.host?.contains("moneypilot.app") == false) return null
+        val host = uri.host ?: return null
+        if (!host.contains("moneypilot.app") && !host.contains("github.io")) return null
 
-        val pathSegments = uri.pathSegments
+        var pathSegments = uri.pathSegments
+        if (host.contains("github.io") && pathSegments.isNotEmpty() && pathSegments[0].lowercase() == "moneypilot-legal") {
+            pathSegments = pathSegments.drop(1)
+        }
+
         if (pathSegments.isEmpty()) return Destination.Dashboard
 
         return when (pathSegments[0].lowercase()) {

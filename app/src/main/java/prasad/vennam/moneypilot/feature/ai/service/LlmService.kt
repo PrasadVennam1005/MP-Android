@@ -7,7 +7,6 @@ import com.squareup.moshi.JsonClass
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
@@ -16,7 +15,6 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
@@ -150,7 +148,7 @@ class LlmService(
         }
     }
 
-    fun generateResponse(prompt: String): String {
+    suspend fun generateResponse(prompt: String): String {
         val eng = engine ?: throw IllegalStateException("LLM not initialized")
         try {
             conversation?.close()
@@ -160,14 +158,12 @@ class LlmService(
         val convo = eng.createConversation()
         conversation = convo
         var response = ""
-        runBlocking {
-            try {
-                convo.sendMessageAsync(prompt).collect { token ->
-                    response += token
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "Error in generateResponse", e)
+        try {
+            convo.sendMessageAsync(prompt).collect { token ->
+                response += token
             }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error in generateResponse", e)
         }
         return response
     }

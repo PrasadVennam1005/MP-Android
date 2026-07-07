@@ -88,6 +88,9 @@ class MainViewModel
             userPreferences.isSynced
                 .stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
+        private val _isSyncing = MutableStateFlow(false)
+        val isSyncing: StateFlow<Boolean> = _isSyncing.asStateFlow()
+
         val currency: StateFlow<String> =
             userPreferences.currency
                 .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "INR")
@@ -119,6 +122,17 @@ class MainViewModel
 
         private val _restoreState = MutableStateFlow<RestoreState>(RestoreState.Idle)
         val restoreState: StateFlow<RestoreState> = _restoreState.asStateFlow()
+
+        private val _pendingDeepLink = MutableStateFlow<prasad.vennam.moneypilot.ui.navigation.Destination?>(null)
+        val pendingDeepLink: StateFlow<prasad.vennam.moneypilot.ui.navigation.Destination?> = _pendingDeepLink.asStateFlow()
+
+        fun setPendingDeepLink(destination: prasad.vennam.moneypilot.ui.navigation.Destination) {
+            _pendingDeepLink.value = destination
+        }
+
+        fun consumePendingDeepLink() {
+            _pendingDeepLink.value = null
+        }
 
         private var lastCheckedEmail: String? = null
 
@@ -160,6 +174,17 @@ class MainViewModel
         fun setSynced(synced: Boolean) {
             viewModelScope.launch {
                 userPreferences.setSynced(synced)
+            }
+        }
+
+        fun triggerSync() {
+            viewModelScope.launch {
+                _isSyncing.value = true
+                userPreferences.setSynced(false)
+                // We'll reset syncing state after a reasonable timeout or upon sync completion
+                // In a real app, you might listen to WorkManager state
+                kotlinx.coroutines.delay(2000)
+                _isSyncing.value = false
             }
         }
 

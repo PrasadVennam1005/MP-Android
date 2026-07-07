@@ -9,7 +9,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import prasad.vennam.moneypilot.data.entity.PendingTransaction
 import prasad.vennam.moneypilot.data.repository.TransactionRepository
@@ -62,40 +61,11 @@ class TransactionNotificationListener : NotificationListenerService() {
                 val now = System.currentTimeMillis()
 
                 // 10 minutes duplicate check window
-                val timeWindowMs = 10 * 60 * 1000
+                val timeWindowMs = 10L * 60 * 1000
 
-                // Check pending transactions for duplicates
-                val currentPending = repository.allPendingTransactions.first()
-                val isPendingDuplicate =
-                    currentPending.any { pending ->
-                        Math.abs(pending.timestamp - now) < timeWindowMs &&
-                            Math.abs(pending.amount - parsed.amount) < 0.01 &&
-                            (
-                                pending.merchant.equals(parsed.merchant, ignoreCase = true) ||
-                                    pending.rawMessage.contains(parsed.merchant, ignoreCase = true)
-                            )
-                    }
-                if (isPendingDuplicate) {
+                if (repository.isDuplicateTransaction(now, timeWindowMs, parsed.amount, parsed.merchant)) {
                     if (prasad.vennam.moneypilot.BuildConfig.DEBUG) {
-                        Log.d("NotificationListener", "Skipping: duplicate pending transaction found")
-                    }
-                    return@launch
-                }
-
-                // Check approved transactions for duplicates
-                val currentTransactions = repository.allTransactions.first()
-                val isTransactionDuplicate =
-                    currentTransactions.any { trans ->
-                        Math.abs(trans.timestamp - now) < timeWindowMs &&
-                            Math.abs(trans.amount.toMajorUnit - parsed.amount) < 0.01 &&
-                            (
-                                trans.note.equals(parsed.merchant, ignoreCase = true) ||
-                                    trans.note.contains(parsed.merchant, ignoreCase = true)
-                            )
-                    }
-                if (isTransactionDuplicate) {
-                    if (prasad.vennam.moneypilot.BuildConfig.DEBUG) {
-                        Log.d("NotificationListener", "Skipping: duplicate transaction already recorded in database")
+                        Log.d("NotificationListener", "Skipping: duplicate transaction found in pending or approved")
                     }
                     return@launch
                 }

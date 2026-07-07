@@ -1,6 +1,7 @@
 package prasad.vennam.moneypilot.util
 
 import android.content.Context
+import android.util.Log
 import com.squareup.moshi.JsonClass
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.Types
@@ -25,7 +26,7 @@ object QuotesManager {
             val adapter = moshi.adapter<List<Quote>>(type)
             quotes = adapter.fromJson(jsonString) ?: emptyList()
         } catch (e: IOException) {
-            e.printStackTrace()
+            Log.e("QuotesManager", "Failed to load quotes from assets", e)
         }
     }
 

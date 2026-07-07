@@ -68,6 +68,28 @@
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+
+            <!-- App Links Support -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data android:scheme="http" />
+                <data android:scheme="https" />
+                <data android:host="moneypilot.app" />
+                <data android:host="www.moneypilot.app" />
+                <data android:host="prasadvennam1005.github.io" />
+
+                <!-- Explicitly defined paths for deep linking -->
+                <data android:pathPrefix="/dashboard" />
+                <data android:pathPrefix="/insights" />
+                <data android:pathPrefix="/history" />
+                <data android:pathPrefix="/premium" />
+                <data android:pathPrefix="/learn" />
+                <data android:pathPrefix="/article" />
+            </intent-filter>
         </activity>
 
         <provider

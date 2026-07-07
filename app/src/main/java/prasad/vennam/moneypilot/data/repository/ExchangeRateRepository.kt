@@ -1,6 +1,7 @@
 package prasad.vennam.moneypilot.data.repository
 
 import android.content.Context
+import android.util.Log
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.Types
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -128,11 +129,11 @@ class ExchangeRateRepository
                                 }
                             }
                         } catch (e: Exception) {
-                            e.printStackTrace()
+                            Log.e("ExchangeRateRepository", "Error evaluating alerts", e)
                         }
                     }
                 }.onFailure {
-                    it.printStackTrace()
+                    Log.e("ExchangeRateRepository", "syncRates failed", it)
                 }
             }
         }
@@ -207,7 +208,7 @@ class ExchangeRateRepository
                         adapter.fromJson(resp.body.string()) ?: emptyList()
                     }
                 } catch (e: Exception) {
-                    e.printStackTrace()
+                    Log.e("ExchangeRateRepository", "fetchHistoricalRates failed", e)
                     emptyList()
                 }
             }
@@ -228,7 +229,7 @@ class ExchangeRateRepository
                         adapter.fromJson(resp.body.string()) ?: emptyList()
                     }
                 } catch (e: Exception) {
-                    e.printStackTrace()
+                    Log.e("ExchangeRateRepository", "fetchCurrencies failed", e)
                     emptyList()
                 }
             }
@@ -246,7 +247,7 @@ class ExchangeRateRepository
                         }
                     }
                 } catch (e: Exception) {
-                    e.printStackTrace()
+                    Log.e("ExchangeRateRepository", "detectCountryByIp (ipapi) failed", e)
                 }
 
                 try {
@@ -259,7 +260,7 @@ class ExchangeRateRepository
                         }
                     }
                 } catch (e: Exception) {
-                    e.printStackTrace()
+                    Log.e("ExchangeRateRepository", "detectCountryByIp (ipinfo) failed", e)
                 }
 
                 null
