@@ -88,7 +88,7 @@ fun CoSplitGroupDetailScreen(
                     IconButton(
                         onClick = {
                             try {
-                                val inviteUrl = "https://prasadvennam1005.github.io/moneypilot-legal/cosplit/join?groupId=${group!!.id}&name=${java.net.URLEncoder.encode(group!!.name, "UTF-8")}"
+                                val inviteUrl = "https://prasadvennam1005.github.io/cosplit/join?groupId=${group!!.id}&name=${java.net.URLEncoder.encode(group!!.name, "UTF-8")}"
                                 val sendIntent = android.content.Intent().apply {
                                     action = android.content.Intent.ACTION_SEND
                                     putExtra(android.content.Intent.EXTRA_TEXT, "Join my CoSplit group '${group!!.name}' on MoneyPilot to split bills and track expenses together!\n\nClick this link to join: $inviteUrl")
