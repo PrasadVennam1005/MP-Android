@@ -18,6 +18,9 @@
     <string name="export_pdf">Export PDF</string>
     <string name="export_csv">Export CSV</string>
     <string name="sync_with_google_sheets">Sync with Google Sheets</string>
+    <string name="data_is_synced">Cloud data is up to date</string>
+    <string name="sync_now_desc">Force immediate backup to Google Sheets</string>
+    <string name="sync_started_msg">Sync started in background…</string>
     <string name="you_are_logging_out_with">You are logging out with unsynced local data. Sync to Google Sheets, export to CSV/PDF, or logout anyway?</string>
     <string name="unsynced_data_detected">Unsynced Data Detected</string>
     <string name="logout">Logout</string>
@@ -41,7 +44,6 @@
     <string name="income">Income</string>
     <string name="expense">Expense</string>
     <string name="select_category">Select Category</string>
-    <string name="ok">OK</string>
     <string name="save_transaction">Save Transaction</string>
     <string name="back">Back</string>
     <string name="save_expense">Save Expense</string>
@@ -59,7 +61,6 @@
     <string name="icon">Icon</string>
     <string name="color">Color</string>
     <string name="category_name">Category Name</string>
-    <string name="delete">Delete</string>
     <string name="delete_category">Delete Category</string>
     <string name="add_category">Add Category</string>
     <string name="continue_as_guest">Continue as Guest</string>
@@ -109,7 +110,7 @@
     <string name="eg_stock_symbol">e.g. RELIANCE.NS</string>
     <string name="units">Units</string>
     <string name="quantity">Quantity</string>
-    <string name="interest_rate_percent">Interest Rate (% Annual)</string>
+    <string name="interest_rate_percent">Interest Rate (%% Annual)</string>
     <string name="appreciation_rate_percent">Appreciation Rate (% Year)</string>
     <string name="fetching_price_on">Fetching price on %1$s…</string>
     <string name="quantity_filled_price">Quantity filled · price on %1$s was %2$s</string>
@@ -148,6 +149,9 @@
     <string name="yearly_expense">Yearly Expense</string>
     <string name="yearly_savings">Yearly Savings</string>
     <string name="profit_loss">Profit / Loss</string>
+    <string name="savings_rate">Savings Rate</string>
+    <string name="total_debt">Total Debt</string>
+    <string name="savings_rate_value">%1$.1f%%</string>
     <string name="quick_actions">Quick Actions</string>
     <string name="scan">Scan</string>
     <string name="syncing_with_google_drive">Syncing with Google Drive…</string>
@@ -289,7 +293,6 @@
     <string name="time_6_months">6 Months</string>
     <string name="time_all_time">All</string>
     <string name="net_savings">Net Savings</string>
-    <string name="savings_rate">Savings Rate</string>
     <string name="income_vs_expense">Income vs Expense Trend</string>
     <string name="asset_allocation">Asset Allocation</string>
     <string name="financial_insights">Financial Insights</string>
@@ -321,7 +324,26 @@
     <string name="downloading_model_title">Downloading AI Model…</string>
     <string name="downloading_progress_desc">Downloading model assets… %1$d%% complete.</string>
     <string name="initializing_llm_title">Initializing LLM Engine…</string>
-    
+    <string name="suggestions">Suggestions</string>
+    <string name="explore_suggestions">Explore Suggestions</string>
+    <string name="explore_suggestions_desc">Tap a prompt to insert it into the chat input</string>
+    <string name="date_offset_label">Date Offset (0=Today, -1=Yesterday)</string>
+    <string name="first_emi_due_days">First EMI Due (Days)</string>
+    <string name="ad_sponsored">SPONSORED</string>
+    <string name="category_wealth">Wealth</string>
+    <string name="suggestion_food_expense">Add food expense of 500 from Swiggy</string>
+    <string name="suggestion_fuel_expense">Spent 1200 on petrol today</string>
+    <string name="suggestion_salary_income">Received salary of 75000</string>
+    <string name="suggestion_shopping_expense">Log shopping expense of 3500 on Amazon</string>
+    <string name="suggestion_fd_investment">Invested 25000 in FD today</string>
+    <string name="suggestion_stock_investment">Bought HDFC stock for 15k</string>
+    <string name="suggestion_mf_investment">Invested 10000 in Mutual Fund</string>
+    <string name="suggestion_gold_investment">Bought Gold for 5000 today</string>
+    <string name="suggestion_home_loan">Add SBI Home Loan of 30L, EMI 45000</string>
+    <string name="suggestion_personal_loan">Add personal loan of 50k</string>
+    <string name="suggestion_car_loan">Add car loan of 12L, EMI 22000</string>
+    <string name="suggestion_loans_summary">Show active loans summary</string>
+
     <string name="status_offline">Offline</string>
     <string name="status_initializing">Initializing…</string>
     <string name="status_ready">Ready &amp; Secure</string>
@@ -635,4 +657,270 @@
     <string name="terms_of_service">Terms of Service</string>
     <string name="agree_to_policy_and"> and </string>
     <string name="privacy_policy">Privacy Policy</string>
+
+    <!-- Phase 2: Dashboard Strings -->
+    <string name="create_savings_goals">Create Savings Goals</string>
+    <string name="savings_goals_desc">Set custom milestones with rich metrics</string>
+    <string name="savings_goals_count">Savings Goals (%1$d/%2$d)</string>
+    <string name="saved_amount_format">Saved: %1$s</string>
+    <string name="target_amount_format">Target: %1$s</string>
+    <string name="grow_your_financial_iq">Grow Your Financial IQ</string>
+    <string name="learn_finance_desc">22 expert-curated lessons on budgeting, investing &amp; more</string>
+    <string name="percentage_format">%1$d%%</string>
+    <string name="start_btn">Start</string>
+    <string name="next_emi">Next EMI</string>
+    <string name="total_outstanding">Total Outstanding</string>
+
+    <!-- Phase 3: Transactions & Categories Strings -->
+    <string name="invalid_format">Invalid format</string>
+    <string name="amount_cannot_exceed">Amount cannot exceed 100,000,000</string>
+    <string name="new_category">New Category</string>
+    <string name="edit_category">Edit Category</string>
+    <string name="delete_category_confirm">Are you sure you want to delete \'%1$s\'? Transactions using this category will remain, but the category won\'t be available for new transactions.</string>
+
+    <!-- Phase 4: Budgets &amp; Savings Goals Strings -->
+    <string name="savings_goals">Savings Goals</string>
+    <string name="add_goal">Add Goal</string>
+    <string name="create_savings_goal">Create Savings Goal</string>
+    <string name="edit_savings_goal">Edit Savings Goal</string>
+    <string name="goal_name">Goal Name</string>
+    <string name="initially_saved">Initially Saved</string>
+    <string name="target_deadline">Target Deadline</string>
+    <string name="goal_theme_color">Goal Theme Color</string>
+    <string name="goal_icon">Goal Icon</string>
+    <string name="create_goal">Create Goal</string>
+    <string name="edit">Edit</string>
+    <string name="saved">Saved</string>
+    <string name="target">Target</string>
+    <string name="withdraw_action">Withdraw</string>
+    <string name="deposit_action">Deposit</string>
+    <string name="deposit_funds">Deposit Funds</string>
+    <string name="withdraw_funds">Withdraw Funds</string>
+    <string name="deposit_funds_desc">Enter the amount you want to virtually add to this goal.</string>
+    <string name="withdraw_funds_desc">Enter the amount you want to virtually retrieve from this goal.</string>
+    <string name="completed">Completed</string>
+    <string name="achieved">achieved</string>
+    <string name="goal_fully_funded">Congratulations! You have fully funded this goal!</string>
+    <string name="saved_of_target">%1$s saved of %2$s</string>
+    <!-- Phase 5: Investments &amp; Loans Strings -->
+    <string name="new_loan">New Loan</string>
+    <string name="total_cannot_exceed">Total cannot exceed 100,000,000</string>
+    <string name="auto_calculated">(Auto-calculated: %1$s)</string>
+    <string name="outstanding_cannot_be_negative">Outstanding cannot be negative</string>
+    <string name="outstanding_cannot_exceed">Outstanding cannot exceed 100,000,000</string>
+    <string name="emi_cannot_exceed">EMI cannot exceed 100,000,000</string>
+    <string name="interest_rate_cannot_exceed">Interest rate cannot exceed 100%%</string>
+    <string name="tenure_cannot_exceed">Tenure cannot exceed 1200 months</string>
+    <string name="emi_report_subject">MoneyPilot Loan EMI Report</string>
+    <string name="advanced_tools">Advanced Tools</string>
+    <string name="paid_amount">Paid: %1$s</string>
+    <string name="total_amount">Total: %1$s</string>
+    <string name="quantity_cannot_exceed">Quantity cannot exceed 100,000,000</string>
+    <string name="asset_allocation_advisor">Asset Allocation Advisor</string>
+    <string name="add_investments_to_see_allocation">Add investments to see your asset allocation breakdown.</string>
+    <string name="assets">Assets</string>
+    <string name="target_percent">Target: %1$d%%</string>
+    <string name="optimal_alignment">Optimal Alignment</string>
+    <string name="rebalancing_actions">Rebalancing Actions</string>
+    <string name="portfolio_matches_risk_allocation">Your portfolio matches the %1$s risk allocation. Great job!</string>
+    <string name="rebalance_add">Add %1$s to %2$s to meet your %3$d%% target.</string>
+    <string name="rebalance_reduce">Reduce %1$s by %2$s to return to your %3$d%% limit.</string>
+
+    <!-- Phase 6: Subscriptions &amp; Settings Strings -->
+    <string name="subscriptions">Subscriptions</string>
+    <string name="add_subscription">Add Subscription</string>
+    <string name="track_recurring_subscriptions">Track Recurring Subscriptions</string>
+    <string name="subscriptions_desc">Keep tabs on Netflix, rent, utilities, and more. Get notified and approve logging with one tap.</string>
+    <string name="due_today">Due Today</string>
+    <string name="due_tomorrow">Due Tomorrow</string>
+    <string name="in_days">In %1$d days</string>
+    <string name="subscription_name">Subscription Name</string>
+    <string name="billing_cycle">Billing Cycle</string>
+    <string name="weekly">Weekly</string>
+    <string name="next_payment_due_date">Next Payment Due Date</string>
+    <string name="category_label">Category</string>
+    <string name="enable_alert_reminder">Enable Alert Reminder</string>
+    <string name="save_subscription">Save Subscription</string>
+    <string name="next_payment">Next: %1$s (%2$s)</string>
+    <string name="edit_subscription">Edit Subscription</string>
+
+    <string name="help_and_faq">Help &amp; FAQ</string>
+    <string name="help_and_faq_subtitle">Browse answers or contact us</string>
+    <string name="terms_of_service_subtitle">View our terms and conditions</string>
+    <string name="privacy_policy_subtitle">How we handle your data</string>
+    <string name="developer_tools">Developer Tools</string>
+    <string name="enable_devtools">Enable DevTools</string>
+    <string name="enable_devtools_subtitle">Unlock restricted features for testing</string>
+    <string name="load_demo_data">Load Demo Data (INR)</string>
+    <string name="load_demo_data_subtitle">Seeds rich Indian currency datasets for screenshots</string>
+    <string name="load_demo_data_title">Load Demo Data?</string>
+    <string name="seeding_demo_data">Seeding Indian currency demo data...</string>
+    <string name="seeding_demo_data_desc">This will clear all your current guest data, insert a comprehensive set of Indian Rupee (₹) transaction, budget, investment, and loan history, and relaunch the app. This is perfect for generating Play Store screenshots. Do you want to proceed?</string>
+    <string name="yes_load_relaunch">Yes, Load &amp; Relaunch</string>
+    <string name="moneypilot_premium">MoneyPilot Premium</string>
+    <string name="premium_subtitle">Remove ads and support development</string>
+    <string name="recurring_subscriptions">Recurring Subscriptions</string>
+    <string name="subscriptions_subtitle">Track Netflix, Rent, utilities &amp; billing alerts</string>
+    <string name="biometric_authentication">Biometric Authentication</string>
+    <string name="biometric_subtitle">Require fingerprint/face to open app</string>
+    <string name="enable_biometric_lock">Enable Biometric Lock</string>
+    <string name="enable_biometric_subtitle">Verify your identity to enable biometric lock</string>
+    <string name="auth_failed">Authentication failed: %1$s</string>
+    <string name="auth_requires_restart">Biometric authentication requires app restart to work correctly.</string>
+    <string name="auto_track_notifications">Auto-Track via Notifications</string>
+    <string name="auto_track_notifications_subtitle">Parse notifications to auto-add expenses</string>
+    <string name="auto_track_sms">Auto-Track via SMS</string>
+    <string name="auto_track_sms_subtitle">Parse debit/credit SMS to auto-add expenses</string>
+    <string name="disable_sms_tracking_msg">Please disable permission from app settings to stop SMS tracking.</string>
+    <string name="currency_subtitle_format">%1$s (%2$s) • %3$s</string>
+    <string name="notification_alerts_enabled">Notification alerts enabled!</string>
+    <string name="notification_permission_denied">Notification permission denied.</string>
+    <string name="category_alerts">Alerts</string>
+    <string name="category_sync">Sync</string>
+    <string name="category_system">System</string>
+    <string name="notification_alerts_off">Notification alerts are off</string>
+    <string name="notification_alerts_off_desc">Enable them to receive daily wealth feeds, budget warnings, and loan reminders.</string>
+    <string name="turn_on">Turn On</string>
+    <string name="no_link">No Link</string>
+    <string name="all_caught_up">All Caught Up! ✨</string>
+    <string name="no_category_notifications">No %1$s Notifications</string>
+    <string name="empty_notifications_desc">When alerts, budget targets, or backups trigger, you\'ll see them listed here.</string>
+    <string name="yesterday">Yesterday</string>
+    <string name="today">Today</string>
+    <string name="days_ago">%1$d days ago</string>
+    <string name="invested_amount">Invested: %1$s</string>
+
+    <!-- Learn Finance -->
+    <string name="article">Article</string>
+    <string name="read_time_minutes">%1$d min read</string>
+    <string name="related_articles">Related Articles</string>
+    <string name="test_your_knowledge">Test Your Knowledge</string>
+    <string name="correct">Correct</string>
+    <string name="incorrect">Incorrect</string>
+    <string name="explanation">Explanation</string>
+    <string name="search_articles">Search articles...</string>
+
+    <!-- Support / FAQ -->
+    <string name="ask_a_question">Ask a Question</string>
+    <string name="subject">Subject</string>
+    <string name="subject_placeholder">e.g. Sync not working</string>
+    <string name="message">Message</string>
+    <string name="message_placeholder">Describe your issue or question in detail…</string>
+
+    <!-- More Learn Finance / FAQ -->
+    <string name="close_search">Close Search</string>
+    <string name="featured">Featured</string>
+    <string name="articles">Articles</string>
+    <string name="no_articles_found">No articles found</string>
+    <string name="read_time_minutes_quiz">%1$d min read • Quiz</string>
+    <string name="quiz_label">QUIZ</string>
+    <string name="how_can_we_help">How can we help?</string>
+    <string name="faq_description">Browse questions below or tap "Ask a Question" at the bottom to email our team.</string>
+    <string name="send_email">Send Email</string>
+    <string name="send_email_desc">Opens your email app with our address pre-filled.</string>
+    <!-- Premium Screen -->
+    <string name="premium_title">MoneyPilot Premium</string>
+    <string name="upgrade_to_premium">Upgrade to Premium</string>
+    <string name="premium_description">Get an ad-free experience and support the development of MoneyPilot.</string>
+    <string name="you_are_premium">You are Premium!</string>
+    <string name="premium_thank_you">Thank you for supporting MoneyPilot. Ads are permanently removed.</string>
+    <string name="loading_products">Loading products…</string>
+    <string name="buy_for_price">Buy for %1$s</string>
+    <!-- Subscription Screen -->
+    <!-- Detailed Report & Prepayment Calculator -->
+
+    <string name="interest_rate">Interest Rate</string>
+    <string name="delete">Delete</string>
+    <string name="ok">OK</string>
+    <string name="duration_years_format">%1$s Years</string>
+    <string name="duration_months_format">%1$s Months</string>
+    <string name="interest_rate_format">%1$s%% p.a.</string>
+    <string name="format_pdf">PDF</string>
+    <string name="format_csv">CSV</string>
+    <string name="one_time">One-time</string>
+    <string name="prepayment_amount">Prepayment Amount</string>
+    <string name="months_saved_format">%1$s Mo</string>
+    <string name="send">Send</string>
+
+    <!-- AI Chat: error / feedback strings (replaces hardcoded English in ViewModel/Repo) -->
+    <string name="ai_failed_to_send">Failed to send: %1$s</string>
+    <string name="ai_error_prefix">Error: %1$s</string>
+    <string name="ai_action_cancelled">Action cancelled.</string>
+    <string name="ai_expense_added">₹%1$s Expense added successfully!</string>
+    <string name="ai_income_added">₹%1$s Income added successfully!</string>
+    <string name="ai_investment_added">Investment \"%1$s\" added successfully!</string>
+    <string name="ai_loan_added">Loan \"%1$s\" added successfully!</string>
+    <string name="ai_not_ready">AI not ready. Please try again later.</string>
+
+    <!-- AI Chat: send button label when confirming a pending action -->
+    <string name="send_message">Send message</string>
+    <string name="confirm_action">Confirm action</string>
+
+    <!-- AI Chat: field hint/placeholder texts for the edit card -->
+    <string name="hint_category">e.g. Food, Transport…</string>
+    <string name="hint_note">e.g. Swiggy, salary…</string>
+    <string name="hint_loan_name">e.g. SBI Home Loan</string>
+    <string name="hint_investment_name">e.g. HDFC Top 100 Fund</string>
+
+    <!-- AI Chat: category validation -->
+    <string name="category_required">Category is required</string>
+
+    <!-- AI Chat: consent dialog for cloud (Gemini) AI feature -->
+    <string name="ai_consent_title">Enable AI Assistant</string>
+    <string name="ai_consent_desc">To answer your questions, MoneyPilot sends a summary of your recent financial data to Google Gemini. No data is stored by Google beyond the request. Do you agree?</string>
+    <string name="ai_consent_agree">I Agree</string>
+    <string name="ai_consent_decline">No Thanks</string>
+    <string name="ai_consent_declined_msg">AI assistant requires your consent to work.</string>
+    <string name="unknown_error">Unknown error</string>
+
+    <string name="ai_rate_limited_title">Free Tier Limit Exceeded</string>
+    <string name="ai_rate_limited_desc">You have exceeded the Gemini API free tier limits. To continue chatting offline, you can download the local Gemma model (1.5 GB) directly to your device.</string>
+
+    <!-- Delete Transaction Confirmation -->
+    <string name="delete_transaction_title">Delete Transaction</string>
+    <string name="delete_transaction_confirm">Are you sure you want to delete this transaction?</string>
+
+    <!-- Delete Investment Confirmation -->
+    <string name="delete_investment_title">Delete Investment</string>
+    <string name="delete_investment_confirm">Are you sure you want to delete this investment?</string>
+
+    <!-- Delete Budget Confirmation -->
+    <string name="delete_budget_title">Delete Budget</string>
+    <string name="delete_budget_confirm">Are you sure you want to delete this budget?</string>
+
+    <!-- Subscription Notification Actions -->
+    <string name="approve_log_payment_title">Approve &amp; Log Payment</string>
+    <string name="approve_log_payment_message">Do you want to log the payment for subscription \"%1$s\" and advance its billing cycle?</string>
+    <string name="subscription_logged_success">Logged payment for %1$s successfully!</string>
+
+    <!-- Quote Card Actions -->
+    <string name="daily_motivation">Daily Motivation</string>
+    <string name="quote_copied">Quote copied to clipboard!</string>
+    <string name="share_quote">Share Quote</string>
+    <string name="shuffle_quote">Shuffle Quote</string>
+    <string name="copy">Copy</string>
+
+    <!-- Font Size Settings -->
+    <string name="app_font_size">App Font Size</string>
+    <string name="choose_font_size">Choose Font Size</string>
+    <string name="font_scale_small">Small</string>
+    <string name="font_scale_default">Default</string>
+    <string name="font_scale_large">Large</string>
+    <string name="font_scale_extra_large">Extra Large</string>
+
+    <!-- CoSplit Group Edit -->
+    <string name="manage_members">Manage Members</string>
+    <string name="manage_members_desc">Add or remove members from this group.</string>
+    <string name="email_address">Email address</string>
+    <string name="email_address_placeholder">friend@example.com</string>
+    <string name="add_member">Add Member</string>
+    <string name="member_already_in_group">Member already in group</string>
+    <string name="invalid_email">Invalid email</string>
+    <string name="current_members_count">Current Members (%1$d)</string>
+    <string name="remove_member">Remove Member</string>
+    <string name="members_updated">Members updated</string>
+    <string name="delete_group_title">Delete Group?</string>
+    <string name="delete_group_desc">Are you sure you want to delete \'%1$s\'? This action cannot be undone.</string>
+    <string name="edit_members">Edit Members</string>
+    <string name="delete_group">Delete Group</string>
 </resources>

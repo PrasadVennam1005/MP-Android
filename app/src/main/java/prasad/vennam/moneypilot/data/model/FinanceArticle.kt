@@ -8,7 +8,7 @@ data class ArticleQuiz(
     val question: String? = null,
     val options: List<String>? = null,
     val correctAnswer: Int? = null,
-    val explanation: String? = null
+    val explanation: String? = null,
 )
 
 @JsonClass(generateAdapter = true)
@@ -31,5 +31,5 @@ data class FinanceArticle(
     val recommendedFor: List<String> = emptyList(),
     val quiz: ArticleQuiz = ArticleQuiz(),
     val publishedAt: String = "",
-    val lastUpdatedAt: String = ""
+    val lastUpdatedAt: String = "",
 )

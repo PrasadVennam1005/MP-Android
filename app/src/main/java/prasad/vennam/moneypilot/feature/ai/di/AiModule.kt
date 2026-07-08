@@ -1,12 +1,13 @@
 package prasad.vennam.moneypilot.feature.ai.di
 
 import android.content.Context
+import com.squareup.moshi.Moshi
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
-import prasad.vennam.moneypilot.data.repository.MoneyPilotRepository
+import prasad.vennam.moneypilot.data.repository.*
 import prasad.vennam.moneypilot.feature.ai.data.AiRepositoryImpl
 import prasad.vennam.moneypilot.feature.ai.domain.AiRepository
 import prasad.vennam.moneypilot.feature.ai.service.LlmService
@@ -19,14 +20,29 @@ object AiModule {
     @Singleton
     fun provideLlmService(
         @ApplicationContext context: Context,
-    ): LlmService = LlmService(context)
+        moshi: Moshi,
+    ): LlmService = LlmService(context, moshi)
 
     @Provides
     @Singleton
     fun provideAiRepository(
         @ApplicationContext context: Context,
         llmService: LlmService,
-        moneyPilotRepository: MoneyPilotRepository,
+        transactionRepository: TransactionRepository,
+        categoryRepository: CategoryRepository,
+        budgetRepository: BudgetRepository,
+        investmentRepository: InvestmentRepository,
+        loanRepository: LoanRepository,
         remoteConfigHelper: prasad.vennam.moneypilot.util.RemoteConfigHelper,
-    ): AiRepository = AiRepositoryImpl(context, llmService, moneyPilotRepository, remoteConfigHelper)
+    ): AiRepository =
+        AiRepositoryImpl(
+            context,
+            llmService,
+            transactionRepository,
+            categoryRepository,
+            budgetRepository,
+            investmentRepository,
+            loanRepository,
+            remoteConfigHelper,
+        )
 }

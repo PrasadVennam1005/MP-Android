@@ -1,5 +1,6 @@
 package prasad.vennam.moneypilot.ui.categories
 
+import prasad.vennam.moneypilot.ui.components.BaseBottomSheet
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -10,6 +11,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
+import androidx.compose.material3.adaptive.currentWindowAdaptiveInfoV2
+import androidx.window.core.layout.WindowWidthSizeClass
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -39,8 +42,10 @@ fun CategoryListScreen(
     var showAddSheet by remember { mutableStateOf(false) }
     var editingCategory by remember { mutableStateOf<Category?>(null) }
     var categoryToDelete by remember { mutableStateOf<Category?>(null) }
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
+
+    val adaptiveInfo = currentWindowAdaptiveInfoV2()
+    val isExpanded = adaptiveInfo.windowSizeClass.windowWidthSizeClass == WindowWidthSizeClass.EXPANDED
 
     Scaffold(
         topBar = {
@@ -80,60 +85,147 @@ fun CategoryListScreen(
             }
         },
     ) { innerPadding ->
-        LazyColumn(
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding)
-                    .background(MaterialTheme.colorScheme.background),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            val expenseCategories = categories.filter { it.isExpense }
-            val incomeCategories = categories.filter { !it.isExpense }
-
-            if (expenseCategories.isNotEmpty()) {
-                item {
-                    CategoryHeader("Expenses")
+        if (isExpanded) {
+            Row(
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding)
+                        .background(MaterialTheme.colorScheme.background)
+                        .padding(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(24.dp)
+            ) {
+                // Left Pane: Expenses
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                ) {
+                    CategoryHeader(stringResource(R.string.expenses))
+                    Spacer(modifier = Modifier.height(4.dp))
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        contentPadding = PaddingValues(bottom = 100.dp)
+                    ) {
+                        val expenseCategories = categories.filter { it.isExpense }
+                        if (expenseCategories.isEmpty()) {
+                            item {
+                                Text(
+                                    text = "No expense categories",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(16.dp)
+                                )
+                            }
+                        } else {
+                            items(expenseCategories, key = { it.id }) { category ->
+                                CategoryItem(
+                                    category = category,
+                                    onClick = {
+                                        editingCategory = it
+                                        showAddSheet = true
+                                    },
+                                    onDelete = { categoryToDelete = it },
+                                )
+                            }
+                        }
+                    }
                 }
-                items(expenseCategories, key = { it.id }) { category ->
-                    CategoryItem(
-                        category = category,
-                        onClick = {
-                            editingCategory = it
-                            showAddSheet = true
-                        },
-                        onDelete = { categoryToDelete = it },
-                    )
+
+                // Right Pane: Income
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                ) {
+                    CategoryHeader(stringResource(R.string.income))
+                    Spacer(modifier = Modifier.height(4.dp))
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        contentPadding = PaddingValues(bottom = 100.dp)
+                    ) {
+                        val incomeCategories = categories.filter { !it.isExpense }
+                        if (incomeCategories.isEmpty()) {
+                            item {
+                                Text(
+                                    text = "No income categories",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(16.dp)
+                                )
+                            }
+                        } else {
+                            items(incomeCategories, key = { it.id }) { category ->
+                                CategoryItem(
+                                    category = category,
+                                    onClick = {
+                                        editingCategory = it
+                                        showAddSheet = true
+                                    },
+                                    onDelete = { categoryToDelete = it },
+                                )
+                            }
+                        }
+                    }
                 }
             }
+        } else {
+            LazyColumn(
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding)
+                        .background(MaterialTheme.colorScheme.background),
+                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 100.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                val expenseCategories = categories.filter { it.isExpense }
+                val incomeCategories = categories.filter { !it.isExpense }
 
-            if (incomeCategories.isNotEmpty()) {
-                item {
-                    CategoryHeader("Income")
+                if (expenseCategories.isNotEmpty()) {
+                    item {
+                        CategoryHeader(stringResource(R.string.expenses))
+                    }
+                    items(expenseCategories, key = { it.id }) { category ->
+                        CategoryItem(
+                            category = category,
+                            onClick = {
+                                editingCategory = it
+                                showAddSheet = true
+                            },
+                            onDelete = { categoryToDelete = it },
+                        )
+                    }
                 }
-                items(incomeCategories, key = { it.id }) { category ->
-                    CategoryItem(
-                        category = category,
-                        onClick = {
-                            editingCategory = it
-                            showAddSheet = true
-                        },
-                        onDelete = { categoryToDelete = it },
-                    )
+
+                if (incomeCategories.isNotEmpty()) {
+                    item {
+                        CategoryHeader(stringResource(R.string.income))
+                    }
+                    items(incomeCategories, key = { it.id }) { category ->
+                        CategoryItem(
+                            category = category,
+                            onClick = {
+                                editingCategory = it
+                                showAddSheet = true
+                            },
+                            onDelete = { categoryToDelete = it },
+                        )
+                    }
                 }
             }
         }
     }
 
     if (showAddSheet) {
-        ModalBottomSheet(
+        BaseBottomSheet(
             onDismissRequest = {
                 showAddSheet = false
                 editingCategory = null
             },
-            sheetState = sheetState,
-            containerColor = MaterialTheme.colorScheme.surface,
+            title = if (editingCategory == null) stringResource(R.string.new_category) else stringResource(R.string.edit_category),
         ) {
             AddCategorySheetContent(
                 initialCategory = editingCategory,
@@ -142,24 +234,16 @@ fun CategoryListScreen(
                         AnalyticsConstants.Event.CATEGORY_SAVED,
                         mapOf(
                             AnalyticsConstants.Param.IS_EDIT to (editingCategory != null),
-                            AnalyticsConstants.Param.IS_EXPENSE to newCategory.isExpense
-                        )
+                            AnalyticsConstants.Param.IS_EXPENSE to newCategory.isExpense,
+                        ),
                     )
                     viewModel.saveCategory(newCategory)
-                    scope.launch { sheetState.hide() }.invokeOnCompletion {
-                        if (!sheetState.isVisible) {
-                            showAddSheet = false
-                            editingCategory = null
-                        }
-                    }
+                    showAddSheet = false
+                    editingCategory = null
                 },
                 onCancel = {
-                    scope.launch { sheetState.hide() }.invokeOnCompletion {
-                        if (!sheetState.isVisible) {
-                            showAddSheet = false
-                            editingCategory = null
-                        }
-                    }
+                    showAddSheet = false
+                    editingCategory = null
                 },
             )
         }
@@ -171,7 +255,7 @@ fun CategoryListScreen(
             title = { Text(stringResource(R.string.delete_category)) },
             text = {
                 Text(
-                    "Are you sure you want to delete '${cat.name}'? Transactions using this category will remain, but the category won't be available for new transactions.",
+                    stringResource(R.string.delete_category_confirm, cat.name),
                 )
             },
             confirmButton = {
@@ -179,7 +263,7 @@ fun CategoryListScreen(
                     onClick = {
                         analyticsHelper.logEvent(
                             AnalyticsConstants.Event.CATEGORY_DELETED,
-                            mapOf(AnalyticsConstants.Param.NAME to cat.name)
+                            mapOf(AnalyticsConstants.Param.NAME to cat.name),
                         )
                         viewModel.deleteCategory(cat)
                         categoryToDelete = null
@@ -319,11 +403,7 @@ fun AddCategorySheetContent(
                 .padding(24.dp)
                 .padding(bottom = 24.dp),
     ) {
-        Text(
-            text = if (initialCategory == null) "New Category" else "Edit Category",
-            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-        )
-        Spacer(modifier = Modifier.height(24.dp))
+
 
         // Type selection
         Row(modifier = Modifier.fillMaxWidth()) {
@@ -356,6 +436,7 @@ fun AddCategorySheetContent(
 
         val isNameError = name.isNotEmpty() && name.trim().isEmpty()
 
+        val keyboardController = androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
         OutlinedTextField(
             value = name,
             onValueChange = { name = it },
@@ -370,6 +451,25 @@ fun AddCategorySheetContent(
                 },
             singleLine = true,
             shape = MaterialTheme.shapes.large,
+            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                imeAction = androidx.compose.ui.text.input.ImeAction.Done
+            ),
+            keyboardActions = androidx.compose.foundation.text.KeyboardActions(
+                onDone = {
+                    keyboardController?.hide()
+                    if (name.isNotBlank()) {
+                        onSave(
+                            Category(
+                                id = initialCategory?.id ?: 0,
+                                name = name.trim(),
+                                iconName = selectedIcon,
+                                color = selectedColor,
+                                isExpense = isExpense,
+                            )
+                        )
+                    }
+                }
+            )
         )
 
         Spacer(modifier = Modifier.height(24.dp))

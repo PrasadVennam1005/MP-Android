@@ -31,4 +31,10 @@ interface BudgetDao {
         categoryId: Long,
         period: String,
     ): Budget?
+
+    @Query("DELETE FROM budgets WHERE categoryId = :categoryId")
+    suspend fun deleteBudgetsByCategoryId(categoryId: Long)
+
+    @Query("SELECT * FROM budgets WHERE id = :id")
+    suspend fun getBudgetById(id: Long): Budget?
 }

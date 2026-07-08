@@ -8,7 +8,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -20,15 +22,17 @@ import prasad.vennam.moneypilot.data.entity.Investment
 import prasad.vennam.moneypilot.data.entity.Loan
 import prasad.vennam.moneypilot.data.entity.LoanPayment
 import prasad.vennam.moneypilot.data.entity.PendingTransaction
+import prasad.vennam.moneypilot.data.entity.SavingGoal
+import prasad.vennam.moneypilot.data.entity.Subscription
 import prasad.vennam.moneypilot.data.entity.TimeFrame
 import prasad.vennam.moneypilot.data.entity.Transaction
 import prasad.vennam.moneypilot.data.entity.TransactionType
 import prasad.vennam.moneypilot.data.repository.ExchangeRateRepository
-import prasad.vennam.moneypilot.data.repository.MoneyPilotRepository
+import prasad.vennam.moneypilot.data.repository.LoanRepository
 import prasad.vennam.moneypilot.domain.usecase.*
 import prasad.vennam.moneypilot.util.LoanIntelligenceUtil
 import prasad.vennam.moneypilot.util.RemoteConfigHelper
-import prasad.vennam.moneypilot.util.inRupees
+import prasad.vennam.moneypilot.util.toMajorUnit
 import java.util.Calendar
 import javax.inject.Inject
 
@@ -38,6 +42,16 @@ data class BudgetProgress(
     val spent: Double,
     val limit: Double,
     val progress: Float,
+)
+
+data class CreditCardBillState(
+    val hasBill: Boolean,
+    val billAmount: Double,
+    val billMonthName: String,
+    val isPaid: Boolean,
+    val currencyCode: String,
+    val previousMonth: Int,
+    val previousYear: Int,
 )
 
 data class DashboardState(
@@ -53,10 +67,18 @@ data class DashboardState(
     val budgetProgresses: List<BudgetProgress> = emptyList(),
     val categories: List<Category> = emptyList(),
     val loans: List<Loan> = emptyList(),
+    val subscriptions: List<Subscription> = emptyList(),
+    val savingGoals: List<SavingGoal> = emptyList(),
     val emergencyFund: EmergencyFund? = null,
+    val savingsRate: Double = 0.0,
+    val totalDebt: Double = 0.0,
     val selectedTimeFrame: TimeFrame = TimeFrame.MONTHLY,
+    val selectedMonth: Int = Calendar.getInstance().get(Calendar.MONTH),
+    val selectedYear: Int = Calendar.getInstance().get(Calendar.YEAR),
     val pendingTransactions: List<PendingTransaction> = emptyList(),
     val isLearnFinanceEnabled: Boolean = false,
+    val creditCardBill: CreditCardBillState? = null,
+    val errorMessage: String? = null,
 )
 
 private data class DashboardData(
@@ -65,6 +87,8 @@ private data class DashboardData(
     val budgets: List<Budget>,
     val investments: List<Investment>,
     val loans: List<Loan>,
+    val subscriptions: List<Subscription>,
+    val savingGoals: List<SavingGoal>,
     val emergencyFund: EmergencyFund?,
     val pendingTransactions: List<PendingTransaction>,
 )
@@ -75,7 +99,7 @@ class DashboardViewModel
     constructor(
         private val exchangeRateRepo: ExchangeRateRepository,
         private val userPreferences: UserPreferences,
-        private val repository: MoneyPilotRepository,
+        private val loanRepository: LoanRepository,
         private val addLoanUseCase: AddLoanUseCase,
         private val updateLoanUseCase: UpdateLoanUseCase,
         private val deleteLoanUseCase: DeleteLoanUseCase,
@@ -84,17 +108,105 @@ class DashboardViewModel
         private val getBudgetsUseCase: GetBudgetsUseCase,
         private val getInvestmentsUseCase: GetInvestmentsUseCase,
         private val getLoansUseCase: GetLoansUseCase,
+        private val getSubscriptionsUseCase: GetSubscriptionsUseCase,
+        private val getSavingGoalsUseCase: GetSavingGoalsUseCase,
         private val getEmergencyFundUseCase: GetEmergencyFundUseCase,
         private val getPendingTransactionsUseCase: GetPendingTransactionsUseCase,
         private val approvePendingTransactionUseCase: ApprovePendingTransactionUseCase,
         private val dismissPendingTransactionUseCase: DismissPendingTransactionUseCase,
+        private val saveTransactionUseCase: SaveTransactionUseCase,
         private val remoteConfigHelper: RemoteConfigHelper,
     ) : ViewModel() {
         private val _selectedTimeFrame = MutableStateFlow(TimeFrame.MONTHLY)
         val selectedTimeFrame: StateFlow<TimeFrame> = _selectedTimeFrame.asStateFlow()
 
+        private val _selectedMonth = MutableStateFlow(Calendar.getInstance().get(Calendar.MONTH))
+        val selectedMonth: StateFlow<Int> = _selectedMonth.asStateFlow()
+
+        private val _selectedYear = MutableStateFlow(Calendar.getInstance().get(Calendar.YEAR))
+        val selectedYear: StateFlow<Int> = _selectedYear.asStateFlow()
+
+        data class TimeFilter(val timeFrame: TimeFrame, val month: Int, val year: Int)
+
+        private val filterFlow = combine(_selectedTimeFrame, _selectedMonth, _selectedYear) { tf, m, y ->
+            TimeFilter(tf, m, y)
+        }
+
         fun setTimeFrame(timeFrame: TimeFrame) {
             _selectedTimeFrame.value = timeFrame
+            // Reset to current date when changing timeframe
+            val now = Calendar.getInstance()
+            _selectedMonth.value = now.get(Calendar.MONTH)
+            _selectedYear.value = now.get(Calendar.YEAR)
+        }
+
+        fun setMonth(month: Int) {
+            _selectedMonth.value = month
+        }
+
+        fun setYear(year: Int) {
+            _selectedYear.value = year
+        }
+
+        fun navigatePrevious() {
+            when (_selectedTimeFrame.value) {
+                TimeFrame.MONTHLY -> {
+                    if (_selectedMonth.value == 0) {
+                        _selectedMonth.value = 11
+                        _selectedYear.value -= 1
+                    } else {
+                        _selectedMonth.value -= 1
+                    }
+                }
+                TimeFrame.QUARTERLY -> {
+                    val currentQuarterMonthStart = (_selectedMonth.value / 3) * 3
+                    if (currentQuarterMonthStart == 0) {
+                        _selectedMonth.value = 9 // Q4 start (Oct)
+                        _selectedYear.value -= 1
+                    } else {
+                        _selectedMonth.value = currentQuarterMonthStart - 3
+                    }
+                }
+                TimeFrame.YEARLY -> {
+                    _selectedYear.value -= 1
+                }
+            }
+        }
+
+        fun navigateNext() {
+            val now = Calendar.getInstance()
+            val maxYear = now.get(Calendar.YEAR)
+            val maxMonth = now.get(Calendar.MONTH)
+
+            when (_selectedTimeFrame.value) {
+                TimeFrame.MONTHLY -> {
+                    if (_selectedYear.value < maxYear || (_selectedYear.value == maxYear && _selectedMonth.value < maxMonth)) {
+                        if (_selectedMonth.value == 11) {
+                            _selectedMonth.value = 0
+                            _selectedYear.value += 1
+                        } else {
+                            _selectedMonth.value += 1
+                        }
+                    }
+                }
+                TimeFrame.QUARTERLY -> {
+                    val currentQuarterMonthStart = (_selectedMonth.value / 3) * 3
+                    val maxQuarterMonthStart = (maxMonth / 3) * 3
+                    if (_selectedYear.value < maxYear || (_selectedYear.value == maxYear && currentQuarterMonthStart < maxQuarterMonthStart)) {
+                        if (currentQuarterMonthStart == 9) {
+                            _selectedMonth.value = 0 // Q1 start (Jan)
+                            _selectedYear.value += 1
+                        } else {
+                            _selectedMonth.value = currentQuarterMonthStart + 3
+                        }
+                    }
+                }
+                TimeFrame.YEARLY -> {
+                    if (_selectedYear.value < maxYear) {
+                        _selectedYear.value += 1
+                    }
+                }
+            }
         }
 
         @Suppress("UNCHECKED_CAST")
@@ -105,6 +217,8 @@ class DashboardViewModel
                 getBudgetsUseCase(),
                 getInvestmentsUseCase(),
                 getLoansUseCase(),
+                getSubscriptionsUseCase(),
+                getSavingGoalsUseCase(),
                 getEmergencyFundUseCase(),
                 getPendingTransactionsUseCase(),
             ) { array ->
@@ -114,8 +228,10 @@ class DashboardViewModel
                     budgets = array[2] as List<Budget>,
                     investments = array[3] as List<Investment>,
                     loans = array[4] as List<Loan>,
-                    emergencyFund = array[5] as EmergencyFund?,
-                    pendingTransactions = array[6] as List<PendingTransaction>,
+                    subscriptions = array[5] as List<Subscription>,
+                    savingGoals = array[6] as List<SavingGoal>,
+                    emergencyFund = array[7] as EmergencyFund?,
+                    pendingTransactions = array[8] as List<PendingTransaction>,
                 )
             }
 
@@ -124,17 +240,20 @@ class DashboardViewModel
                 dataFlow,
                 exchangeRateRepo.allRates,
                 userPreferences.currency,
-                _selectedTimeFrame,
-            ) { data, allRates, currentCurrencyCode, timeFrame ->
+                filterFlow,
+            ) { data, allRates, currentCurrencyCode, filter ->
+                val timeFrame = filter.timeFrame
+                val selMonth = filter.month
+                val selYear = filter.year
 
                 fun convertAmount(
                     amountInMinor: Long,
                     fromCurrency: String,
                 ): Double {
-                    if (fromCurrency == currentCurrencyCode) return amountInMinor.inRupees
+                    if (fromCurrency == currentCurrencyCode) return amountInMinor.toMajorUnit
                     val rateFrom = allRates[fromCurrency] ?: 1.0
                     val rateTo = allRates[currentCurrencyCode] ?: 1.0
-                    val amountInUSD = amountInMinor.inRupees / rateFrom
+                    val amountInUSD = amountInMinor.toMajorUnit / rateFrom
                     return amountInUSD * rateTo
                 }
 
@@ -144,26 +263,25 @@ class DashboardViewModel
                 val investments = data.investments
 
                 val calendar = Calendar.getInstance()
-                val currentMonth = calendar.get(Calendar.MONTH)
-                val currentYear = calendar.get(Calendar.YEAR)
                 val today = calendar.get(Calendar.DAY_OF_YEAR)
+                val currentYear = calendar.get(Calendar.YEAR)
 
-                // Filter transactions based on selected TimeFrame
+                // Filter transactions based on selected TimeFrame, Month, and Year
                 val filteredTransactions =
                     transactions.filter {
                         val transCal = Calendar.getInstance().apply { timeInMillis = it.timestamp }
                         val transYear = transCal.get(Calendar.YEAR)
                         val transMonth = transCal.get(Calendar.MONTH)
 
-                        if (transYear != currentYear) {
+                        if (transYear != selYear) {
                             false
                         } else {
                             when (timeFrame) {
-                                TimeFrame.MONTHLY -> transMonth == currentMonth
+                                TimeFrame.MONTHLY -> transMonth == selMonth
                                 TimeFrame.QUARTERLY -> {
-                                    val currentQuarter = currentMonth / 3
+                                    val selectedQuarter = selMonth / 3
                                     val transQuarter = transMonth / 3
-                                    transQuarter == currentQuarter
+                                    transQuarter == selectedQuarter
                                 }
                                 TimeFrame.YEARLY -> true
                             }
@@ -194,9 +312,11 @@ class DashboardViewModel
                         )
                     }
                 val savings = periodIncome - periodExpense
+                val savingsRate = if (periodIncome > 0) (savings / periodIncome) * 100 else 0.0
 
                 val totalInvestment = investments.sumOf { convertAmount(it.investedAmount, it.currencyCode) }
                 val currentInvestmentValue = investments.sumOf { convertAmount(it.currentValue, it.currencyCode) }
+                val totalDebt = data.loans.sumOf { convertAmount(it.outstandingAmount, it.currencyCode) }
 
                 val categoriesMap = categories.associateBy { it.id }
 
@@ -207,24 +327,62 @@ class DashboardViewModel
                         .mapKeys { (catId, _) -> categoriesMap[catId] }
                         .mapValues { (_, trans) -> trans.sumOf { convertAmount(it.amount, it.currencyCode) } }
 
-                val currentMonthExpenses = transactions.filter {
-                    val transCal = Calendar.getInstance().apply { timeInMillis = it.timestamp }
-                    it.type == TransactionType.EXPENSE &&
-                        transCal.get(Calendar.MONTH) == currentMonth &&
-                        transCal.get(Calendar.YEAR) == currentYear
-                }
+                val currentMonthExpenses =
+                    transactions.filter {
+                        val transCal = Calendar.getInstance().apply { timeInMillis = it.timestamp }
+                        it.type == TransactionType.EXPENSE &&
+                            transCal.get(Calendar.MONTH) == selMonth &&
+                            transCal.get(Calendar.YEAR) == selYear
+                    }
                 val expensesByCategoryId = currentMonthExpenses.groupBy { it.categoryId }
 
                 val budgetProgresses =
                     budgets.map { budget ->
                         val category = categoriesMap[budget.categoryId]
-                        val spent = expensesByCategoryId[budget.categoryId]
-                            ?.sumOf { convertAmount(it.amount, it.currencyCode) } ?: 0.0
+                        val spent =
+                            expensesByCategoryId[budget.categoryId]
+                                ?.sumOf { convertAmount(it.amount, it.currencyCode) } ?: 0.0
 
                         val budgetConverted = convertAmount(budget.amount, budget.currencyCode)
                         val progress = if (budgetConverted > 0) (spent / budgetConverted).toFloat().coerceIn(0f, 1f) else 0f
                         BudgetProgress(budget, category, spent, budgetConverted, progress)
                     }
+
+                // Credit Card Bill details for the previous month
+                val prevMonth = if (selMonth == 0) 11 else selMonth - 1
+                val prevYear = if (selMonth == 0) selYear - 1 else selYear
+                val prevMonthName = java.text.DateFormatSymbols.getInstance().months[prevMonth]
+
+                val ccTransactionsPrevMonth = transactions.filter {
+                    val transCal = Calendar.getInstance().apply { timeInMillis = it.timestamp }
+                    it.type == TransactionType.EXPENSE &&
+                        it.paymentMode == "Credit Card" &&
+                        transCal.get(Calendar.MONTH) == prevMonth &&
+                        transCal.get(Calendar.YEAR) == prevYear
+                }
+                val ccBillAmount = ccTransactionsPrevMonth.sumOf { convertAmount(it.amount, it.currencyCode) }
+
+                // Check if paid in the selected month
+                val searchPaidToken = "Credit Card Bill Payment: $prevMonthName $prevYear"
+                val isBillPaid = ccBillAmount == 0.0 || transactions.any {
+                    val transCal = Calendar.getInstance().apply { timeInMillis = it.timestamp }
+                    it.type == TransactionType.EXPENSE &&
+                        transCal.get(Calendar.MONTH) == selMonth &&
+                        transCal.get(Calendar.YEAR) == selYear &&
+                        it.note.contains(searchPaidToken, ignoreCase = true)
+                }
+
+                val creditCardBill = if (ccBillAmount > 0.0) {
+                    CreditCardBillState(
+                        hasBill = true,
+                        billAmount = ccBillAmount,
+                        billMonthName = prevMonthName,
+                        isPaid = isBillPaid,
+                        currencyCode = currentCurrencyCode,
+                        previousMonth = prevMonth,
+                        previousYear = prevYear
+                    )
+                } else null
 
                 DashboardState(
                     isLoading = false,
@@ -239,17 +397,45 @@ class DashboardViewModel
                     budgetProgresses = budgetProgresses,
                     categories = categories,
                     loans = data.loans,
+                    subscriptions = data.subscriptions,
+                    savingGoals = data.savingGoals,
                     emergencyFund = data.emergencyFund,
+                    savingsRate = savingsRate,
+                    totalDebt = totalDebt,
                     selectedTimeFrame = timeFrame,
+                    selectedMonth = selMonth,
+                    selectedYear = selYear,
                     pendingTransactions = data.pendingTransactions,
-                    isLearnFinanceEnabled = remoteConfigHelper.isLearnFinanceEnabled()
+                    isLearnFinanceEnabled = remoteConfigHelper.isLearnFinanceEnabled(),
+                    creditCardBill = creditCardBill,
                 )
             }.flowOn(Dispatchers.Default)
+                .catch { e ->
+                    emit(DashboardState(isLoading = false, errorMessage = e.message))
+                }
                 .stateIn(
                     scope = viewModelScope,
                     started = SharingStarted.WhileSubscribed(5000),
                     initialValue = DashboardState(isLoading = true),
                 )
+
+        fun payCreditCardBill(amount: Double, month: Int, year: Int, currencyCode: String) {
+            viewModelScope.launch {
+                val categories = getCategoriesUseCase().first()
+                val categoryId = categories.find { it.name.equals("Bills", ignoreCase = true) }?.id
+                val monthName = java.text.DateFormatSymbols.getInstance().months[month]
+                val transaction = Transaction(
+                    amount = (amount * 100).toLong(), // Convert to minor units
+                    timestamp = System.currentTimeMillis(),
+                    categoryId = categoryId,
+                    note = "Credit Card Bill Payment: $monthName $year",
+                    type = TransactionType.EXPENSE,
+                    paymentMode = "UPI",
+                    currencyCode = currencyCode
+                )
+                saveTransactionUseCase(transaction)
+            }
+        }
 
         fun addLoan(
             name: String,
@@ -296,9 +482,12 @@ class DashboardViewModel
             }
         }
 
-        fun deleteLoan(loan: Loan) {
+        fun deleteLoan(
+            loan: Loan,
+            deleteTransactions: Boolean = true,
+        ) {
             viewModelScope.launch {
-                deleteLoanUseCase(loan)
+                loanRepository.deleteLoan(loan, deleteTransactions)
             }
         }
 
@@ -307,6 +496,7 @@ class DashboardViewModel
             amount: Long,
             isExtra: Boolean = false,
             note: String = "",
+            paymentMode: String = "Cash",
         ) {
             viewModelScope.launch {
                 val payment =
@@ -316,12 +506,13 @@ class DashboardViewModel
                         date = System.currentTimeMillis(),
                         isExtraPayment = isExtra,
                         note = note,
+                        paymentMode = paymentMode,
                     )
-                repository.insertLoanPayment(payment)
+                loanRepository.insertLoanPayment(payment)
             }
         }
 
-        fun getLoanPayments(loanId: Long): kotlinx.coroutines.flow.Flow<List<LoanPayment>> = repository.getPaymentsForLoan(loanId)
+        fun getLoanPayments(loanId: Long): kotlinx.coroutines.flow.Flow<List<LoanPayment>> = loanRepository.getPaymentsForLoan(loanId)
 
         fun estimatePayoff(loan: Loan): Long =
             LoanIntelligenceUtil.predictPayoffDate(

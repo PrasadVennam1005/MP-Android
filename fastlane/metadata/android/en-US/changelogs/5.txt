@@ -1,0 +1,5 @@
+• Custom App Font Size: Adjust font scale (Small, Large, Extra Large) directly from Settings.
+• Plus Jakarta Sans: Enjoy a clean, modern fintech look with our new custom typography.
+• Faster Access to Subscriptions: Quick action button added directly to the Dashboard.
+• Expanded Daily Motivation: New finance-focused quotes with copy, share, and shuffle controls.
+• Enhanced Entry Screen: Enjoy a premium splash sequence, breathing logo, and glassmorphic card entrance.

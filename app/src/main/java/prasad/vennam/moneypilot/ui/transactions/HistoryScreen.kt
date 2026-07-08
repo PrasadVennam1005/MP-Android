@@ -1,11 +1,13 @@
 package prasad.vennam.moneypilot.ui.transactions
 
+import prasad.vennam.moneypilot.ui.components.BaseBottomSheet
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -21,10 +23,14 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
-import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.Category
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Edit
@@ -32,6 +38,7 @@ import androidx.compose.material.icons.rounded.FilterList
 import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.SearchOff
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -41,7 +48,6 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
@@ -58,11 +64,13 @@ import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.adaptive.currentWindowAdaptiveInfoV2
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -76,6 +84,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.window.core.layout.WindowWidthSizeClass
 import kotlinx.coroutines.launch
 import prasad.vennam.moneypilot.R
 import prasad.vennam.moneypilot.data.UserPreferences
@@ -88,12 +97,12 @@ import prasad.vennam.moneypilot.ui.components.ProfileIconButton
 import prasad.vennam.moneypilot.ui.dashboard.SyncState
 import prasad.vennam.moneypilot.ui.dashboard.SyncStatusIndicator
 import prasad.vennam.moneypilot.ui.viewmodel.TransactionViewModel
-import prasad.vennam.moneypilot.util.CurrencyFormatter
-import prasad.vennam.moneypilot.util.LocalCurrencyCode
-import prasad.vennam.moneypilot.util.inRupees
 import prasad.vennam.moneypilot.util.AnalyticsConstants
 import prasad.vennam.moneypilot.util.AnalyticsHelper
+import prasad.vennam.moneypilot.util.CurrencyFormatter
+import prasad.vennam.moneypilot.util.LocalCurrencyCode
 import prasad.vennam.moneypilot.util.TrackScreen
+import prasad.vennam.moneypilot.util.toMajorUnit
 import java.text.SimpleDateFormat
 import java.util.Date
 
@@ -132,15 +141,19 @@ fun HistoryScreen(
 
     var selectedTabType by remember { mutableStateOf(TransactionType.EXPENSE) }
     val activeType = fixedType ?: selectedTabType
+    
+    val adaptiveInfo = currentWindowAdaptiveInfoV2()
+    val isExpanded = adaptiveInfo.windowSizeClass.windowWidthSizeClass == WindowWidthSizeClass.EXPANDED
 
     val lazyListState = rememberLazyListState()
+    val lazyGridState = rememberLazyGridState()
     var isFabVisible by remember { mutableStateOf(true) }
-    var previousIndex by remember { androidx.compose.runtime.mutableIntStateOf(0) }
-    var previousOffset by remember { androidx.compose.runtime.mutableIntStateOf(0) }
+    var previousIndex by remember { mutableIntStateOf(0) }
+    var previousOffset by remember { mutableIntStateOf(0) }
 
-    LaunchedEffect(lazyListState.firstVisibleItemIndex, lazyListState.firstVisibleItemScrollOffset) {
-        val currentIndex = lazyListState.firstVisibleItemIndex
-        val currentOffset = lazyListState.firstVisibleItemScrollOffset
+    LaunchedEffect(lazyListState.firstVisibleItemIndex, lazyListState.firstVisibleItemScrollOffset, lazyGridState.firstVisibleItemIndex, lazyGridState.firstVisibleItemScrollOffset) {
+        val currentIndex = if (isExpanded) lazyGridState.firstVisibleItemIndex else lazyListState.firstVisibleItemIndex
+        val currentOffset = if (isExpanded) lazyGridState.firstVisibleItemScrollOffset else lazyListState.firstVisibleItemScrollOffset
         if (currentIndex == 0 && currentOffset == 0) {
             isFabVisible = true
         } else if (currentIndex > previousIndex || (currentIndex == previousIndex && currentOffset > previousOffset)) {
@@ -155,25 +168,40 @@ fun HistoryScreen(
     val filteredTransactions =
         remember(transactions, searchQuery, selectedCategoryId, selectedPaymentMode, activeType, categories) {
             val categoryMap = categories.associateBy { it.id }
+            val query = searchQuery.trim().lowercase(java.util.Locale.getDefault())
+            
             transactions.filter { transaction ->
                 val matchesType = transaction.type == activeType
-                val matchesSearch =
-                    transaction.note.contains(searchQuery, ignoreCase = true) ||
-                        categoryMap[transaction.categoryId]?.name?.contains(
-                            searchQuery,
-                            ignoreCase = true,
-                        ) == true
+                
+                // Matches note or category name
+                val matchesText = transaction.note.contains(query, ignoreCase = true) ||
+                        categoryMap[transaction.categoryId]?.name?.contains(query, ignoreCase = true) == true
+                
+                // Matches amount (e.g., search "500" matches 500.00 or 5.00 depending on units)
+                val amountStr = (transaction.amount / 100.0).toString()
+                val matchesAmount = query.isNotEmpty() && (
+                    amountStr.contains(query) || 
+                    amountStr.replace(".", "").contains(query)
+                )
+
+                val matchesSearch = matchesText || matchesAmount
+                
                 val matchesCategory =
                     selectedCategoryId == null || transaction.categoryId == selectedCategoryId
                 val matchesPayment =
                     selectedPaymentMode == null || transaction.paymentMode == selectedPaymentMode
 
-                matchesType && matchesSearch && matchesCategory && matchesPayment
+                matchesType && (query.isEmpty() || matchesSearch) && matchesCategory && matchesPayment
             }
         }
 
     Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHostState) },
+        snackbarHost = {
+            SnackbarHost(
+                hostState = snackbarHostState,
+                modifier = Modifier.navigationBarsPadding()
+            )
+        },
         topBar = {
             Column(modifier = Modifier.background(MaterialTheme.colorScheme.background)) {
                 TopAppBar(
@@ -196,7 +224,7 @@ fun HistoryScreen(
                             enter = scaleIn() + fadeIn(),
                             exit = scaleOut() + fadeOut(),
                         ) {
-                            IconButton(onClick = {onAddTransaction(activeType)}) {
+                            IconButton(onClick = { onAddTransaction(activeType) }) {
                                 Icon(
                                     imageVector = Icons.Rounded.Add,
                                     contentDescription = stringResource(R.string.add),
@@ -239,7 +267,7 @@ fun HistoryScreen(
                                     val newType = if (index == 0) TransactionType.EXPENSE else TransactionType.INCOME
                                     analyticsHelper.logEvent(
                                         AnalyticsConstants.Event.HISTORY_TAB_SWITCHED,
-                                        mapOf(AnalyticsConstants.Param.TYPE to newType.name)
+                                        mapOf(AnalyticsConstants.Param.TYPE to newType.name),
                                     )
                                     selectedTabType = newType
                                     selectedCategoryId = null // Reset category filter on tab switch
@@ -284,6 +312,43 @@ fun HistoryScreen(
         ) {
             if (transactionItemStates.isEmpty()) {
                 EmptyState(searchQuery.isNotEmpty())
+            } else if (isExpanded) {
+                LazyVerticalGrid(
+                    columns = GridCells.Adaptive(360.dp),
+                    state = lazyGridState,
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    item(span = { GridItemSpan(maxLineSpan) }) {
+                        AdBannerView(isPremium = isPremium, modifier = Modifier.fillMaxWidth())
+                    }
+                    items(transactionItemStates, key = { "${it.transaction.id}_${it.transaction.lastUpdated}" }) { itemState ->
+                        val deletedMessage = stringResource(R.string.transaction_deleted)
+                        val undoLabel = stringResource(R.string.undo)
+                        SwipeableTransactionCard(
+                            transaction = itemState.transaction,
+                            category = itemState.category,
+                            onEdit = { onEditTransaction(itemState.transaction.id, itemState.transaction.type) },
+                            onDelete = {
+                                val transactionCopy = itemState.transaction
+                                viewModel.deleteTransaction(itemState.transaction)
+                                scope.launch {
+                                    val result =
+                                        snackbarHostState.showSnackbar(
+                                            message = deletedMessage,
+                                            actionLabel = undoLabel,
+                                            duration = SnackbarDuration.Short,
+                                        )
+                                    if (result == SnackbarResult.ActionPerformed) {
+                                        viewModel.saveTransaction(transactionCopy)
+                                    }
+                                }
+                            },
+                        )
+                    }
+                }
             } else {
                 LazyColumn(
                     state = lazyListState,
@@ -294,7 +359,7 @@ fun HistoryScreen(
                     item {
                         AdBannerView(isPremium = isPremium, modifier = Modifier.fillMaxWidth())
                     }
-                    items(transactionItemStates, key = { it.transaction.id }) { itemState ->
+                    items(transactionItemStates, key = { "${it.transaction.id}_${it.transaction.lastUpdated}" }) { itemState ->
                         val deletedMessage = stringResource(R.string.transaction_deleted)
                         val undoLabel = stringResource(R.string.undo)
                         SwipeableTransactionCard(
@@ -341,8 +406,8 @@ fun HistoryScreen(
                     AnalyticsConstants.Event.HISTORY_FILTERS_APPLIED,
                     mapOf(
                         AnalyticsConstants.Param.CATEGORY_FILTERED to (selectedCategoryId != null),
-                        AnalyticsConstants.Param.PAYMENT_MODE_FILTERED to (selectedPaymentMode != null)
-                    )
+                        AnalyticsConstants.Param.PAYMENT_MODE_FILTERED to (selectedPaymentMode != null),
+                    ),
                 )
                 showFilterSheet = false
             },
@@ -398,12 +463,48 @@ fun SwipeableTransactionCard(
     val dismissState = rememberSwipeToDismissBoxState()
     val scope = rememberCoroutineScope()
 
+    var showConfirmDialog by remember { mutableStateOf(false) }
+    
+    if (showConfirmDialog) {
+        AlertDialog(
+            onDismissRequest = {
+                showConfirmDialog = false
+                scope.launch { dismissState.reset() }
+            },
+            title = { Text(text = stringResource(R.string.delete_transaction_title)) },
+            text = { Text(text = stringResource(R.string.delete_transaction_confirm)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showConfirmDialog = false
+                        scope.launch {
+                            dismissState.snapTo(SwipeToDismissBoxValue.Settled)
+                            onDelete()
+                        }
+                    }
+                ) {
+                    Text(text = stringResource(R.string.delete))
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        showConfirmDialog = false
+                        scope.launch { dismissState.reset() }
+                    }
+                ) {
+                    Text(text = stringResource(R.string.cancel))
+                }
+            }
+        )
+    }
+
     SwipeToDismissBox(
         state = dismissState,
         onDismiss = { direction ->
             when (direction) {
                 SwipeToDismissBoxValue.EndToStart -> {
-                    onDelete()
+                    showConfirmDialog = true
                 }
                 SwipeToDismissBoxValue.StartToEnd -> {
                     onEdit()
@@ -525,7 +626,7 @@ fun FintechTransactionCard(
             }
 
             Column(horizontalAlignment = Alignment.End) {
-                val formattedAmount = CurrencyFormatter.format(transaction.amount.inRupees, currencyCode)
+                val formattedAmount = CurrencyFormatter.format(transaction.amount.toMajorUnit, currencyCode)
                 val sign = if (transaction.type == TransactionType.INCOME) "+" else "-"
                 Text(
                     text = "$sign$formattedAmount",
@@ -555,23 +656,22 @@ fun FilterBottomSheet(
     onReset: () -> Unit,
     onDismiss: () -> Unit,
 ) {
-    ModalBottomSheet(onDismissRequest = onDismiss) {
+    BaseBottomSheet(
+        onDismissRequest = onDismiss,
+        title = stringResource(R.string.filters),
+    ) {
         Column(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 24.dp, vertical = 16.dp)
+                    .padding(horizontal = 24.dp)
                     .padding(bottom = 32.dp),
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
+                horizontalArrangement = Arrangement.End,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(
-                    stringResource(R.string.filters),
-                    style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
-                )
                 TextButton(onClick = onReset) { Text(stringResource(R.string.reset)) }
             }
 
@@ -610,7 +710,7 @@ fun FilterBottomSheet(
                 stringResource(R.string.payment_mode),
                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
             )
-            val modes = prasad.vennam.moneypilot.util.PaymentModes.ALL
+            val modes = prasad.vennam.moneypilot.util.PaymentModes.ALL_MODES
             LazyRow(
                 modifier =
                     Modifier
@@ -625,11 +725,18 @@ fun FilterBottomSheet(
                         label = { Text(stringResource(R.string.all)) },
                     )
                 }
-                items(modes, key = { it }) { mode ->
+                items(modes, key = { it.name }) { mode ->
                     FilterChip(
-                        selected = selectedPaymentMode == mode,
-                        onClick = { onPaymentModeSelect(mode) },
-                        label = { Text(mode) },
+                        selected = selectedPaymentMode == mode.name,
+                        onClick = { onPaymentModeSelect(mode.name) },
+                        label = { Text(mode.name) },
+                        leadingIcon = {
+                            Icon(
+                                mode.icon,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        },
                     )
                 }
             }

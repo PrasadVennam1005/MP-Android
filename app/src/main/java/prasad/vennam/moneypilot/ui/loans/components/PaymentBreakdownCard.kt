@@ -15,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLocale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -22,8 +23,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import prasad.vennam.moneypilot.R
 import kotlin.math.roundToInt
-
-import androidx.compose.ui.platform.LocalDensity
 
 @Composable
 fun PaymentBreakdownCard(
@@ -66,9 +65,10 @@ fun PaymentBreakdownCard(
             )
 
             val density = LocalDensity.current
-            val stroke = remember(density) {
-                Stroke(width = with(density) { 20.dp.toPx() }, cap = StrokeCap.Round)
-            }
+            val stroke =
+                remember(density) {
+                    Stroke(width = with(density) { 20.dp.toPx() }, cap = StrokeCap.Round)
+                }
 
             Box(
                 contentAlignment = Alignment.Center,

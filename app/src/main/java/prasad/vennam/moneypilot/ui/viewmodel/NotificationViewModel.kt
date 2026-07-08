@@ -16,6 +16,9 @@ import prasad.vennam.moneypilot.domain.usecase.GetNotificationsUseCase
 import prasad.vennam.moneypilot.domain.usecase.InsertNotificationsUseCase
 import javax.inject.Inject
 
+import prasad.vennam.moneypilot.data.repository.SubscriptionRepository
+import prasad.vennam.moneypilot.data.repository.TransactionRepository
+
 @HiltViewModel
 class NotificationViewModel
     @Inject
@@ -26,6 +29,8 @@ class NotificationViewModel
         private val deleteNotificationUseCase: DeleteNotificationUseCase,
         private val clearAllNotificationsUseCase: ClearAllNotificationsUseCase,
         private val addBookmarkUseCase: AddBookmarkUseCase,
+        private val subscriptionRepository: SubscriptionRepository,
+        private val transactionRepository: TransactionRepository,
     ) : ViewModel() {
         val notifications: StateFlow<List<Notification>> =
             getNotificationsUseCase()
@@ -98,5 +103,66 @@ class NotificationViewModel
                 val currency = userPreferences.currency.first()
                 addBookmarkUseCase(title, url, currency)
             }
+        }
+
+        fun logSubscriptionPayment(
+            notificationId: Long,
+            subscriptionId: Long?,
+            subscriptionNameFallback: String? = null,
+        ) {
+            viewModelScope.launch {
+                try {
+                    val subscription = if (subscriptionId != null && subscriptionId != -1L) {
+                        subscriptionRepository.getSubscriptionById(subscriptionId)
+                    } else if (!subscriptionNameFallback.isNullOrBlank()) {
+                        subscriptionRepository.allSubscriptions.first().find {
+                            it.name.equals(subscriptionNameFallback, ignoreCase = true)
+                        }
+                    } else {
+                        null
+                    }
+
+                    if (subscription != null) {
+                        // 1. Log transaction
+                        val transaction = prasad.vennam.moneypilot.data.entity.Transaction(
+                            amount = subscription.amount,
+                            type = prasad.vennam.moneypilot.data.entity.TransactionType.EXPENSE,
+                            categoryId = subscription.categoryId,
+                            note = "Paid: ${subscription.name}",
+                            paymentMode = subscription.paymentMode,
+                            timestamp = System.currentTimeMillis(),
+                        )
+                        transactionRepository.insertTransaction(transaction)
+
+                        // 2. Advance next payment date
+                        val nextDate = calculateNextPaymentDate(subscription.nextPaymentDate, subscription.billingCycle)
+                        subscriptionRepository.updateSubscription(
+                            subscription.copy(
+                                nextPaymentDate = nextDate,
+                                lastUpdated = System.currentTimeMillis(),
+                            )
+                        )
+
+                        // 3. Delete notification
+                        deleteNotificationUseCase(notificationId)
+                    }
+                } catch (e: Exception) {
+                    android.util.Log.e("NotificationVM", "Failed to log subscription payment from notification", e)
+                }
+            }
+        }
+
+        private fun calculateNextPaymentDate(
+            currentDate: Long,
+            billingCycle: String,
+        ): Long {
+            val cal = java.util.Calendar.getInstance().apply { timeInMillis = currentDate }
+            when (billingCycle) {
+                "Weekly" -> cal.add(java.util.Calendar.WEEK_OF_YEAR, 1)
+                "Monthly" -> cal.add(java.util.Calendar.MONTH, 1)
+                "Yearly" -> cal.add(java.util.Calendar.YEAR, 1)
+                else -> cal.add(java.util.Calendar.MONTH, 1)
+            }
+            return cal.timeInMillis
         }
     }

@@ -37,6 +37,7 @@ import prasad.vennam.moneypilot.ui.viewmodel.AssetAllocation
 import prasad.vennam.moneypilot.ui.viewmodel.FinancialInsight
 import prasad.vennam.moneypilot.ui.viewmodel.InsightType
 import prasad.vennam.moneypilot.ui.viewmodel.TimeFilter
+import androidx.compose.ui.platform.LocalConfiguration
 import prasad.vennam.moneypilot.util.AnalyticsConstants
 import prasad.vennam.moneypilot.util.AnalyticsHelper
 import prasad.vennam.moneypilot.util.CurrencyFormatter
@@ -77,9 +78,20 @@ fun AnalyticsScreen(
                 modifier =
                     Modifier
                         .fillMaxSize(),
-                contentPadding = PaddingValues(16.dp),
+                contentPadding = innerPadding,
                 verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
+                if (!isPremium) {
+                    item {
+                        AdBannerView(
+                            isPremium = isPremium,
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .padding(top = 16.dp),
+                        )
+                    }
+                }
                 // 1. Time Filter Row
                 item {
                     TimeFilterRow(
@@ -120,7 +132,7 @@ fun AnalyticsScreen(
                                 currencySymbol =
                                     java.util.Currency
                                         .getInstance(currencyCode)
-                                        .getSymbol(java.util.Locale.getDefault()),
+                                        .getSymbol(LocalConfiguration.current.locales[0]),
                             )
                         }
                     }
@@ -237,17 +249,6 @@ fun AnalyticsScreen(
                     }
                     items(state.insights, key = { it.title }) { insight ->
                         InsightCard(insight = insight)
-                    }
-                }
-
-                if (!isPremium) {
-                    item {
-                        AdBannerView(
-                            isPremium = isPremium,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(top = 16.dp)
-                        )
                     }
                 }
             }
@@ -427,7 +428,7 @@ fun AssetAllocationRow(
                     color = MaterialTheme.colorScheme.onSurface,
                 )
                 Text(
-                    text = "Invested: ${CurrencyFormatter.format(alloc.investedAmount, currencyCode)}",
+                    text = stringResource(R.string.invested_amount, CurrencyFormatter.format(alloc.investedAmount, currencyCode)),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

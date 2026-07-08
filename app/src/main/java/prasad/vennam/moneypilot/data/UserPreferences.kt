@@ -4,14 +4,14 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
-import prasad.vennam.moneypilot.util.WorkManagerSyncScheduler
 import prasad.vennam.moneypilot.data.model.RateAlert
+import prasad.vennam.moneypilot.util.WorkManagerSyncScheduler
 import javax.inject.Inject
-
 import javax.inject.Singleton
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "user_prefs")
@@ -84,8 +84,31 @@ class UserPreferences
         private val rateAlertsKey =
             androidx.datastore.preferences.core
                 .stringPreferencesKey("currency_rate_alerts")
+        private val deletedTransactionIdsKey = stringSetPreferencesKey("deleted_transaction_ids")
+        private val fontScaleKey =
+            androidx.datastore.preferences.core
+                .floatPreferencesKey("font_scale")
+        private val aiModeKey =
+            androidx.datastore.preferences.core
+                .intPreferencesKey("ai_mode")
 
+        object AiMode {
+            const val UNDECIDED = 0
+            const val LOCAL = 1
+            const val CLOUD = 2
+        }
 
+        val aiMode: Flow<Int> =
+            context.dataStore.data
+                .map { preferences ->
+                    preferences[aiModeKey] ?: 0 // UNDECIDED
+                }
+
+        suspend fun setAiMode(mode: Int) {
+            context.dataStore.edit { preferences ->
+                preferences[aiModeKey] = mode
+            }
+        }
 
         val isLoggedIn: Flow<Boolean> =
             context.dataStore.data
@@ -121,6 +144,12 @@ class UserPreferences
             context.dataStore.data
                 .map { preferences ->
                     preferences[themeModeKey] ?: 0 // Default to SYSTEM (0)
+                }
+
+        val fontScale: Flow<Float> =
+            context.dataStore.data
+                .map { preferences ->
+                    preferences[fontScaleKey] ?: 1.0f
                 }
 
         val hasSeededNotifications: Flow<Boolean> =
@@ -181,6 +210,12 @@ class UserPreferences
                     parseRateAlerts(raw)
                 }
 
+        val deletedTransactionIds: Flow<Set<String>> =
+            context.dataStore.data
+                .map { preferences ->
+                    preferences[deletedTransactionIdsKey] ?: emptySet()
+                }
+
         private fun parseRateAlerts(raw: String): List<RateAlert> {
             if (raw.isEmpty()) return emptyList()
             return raw.split(";").mapNotNull {
@@ -197,7 +232,6 @@ class UserPreferences
             }
         }
 
-
         private fun parseCurrencyPairs(raw: String): List<Pair<String, String>> {
             if (raw.isEmpty()) return emptyList()
             return raw.split(";").mapNotNull {
@@ -209,7 +243,6 @@ class UserPreferences
                 }
             }
         }
-
 
         val isSynced: Flow<Boolean> =
             context.dataStore.data
@@ -320,6 +353,12 @@ class UserPreferences
             }
         }
 
+        suspend fun setFontScale(scale: Float) {
+            context.dataStore.edit { preferences ->
+                preferences[fontScaleKey] = scale
+            }
+        }
+
         suspend fun setNotificationsSeeded(seeded: Boolean) {
             context.dataStore.edit { preferences ->
                 preferences[hasSeededNotificationsKey] = seeded
@@ -378,7 +417,10 @@ class UserPreferences
             }
         }
 
-        suspend fun saveRecentCurrencyPair(from: String, to: String) {
+        suspend fun saveRecentCurrencyPair(
+            from: String,
+            to: String,
+        ) {
             context.dataStore.edit { preferences ->
                 val raw = preferences[recentCurrencyPairsKey] ?: ""
                 val current = parseCurrencyPairs(raw).toMutableList()
@@ -390,7 +432,10 @@ class UserPreferences
             }
         }
 
-        suspend fun toggleFavoriteCurrencyPair(from: String, to: String) {
+        suspend fun toggleFavoriteCurrencyPair(
+            from: String,
+            to: String,
+        ) {
             context.dataStore.edit { preferences ->
                 val raw = preferences[favoriteCurrencyPairsKey] ?: ""
                 val current = parseCurrencyPairs(raw).toMutableList()
@@ -411,9 +456,10 @@ class UserPreferences
                 if (!current.contains(alert)) {
                     current.add(alert)
                 }
-                preferences[rateAlertsKey] = current.joinToString(";") {
-                    "${it.from},${it.to},${it.targetRate},${if (it.isAbove) "above" else "below"}"
-                }
+                preferences[rateAlertsKey] =
+                    current.joinToString(";") {
+                        "${it.from},${it.to},${it.targetRate},${if (it.isAbove) "above" else "below"}"
+                    }
             }
         }
 
@@ -422,9 +468,10 @@ class UserPreferences
                 val raw = preferences[rateAlertsKey] ?: ""
                 val current = parseRateAlerts(raw).toMutableList()
                 current.remove(alert)
-                preferences[rateAlertsKey] = current.joinToString(";") {
-                    "${it.from},${it.to},${it.targetRate},${if (it.isAbove) "above" else "below"}"
-                }
+                preferences[rateAlertsKey] =
+                    current.joinToString(";") {
+                        "${it.from},${it.to},${it.targetRate},${if (it.isAbove) "above" else "below"}"
+                    }
             }
         }
 
@@ -433,6 +480,24 @@ class UserPreferences
                 preferences[currencyBasketKey] = basket.joinToString(",")
             }
         }
+
+        suspend fun addDeletedTransactionId(id: String) {
+            context.dataStore.edit { preferences ->
+                val current = preferences[deletedTransactionIdsKey] ?: emptySet()
+                preferences[deletedTransactionIdsKey] = current + id
+            }
+        }
+
+        suspend fun removeDeletedTransactionId(id: String) {
+            context.dataStore.edit { preferences ->
+                val current = preferences[deletedTransactionIdsKey] ?: emptySet()
+                preferences[deletedTransactionIdsKey] = current - id
+            }
+        }
+
+        suspend fun clearDeletedTransactionIds() {
+            context.dataStore.edit { preferences ->
+                preferences.remove(deletedTransactionIdsKey)
+            }
+        }
     }
-
-

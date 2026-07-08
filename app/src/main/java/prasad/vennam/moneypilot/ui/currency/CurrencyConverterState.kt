@@ -13,7 +13,6 @@ data class CurrencyConverterState(
     val isFavorite: Boolean = false,
     val isLoading: Boolean = false,
     val error: String? = null,
-    
     // Premium features state
     val isComparisonMode: Boolean = false,
     val basketCurrencies: List<String> = emptyList(),
@@ -22,12 +21,12 @@ data class CurrencyConverterState(
     val historicalDates: List<String> = emptyList(),
     val activeAlerts: List<prasad.vennam.moneypilot.data.model.RateAlert> = emptyList(),
     val isLocationLoading: Boolean = false,
-    val detectedCountry: String? = null
+    val detectedCountry: String? = null,
 )
 
 data class CurrencyItem(
     val code: String,
     val name: String,
     val flag: String,
-    val symbol: String
+    val symbol: String,
 )

@@ -17,4 +17,7 @@ interface PendingTransactionDao {
 
     @Query("DELETE FROM pending_transactions")
     suspend fun clearAllPendingTransactions()
+
+    @Query("SELECT COUNT(*) FROM pending_transactions WHERE timestamp BETWEEN :startTime AND :endTime AND ABS(amount - :amountMajor) < 0.01 AND (merchant LIKE '%' || :merchant || '%' OR rawMessage LIKE '%' || :merchant || '%')")
+    suspend fun countDuplicatePendingTransactions(startTime: Long, endTime: Long, amountMajor: Double, merchant: String): Int
 }

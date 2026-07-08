@@ -9,7 +9,7 @@ import androidx.compose.material.icons.automirrored.rounded.ShowChart
 import androidx.compose.material.icons.automirrored.rounded.TrendingUp
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -25,7 +25,7 @@ import prasad.vennam.moneypilot.data.entity.Investment
 import prasad.vennam.moneypilot.domain.model.SymbolResult
 import prasad.vennam.moneypilot.util.CurrencyFormatter
 import prasad.vennam.moneypilot.util.LocalCurrencyCode
-import prasad.vennam.moneypilot.util.inRupees
+import prasad.vennam.moneypilot.util.toMajorUnit
 
 @Composable
 fun InvestmentSummaryCard(
@@ -84,12 +84,49 @@ fun SwipeableInvestmentCard(
 ) {
     val dismissState = rememberSwipeToDismissBoxState()
     val scope = rememberCoroutineScope()
+    var showDeleteDialog by remember { mutableStateOf(false) }
+
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = {
+                showDeleteDialog = false
+                scope.launch { dismissState.reset() }
+            },
+            title = { Text(stringResource(R.string.delete_investment_title)) },
+            text = { Text(stringResource(R.string.delete_investment_confirm)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showDeleteDialog = false
+                        scope.launch {
+                            dismissState.snapTo(SwipeToDismissBoxValue.Settled)
+                        }
+                        onDelete()
+                    }
+                ) {
+                    Text(stringResource(R.string.delete))
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        showDeleteDialog = false
+                        scope.launch { dismissState.reset() }
+                    }
+                ) {
+                    Text(stringResource(R.string.cancel))
+                }
+            }
+        )
+    }
 
     SwipeToDismissBox(
         state = dismissState,
         onDismiss = { direction ->
             when (direction) {
-                SwipeToDismissBoxValue.EndToStart -> onDelete()
+                SwipeToDismissBoxValue.EndToStart -> {
+                    showDeleteDialog = true
+                }
                 SwipeToDismissBoxValue.StartToEnd -> {
                     onEdit()
                     scope.launch { dismissState.reset() }
@@ -138,9 +175,9 @@ fun SwipeableInvestmentCard(
 @Composable
 fun InvestmentItem(investment: Investment) {
     val currencyCode = LocalCurrencyCode.current
-    val gain = investment.currentValue.inRupees - investment.investedAmount.inRupees
+    val gain = investment.currentValue.toMajorUnit - investment.investedAmount.toMajorUnit
     val gainPercentage =
-        if (investment.investedAmount > 0) (gain / investment.investedAmount.inRupees) * 100 else 0.0
+        if (investment.investedAmount > 0) (gain / investment.investedAmount.toMajorUnit) * 100 else 0.0
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -182,7 +219,7 @@ fun InvestmentItem(investment: Investment) {
 
             Column(horizontalAlignment = Alignment.End) {
                 Text(
-                    CurrencyFormatter.format(investment.currentValue.inRupees, currencyCode),
+                    CurrencyFormatter.format(investment.currentValue.toMajorUnit, currencyCode),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
                 )

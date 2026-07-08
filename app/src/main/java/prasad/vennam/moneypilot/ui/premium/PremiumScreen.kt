@@ -9,17 +9,21 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
+import androidx.compose.material3.adaptive.currentWindowAdaptiveInfoV2
+import androidx.window.core.layout.WindowWidthSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.android.billingclient.api.BillingClient
 import com.android.billingclient.api.ProductDetails
+import prasad.vennam.moneypilot.R
 import prasad.vennam.moneypilot.util.AnalyticsConstants
 import prasad.vennam.moneypilot.util.AnalyticsHelper
 import prasad.vennam.moneypilot.util.TrackScreen
@@ -36,13 +40,16 @@ fun PremiumScreen(
     val isPremium by viewModel.isPremium.collectAsState()
     val context = LocalContext.current
 
+    val adaptiveInfo = currentWindowAdaptiveInfoV2()
+    val isExpanded = adaptiveInfo.windowSizeClass.windowWidthSizeClass == WindowWidthSizeClass.EXPANDED
+
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("MoneyPilot Premium") },
+                title = { Text(stringResource(id = R.string.premium_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(id = R.string.back))
                     }
                 },
             )
@@ -67,7 +74,7 @@ fun PremiumScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             Text(
-                text = "Upgrade to Premium",
+                text = stringResource(id = R.string.upgrade_to_premium),
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold,
             )
@@ -75,7 +82,7 @@ fun PremiumScreen(
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = "Get an ad-free experience and support the development of MoneyPilot.",
+                text = stringResource(id = R.string.premium_description),
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center,
@@ -96,14 +103,14 @@ fun PremiumScreen(
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
                         Text(
-                            text = "You are Premium!",
+                            text = stringResource(id = R.string.you_are_premium),
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onPrimaryContainer,
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = "Thank you for supporting MoneyPilot. Ads are permanently removed.",
+                            text = stringResource(id = R.string.premium_thank_you),
                             color = MaterialTheme.colorScheme.onPrimaryContainer,
                             textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                         )
@@ -113,20 +120,42 @@ fun PremiumScreen(
                 if (products.isEmpty()) {
                     CircularProgressIndicator()
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text("Loading products...")
+                    Text(stringResource(id = R.string.loading_products))
                 } else {
-                    products.forEach { product ->
-                        ProductCard(
-                            product = product,
-                            onPurchaseClick = {
-                                analyticsHelper.logEvent(
-                                    AnalyticsConstants.Event.PURCHASE_ATTEMPTED,
-                                    mapOf(AnalyticsConstants.Param.PRODUCT_ID to product.productId)
-                                )
-                                viewModel.launchBillingFlow(context as Activity, product)
-                            },
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
+                    if (isExpanded) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            products.forEach { product ->
+                                Box(modifier = Modifier.weight(1f)) {
+                                    ProductCard(
+                                        product = product,
+                                        onPurchaseClick = {
+                                            analyticsHelper.logEvent(
+                                                AnalyticsConstants.Event.PURCHASE_ATTEMPTED,
+                                                mapOf(AnalyticsConstants.Param.PRODUCT_ID to product.productId),
+                                            )
+                                            viewModel.launchBillingFlow(context as Activity, product)
+                                        },
+                                    )
+                                }
+                            }
+                        }
+                    } else {
+                        products.forEach { product ->
+                            ProductCard(
+                                product = product,
+                                onPurchaseClick = {
+                                    analyticsHelper.logEvent(
+                                        AnalyticsConstants.Event.PURCHASE_ATTEMPTED,
+                                        mapOf(AnalyticsConstants.Param.PRODUCT_ID to product.productId),
+                                    )
+                                    viewModel.launchBillingFlow(context as Activity, product)
+                                },
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                        }
                     }
                 }
             }
@@ -175,7 +204,7 @@ fun ProductCard(
                 onClick = onPurchaseClick,
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Text(text = "Buy for $price")
+                Text(text = stringResource(id = R.string.buy_for_price, price))
             }
         }
     }

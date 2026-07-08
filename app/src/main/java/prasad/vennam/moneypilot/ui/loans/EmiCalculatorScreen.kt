@@ -52,10 +52,10 @@ import prasad.vennam.moneypilot.ui.loans.components.PrepaymentCalculator
 import prasad.vennam.moneypilot.ui.loans.components.TenureInput
 import prasad.vennam.moneypilot.ui.viewmodel.EmiCalculatorUiState
 import prasad.vennam.moneypilot.ui.viewmodel.EmiCalculatorViewModel
-import prasad.vennam.moneypilot.util.CurrencyFormatter
-import prasad.vennam.moneypilot.util.LocalCurrencyCode
 import prasad.vennam.moneypilot.util.AnalyticsConstants
 import prasad.vennam.moneypilot.util.AnalyticsHelper
+import prasad.vennam.moneypilot.util.CurrencyFormatter
+import prasad.vennam.moneypilot.util.LocalCurrencyCode
 import prasad.vennam.moneypilot.util.TrackScreen
 import java.util.Currency
 
@@ -86,6 +86,7 @@ fun EmiCalculatorScreen(
     }
 
     val state by viewModel.uiState.collectAsState()
+    val emiReportSubject = stringResource(R.string.emi_report_subject)
 
     Scaffold(
         topBar = {
@@ -166,7 +167,7 @@ fun EmiCalculatorScreen(
 
                             ShareHelper.shareText(
                                 context = context,
-                                subject = "MoneyPilot Loan EMI Report",
+                                subject = emiReportSubject,
                                 text = shareText,
                             )
                         },
@@ -297,7 +298,7 @@ private fun CalculatorMainView(
 
         Spacer(modifier = Modifier.height(8.dp))
         Text(
-            text = "Advanced Tools",
+            text = stringResource(R.string.advanced_tools),
             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
             color = MaterialTheme.colorScheme.onBackground,
         )

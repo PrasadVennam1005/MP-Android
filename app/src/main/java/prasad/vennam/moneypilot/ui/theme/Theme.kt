@@ -20,12 +20,16 @@ private val DarkColorScheme =
         onSecondaryContainer = OnSecondaryContainerDark,
         tertiary = TertiaryDark,
         onTertiary = OnTertiaryDark,
+        tertiaryContainer = TertiaryContainerDark,
+        onTertiaryContainer = OnTertiaryContainerDark,
         background = BackgroundDark,
         onBackground = OnBackgroundDark,
         surface = SurfaceDark,
         onSurface = OnSurfaceDark,
         error = ErrorLight,
         onError = OnErrorLight,
+        errorContainer = ErrorContainerDark,
+        onErrorContainer = OnErrorContainerDark,
     )
 
 private val LightColorScheme =
@@ -40,12 +44,16 @@ private val LightColorScheme =
         onSecondaryContainer = OnSecondaryContainerLight,
         tertiary = TertiaryLight,
         onTertiary = OnTertiaryLight,
+        tertiaryContainer = TertiaryContainerLight,
+        onTertiaryContainer = OnTertiaryContainerLight,
         background = BackgroundLight,
         onBackground = OnBackgroundLight,
         surface = SurfaceLight,
         onSurface = OnSurfaceLight,
         error = ErrorLight,
         onError = OnErrorLight,
+        errorContainer = ErrorContainerLight,
+        onErrorContainer = OnErrorContainerLight,
     )
 
 // Premium Shapes: Cards 20dp, Buttons/Inputs 16dp
@@ -62,6 +70,7 @@ val PremiumShapes =
 fun MoneyPilotTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     dynamicColor: Boolean = false,
+    fontScale: Float = 1.0f,
     content: @Composable () -> Unit,
 ) {
     val colorScheme =
@@ -77,7 +86,7 @@ fun MoneyPilotTheme(
 
     MaterialTheme(
         colorScheme = colorScheme,
-        typography = Typography,
+        typography = getScaledTypography(fontScale),
         shapes = PremiumShapes,
         content = content,
     )

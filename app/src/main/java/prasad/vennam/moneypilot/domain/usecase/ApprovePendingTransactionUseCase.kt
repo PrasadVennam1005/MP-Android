@@ -5,14 +5,14 @@ import prasad.vennam.moneypilot.data.UserPreferences
 import prasad.vennam.moneypilot.data.entity.PendingTransaction
 import prasad.vennam.moneypilot.data.entity.Transaction
 import prasad.vennam.moneypilot.data.entity.TransactionType
-import prasad.vennam.moneypilot.data.repository.MoneyPilotRepository
-import prasad.vennam.moneypilot.util.inPaisa
+import prasad.vennam.moneypilot.data.repository.TransactionRepository
+import prasad.vennam.moneypilot.util.toMinorUnit
 import javax.inject.Inject
 
 class ApprovePendingTransactionUseCase
     @Inject
     constructor(
-        private val repository: MoneyPilotRepository,
+        private val repository: TransactionRepository,
         private val userPreferences: UserPreferences,
     ) {
         suspend operator fun invoke(
@@ -23,7 +23,7 @@ class ApprovePendingTransactionUseCase
             val currentCurrency = userPreferences.currency.first()
             val transaction =
                 Transaction(
-                    amount = pending.amount.inPaisa,
+                    amount = pending.amount.toMinorUnit,
                     timestamp = pending.timestamp,
                     categoryId = categoryId,
                     note = note.ifEmpty { pending.merchant },

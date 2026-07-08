@@ -39,3 +39,10 @@ google-services.json
 *.sh
 *.py
 .kotlin/
+
+# Release builds folder
+/builds/
+
+# Credentials / Service Accounts
+play-service-account.json
+

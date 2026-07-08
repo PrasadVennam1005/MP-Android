@@ -1,5 +1,6 @@
 package prasad.vennam.moneypilot.ui.budget.components
 
+import prasad.vennam.moneypilot.ui.components.BaseBottomSheet
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -30,10 +31,8 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -44,14 +43,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.ui.unit.dp
 import prasad.vennam.moneypilot.R
 import prasad.vennam.moneypilot.data.entity.Budget
 import prasad.vennam.moneypilot.data.entity.Category
 import prasad.vennam.moneypilot.ui.budget.utils.getCategoryIcon
 import prasad.vennam.moneypilot.util.LocalCurrencyCode
-import prasad.vennam.moneypilot.util.inRupees
+import prasad.vennam.moneypilot.util.toMajorUnit
 import java.util.Currency
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -67,7 +70,7 @@ fun BudgetFormBottomSheet(
         mutableStateOf(
             initialBudget
                 ?.amount
-                ?.inRupees
+                ?.toMajorUnit
                 ?.toString()
                 ?.removeSuffix(".0") ?: "",
         )
@@ -79,13 +82,13 @@ fun BudgetFormBottomSheet(
     val amountVal = amount.toDoubleOrNull()
     val isAmountError = amount.isNotEmpty() && (amountVal == null || amountVal <= 0.0 || amountVal > 100000000.0)
 
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val focusManager = LocalFocusManager.current
+    val keyboardController = LocalSoftwareKeyboardController.current
 
-    ModalBottomSheet(
+
+    BaseBottomSheet(
         onDismissRequest = onDismiss,
-        sheetState = sheetState,
-        containerColor = MaterialTheme.colorScheme.surface,
-        dragHandle = null,
+        title = if (initialBudget == null) stringResource(R.string.set_new_budget) else stringResource(R.string.edit_budget),
     ) {
         Column(
             modifier =
@@ -94,41 +97,6 @@ fun BudgetFormBottomSheet(
                     .padding(bottom = 32.dp)
                     .verticalScroll(rememberScrollState()),
         ) {
-            // Header with Close Icon
-            Row(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 24.dp, vertical = 20.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = if (initialBudget == null) stringResource(R.string.set_new_budget) else stringResource(R.string.edit_budget),
-                    style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
-                )
-                IconButton(
-                    onClick = onDismiss,
-                    modifier =
-                        Modifier
-                            .size(32.dp)
-                            .background(
-                                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                                CircleShape,
-                            ),
-                ) {
-                    Icon(
-                        Icons.Rounded.Close,
-                        contentDescription = stringResource(R.string.close),
-                        modifier = Modifier.size(18.dp),
-                    )
-                }
-            }
-
-            HorizontalDivider(
-                modifier = Modifier.padding(bottom = 24.dp),
-                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
-            )
 
             Column(
                 modifier = Modifier.padding(horizontal = 24.dp),
@@ -212,16 +180,20 @@ fun BudgetFormBottomSheet(
                             {
                                 val text =
                                     when {
-                                        amountVal == null -> "Invalid format"
+                                        amountVal == null -> stringResource(R.string.invalid_format)
                                         amountVal <= 0.0 -> stringResource(R.string.budget_limit_error_desc)
-                                        else -> "Amount cannot exceed 100,000,000"
+                                        else -> stringResource(R.string.amount_cannot_exceed)
                                     }
                                 Text(text)
                             }
                         } else {
                             null
                         },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Done),
+                    keyboardActions = KeyboardActions(onDone = {
+                        keyboardController?.hide()
+                        focusManager.clearFocus()
+                    }),
                     shape = MaterialTheme.shapes.large,
                     modifier = Modifier.fillMaxWidth(),
                 )

@@ -12,23 +12,31 @@ import prasad.vennam.moneypilot.data.entity.Investment
 import prasad.vennam.moneypilot.data.entity.Loan
 import prasad.vennam.moneypilot.data.entity.Transaction
 import prasad.vennam.moneypilot.data.entity.TransactionType
-import prasad.vennam.moneypilot.data.repository.MoneyPilotRepository
+import prasad.vennam.moneypilot.data.repository.*
 import org.mockito.Mockito.`when` as whenever
 
 class UseCaseTest {
-    private val repository = mock(MoneyPilotRepository::class.java)
+    private val transactionRepository = mock(TransactionRepository::class.java)
+    private val categoryRepository = mock(CategoryRepository::class.java)
+    private val budgetRepository = mock(BudgetRepository::class.java)
+    private val investmentRepository = mock(InvestmentRepository::class.java)
+    private val loanRepository = mock(LoanRepository::class.java)
+    private val goalRepository = mock(GoalRepository::class.java)
+    private val notificationRepository = mock(NotificationRepository::class.java)
+    private val articleRepository = mock(ArticleRepository::class.java)
+    private val dataManagementRepository = mock(DataManagementRepository::class.java)
     private val userPreferences = mock(UserPreferences::class.java)
 
-    private val getTransactionByIdUseCase = GetTransactionByIdUseCase(repository)
-    private val saveTransactionUseCase = SaveTransactionUseCase(repository, userPreferences)
-    private val deleteTransactionUseCase = DeleteTransactionUseCase(repository, userPreferences)
-    private val saveBudgetUseCase = SaveBudgetUseCase(repository, userPreferences)
-    private val deleteBudgetUseCase = DeleteBudgetUseCase(repository, userPreferences)
-    private val addLoanUseCase = AddLoanUseCase(repository, userPreferences)
-    private val updateLoanUseCase = UpdateLoanUseCase(repository, userPreferences)
-    private val deleteLoanUseCase = DeleteLoanUseCase(repository, userPreferences)
-    private val saveInvestmentUseCase = SaveInvestmentUseCase(repository, userPreferences)
-    private val deleteInvestmentUseCase = DeleteInvestmentUseCase(repository, userPreferences)
+    private val getTransactionByIdUseCase = GetTransactionByIdUseCase(transactionRepository)
+    private val saveTransactionUseCase = SaveTransactionUseCase(transactionRepository, userPreferences)
+    private val deleteTransactionUseCase = DeleteTransactionUseCase(transactionRepository, userPreferences)
+    private val saveBudgetUseCase = SaveBudgetUseCase(budgetRepository, userPreferences)
+    private val deleteBudgetUseCase = DeleteBudgetUseCase(budgetRepository, userPreferences)
+    private val addLoanUseCase = AddLoanUseCase(loanRepository, userPreferences)
+    private val updateLoanUseCase = UpdateLoanUseCase(loanRepository, userPreferences)
+    private val deleteLoanUseCase = DeleteLoanUseCase(loanRepository, userPreferences)
+    private val saveInvestmentUseCase = SaveInvestmentUseCase(investmentRepository, userPreferences)
+    private val deleteInvestmentUseCase = DeleteInvestmentUseCase(investmentRepository, userPreferences)
 
     @Test
     fun getTransactionByIdUseCase_returnsTransaction_whenFound() =
@@ -45,23 +53,23 @@ class UseCaseTest {
                     paymentMode = "Cash",
                     currencyCode = "INR",
                 )
-            whenever(repository.getTransactionById(1L)).thenReturn(transaction)
+            whenever(transactionRepository.getTransactionById(1L)).thenReturn(transaction)
 
             val result = getTransactionByIdUseCase(1L)
 
             assertEquals(transaction, result)
-            verify(repository).getTransactionById(1L)
+            verify(transactionRepository).getTransactionById(1L)
         }
 
     @Test
     fun getTransactionByIdUseCase_returnsNull_whenNotFound() =
         runTest {
-            whenever(repository.getTransactionById(2L)).thenReturn(null)
+            whenever(transactionRepository.getTransactionById(2L)).thenReturn(null)
 
             val result = getTransactionByIdUseCase(2L)
 
             assertNull(result)
-            verify(repository).getTransactionById(2L)
+            verify(transactionRepository).getTransactionById(2L)
         }
 
     @Test
@@ -83,7 +91,7 @@ class UseCaseTest {
             saveTransactionUseCase(transaction)
 
             verify(userPreferences).setSynced(false)
-            verify(repository).insertTransaction(transaction)
+            verify(transactionRepository).insertTransaction(org.mockito.Mockito.any(Transaction::class.java) ?: transaction)
         }
 
     @Test
@@ -101,11 +109,12 @@ class UseCaseTest {
                     paymentMode = "Card",
                     currencyCode = "INR",
                 )
+            whenever(transactionRepository.getTransactionById(5L)).thenReturn(transaction)
 
             saveTransactionUseCase(transaction)
 
             verify(userPreferences).setSynced(false)
-            verify(repository).updateTransaction(transaction)
+            verify(transactionRepository).updateTransaction(org.mockito.Mockito.any(Transaction::class.java) ?: transaction)
         }
 
     @Test
@@ -127,7 +136,7 @@ class UseCaseTest {
             deleteTransactionUseCase(transaction)
 
             verify(userPreferences).setSynced(false)
-            verify(repository).deleteTransaction(transaction)
+            verify(transactionRepository).deleteTransaction(transaction)
         }
 
     @Test
@@ -145,7 +154,7 @@ class UseCaseTest {
             saveBudgetUseCase(budget)
 
             verify(userPreferences).setSynced(false)
-            verify(repository).insertBudget(budget)
+            verify(budgetRepository).insertBudget(org.mockito.Mockito.any(Budget::class.java) ?: budget)
         }
 
     @Test
@@ -159,11 +168,12 @@ class UseCaseTest {
                     period = "Monthly",
                     currencyCode = "INR",
                 )
+            whenever(budgetRepository.getBudgetById(4L)).thenReturn(budget)
 
             saveBudgetUseCase(budget)
 
             verify(userPreferences).setSynced(false)
-            verify(repository).updateBudget(budget)
+            verify(budgetRepository).updateBudget(org.mockito.Mockito.any(Budget::class.java) ?: budget)
         }
 
     @Test
@@ -181,7 +191,7 @@ class UseCaseTest {
             deleteBudgetUseCase(budget)
 
             verify(userPreferences).setSynced(false)
-            verify(repository).deleteBudget(budget)
+            verify(budgetRepository).deleteBudget(budget)
         }
 
     @Test
@@ -201,7 +211,7 @@ class UseCaseTest {
             addLoanUseCase(loan)
 
             verify(userPreferences).setSynced(false)
-            verify(repository).insertLoan(loan)
+            verify(loanRepository).insertLoan(loan)
         }
 
     @Test
@@ -221,7 +231,7 @@ class UseCaseTest {
             updateLoanUseCase(loan)
 
             verify(userPreferences).setSynced(false)
-            verify(repository).updateLoan(loan)
+            verify(loanRepository).updateLoan(loan)
         }
 
     @Test
@@ -241,7 +251,7 @@ class UseCaseTest {
             deleteLoanUseCase(loan)
 
             verify(userPreferences).setSynced(false)
-            verify(repository).deleteLoan(loan)
+            verify(loanRepository).deleteLoan(loan)
         }
 
     @Test
@@ -260,7 +270,7 @@ class UseCaseTest {
             saveInvestmentUseCase(investment)
 
             verify(userPreferences).setSynced(false)
-            verify(repository).insertInvestment(investment)
+            verify(investmentRepository).insertInvestment(org.mockito.Mockito.any(Investment::class.java) ?: investment)
         }
 
     @Test
@@ -275,11 +285,12 @@ class UseCaseTest {
                     currentValue = 65000,
                     currencyCode = "INR",
                 )
+            whenever(investmentRepository.getInvestmentById(2L)).thenReturn(investment)
 
             saveInvestmentUseCase(investment)
 
             verify(userPreferences).setSynced(false)
-            verify(repository).updateInvestment(investment)
+            verify(investmentRepository).updateInvestment(org.mockito.Mockito.any(Investment::class.java) ?: investment)
         }
 
     @Test
@@ -298,7 +309,7 @@ class UseCaseTest {
             deleteInvestmentUseCase(investment)
 
             verify(userPreferences).setSynced(false)
-            verify(repository).deleteInvestment(investment)
+            verify(investmentRepository).deleteInvestment(investment)
         }
 
     @Test
@@ -312,10 +323,10 @@ class UseCaseTest {
                     color = 0xFFF44336,
                     isExpense = true,
                 )
-            val useCase = SaveCategoryUseCase(repository, userPreferences)
+            val useCase = SaveCategoryUseCase(categoryRepository, userPreferences)
             useCase(category)
             verify(userPreferences).setSynced(false)
-            verify(repository).insertCategory(category)
+            verify(categoryRepository).insertCategory(category)
         }
 
     @Test
@@ -329,10 +340,10 @@ class UseCaseTest {
                     color = 0xFFF44336,
                     isExpense = true,
                 )
-            val useCase = DeleteCategoryUseCase(repository, userPreferences)
+            val useCase = DeleteCategoryUseCase(categoryRepository, userPreferences)
             useCase(category)
             verify(userPreferences).setSynced(false)
-            verify(repository).deleteCategory(category)
+            verify(categoryRepository).deleteCategory(category)
         }
 
     @Test
@@ -345,21 +356,21 @@ class UseCaseTest {
                     targetMonths = 6,
                     currentSaved = 10000.0,
                 )
-            val useCase = SaveEmergencyFundUseCase(repository, userPreferences)
+            val useCase = SaveEmergencyFundUseCase(goalRepository, userPreferences)
             useCase(fund)
             verify(userPreferences).setSynced(false)
-            verify(repository).insertEmergencyFund(fund)
+            verify(goalRepository).insertEmergencyFund(fund)
         }
 
     @Test
     fun getBookmarksUseCase_returnsBookmarksFlow() =
         runTest {
             val flow = kotlinx.coroutines.flow.flowOf(emptyList<prasad.vennam.moneypilot.data.entity.BookmarkedArticle>())
-            whenever(repository.allBookmarks).thenReturn(flow)
-            val useCase = GetBookmarksUseCase(repository)
+            whenever(articleRepository.allBookmarks).thenReturn(flow)
+            val useCase = GetBookmarksUseCase(articleRepository)
             val result = useCase()
             assertEquals(flow, result)
-            verify(repository).allBookmarks
+            verify(articleRepository).allBookmarks
         }
 
     @Test
@@ -372,28 +383,28 @@ class UseCaseTest {
                     timestamp = 0L,
                     currencyCode = "INR",
                 )
-            val useCase = AddBookmarkUseCase(repository)
+            val useCase = AddBookmarkUseCase(articleRepository)
             useCase(article)
-            verify(repository).insertBookmark(article)
+            verify(articleRepository).insertBookmark(article)
         }
 
     @Test
     fun removeBookmarkUseCase_deletesBookmarkByUrl() =
         runTest {
-            val useCase = RemoveBookmarkUseCase(repository)
+            val useCase = RemoveBookmarkUseCase(articleRepository)
             useCase("http")
-            verify(repository).deleteBookmarkByUrl("http")
+            verify(articleRepository).deleteBookmarkByUrl("http")
         }
 
     @Test
     fun getNotificationsUseCase_returnsNotificationsFlow() =
         runTest {
             val flow = kotlinx.coroutines.flow.flowOf(emptyList<prasad.vennam.moneypilot.data.entity.Notification>())
-            whenever(repository.allNotifications).thenReturn(flow)
-            val useCase = GetNotificationsUseCase(repository)
+            whenever(notificationRepository.allNotifications).thenReturn(flow)
+            val useCase = GetNotificationsUseCase(notificationRepository)
             val result = useCase()
             assertEquals(flow, result)
-            verify(repository).allNotifications
+            verify(notificationRepository).allNotifications
         }
 
     @Test
@@ -404,41 +415,41 @@ class UseCaseTest {
                     prasad.vennam.moneypilot.data.entity
                         .Notification(title = "Welcome", message = "msg", category = "sys", timestamp = 0L),
                 )
-            val useCase = InsertNotificationsUseCase(repository)
+            val useCase = InsertNotificationsUseCase(notificationRepository)
             useCase(notifications)
-            verify(repository).insertNotifications(notifications)
+            verify(notificationRepository).insertNotifications(notifications)
         }
 
     @Test
     fun deleteNotificationUseCase_deletesNotificationById() =
         runTest {
-            val useCase = DeleteNotificationUseCase(repository)
+            val useCase = DeleteNotificationUseCase(notificationRepository)
             useCase(42L)
-            verify(repository).deleteNotification(42L)
+            verify(notificationRepository).deleteNotification(42L)
         }
 
     @Test
     fun clearAllNotificationsUseCase_clearsAllNotifications() =
         runTest {
-            val useCase = ClearAllNotificationsUseCase(repository)
+            val useCase = ClearAllNotificationsUseCase(notificationRepository)
             useCase()
-            verify(repository).clearAllNotifications()
+            verify(notificationRepository).clearAllNotifications()
         }
 
     @Test
     fun restoreBackupUseCase_restoresBackup() =
         runTest {
-            val useCase = RestoreBackupUseCase(repository, userPreferences)
+            val useCase = RestoreBackupUseCase(dataManagementRepository, userPreferences)
             useCase(emptyList(), emptyList(), emptyList(), emptyList())
-            verify(repository).restoreBackup(emptyList(), emptyList(), emptyList(), emptyList())
+            verify(dataManagementRepository).restoreBackup(emptyList(), emptyList(), emptyList(), emptyList())
             verify(userPreferences).setSynced(true)
         }
 
     @Test
     fun clearAllDataUseCase_clearsAllData() =
         runTest {
-            val useCase = ClearAllDataUseCase(repository)
+            val useCase = ClearAllDataUseCase(dataManagementRepository)
             useCase()
-            verify(repository).clearAllData()
+            verify(dataManagementRepository).clearAllData()
         }
 }

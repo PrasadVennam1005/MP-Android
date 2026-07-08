@@ -20,11 +20,11 @@ import androidx.room.PrimaryKey
 data class Subscription(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val name: String,
-    val amount: Long,                 // In paise
-    val billingCycle: String,         // "Weekly", "Monthly", "Yearly"
-    val nextPaymentDate: Long,        // Timestamp
+    val amount: Long, // In paise
+    val billingCycle: String, // "Weekly", "Monthly", "Yearly"
+    val nextPaymentDate: Long, // Timestamp
     val paymentMode: String = "UPI",
     val categoryId: Long?,
     val isNotificationEnabled: Boolean = true,
-    val lastUpdated: Long = System.currentTimeMillis()
+    val lastUpdated: Long = System.currentTimeMillis(),
 )

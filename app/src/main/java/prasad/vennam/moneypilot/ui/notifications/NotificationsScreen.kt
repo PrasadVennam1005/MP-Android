@@ -1,24 +1,27 @@
 package prasad.vennam.moneypilot.ui.notifications
 
+import android.Manifest
+import android.content.pm.PackageManager
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.BorderStroke
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
-import androidx.lifecycle.compose.LocalLifecycleOwner
-import android.Manifest
-import android.content.pm.PackageManager
-import androidx.core.content.ContextCompat
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material3.adaptive.currentWindowAdaptiveInfoV2
+import androidx.window.core.layout.WindowWidthSizeClass
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -38,7 +41,11 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import kotlinx.coroutines.launch
 import prasad.vennam.moneypilot.R
 import prasad.vennam.moneypilot.data.entity.Notification
@@ -46,6 +53,7 @@ import prasad.vennam.moneypilot.ui.viewmodel.NotificationViewModel
 import prasad.vennam.moneypilot.util.AnalyticsConstants
 import prasad.vennam.moneypilot.util.AnalyticsHelper
 import prasad.vennam.moneypilot.util.TrackScreen
+import androidx.compose.ui.platform.LocalConfiguration
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -66,51 +74,70 @@ fun NotificationsScreen(
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
                 ContextCompat.checkSelfPermission(
                     context,
-                    Manifest.permission.POST_NOTIFICATIONS
+                    Manifest.permission.POST_NOTIFICATIONS,
                 ) == PackageManager.PERMISSION_GRANTED
             } else {
                 true
-            }
+            },
         )
     }
 
-    val permissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission()
-    ) { isGranted: Boolean ->
-        isPermissionGranted = isGranted
-        if (isGranted) {
-            Toast.makeText(context, "Notification alerts enabled!", Toast.LENGTH_SHORT).show()
-        } else {
-            Toast.makeText(context, "Notification permission denied.", Toast.LENGTH_SHORT).show()
+    var subscriptionToLog by remember { mutableStateOf<Notification?>(null) }
+
+    val notificationAlertsEnabled = stringResource(R.string.notification_alerts_enabled)
+    val notificationPermissionDenied = stringResource(R.string.notification_permission_denied)
+    val permissionLauncher =
+        rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.RequestPermission(),
+        ) { isGranted: Boolean ->
+            isPermissionGranted = isGranted
+            if (isGranted) {
+                Toast.makeText(context, notificationAlertsEnabled, Toast.LENGTH_SHORT).show()
+            } else {
+                Toast.makeText(context, notificationPermissionDenied, Toast.LENGTH_SHORT).show()
+            }
         }
-    }
 
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
-        val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) {
-                isPermissionGranted = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-                    ContextCompat.checkSelfPermission(
-                        context,
-                        Manifest.permission.POST_NOTIFICATIONS
-                    ) == PackageManager.PERMISSION_GRANTED
-                } else {
-                    true
+        val observer =
+            LifecycleEventObserver { _, event ->
+                if (event == Lifecycle.Event.ON_RESUME) {
+                    isPermissionGranted =
+                        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                            ContextCompat.checkSelfPermission(
+                                context,
+                                Manifest.permission.POST_NOTIFICATIONS,
+                            ) == PackageManager.PERMISSION_GRANTED
+                        } else {
+                            true
+                        }
                 }
             }
-        }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose {
             lifecycleOwner.lifecycle.removeObserver(observer)
         }
     }
 
+    val adaptiveInfo = currentWindowAdaptiveInfoV2()
+    val isExpanded = adaptiveInfo.windowSizeClass.windowWidthSizeClass == WindowWidthSizeClass.EXPANDED
+    val lazyListState = rememberLazyListState()
+    val lazyGridState = rememberLazyGridState()
+
     var selectedCategory by remember { mutableStateOf("All") }
-    val categories = listOf("All", "Alerts", "Sync", "Budget", "System")
+    val categoryAllStr = stringResource(R.string.category_all)
+    val categories = listOf(
+        categoryAllStr,
+        stringResource(R.string.category_alerts),
+        stringResource(R.string.category_sync),
+        stringResource(R.string.budget),
+        stringResource(R.string.category_system)
+    )
 
     val filteredNotifications =
-        remember(notifications, selectedCategory) {
-            if (selectedCategory == "All") {
+        remember(notifications, selectedCategory, categoryAllStr) {
+            if (selectedCategory == categoryAllStr) {
                 notifications
             } else {
                 notifications.filter { it.category.equals(selectedCategory, ignoreCase = true) }
@@ -162,34 +189,35 @@ fun NotificationsScreen(
                 Surface(
                     color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
                     shape = RoundedCornerShape(16.dp),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.15f))
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)),
                 ) {
                     Row(
                         modifier = Modifier.padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Icon(
                             imageVector = Icons.Rounded.NotificationsActive,
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(24.dp)
+                            modifier = Modifier.size(24.dp),
                         )
                         Spacer(modifier = Modifier.width(16.dp))
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "Notification alerts are off",
+                                text = stringResource(R.string.notification_alerts_off),
                                 style = MaterialTheme.typography.titleSmall,
                                 fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                                color = MaterialTheme.colorScheme.onPrimaryContainer,
                             )
                             Spacer(modifier = Modifier.height(2.dp))
                             Text(
-                                text = "Enable them to receive daily wealth feeds, budget warnings, and loan reminders.",
+                                text = stringResource(R.string.notification_alerts_off_desc),
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+                                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f),
                             )
                         }
                         Spacer(modifier = Modifier.width(16.dp))
@@ -199,9 +227,9 @@ fun NotificationsScreen(
                             },
                             shape = RoundedCornerShape(8.dp),
                             contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
-                            modifier = Modifier.height(36.dp)
+                            modifier = Modifier.height(36.dp),
                         ) {
-                            Text("Turn On", style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold))
+                            Text(stringResource(R.string.turn_on), style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold))
                         }
                     }
                 }
@@ -220,7 +248,7 @@ fun NotificationsScreen(
                     val isSelected = selectedCategory == category
                     val count =
                         if (category ==
-                            "All"
+                            stringResource(R.string.category_all)
                         ) {
                             notifications.size
                         } else {
@@ -232,7 +260,7 @@ fun NotificationsScreen(
                         onClick = {
                             analyticsHelper.logEvent(
                                 AnalyticsConstants.Event.NOTIFICATIONS_FILTER_CLICKED,
-                                mapOf(AnalyticsConstants.Param.CATEGORY to category)
+                                mapOf(AnalyticsConstants.Param.CATEGORY to category),
                             )
                             selectedCategory = category
                         },
@@ -269,31 +297,67 @@ fun NotificationsScreen(
             if (filteredNotifications.isEmpty()) {
                 EmptyNotificationsState(selectedCategory)
             } else {
-                LazyColumn(
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                    modifier = Modifier.fillMaxSize(),
-                ) {
-                    items(
-                        items = filteredNotifications,
-                        key = { it.id },
-                    ) { item ->
-                        SwipeToDismissNotification(
-                            item = item,
-                            onDismiss = {
-                                viewModel.deleteNotification(item.id)
-                                Toast.makeText(context, with(context) { getString(R.string.notification_deleted) }, Toast.LENGTH_SHORT).show()
-                            },
-                            onBookmark = {
-                                if (!item.url.isNullOrBlank()) {
-                                    viewModel.bookmarkNotificationUrl(item.title, item.url)
-                                    Toast.makeText(context, with(context) { getString(R.string.saved_offline) }, Toast.LENGTH_SHORT).show()
-                                } else {
-                                    Toast.makeText(context, with(context) { getString(R.string.no_link_to_bookmark) }, Toast.LENGTH_SHORT).show()
-                                }
-                            },
-                            onNavigateToWeb = onNavigateToWeb,
-                        )
+                if (isExpanded) {
+                    LazyVerticalGrid(
+                        columns = GridCells.Fixed(2),
+                        state = lazyGridState,
+                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier.fillMaxSize(),
+                    ) {
+                        items(
+                            items = filteredNotifications,
+                            key = { it.id },
+                        ) { item ->
+                            SwipeToDismissNotification(
+                                item = item,
+                                onDismiss = {
+                                    viewModel.deleteNotification(item.id)
+                                    Toast.makeText(context, with(context) { getString(R.string.notification_deleted) }, Toast.LENGTH_SHORT).show()
+                                },
+                                onBookmark = {
+                                    if (!item.url.isNullOrBlank()) {
+                                        viewModel.bookmarkNotificationUrl(item.title, item.url)
+                                        Toast.makeText(context, with(context) { getString(R.string.saved_offline) }, Toast.LENGTH_SHORT).show()
+                                    } else {
+                                        Toast.makeText(context, with(context) { getString(R.string.no_link_to_bookmark) }, Toast.LENGTH_SHORT).show()
+                                    }
+                                },
+                                onNavigateToWeb = onNavigateToWeb,
+                                onLogSubscriptionClick = { subscriptionToLog = it },
+                            )
+                        }
+                    }
+                } else {
+                    LazyColumn(
+                        state = lazyListState,
+                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier.fillMaxSize(),
+                    ) {
+                        items(
+                            items = filteredNotifications,
+                            key = { it.id },
+                        ) { item ->
+                            SwipeToDismissNotification(
+                                item = item,
+                                onDismiss = {
+                                    viewModel.deleteNotification(item.id)
+                                    Toast.makeText(context, with(context) { getString(R.string.notification_deleted) }, Toast.LENGTH_SHORT).show()
+                                },
+                                onBookmark = {
+                                    if (!item.url.isNullOrBlank()) {
+                                        viewModel.bookmarkNotificationUrl(item.title, item.url)
+                                        Toast.makeText(context, with(context) { getString(R.string.saved_offline) }, Toast.LENGTH_SHORT).show()
+                                    } else {
+                                        Toast.makeText(context, with(context) { getString(R.string.no_link_to_bookmark) }, Toast.LENGTH_SHORT).show()
+                                    }
+                                },
+                                onNavigateToWeb = onNavigateToWeb,
+                                onLogSubscriptionClick = { subscriptionToLog = it },
+                            )
+                        }
                     }
                 }
             }
@@ -328,6 +392,41 @@ fun NotificationsScreen(
             tonalElevation = 6.dp,
         )
     }
+
+    if (subscriptionToLog != null) {
+        val notification = subscriptionToLog!!
+        val subscriptionName = notification.title.substringAfter("Subscription Due:").trim()
+        AlertDialog(
+            onDismissRequest = { subscriptionToLog = null },
+            title = { Text(stringResource(R.string.approve_log_payment_title)) },
+            text = { Text(stringResource(R.string.approve_log_payment_message, subscriptionName)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        val parsedId = notification.url?.substringAfter("id=")?.toLongOrNull()
+                        viewModel.logSubscriptionPayment(
+                            notificationId = notification.id,
+                            subscriptionId = parsedId,
+                            subscriptionNameFallback = subscriptionName
+                        )
+                        Toast.makeText(
+                            context,
+                            context.resources.getString(R.string.subscription_logged_success, subscriptionName),
+                            Toast.LENGTH_SHORT
+                        ).show()
+                        subscriptionToLog = null
+                    }
+                ) {
+                    Text(stringResource(R.string.approve))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { subscriptionToLog = null }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            }
+        )
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -337,6 +436,7 @@ fun SwipeToDismissNotification(
     onDismiss: () -> Unit,
     onBookmark: () -> Unit,
     onNavigateToWeb: (url: String, title: String) -> Unit,
+    onLogSubscriptionClick: (Notification) -> Unit,
 ) {
     var isRemoved by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
@@ -400,7 +500,7 @@ fun SwipeToDismissNotification(
                             SwipeToDismissBoxValue.StartToEnd -> {
                                 Icon(
                                     imageVector = if (!item.url.isNullOrBlank()) Icons.Rounded.Bookmark else Icons.Rounded.Block,
-                                    contentDescription = if (!item.url.isNullOrBlank()) "Bookmark" else "No Link",
+                                    contentDescription = if (!item.url.isNullOrBlank()) stringResource(R.string.bookmark) else stringResource(R.string.no_link),
                                     tint = if (!item.url.isNullOrBlank()) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
@@ -420,6 +520,7 @@ fun SwipeToDismissNotification(
                 NotificationItemCard(
                     notification = item,
                     onNavigateToWeb = onNavigateToWeb,
+                    onLogSubscriptionClick = onLogSubscriptionClick,
                 )
             },
         )
@@ -430,23 +531,36 @@ fun SwipeToDismissNotification(
 fun NotificationItemCard(
     notification: Notification,
     onNavigateToWeb: (url: String, title: String) -> Unit,
+    onLogSubscriptionClick: (Notification) -> Unit,
 ) {
+    val categoryAlertsStr = stringResource(R.string.category_alerts)
+    val categorySyncStr = stringResource(R.string.category_sync)
+    val budgetStr = stringResource(R.string.budget)
+    val categorySystemStr = stringResource(R.string.category_system)
+
     val categoryDetails =
-        remember(notification.category) {
+        remember(notification.category, categoryAlertsStr, categorySyncStr, budgetStr, categorySystemStr) {
             when (notification.category.lowercase(Locale.ROOT)) {
-                "alerts" -> Triple(Icons.Rounded.Warning, Color(0xFFFF9800), "Alerts")
-                "sync" -> Triple(Icons.Rounded.CloudDone, Color(0xFF2196F3), "Sync")
-                "budget" -> Triple(Icons.AutoMirrored.Rounded.TrendingDown, Color(0xFF4CAF50), "Budget")
-                else -> Triple(Icons.Rounded.Info, Color(0xFF9C27B0), "System")
+                "alerts" -> Triple(Icons.Rounded.Warning, Color(0xFFFF9800), categoryAlertsStr)
+                "sync" -> Triple(Icons.Rounded.CloudDone, Color(0xFF2196F3), categorySyncStr)
+                "budget" -> Triple(Icons.AutoMirrored.Rounded.TrendingDown, Color(0xFF4CAF50), budgetStr)
+                else -> Triple(Icons.Rounded.Info, Color(0xFF9C27B0), categorySystemStr)
             }
         }
+
+    val isSubscriptionLog = remember(notification.url, notification.title) {
+        notification.url?.startsWith("moneypilot://subscription/log") == true ||
+            notification.title.startsWith("Subscription Due:", ignoreCase = true)
+    }
 
     Card(
         modifier =
             Modifier
                 .fillMaxWidth()
                 .then(
-                    if (!notification.url.isNullOrBlank()) {
+                    if (isSubscriptionLog) {
+                        Modifier.clickable { onLogSubscriptionClick(notification) }
+                    } else if (!notification.url.isNullOrBlank()) {
                         Modifier.clickable { onNavigateToWeb(notification.url, notification.title) }
                     } else {
                         Modifier
@@ -478,7 +592,7 @@ fun NotificationItemCard(
                 }
             }
 
-            Spacer(modifier = Modifier.width(16.dp))
+            Spacer(modifier = Modifier.width(12.dp))
 
             Column(modifier = Modifier.weight(1f)) {
                 Row(
@@ -492,11 +606,20 @@ fun NotificationItemCard(
                         color = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.weight(1f),
                     )
-                    Spacer(modifier = Modifier.width(16.dp))
+                    val timeAgo =
+                        remember(notification.timestamp) {
+                            val diff = System.currentTimeMillis() - notification.timestamp
+                            when {
+                                diff < 60000 -> "just now"
+                                diff < 3600000 -> "${diff / 60000}m ago"
+                                diff < 86400000 -> "${diff / 3600000}h ago"
+                                else -> "${diff / 86400000}d ago"
+                            }
+                        }
                     Text(
-                        text = formatTime(notification.timestamp),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                        text = timeAgo,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
                     )
                 }
@@ -506,7 +629,37 @@ fun NotificationItemCard(
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                if (!notification.url.isNullOrBlank()) {
+                if (isSubscriptionLog) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Button(
+                        onClick = {
+                            onLogSubscriptionClick(notification)
+                        },
+                        colors =
+                            ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                                contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                            ),
+                        shape = MaterialTheme.shapes.medium,
+                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp),
+                        modifier = Modifier.height(36.dp),
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.CheckCircle,
+                                contentDescription = null,
+                                modifier = Modifier.size(14.dp),
+                            )
+                            Text(
+                                "Approve & Log",
+                                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                            )
+                        }
+                    }
+                } else if (!notification.url.isNullOrBlank()) {
                     Spacer(modifier = Modifier.height(12.dp))
                     Button(
                         onClick = {
@@ -578,13 +731,13 @@ fun EmptyNotificationsState(category: String) {
         }
         Spacer(modifier = Modifier.height(24.dp))
         Text(
-            text = if (category == "All") "All Caught Up! ✨" else "No $category Notifications",
+            text = if (category == stringResource(R.string.category_all)) stringResource(R.string.all_caught_up) else stringResource(R.string.no_category_notifications, category),
             style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
             color = MaterialTheme.colorScheme.onSurface,
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
-            text = "When alerts, budget targets, or backups trigger, you'll see them listed here.",
+            text = stringResource(R.string.empty_notifications_desc),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
@@ -592,16 +745,18 @@ fun EmptyNotificationsState(category: String) {
     }
 }
 
+@Composable
 private fun formatTime(timestamp: Long): String {
     val date = Date(timestamp)
     val now = Calendar.getInstance()
     val time = Calendar.getInstance().apply { time = date }
 
+    val locale = LocalConfiguration.current.locales[0]
     return if (now.get(Calendar.DATE) == time.get(Calendar.DATE)) {
-        SimpleDateFormat("hh:mm a", Locale.getDefault()).format(date)
+        SimpleDateFormat("hh:mm a", locale).format(date)
     } else if (now.get(Calendar.DATE) - time.get(Calendar.DATE) == 1) {
-        "Yesterday"
+        stringResource(R.string.yesterday)
     } else {
-        SimpleDateFormat("MMM dd", Locale.getDefault()).format(date)
+        SimpleDateFormat("MMM dd", locale).format(date)
     }
 }

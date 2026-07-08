@@ -72,11 +72,22 @@ class MainActivity : FragmentActivity() {
     @Inject
     lateinit var billingManager: BillingManager
 
+    private var onNewIntentListener: ((android.content.Intent) -> Unit)? = null
+
+    fun setOnNewIntentListener(listener: (android.content.Intent) -> Unit) {
+        onNewIntentListener = listener
+    }
+
+    override fun onNewIntent(intent: android.content.Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        onNewIntentListener?.invoke(intent)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         MobileAds.initialize(this) {}
-
 
         // Schedule timezone-based Daily News Notifications
         prasad.vennam.moneypilot.worker.DailyNewsWorker
@@ -98,10 +109,46 @@ class MainActivity : FragmentActivity() {
 
         setContent {
             val mainViewModel: MainViewModel = hiltViewModel()
+            
+            // Handle incoming deep link or notification redirect from initial intent
+            LaunchedEffect(Unit) {
+                intent?.let { intent ->
+                    if (intent.getBooleanExtra("navigate_to_notifications", false)) {
+                        mainViewModel.setPendingDeepLink(Destination.Notifications)
+                        intent.removeExtra("navigate_to_notifications")
+                    } else {
+                        intent.data?.let { uri ->
+                            prasad.vennam.moneypilot.util.DeepLinkMapper.fromUri(uri)?.let { destination ->
+                                mainViewModel.setPendingDeepLink(destination)
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Listen for deep links & notifications while app is in memory
+            DisposableEffect(Unit) {
+                val listener: (android.content.Intent) -> Unit = { newIntent ->
+                    if (newIntent.getBooleanExtra("navigate_to_notifications", false)) {
+                        mainViewModel.setPendingDeepLink(Destination.Notifications)
+                        newIntent.removeExtra("navigate_to_notifications")
+                    } else {
+                        newIntent.data?.let { uri ->
+                            prasad.vennam.moneypilot.util.DeepLinkMapper.fromUri(uri)?.let { destination ->
+                                mainViewModel.setPendingDeepLink(destination)
+                            }
+                        }
+                    }
+                }
+                setOnNewIntentListener(listener)
+                onDispose { setOnNewIntentListener { } }
+            }
+
             LaunchedEffect(Unit) {
                 mainViewModel.checkLoanReminders()
             }
             val themeMode by mainViewModel.themeMode.collectAsState()
+            val fontScale by mainViewModel.fontScale.collectAsState()
             val isBiometricEnabled by mainViewModel.isBiometricEnabled.collectAsState()
             // isAuthenticated tracks whether user passed biometric check.
             var isAuthenticated by remember { mutableStateOf(false) }
@@ -109,21 +156,22 @@ class MainActivity : FragmentActivity() {
 
             val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
             DisposableEffect(lifecycleOwner) {
-                val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
-                    if (event == androidx.lifecycle.Lifecycle.Event.ON_STOP) {
-                        // Store the timestamp when the app is backgrounded
-                        lastBackgroundTime = System.currentTimeMillis()
-                    } else if (event == androidx.lifecycle.Lifecycle.Event.ON_START) {
-                        // Require re-authentication only if the app has been in the background for > 1 minute (60s)
-                        if (lastBackgroundTime != 0L) {
-                            val elapsed = System.currentTimeMillis() - lastBackgroundTime
-                            if (elapsed > 60_000L) {
-                                isAuthenticated = false
+                val observer =
+                    androidx.lifecycle.LifecycleEventObserver { _, event ->
+                        if (event == androidx.lifecycle.Lifecycle.Event.ON_STOP) {
+                            // Store the timestamp when the app is backgrounded
+                            lastBackgroundTime = System.currentTimeMillis()
+                        } else if (event == androidx.lifecycle.Lifecycle.Event.ON_START) {
+                            // Require re-authentication only if the app has been in the background for > 1 minute (60s)
+                            if (lastBackgroundTime != 0L) {
+                                val elapsed = System.currentTimeMillis() - lastBackgroundTime
+                                if (elapsed > 60_000L) {
+                                    isAuthenticated = false
+                                }
+                                lastBackgroundTime = 0L // Reset
                             }
-                            lastBackgroundTime = 0L // Reset
                         }
                     }
-                }
                 lifecycleOwner.lifecycle.addObserver(observer)
                 onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
             }
@@ -138,7 +186,7 @@ class MainActivity : FragmentActivity() {
                         onSuccess = { isAuthenticated = true },
                         onError = {
                             // Silently ignore; user can tap Unlock button
-                        }
+                        },
                     )
                 }
             }
@@ -149,7 +197,7 @@ class MainActivity : FragmentActivity() {
                     UserPreferences.ThemeMode.DARK -> true
                     else -> androidx.compose.foundation.isSystemInDarkTheme()
                 }
-            MoneyPilotTheme(darkTheme = darkTheme) {
+            MoneyPilotTheme(darkTheme = darkTheme, fontScale = fontScale) {
                 // Wrap the main app and the biometric lock screen in a Box overlay structure.
                 // This keeps MoneyPilotApp composed in memory, preserving navigation backstack and screen state
                 // instead of resetting it back to the home/first screen when locking.
@@ -165,14 +213,15 @@ class MainActivity : FragmentActivity() {
                                     subtitle = "Verify your identity to open the app",
                                     onSuccess = { isAuthenticated = true },
                                     onError = {
-                                        android.widget.Toast.makeText(
-                                            this@MainActivity,
-                                            "Authentication failed. Please try again.",
-                                            android.widget.Toast.LENGTH_SHORT
-                                        ).show()
-                                    }
+                                        android.widget.Toast
+                                            .makeText(
+                                                this@MainActivity,
+                                                "Authentication failed. Please try again.",
+                                                android.widget.Toast.LENGTH_SHORT,
+                                            ).show()
+                                    },
                                 )
-                            }
+                            },
                         )
                     }
                 }
@@ -190,36 +239,36 @@ class MainActivity : FragmentActivity() {
 fun BiometricLockScreen(onUnlockClick: () -> Unit) {
     androidx.compose.material3.Surface(
         modifier = Modifier.fillMaxSize(),
-        color = MaterialTheme.colorScheme.background
+        color = MaterialTheme.colorScheme.background,
     ) {
         Column(
             modifier = Modifier.fillMaxSize(),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+            verticalArrangement = Arrangement.Center,
         ) {
             Icon(
                 imageVector = Icons.Rounded.Lock,
                 contentDescription = "Locked",
                 modifier = Modifier.size(80.dp),
-                tint = MaterialTheme.colorScheme.primary
+                tint = MaterialTheme.colorScheme.primary,
             )
             Spacer(modifier = Modifier.height(20.dp))
             Text(
                 "MoneyPilot is locked",
-                style = MaterialTheme.typography.titleLarge
+                style = MaterialTheme.typography.titleLarge,
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
                 "Verify your identity to continue",
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Spacer(modifier = Modifier.height(32.dp))
             Button(onClick = onUnlockClick) {
                 Icon(
                     imageVector = Icons.Rounded.Lock,
                     contentDescription = null,
-                    modifier = Modifier.size(18.dp)
+                    modifier = Modifier.size(18.dp),
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text("Unlock")
@@ -248,8 +297,21 @@ fun MoneyPilotApp(
     val currencyCode by mainViewModel.currency.collectAsState(initial = defaultCurrency)
     val userData by mainViewModel.userData.collectAsState(initial = null)
     val isLoggedIn by mainViewModel.isLoggedIn.collectAsState(initial = false)
+    val pendingDeepLink by mainViewModel.pendingDeepLink.collectAsState()
 
     val context = androidx.compose.ui.platform.LocalContext.current
+
+    // Handle Deep Link or Notification redirection
+    LaunchedEffect(isLoggedIn, pendingDeepLink, currentDestination, userData) {
+        if (isLoggedIn && pendingDeepLink != null && currentDestination != null && currentDestination !is Destination.Auth && userData != null) {
+            val email = userData?.email
+            val isGuest = email == "guest@moneypilot.app"
+            if (!isGuest) {
+                backStack.add(pendingDeepLink!!)
+            }
+            mainViewModel.consumePendingDeepLink()
+        }
+    }
     val interstitialAdManager =
         remember {
             prasad.vennam.moneypilot.ads
@@ -286,13 +348,14 @@ fun MoneyPilotApp(
 
     CompositionLocalProvider(LocalCurrencyCode provides currencyCode) {
         val showNavigation =
-            isLoggedIn && (
-                currentDestination is Destination.Dashboard ||
-                currentDestination is Destination.History ||
-                currentDestination is Destination.Loans ||
-                currentDestination is Destination.Investments ||
-                currentDestination is Destination.Reports
-            )
+            isLoggedIn &&
+                (
+                    currentDestination is Destination.Dashboard ||
+                        currentDestination is Destination.History ||
+                        currentDestination is Destination.Loans ||
+                        currentDestination is Destination.Investments ||
+                        currentDestination is Destination.Reports
+                )
 
         NavigationSuiteScaffold(
             layoutType =
@@ -377,7 +440,7 @@ fun MoneyPilotApp(
                 onBack = { if (backStack.size > 1) backStack.removeLastOrNull() },
                 modifier = Modifier,
                 entryProvider = { key ->
-                   moneyPilotNavEntry(
+                    moneyPilotNavEntry(
                         key = key,
                         backStack = backStack,
                         analyticsHelper = analyticsHelper,
@@ -392,7 +455,7 @@ fun MoneyPilotApp(
                         userData = userData,
                         syncState = syncState,
                         interstitialAdManager = interstitialAdManager,
-                        onBack = { if (backStack.size > 1) backStack.removeLastOrNull() }
+                        onBack = { if (backStack.size > 1) backStack.removeLastOrNull() },
                     )
                 },
             )

@@ -1,0 +1,29 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Users Collection
+    match /users/{email} {
+      allow read, write: if isAuthenticated();
+    }
+
+    // CoSplit Groups Collection
+    match /cosplit_groups/{groupId} {
+      allow read: if isAuthenticated() && (request.auth.token.email in resource.data.members);
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() && (request.auth.token.email in resource.data.members);
+      allow delete: if isAuthenticated() && resource.data.createdById == request.auth.uid;
+
+      // Expenses Subcollection
+      match /expenses/{expenseId} {
+        allow read, write: if isAuthenticated() && (request.auth.token.email in get(/databases/$(database)/documents/cosplit_groups/$(groupId)).data.members);
+      }
+    }
+  }
+}

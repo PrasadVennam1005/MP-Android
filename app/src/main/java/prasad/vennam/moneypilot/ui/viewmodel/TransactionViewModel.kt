@@ -7,9 +7,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import prasad.vennam.moneypilot.data.UserPreferences
 import prasad.vennam.moneypilot.data.entity.Budget
@@ -25,10 +25,10 @@ import prasad.vennam.moneypilot.domain.usecase.GetTransactionsUseCase
 import prasad.vennam.moneypilot.domain.usecase.RestoreBackupUseCase
 import prasad.vennam.moneypilot.domain.usecase.SaveCategoryUseCase
 import prasad.vennam.moneypilot.domain.usecase.SaveTransactionUseCase
-import javax.inject.Inject
 import prasad.vennam.moneypilot.feature.ai.domain.AiRepository
 import prasad.vennam.moneypilot.feature.ai.model.LlmState
 import prasad.vennam.moneypilot.util.ParsedReceipt
+import javax.inject.Inject
 
 data class TransactionFormState(
     val amount: String = "",
@@ -38,6 +38,7 @@ data class TransactionFormState(
     val subCategory: String = "",
     val paymentMode: String = "Cash",
     val timestamp: Long = System.currentTimeMillis(),
+    val loanPaymentId: Long? = null,
 )
 
 @HiltViewModel
@@ -139,6 +140,7 @@ class TransactionViewModel
                                 subCategory = it.subCategory,
                                 paymentMode = it.paymentMode,
                                 timestamp = it.timestamp,
+                                loanPaymentId = it.loanPaymentId,
                             )
                     }
                 } catch (e: Exception) {
@@ -223,8 +225,9 @@ class TransactionViewModel
         fun predictCategoryForMerchant(merchant: String): Long? {
             if (merchant.isBlank()) return null
             val query = merchant.lowercase(java.util.Locale.getDefault()).trim()
-            val matches = allTransactions.value
-                .filter { it.note.lowercase(java.util.Locale.getDefault()).contains(query) && it.categoryId != null }
+            val matches =
+                allTransactions.value
+                    .filter { it.note.lowercase(java.util.Locale.getDefault()).contains(query) && it.categoryId != null }
             if (matches.isEmpty()) return null
 
             return matches

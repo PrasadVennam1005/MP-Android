@@ -56,15 +56,16 @@ fun PaymentAppsSection(currencyCode: String) {
      *    use [isAppInstalled] which only requires the LAUNCHER intent query
      *    already declared in the manifest.
      */
-    val paymentApps = remember(currencyCode) {
-        if (isUpiCurrency(currencyCode)) {
-            discoverUpiApps(context)
-        } else {
-            getPaymentAppsForCurrency(currencyCode).filter { app ->
-                isAppInstalled(context, app.packageName)
+    val paymentApps =
+        remember(currencyCode) {
+            if (isUpiCurrency(currencyCode)) {
+                discoverUpiApps(context)
+            } else {
+                getPaymentAppsForCurrency(currencyCode).filter { app ->
+                    isAppInstalled(context, app.packageName)
+                }
             }
         }
-    }
 
     if (paymentApps.isEmpty()) return
 
@@ -90,24 +91,27 @@ fun PaymentAppItem(
     onClick: () -> Unit,
 ) {
     val context = LocalContext.current
-    val appIcon = remember(app.packageName) {
-        try {
-            context.packageManager.getApplicationIcon(app.packageName)
-        } catch (e: Exception) {
-            null
+    val appIcon =
+        remember(app.packageName) {
+            try {
+                context.packageManager.getApplicationIcon(app.packageName)
+            } catch (e: Exception) {
+                null
+            }
         }
-    }
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier
-            .width(72.dp)
-            .clickable { onClick() },
+        modifier =
+            Modifier
+                .width(72.dp)
+                .clickable { onClick() },
     ) {
         Surface(
-            modifier = Modifier
-                .size(56.dp)
-                .clip(CircleShape),
+            modifier =
+                Modifier
+                    .size(56.dp)
+                    .clip(CircleShape),
             color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
             shape = CircleShape,
             tonalElevation = 1.dp,
@@ -120,9 +124,10 @@ fun PaymentAppItem(
                     Image(
                         painter = rememberAsyncImagePainter(model = appIcon),
                         contentDescription = "${app.name} icon",
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(12.dp),
+                        modifier =
+                            Modifier
+                                .fillMaxSize()
+                                .padding(12.dp),
                     )
                 } else {
                     Text(
@@ -150,8 +155,7 @@ fun PaymentAppItem(
  * Returns true for currency codes whose payment ecosystems use UPI
  * (covers India and other NPCI-adjacent markets).
  */
-private fun isUpiCurrency(currency: String): Boolean =
-    currency.uppercase().trim() in setOf("INR")
+private fun isUpiCurrency(currency: String): Boolean = currency.uppercase().trim() in setOf("INR")
 
 /**
  * Play Store-compliant discovery for UPI-capable apps.
@@ -164,31 +168,33 @@ private fun discoverUpiApps(context: Context): List<PaymentApp> {
     val upiIntent = Intent(Intent.ACTION_VIEW, Uri.parse("upi://pay"))
 
     @Suppress("DEPRECATION")
-    val resolvedApps: List<ResolveInfo> = context.packageManager
-        .queryIntentActivities(upiIntent, 0)
+    val resolvedApps: List<ResolveInfo> =
+        context.packageManager
+            .queryIntentActivities(upiIntent, 0)
 
     // Friendly name lookup — kept in code (not in manifest), policy-safe
-    val friendlyNames: Map<String, String> = mapOf(
-        "com.google.android.apps.nbu.paisa.user" to "GPay",
-        "com.phonepe.app" to "PhonePe",
-        "net.one97.paytm" to "Paytm",
-        "in.org.npci.upiapp" to "BHIM",
-        "in.amazon.mShop.android.shopping" to "Amazon Pay",
-        "com.mobikwik_new" to "MobiKwik",
-        "com.freecharge.android" to "FreeCharge",
-        "com.axis.mobile" to "Axis Bank",
-        "com.icici" to "iMobile Pay",
-        "com.snapbizz.snapwork" to "SnapBizz",
-    )
+    val friendlyNames: Map<String, String> =
+        mapOf(
+            "com.google.android.apps.nbu.paisa.user" to "GPay",
+            "com.phonepe.app" to "PhonePe",
+            "net.one97.paytm" to "Paytm",
+            "in.org.npci.upiapp" to "BHIM",
+            "in.amazon.mShop.android.shopping" to "Amazon Pay",
+            "com.mobikwik_new" to "MobiKwik",
+            "com.freecharge.android" to "FreeCharge",
+            "com.axis.mobile" to "Axis Bank",
+            "com.icici" to "iMobile Pay",
+            "com.snapbizz.snapwork" to "SnapBizz",
+        )
 
     return resolvedApps
         .mapNotNull { info ->
             val pkg = info.activityInfo.packageName
-            val label = friendlyNames[pkg]
-                ?: info.loadLabel(context.packageManager).toString()
+            val label =
+                friendlyNames[pkg]
+                    ?: info.loadLabel(context.packageManager).toString()
             PaymentApp(name = label, packageName = pkg)
-        }
-        .distinctBy { it.packageName }
+        }.distinctBy { it.packageName }
         .sortedBy { it.name }
 }
 
@@ -197,107 +203,124 @@ private fun discoverUpiApps(context: Context): List<PaymentApp> {
 
 fun getPaymentAppsForCurrency(currency: String): List<PaymentApp> =
     when (currency.uppercase().trim()) {
-        "USD" -> listOf(
-            PaymentApp("PayPal", "com.paypal.android.p2pmobile"),
-            PaymentApp("Venmo", "com.venmo"),
-            PaymentApp("Cash App", "com.squareup.cash"),
-            PaymentApp("Zelle", "com.zellepay.zelle"),
-            PaymentApp("Google Wallet", "com.google.android.apps.walletnfcrel"),
-        )
-        "GBP" -> listOf(
-            PaymentApp("Revolut", "com.revolut.revolut"),
-            PaymentApp("Monzo", "co.uk.getmondo"),
-            PaymentApp("PayPal", "com.paypal.android.p2pmobile"),
-            PaymentApp("Barclays", "mobi.barclays.android.barclaysmobilebanking"),
-            PaymentApp("Lloyds Bank", "com.lloydsbank.mobilebanking"),
-        )
-        "EUR" -> listOf(
-            PaymentApp("Revolut", "com.revolut.revolut"),
-            PaymentApp("PayPal", "com.paypal.android.p2pmobile"),
-            PaymentApp("Google Wallet", "com.google.android.apps.walletnfcrel"),
-            PaymentApp("N26", "de.number26.android"),
-            PaymentApp("Lydia", "com.lydia"),
-        )
-        "CAD" -> listOf(
-            PaymentApp("RBC Mobile", "com.rbc.mobile.android"),
-            PaymentApp("TD Canada", "com.td"),
-            PaymentApp("CIBC Mobile", "com.cibc.mobile.banking"),
-            PaymentApp("Scotiabank", "com.scotiabank.mobile"),
-            PaymentApp("BMO Mobile", "com.bmo.mobile"),
-            PaymentApp("Tangerine", "com.tangerine.android"),
-            PaymentApp("Wealthsimple", "com.wealthsimple.trade"),
-            PaymentApp("PayPal", "com.paypal.android.p2pmobile"),
-        )
-        "AUD" -> listOf(
-            PaymentApp("CommBank", "au.com.commbank.netbank"),
-            PaymentApp("NAB Mobile", "au.com.nab.mobile"),
-            PaymentApp("Westpac", "com.westpac.bank"),
-            PaymentApp("ANZ Plus", "au.com.anz.plus"),
-            PaymentApp("Beem", "au.com.beemit"),
-            PaymentApp("PayPal", "com.paypal.android.p2pmobile"),
-        )
-        "SGD" -> listOf(
-            PaymentApp("DBS PayLah!", "com.dbs.dbspaylah"),
-            PaymentApp("Grab", "com.grabtaxi.passenger"),
-            PaymentApp("OCBC Digital", "com.ocbc.mobile"),
-            PaymentApp("UOB TMRW", "com.uob.mobile"),
-            PaymentApp("NETSPay", "sg.nets.netspay"),
-            PaymentApp("Singtel Dash", "com.SingTel.mWallet"),
-        )
-        "JPY" -> listOf(
-            PaymentApp("PayPay", "jp.ne.paypay.android"),
-            PaymentApp("Rakuten Pay", "jp.co.rakuten.pay"),
-            PaymentApp("LINE Pay", "com.linecorp.linepay"),
-        )
-        "BRL" -> listOf(
-            PaymentApp("Nubank", "com.nu"),
-            PaymentApp("Banco do Brasil", "com.bb.android"),
-            PaymentApp("Itaú", "com.itau"),
-            PaymentApp("Bradesco", "com.bradesco"),
-            PaymentApp("PicPay", "com.picpay"),
-            PaymentApp("Mercado Pago", "com.mercadopago.merchant"),
-        )
-        "NZD" -> listOf(
-            PaymentApp("ANZ goMoney", "nz.co.anz.gomoney"),
-            PaymentApp("ASB Bank", "nz.co.asb.mobile"),
-            PaymentApp("BNZ Bank", "nz.co.bnz.droidbanking"),
-            PaymentApp("Westpac NZ", "nz.co.westpac"),
-        )
-        "MXN" -> listOf(
-            PaymentApp("BBVA México", "com.bancomer.mbanking"),
-            PaymentApp("Mercado Pago", "com.mercadopago.merchant"),
-            PaymentApp("PayPal", "com.paypal.android.p2pmobile"),
-        )
-        "AED" -> listOf(
-            PaymentApp("e& money", "com.etisalat.ewallet"),
-            PaymentApp("Payit", "com.Isys.Payitv2"),
-            PaymentApp("ENBD X", "com.emiratesnbd.EmiratesNBD"),
-            PaymentApp("ADCB", "com.adcb.mobilebanking"),
-            PaymentApp("Mashreq UAE", "com.mashreq.mobile"),
-            PaymentApp("PayPal", "com.paypal.android.p2pmobile"),
-            PaymentApp("Google Wallet", "com.google.android.apps.walletnfcrel"),
-        )
-        "SAR" -> listOf(
-            PaymentApp("stc pay", "sa.com.stcpay"),
-            PaymentApp("urpay", "com.neoleap.urpay"),
-            PaymentApp("Al Rajhi Bank", "com.alrajhibank.alrajhimobile"),
-            PaymentApp("SNB Mobile", "com.alahli.mobile"),
-            PaymentApp("PayPal", "com.paypal.android.p2pmobile"),
-        )
-        else -> listOf(
-            PaymentApp("PayPal", "com.paypal.android.p2pmobile"),
-            PaymentApp("Google Wallet", "com.google.android.apps.walletnfcrel"),
-        )
+        "USD" ->
+            listOf(
+                PaymentApp("PayPal", "com.paypal.android.p2pmobile"),
+                PaymentApp("Venmo", "com.venmo"),
+                PaymentApp("Cash App", "com.squareup.cash"),
+                PaymentApp("Zelle", "com.zellepay.zelle"),
+                PaymentApp("Google Wallet", "com.google.android.apps.walletnfcrel"),
+            )
+        "GBP" ->
+            listOf(
+                PaymentApp("Revolut", "com.revolut.revolut"),
+                PaymentApp("Monzo", "co.uk.getmondo"),
+                PaymentApp("PayPal", "com.paypal.android.p2pmobile"),
+                PaymentApp("Barclays", "mobi.barclays.android.barclaysmobilebanking"),
+                PaymentApp("Lloyds Bank", "com.lloydsbank.mobilebanking"),
+            )
+        "EUR" ->
+            listOf(
+                PaymentApp("Revolut", "com.revolut.revolut"),
+                PaymentApp("PayPal", "com.paypal.android.p2pmobile"),
+                PaymentApp("Google Wallet", "com.google.android.apps.walletnfcrel"),
+                PaymentApp("N26", "de.number26.android"),
+                PaymentApp("Lydia", "com.lydia"),
+            )
+        "CAD" ->
+            listOf(
+                PaymentApp("RBC Mobile", "com.rbc.mobile.android"),
+                PaymentApp("TD Canada", "com.td"),
+                PaymentApp("CIBC Mobile", "com.cibc.mobile.banking"),
+                PaymentApp("Scotiabank", "com.scotiabank.mobile"),
+                PaymentApp("BMO Mobile", "com.bmo.mobile"),
+                PaymentApp("Tangerine", "com.tangerine.android"),
+                PaymentApp("Wealthsimple", "com.wealthsimple.trade"),
+                PaymentApp("PayPal", "com.paypal.android.p2pmobile"),
+            )
+        "AUD" ->
+            listOf(
+                PaymentApp("CommBank", "au.com.commbank.netbank"),
+                PaymentApp("NAB Mobile", "au.com.nab.mobile"),
+                PaymentApp("Westpac", "com.westpac.bank"),
+                PaymentApp("ANZ Plus", "au.com.anz.plus"),
+                PaymentApp("Beem", "au.com.beemit"),
+                PaymentApp("PayPal", "com.paypal.android.p2pmobile"),
+            )
+        "SGD" ->
+            listOf(
+                PaymentApp("DBS PayLah!", "com.dbs.dbspaylah"),
+                PaymentApp("Grab", "com.grabtaxi.passenger"),
+                PaymentApp("OCBC Digital", "com.ocbc.mobile"),
+                PaymentApp("UOB TMRW", "com.uob.mobile"),
+                PaymentApp("NETSPay", "sg.nets.netspay"),
+                PaymentApp("Singtel Dash", "com.SingTel.mWallet"),
+            )
+        "JPY" ->
+            listOf(
+                PaymentApp("PayPay", "jp.ne.paypay.android"),
+                PaymentApp("Rakuten Pay", "jp.co.rakuten.pay"),
+                PaymentApp("LINE Pay", "com.linecorp.linepay"),
+            )
+        "BRL" ->
+            listOf(
+                PaymentApp("Nubank", "com.nu"),
+                PaymentApp("Banco do Brasil", "com.bb.android"),
+                PaymentApp("Itaú", "com.itau"),
+                PaymentApp("Bradesco", "com.bradesco"),
+                PaymentApp("PicPay", "com.picpay"),
+                PaymentApp("Mercado Pago", "com.mercadopago.merchant"),
+            )
+        "NZD" ->
+            listOf(
+                PaymentApp("ANZ goMoney", "nz.co.anz.gomoney"),
+                PaymentApp("ASB Bank", "nz.co.asb.mobile"),
+                PaymentApp("BNZ Bank", "nz.co.bnz.droidbanking"),
+                PaymentApp("Westpac NZ", "nz.co.westpac"),
+            )
+        "MXN" ->
+            listOf(
+                PaymentApp("BBVA México", "com.bancomer.mbanking"),
+                PaymentApp("Mercado Pago", "com.mercadopago.merchant"),
+                PaymentApp("PayPal", "com.paypal.android.p2pmobile"),
+            )
+        "AED" ->
+            listOf(
+                PaymentApp("e& money", "com.etisalat.ewallet"),
+                PaymentApp("Payit", "com.Isys.Payitv2"),
+                PaymentApp("ENBD X", "com.emiratesnbd.EmiratesNBD"),
+                PaymentApp("ADCB", "com.adcb.mobilebanking"),
+                PaymentApp("Mashreq UAE", "com.mashreq.mobile"),
+                PaymentApp("PayPal", "com.paypal.android.p2pmobile"),
+                PaymentApp("Google Wallet", "com.google.android.apps.walletnfcrel"),
+            )
+        "SAR" ->
+            listOf(
+                PaymentApp("stc pay", "sa.com.stcpay"),
+                PaymentApp("urpay", "com.neoleap.urpay"),
+                PaymentApp("Al Rajhi Bank", "com.alrajhibank.alrajhimobile"),
+                PaymentApp("SNB Mobile", "com.alahli.mobile"),
+                PaymentApp("PayPal", "com.paypal.android.p2pmobile"),
+            )
+        else ->
+            listOf(
+                PaymentApp("PayPal", "com.paypal.android.p2pmobile"),
+                PaymentApp("Google Wallet", "com.google.android.apps.walletnfcrel"),
+            )
     }
 
 // ─── App launch helpers ───────────────────────────────────────────────────────
 
-fun isAppInstalled(context: Context, packageName: String): Boolean =
+fun isAppInstalled(
+    context: Context,
+    packageName: String,
+): Boolean =
     try {
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
             context.packageManager.getPackageInfo(
                 packageName,
-                android.content.pm.PackageManager.PackageInfoFlags.of(0),
+                android.content.pm.PackageManager.PackageInfoFlags
+                    .of(0),
             )
         } else {
             @Suppress("DEPRECATION")
@@ -310,7 +333,10 @@ fun isAppInstalled(context: Context, packageName: String): Boolean =
         false
     }
 
-fun openApp(context: Context, packageName: String) {
+fun openApp(
+    context: Context,
+    packageName: String,
+) {
     val launchIntent = context.packageManager.getLaunchIntentForPackage(packageName)
     if (launchIntent != null) {
         context.startActivity(launchIntent)
@@ -319,7 +345,7 @@ fun openApp(context: Context, packageName: String) {
             context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=$packageName")))
         } catch (e: Exception) {
             context.startActivity(
-                Intent(Intent.ACTION_VIEW, Uri.parse("https://play.google.com/store/apps/details?id=$packageName"))
+                Intent(Intent.ACTION_VIEW, Uri.parse("https://play.google.com/store/apps/details?id=$packageName")),
             )
         }
     }

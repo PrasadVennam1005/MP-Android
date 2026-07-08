@@ -7,45 +7,75 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import prasad.vennam.moneypilot.data.dao.AutopayAlertDao
+import prasad.vennam.moneypilot.data.entity.AutopayAlert
 import prasad.vennam.moneypilot.data.entity.Category
 import prasad.vennam.moneypilot.data.entity.Subscription
-import prasad.vennam.moneypilot.data.repository.MoneyPilotRepository
+import prasad.vennam.moneypilot.data.repository.CategoryRepository
+import prasad.vennam.moneypilot.data.repository.SubscriptionRepository
 import javax.inject.Inject
 
 @HiltViewModel
-class SubscriptionViewModel @Inject constructor(
-    private val repository: MoneyPilotRepository
-) : ViewModel() {
+class SubscriptionViewModel
+    @Inject
+    constructor(
+        private val subscriptionRepository: SubscriptionRepository,
+        private val categoryRepository: CategoryRepository,
+        private val autopayAlertDao: AutopayAlertDao,
+    ) : ViewModel() {
+        val allSubscriptions: StateFlow<List<Subscription>> =
+            subscriptionRepository.allSubscriptions
+                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val allSubscriptions: StateFlow<List<Subscription>> =
-        repository.allSubscriptions
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+        val allCategories: StateFlow<List<Category>> =
+            categoryRepository.allCategories
+                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val allCategories: StateFlow<List<Category>> =
-        repository.allCategories
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+        val autopayAlerts: StateFlow<List<AutopayAlert>> =
+            autopayAlertDao.getAllAutopayAlerts()
+                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    fun saveSubscription(subscription: Subscription) {
-        viewModelScope.launch {
-            try {
-                if (subscription.id == 0L) {
-                    repository.insertSubscription(subscription)
-                } else {
-                    repository.updateSubscription(subscription)
+        fun saveSubscription(subscription: Subscription) {
+            viewModelScope.launch {
+                try {
+                    if (subscription.id == 0L) {
+                        subscriptionRepository.insertSubscription(subscription)
+                    } else {
+                        subscriptionRepository.updateSubscription(subscription)
+                    }
+                } catch (e: Exception) {
+                    android.util.Log.e("SubscriptionViewModel", "Error saving subscription", e)
                 }
-            } catch (e: Exception) {
-                android.util.Log.e("SubscriptionViewModel", "Error saving subscription", e)
             }
         }
-    }
 
-    fun deleteSubscription(subscription: Subscription) {
-        viewModelScope.launch {
-            try {
-                repository.deleteSubscription(subscription)
-            } catch (e: Exception) {
-                android.util.Log.e("SubscriptionViewModel", "Error deleting subscription", e)
+        fun deleteSubscription(subscription: Subscription) {
+            viewModelScope.launch {
+                try {
+                    subscriptionRepository.deleteSubscription(subscription)
+                } catch (e: Exception) {
+                    android.util.Log.e("SubscriptionViewModel", "Error deleting subscription", e)
+                }
+            }
+        }
+
+        fun updateAutopayAlertStatus(alert: AutopayAlert, newStatus: String) {
+            viewModelScope.launch {
+                try {
+                    autopayAlertDao.updateAutopayAlert(alert.copy(status = newStatus))
+                } catch (e: Exception) {
+                    android.util.Log.e("SubscriptionViewModel", "Error updating autopay alert status", e)
+                }
+            }
+        }
+
+        fun deleteAutopayAlert(alert: AutopayAlert) {
+            viewModelScope.launch {
+                try {
+                    autopayAlertDao.deleteAutopayAlert(alert.id)
+                } catch (e: Exception) {
+                    android.util.Log.e("SubscriptionViewModel", "Error deleting autopay alert", e)
+                }
             }
         }
     }
-}

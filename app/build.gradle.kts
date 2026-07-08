@@ -124,16 +124,16 @@ base {
 tasks.configureEach {
     if (name.startsWith("assemble") || name.startsWith("bundle")) {
         doLast {
-            val desktopBuilds = File(System.getProperty("user.home"), "Desktop/MoneyPilot_Builds")
-            desktopBuilds.mkdirs()
+            val projectBuilds = File(rootProject.projectDir, "builds")
+            projectBuilds.mkdirs()
             
             val outputsDir = layout.buildDirectory.dir("outputs").get().asFile
             if (outputsDir.exists()) {
                 outputsDir.walkTopDown().filter { it.extension == "apk" || it.extension == "aab" }.forEach { file ->
                     // Only copy freshly generated files from this current build (last 1 minute)
                     if (System.currentTimeMillis() - file.lastModified() < 60000) { 
-                        file.copyTo(File(desktopBuilds, file.name), overwrite = true)
-                        println("✅ Saved build to Desktop: ${file.name}")
+                        file.copyTo(File(projectBuilds, file.name), overwrite = true)
+                        println("✅ Saved build to builds/ folder: ${file.name}")
                     }
                 }
             }
@@ -156,6 +156,8 @@ dependencies {
     implementation(libs.androidx.compose.adaptive)
     implementation(libs.androidx.compose.adaptive.layout)
     implementation(libs.androidx.compose.adaptive.navigation3)
+    implementation(libs.androidx.compose.foundation)
+    implementation(libs.androidx.compose.foundation.layout)
     implementation(libs.androidx.compose.material3.adaptive.navigation.suite)
     implementation(libs.androidx.compose.material.icons.core)
     implementation(libs.androidx.compose.material.icons.extended)
@@ -165,8 +167,11 @@ dependencies {
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.datastore.preferences)
+    implementation(libs.androidx.glance.appwidget)
+    implementation(libs.androidx.glance.material3)
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.auth)
+    implementation(libs.firebase.firestore)
     implementation(libs.firebase.config)
     implementation(libs.firebase.analytics)
     implementation(libs.firebase.crashlytics)

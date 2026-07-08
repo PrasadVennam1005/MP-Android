@@ -33,7 +33,7 @@ import prasad.vennam.moneypilot.data.entity.Transaction
 import prasad.vennam.moneypilot.data.entity.TransactionType
 import prasad.vennam.moneypilot.util.CurrencyFormatter
 import prasad.vennam.moneypilot.util.LocalCurrencyCode
-import prasad.vennam.moneypilot.util.inRupees
+import prasad.vennam.moneypilot.util.toMajorUnit
 import java.text.SimpleDateFormat
 import java.util.Date
 
@@ -124,7 +124,7 @@ fun TransactionItem(
             text =
                 buildString {
                     append(if (transaction.type == TransactionType.INCOME) "+" else "-")
-                    append(CurrencyFormatter.format(transaction.amount.inRupees, currencyCode))
+                    append(CurrencyFormatter.format(transaction.amount.toMajorUnit, currencyCode))
                 },
             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
             color = if (transaction.type == TransactionType.INCOME) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,

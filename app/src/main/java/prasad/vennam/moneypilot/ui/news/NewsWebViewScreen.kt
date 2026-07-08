@@ -56,6 +56,7 @@ fun NewsWebViewScreen(
     var currentTitle by remember { mutableStateOf(title) }
     var progress by remember { mutableIntStateOf(0) }
     var webViewInstance by remember { mutableStateOf<WebView?>(null) }
+    val shareArticleLabel = stringResource(R.string.share_article)
 
     val isBookmarked =
         remember(uiState.bookmarks, currentUrl) {
@@ -95,13 +96,13 @@ fun NewsWebViewScreen(
                                 if (isBookmarked) {
                                     analyticsHelper.logEvent(
                                         AnalyticsConstants.Event.NEWS_BOOKMARK_REMOVED,
-                                        mapOf(AnalyticsConstants.Param.URL to currentUrl)
+                                        mapOf(AnalyticsConstants.Param.URL to currentUrl),
                                     )
                                     viewModel.removeBookmarkByUrl(currentUrl)
                                 } else {
                                     analyticsHelper.logEvent(
                                         AnalyticsConstants.Event.NEWS_BOOKMARK_ADDED,
-                                        mapOf(AnalyticsConstants.Param.URL to currentUrl)
+                                        mapOf(AnalyticsConstants.Param.URL to currentUrl),
                                     )
                                     viewModel.addBookmark(
                                         title = currentTitle,
@@ -124,7 +125,7 @@ fun NewsWebViewScreen(
                         onClick = {
                             analyticsHelper.logEvent(
                                 AnalyticsConstants.Event.NEWS_SHARED,
-                                mapOf(AnalyticsConstants.Param.URL to currentUrl)
+                                mapOf(AnalyticsConstants.Param.URL to currentUrl),
                             )
                             try {
                                 val sendIntent =
@@ -133,7 +134,7 @@ fun NewsWebViewScreen(
                                         putExtra(Intent.EXTRA_TEXT, "$currentTitle\n$currentUrl")
                                         type = "text/plain"
                                     }
-                                val shareIntent = Intent.createChooser(sendIntent, context.getString(R.string.share_article))
+                                val shareIntent = Intent.createChooser(sendIntent, shareArticleLabel)
                                 context.startActivity(shareIntent)
                             } catch (e: Exception) {
                                 // ignore

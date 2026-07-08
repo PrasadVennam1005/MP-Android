@@ -8,32 +8,39 @@ import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
-import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material3.*
+import androidx.compose.material3.adaptive.currentWindowAdaptiveInfoV2
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.window.core.layout.WindowWidthSizeClass
 import kotlinx.coroutines.launch
 import prasad.vennam.moneypilot.R
 import prasad.vennam.moneypilot.data.UserPreferences
 import prasad.vennam.moneypilot.data.entity.Investment
+import prasad.vennam.moneypilot.ui.components.AdBannerView
 import prasad.vennam.moneypilot.ui.components.ProfileIconButton
 import prasad.vennam.moneypilot.ui.dashboard.SyncState
 import prasad.vennam.moneypilot.ui.dashboard.SyncStatusIndicator
 import prasad.vennam.moneypilot.ui.investments.components.*
 import prasad.vennam.moneypilot.ui.viewmodel.InvestmentViewModel
-import prasad.vennam.moneypilot.util.LocalCurrencyCode
-import prasad.vennam.moneypilot.util.inPaisa
-import prasad.vennam.moneypilot.util.AnalyticsHelper
 import prasad.vennam.moneypilot.util.AnalyticsConstants
+import prasad.vennam.moneypilot.util.AnalyticsHelper
+import prasad.vennam.moneypilot.util.LocalCurrencyCode
 import prasad.vennam.moneypilot.util.TrackScreen
+import prasad.vennam.moneypilot.util.toMinorUnit
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -60,14 +67,18 @@ fun InvestmentScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
+    val adaptiveInfo = currentWindowAdaptiveInfoV2()
+    val isExpanded = adaptiveInfo.windowSizeClass.windowWidthSizeClass == WindowWidthSizeClass.EXPANDED
+
     val lazyListState = rememberLazyListState()
+    val lazyGridState = rememberLazyGridState()
     var isFabVisible by remember { mutableStateOf(true) }
     var previousIndex by remember { mutableIntStateOf(0) }
     var previousOffset by remember { mutableIntStateOf(0) }
 
-    LaunchedEffect(lazyListState.firstVisibleItemIndex, lazyListState.firstVisibleItemScrollOffset) {
-        val currentIndex = lazyListState.firstVisibleItemIndex
-        val currentOffset = lazyListState.firstVisibleItemScrollOffset
+    LaunchedEffect(lazyListState.firstVisibleItemIndex, lazyListState.firstVisibleItemScrollOffset, lazyGridState.firstVisibleItemIndex, lazyGridState.firstVisibleItemScrollOffset) {
+        val currentIndex = if (isExpanded) lazyGridState.firstVisibleItemIndex else lazyListState.firstVisibleItemIndex
+        val currentOffset = if (isExpanded) lazyGridState.firstVisibleItemScrollOffset else lazyListState.firstVisibleItemScrollOffset
         if (currentIndex == 0 && currentOffset == 0) {
             isFabVisible = true
         } else if (currentIndex > previousIndex || (currentIndex == previousIndex && currentOffset > previousOffset)) {
@@ -89,7 +100,12 @@ fun InvestmentScreen(
         }
 
     Scaffold(
-        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
+        snackbarHost = {
+            SnackbarHost(
+                hostState = snackbarHostState,
+                modifier = Modifier.navigationBarsPadding()
+            )
+        },
         topBar = {
             TopAppBar(
                 title = {
@@ -188,7 +204,7 @@ fun InvestmentScreen(
                         onClick = {
                             analyticsHelper.logEvent(
                                 AnalyticsConstants.Event.INVESTMENTS_TAB_SWITCHED,
-                                mapOf(AnalyticsConstants.Param.TAB to title)
+                                mapOf(AnalyticsConstants.Param.TAB to title),
                             )
                             selectedTab = index
                         },
@@ -199,60 +215,122 @@ fun InvestmentScreen(
 
             when (selectedTab) {
                 0 -> {
-                    LazyColumn(
-                        state = lazyListState,
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp),
-                    ) {
-                        item {
-                            prasad.vennam.moneypilot.ui.components.AdBannerView(
-                                isPremium = isPremium,
-                                modifier = Modifier.fillMaxWidth(),
-                            )
-                        }
-                        item {
-                            InvestmentSummaryCard(totalCurrent, totalGain, gainPercent)
-                        }
-
-                        item {
-                            Text(
-                                stringResource(R.string.your_portfolio),
-                                style = MaterialTheme.typography.titleLarge,
-                                modifier = Modifier.padding(vertical = 8.dp),
-                            )
-                        }
-
-                        if (investments.isEmpty()) {
-                            item {
-                                EmptyInvestmentState()
-                            }
-                        } else {
-                            items(investments, key = { it.id }) { investment ->
-                                val deletedMessage = stringResource(R.string.investment_deleted)
-                                val undoLabel = stringResource(R.string.undo)
-                                SwipeableInvestmentCard(
-                                    investment = investment,
-                                    onEdit = {
-                                        investmentToEdit = investment
-                                        showFormSheet = true
-                                    },
-                                    onDelete = {
-                                        val investmentCopy = investment
-                                        viewModel.deleteInvestment(investment)
-                                        scope.launch {
-                                            val result =
-                                                snackbarHostState.showSnackbar(
-                                                    message = deletedMessage,
-                                                    actionLabel = undoLabel,
-                                                    duration = SnackbarDuration.Short,
-                                                )
-                                            if (result == SnackbarResult.ActionPerformed) {
-                                                viewModel.saveInvestment(investmentCopy)
-                                            }
-                                        }
-                                    },
+                    if (isExpanded) {
+                        LazyVerticalGrid(
+                            columns = GridCells.Fixed(2),
+                            state = lazyGridState,
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(16.dp),
+                            horizontalArrangement = Arrangement.spacedBy(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(16.dp),
+                        ) {
+                            item(span = { GridItemSpan(2) }) {
+                                prasad.vennam.moneypilot.ui.components.AdBannerView(
+                                    isPremium = isPremium,
+                                    modifier = Modifier.fillMaxWidth(),
                                 )
+                            }
+                            item(span = { GridItemSpan(2) }) {
+                                InvestmentSummaryCard(totalCurrent, totalGain, gainPercent)
+                            }
+
+                            item(span = { GridItemSpan(2) }) {
+                                Text(
+                                    stringResource(R.string.your_portfolio),
+                                    style = MaterialTheme.typography.titleLarge,
+                                    modifier = Modifier.padding(vertical = 8.dp),
+                                )
+                            }
+
+                            if (investments.isEmpty()) {
+                                item(span = { GridItemSpan(2) }) {
+                                    EmptyInvestmentState()
+                                }
+                            } else {
+                                items(investments, key = { "${it.id}_${it.lastUpdated}" }) { investment ->
+                                    val deletedMessage = stringResource(R.string.investment_deleted)
+                                    val undoLabel = stringResource(R.string.undo)
+                                    SwipeableInvestmentCard(
+                                        investment = investment,
+                                        onEdit = {
+                                            investmentToEdit = investment
+                                            showFormSheet = true
+                                        },
+                                        onDelete = {
+                                            val investmentCopy = investment
+                                            viewModel.deleteInvestment(investment)
+                                            scope.launch {
+                                                val result =
+                                                    snackbarHostState.showSnackbar(
+                                                        message = deletedMessage,
+                                                        actionLabel = undoLabel,
+                                                        duration = SnackbarDuration.Short,
+                                                    )
+                                                if (result == SnackbarResult.ActionPerformed) {
+                                                    viewModel.saveInvestment(investmentCopy)
+                                                }
+                                            }
+                                        },
+                                    )
+                                }
+                            }
+                        }
+                    } else {
+                        LazyColumn(
+                            state = lazyListState,
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(16.dp),
+                        ) {
+                            item {
+                                prasad.vennam.moneypilot.ui.components.AdBannerView(
+                                    isPremium = isPremium,
+                                    modifier = Modifier.fillMaxWidth(),
+                                )
+                            }
+                            item {
+                                InvestmentSummaryCard(totalCurrent, totalGain, gainPercent)
+                            }
+
+                            item {
+                                Text(
+                                    stringResource(R.string.your_portfolio),
+                                    style = MaterialTheme.typography.titleLarge,
+                                    modifier = Modifier.padding(vertical = 8.dp),
+                                )
+                            }
+
+                            if (investments.isEmpty()) {
+                                item {
+                                    EmptyInvestmentState()
+                                }
+                            } else {
+                                items(investments, key = { "${it.id}_${it.lastUpdated}" }) { investment ->
+                                    val deletedMessage = stringResource(R.string.investment_deleted)
+                                    val undoLabel = stringResource(R.string.undo)
+                                    SwipeableInvestmentCard(
+                                        investment = investment,
+                                        onEdit = {
+                                            investmentToEdit = investment
+                                            showFormSheet = true
+                                        },
+                                        onDelete = {
+                                            val investmentCopy = investment
+                                            viewModel.deleteInvestment(investment)
+                                            scope.launch {
+                                                val result =
+                                                    snackbarHostState.showSnackbar(
+                                                        message = deletedMessage,
+                                                        actionLabel = undoLabel,
+                                                        duration = SnackbarDuration.Short,
+                                                    )
+                                                if (result == SnackbarResult.ActionPerformed) {
+                                                    viewModel.saveInvestment(investmentCopy)
+                                                }
+                                            }
+                                        },
+                                    )
+                                }
                             }
                         }
                     }
@@ -264,6 +342,17 @@ fun InvestmentScreen(
                         contentPadding = PaddingValues(16.dp),
                         verticalArrangement = Arrangement.spacedBy(16.dp),
                     ) {
+                        if (!isPremium) {
+                            item {
+                                AdBannerView(
+                                    isPremium = isPremium,
+                                    modifier =
+                                        Modifier
+                                            .fillMaxWidth()
+                                            .padding(top = 16.dp),
+                                )
+                            }
+                        }
                         item {
                             AssetAllocationCard(
                                 allocationDetails = allocationDetails,
@@ -300,8 +389,8 @@ fun InvestmentScreen(
                             Investment(
                                 name = name,
                                 type = type,
-                                investedAmount = invested.inPaisa,
-                                currentValue = current.inPaisa,
+                                investedAmount = invested.toMinorUnit,
+                                currentValue = current.toMinorUnit,
                                 symbol = symbol,
                                 quantity = qty,
                                 interestRate = rate,
@@ -314,8 +403,8 @@ fun InvestmentScreen(
                             investmentToEdit!!.copy(
                                 name = name,
                                 type = type,
-                                investedAmount = invested.inPaisa,
-                                currentValue = current.inPaisa,
+                                investedAmount = invested.toMinorUnit,
+                                currentValue = current.toMinorUnit,
                                 symbol = symbol,
                                 quantity = qty,
                                 interestRate = rate,

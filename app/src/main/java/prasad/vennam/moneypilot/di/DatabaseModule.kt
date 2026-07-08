@@ -29,13 +29,15 @@ import prasad.vennam.moneypilot.data.dao.LoanDao
 import prasad.vennam.moneypilot.data.dao.LoanPaymentDao
 import prasad.vennam.moneypilot.data.dao.NotificationDao
 import prasad.vennam.moneypilot.data.dao.PendingTransactionDao
-import prasad.vennam.moneypilot.data.dao.TransactionDao
-import prasad.vennam.moneypilot.data.dao.SubscriptionDao
 import prasad.vennam.moneypilot.data.dao.SavingGoalDao
+import prasad.vennam.moneypilot.data.dao.SubscriptionDao
+import prasad.vennam.moneypilot.data.dao.AutopayAlertDao
+import prasad.vennam.moneypilot.data.dao.TransactionDao
 import prasad.vennam.moneypilot.data.entity.Category
-import prasad.vennam.moneypilot.data.repository.MoneyPilotRepository
+import prasad.vennam.moneypilot.data.repository.DataManagementRepository
 import prasad.vennam.moneypilot.domain.usecase.BackupSyncManager
 import prasad.vennam.moneypilot.domain.usecase.LoanReminderScheduler
+import prasad.vennam.moneypilot.util.AnalyticsHelper
 import prasad.vennam.moneypilot.util.SecureStorageHelper
 import prasad.vennam.moneypilot.worker.BackupSyncManagerImpl
 import prasad.vennam.moneypilot.worker.LoanReminderSchedulerImpl
@@ -78,7 +80,7 @@ object DatabaseModule {
                         passphraseStr,
                         null,
                         SQLiteDatabase.OPEN_READONLY,
-                        null
+                        null,
                     )
                 db.close()
             } catch (e: Exception) {
@@ -86,7 +88,6 @@ object DatabaseModule {
                 context.deleteDatabase(dbName)
             }
         }
-
 
         return Room
             .databaseBuilder(
@@ -97,9 +98,15 @@ object DatabaseModule {
             .addMigrations(
                 MoneyPilotDatabase.MIGRATION_1_2,
                 MoneyPilotDatabase.MIGRATION_2_3,
-                MoneyPilotDatabase.MIGRATION_3_4
-            )
-            .fallbackToDestructiveMigration(true)
+                MoneyPilotDatabase.MIGRATION_3_4,
+                MoneyPilotDatabase.MIGRATION_4_5,
+                MoneyPilotDatabase.MIGRATION_5_6,
+                MoneyPilotDatabase.MIGRATION_6_7,
+                MoneyPilotDatabase.MIGRATION_7_8,
+                MoneyPilotDatabase.MIGRATION_8_9,
+                MoneyPilotDatabase.MIGRATION_9_10,
+                MoneyPilotDatabase.MIGRATION_10_11,
+            ).fallbackToDestructiveMigration(true)
             .addCallback(
                 object : RoomDatabase.Callback() {
                     override fun onOpen(db: SupportSQLiteDatabase) {
@@ -107,9 +114,16 @@ object DatabaseModule {
                         val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
                         scope.launch {
                             val categoryDao = categoryDaoProvider.get()
-                            // Only seed if empty
-                            if (categoryDao.getAllCategories().first().isEmpty()) {
+                            val existingCategories = categoryDao.getAllCategories().first()
+                            if (existingCategories.isEmpty()) {
                                 categoryDao.insertCategories(Category.DEFAULT_CATEGORIES)
+                            } else {
+                                // Insert missing default categories (e.g. after app update)
+                                val existingNames = existingCategories.map { it.name }.toSet()
+                                val missingCategories = Category.DEFAULT_CATEGORIES.filter { it.name !in existingNames }
+                                if (missingCategories.isNotEmpty()) {
+                                    categoryDao.insertCategories(missingCategories)
+                                }
                             }
                         }
                     }
@@ -171,6 +185,10 @@ object DatabaseModule {
 
     @Provides
     @Singleton
+    fun provideAutopayAlertDao(database: MoneyPilotDatabase): AutopayAlertDao = database.autopayAlertDao()
+
+    @Provides
+    @Singleton
     fun provideUserPreferences(
         @ApplicationContext context: Context,
     ): UserPreferences = UserPreferences(context)
@@ -183,28 +201,22 @@ object DatabaseModule {
         budgetDao: BudgetDao,
         investmentDao: InvestmentDao,
         loanDao: LoanDao,
-        loanPaymentDao: LoanPaymentDao,
         emergencyFundDao: EmergencyFundDao,
-        pendingTransactionDao: PendingTransactionDao,
-        bookmarkedArticleDao: BookmarkedArticleDao,
-        notificationDao: NotificationDao,
         subscriptionDao: SubscriptionDao,
         savingGoalDao: SavingGoalDao,
+        loanPaymentDao: LoanPaymentDao,
         database: MoneyPilotDatabase,
-    ): MoneyPilotRepository =
-        MoneyPilotRepository(
+    ): DataManagementRepository =
+        DataManagementRepository(
             categoryDao = categoryDao,
             transactionDao = transactionDao,
             budgetDao = budgetDao,
             investmentDao = investmentDao,
             loanDao = loanDao,
-            loanPaymentDao = loanPaymentDao,
             emergencyFundDao = emergencyFundDao,
-            pendingTransactionDao = pendingTransactionDao,
-            bookmarkedArticleDao = bookmarkedArticleDao,
-            notificationDao = notificationDao,
             subscriptionDao = subscriptionDao,
             savingGoalDao = savingGoalDao,
+            loanPaymentDao = loanPaymentDao,
             database = database,
         )
 
@@ -219,7 +231,9 @@ object DatabaseModule {
     @Provides
     @Singleton
     fun provideBackupSyncManager(
-        repository: MoneyPilotRepository,
+        repository: DataManagementRepository,
         userPreferences: UserPreferences,
-    ): BackupSyncManager = BackupSyncManagerImpl(repository, userPreferences)
+        analyticsHelper: AnalyticsHelper,
+        moshi: com.squareup.moshi.Moshi,
+    ): BackupSyncManager = BackupSyncManagerImpl(repository, userPreferences, analyticsHelper, moshi)
 }

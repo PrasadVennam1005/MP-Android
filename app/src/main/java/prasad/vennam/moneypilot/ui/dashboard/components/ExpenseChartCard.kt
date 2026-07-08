@@ -1,5 +1,6 @@
 package prasad.vennam.moneypilot.ui.dashboard.components
 
+import prasad.vennam.moneypilot.ui.components.BaseBottomSheet
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -18,7 +19,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
+
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -114,18 +115,16 @@ fun CategoryBreakdownBottomSheet(
     val currencyCode = LocalCurrencyCode.current
     val stringKeyedMap = spendingByCategory.mapKeys { it.key?.name ?: unknownString }
     val sortedList = stringKeyedMap.toList().sortedByDescending { it.second }
-    ModalBottomSheet(onDismissRequest = onDismiss, dragHandle = null) {
+    BaseBottomSheet(
+        onDismissRequest = onDismiss,
+        title = stringResource(R.string.full_expense_breakdown),
+    ) {
         Column(
             modifier =
                 Modifier
                     .fillMaxWidth()
                     .padding(bottom = 32.dp, start = 24.dp, end = 24.dp),
         ) {
-            Text(
-                stringResource(R.string.full_expense_breakdown),
-                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                modifier = Modifier.padding(vertical = 16.dp),
-            )
             LazyColumn(
                 verticalArrangement = Arrangement.spacedBy(12.dp),
                 modifier = Modifier.fillMaxWidth(),

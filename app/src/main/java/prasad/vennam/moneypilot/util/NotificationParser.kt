@@ -10,18 +10,25 @@ data class ParsedNotification(
     val bankAccount: String,
 )
 
+data class ParsedAutopay(
+    val amount: Double,
+    val merchant: String,
+    val scheduledDate: Long,
+    val paymentApp: String?,
+    val upiMandateId: String?,
+)
+
 object NotificationParser {
-    // Regex for matching amount (e.g., Rs. 500, Rs 500.50, INR 1500, $50, 20.50 USD)
+    // Regex for matching amount (e.g., Rs. 500, Rs 500.50, INR 1500, $50, 20.50 USD) - Captured currency prefix
     private val amountPrefixPattern =
         Pattern.compile(
-            "(?i)(?:rs\\.?|inr|usd|eur|gbp|aed|sar|aud|cad|sgd|cny|jpy|krw|inr|\\$|€|£|¥|₩)\\s*([\\d,]+(?:\\.\\d{1,2})?)",
+            "(?i)(rs\\.?|inr|usd|eur|gbp|aed|sar|aud|cad|sgd|cny|jpy|krw|\\$|€|£|¥|₩)\\s*([\\d,]+(?:\\.\\d{1,2})?)",
         )
     private val amountSuffixPattern =
         Pattern.compile(
-            "(?i)([\\d,]+(?:\\.\\d{1,2})?)\\s*(?:rs\\.?|inr|usd|eur|gbp|rupees|dollars|euros|cents|paisa)",
+            "(?i)([\\d,]+(?:\\.\\d{1,2})?)\\s*(rs\\.?|inr|usd|eur|gbp|rupees|dollars|euros|cents|paisa)",
         )
 
-    // Keywords to classify transactions
     private val expenseKeywords =
         setOf(
             "debited",
@@ -94,6 +101,12 @@ object NotificationParser {
             "(?i)(?:a/c|acct|account|card|ending|xx)\\s*(?:no\\.?\\s*)?\\b([*Xx]*\\d{3,4})\\b",
         )
 
+    private data class AmountCandidate(
+        val amount: Double,
+        val index: Int,
+        val currency: String,
+    )
+
     fun parse(
         title: String,
         text: String,
@@ -102,21 +115,52 @@ object NotificationParser {
         val fullText = "$title $text".replace("\n", " ").trim()
         val lowerText = fullText.lowercase(Locale.getDefault())
 
-        // 1. Extract Amount
+        // 1. Discard credit card bills / statement due notifications early
+        val isStatementNotice = lowerText.contains("statement for") || 
+                                lowerText.contains("statement of") ||
+                                lowerText.contains("bill of") || 
+                                lowerText.contains("total amount due") || 
+                                lowerText.contains("minimum due") || 
+                                lowerText.contains("due by") || 
+                                lowerText.contains("due on")
+        if (isStatementNotice) return null
+
+        // 2. Discard aggregated system tray summaries
+        val isGroupedAlert = lowerText.contains("transactions successful") || 
+                             lowerText.contains("new alerts") || 
+                             lowerText.contains("notifications")
+        if (isGroupedAlert) return null
+
+        // 3. Discard non-financial alerts (OTPs, simple security checks, etc.) early
+        val isOtp = lowerText.contains("otp") || lowerText.contains("verification code") || lowerText.contains("one time password") || lowerText.contains("one-time password")
+        if (isOtp) return null
+
+        // 4. Extract Amount (utilizing lookback check to prioritize transaction over balance)
         val amount = extractAmount(fullText) ?: return null
 
-        // 2. Extract Type (default to EXPENSE/debit as it's the most common case)
-        val type =
-            when {
-                incomeKeywords.any { lowerText.contains(it) } -> "INCOME"
-                expenseKeywords.any { lowerText.contains(it) } -> "EXPENSE"
-                else -> "EXPENSE"
+        // 5. Classify transaction type and check if it contains actual debit/credit keywords
+        val hasIncomeKeyword = incomeKeywords.any { lowerText.contains(it) }
+        val hasExpenseKeyword = expenseKeywords.any { lowerText.contains(it) }
+        
+        // Discard simple balance queries or limit alerts that are not transactions
+        if (!hasIncomeKeyword && !hasExpenseKeyword) {
+            val isBalanceAlert = lowerText.contains("balance") || lowerText.contains("bal:") || lowerText.contains("available") || lowerText.contains("avl bal")
+            val isLimitAlert = lowerText.contains("limit")
+            if (isBalanceAlert || isLimitAlert) {
+                return null
             }
+        }
 
-        // 3. Extract Merchant
+        val type = when {
+            hasIncomeKeyword -> "INCOME"
+            hasExpenseKeyword -> "EXPENSE"
+            else -> "EXPENSE"
+        }
+
+        // 6. Extract Merchant
         val merchant = extractMerchant(fullText) ?: getAppNameFromPackage(packageName)
 
-        // 4. Extract Bank/Source Account info
+        // 7. Extract Bank/Source Account info
         val bankAccount = extractBankAccount(fullText) ?: getAppNameFromPackage(packageName)
 
         return ParsedNotification(
@@ -128,21 +172,72 @@ object NotificationParser {
     }
 
     private fun extractAmount(text: String): Double? {
+        val lowerText = text.lowercase(Locale.getDefault())
+        val balanceKeywords = listOf("bal", "balance", "available", "avl")
+        val txKeywords = listOf("debited", "credited", "spent", "paid", "charged", "received", "sent", "withdrawn", "purchase", "payment", "txn", "debit", "credit")
+
+        val candidates = mutableListOf<AmountCandidate>()
+
+        // prefix matches
         var matcher = amountPrefixPattern.matcher(text)
-        if (matcher.find()) {
-            matcher.group(1)?.replace(",", "")?.toDoubleOrNull()?.let {
-                if (it > 0) return it
+        while (matcher.find()) {
+            val currencySymbol = matcher.group(1)?.lowercase() ?: ""
+            val amount = matcher.group(2)?.replace(",", "")?.toDoubleOrNull()
+            if (amount != null && amount > 0) {
+                candidates.add(AmountCandidate(amount, matcher.start(), currencySymbol))
             }
         }
 
+        // suffix matches
         matcher = amountSuffixPattern.matcher(text)
-        if (matcher.find()) {
-            matcher.group(1)?.replace(",", "")?.toDoubleOrNull()?.let {
-                if (it > 0) return it
+        while (matcher.find()) {
+            val amount = matcher.group(1)?.replace(",", "")?.toDoubleOrNull()
+            val currencySymbol = matcher.group(2)?.lowercase() ?: ""
+            if (amount != null && amount > 0) {
+                candidates.add(AmountCandidate(amount, matcher.start(), currencySymbol))
             }
         }
 
-        return null
+        if (candidates.isEmpty()) return null
+        if (candidates.size == 1) return candidates[0].amount
+
+        // Sort by occurrence index
+        candidates.sortBy { it.index }
+
+        var bestCandidate: AmountCandidate? = null
+        var bestScore = -1
+
+        for (candidate in candidates) {
+            val index = candidate.index
+            val startLookback = maxOf(0, index - 25)
+            val lookbackText = lowerText.substring(startLookback, index)
+
+            val isPrecededByBalance = balanceKeywords.any { lookbackText.contains(it) }
+            val isPrecededByTx = txKeywords.any { lookbackText.contains(it) }
+
+            // Score based on preceding keywords
+            var score = when {
+                isPrecededByBalance -> 0
+                isPrecededByTx -> 20
+                else -> 10
+            }
+
+            // Score boost: Prioritize local/home currencies (INR/Rs/₹) over foreign ones (USD/$) when multiple values exist
+            val isHomeCurrency = candidate.currency.contains("inr") || 
+                                 candidate.currency.contains("rs") || 
+                                 candidate.currency.contains("₹") || 
+                                 candidate.currency.contains("rupees")
+            if (isHomeCurrency) {
+                score += 5
+            }
+
+            if (score > bestScore) {
+                bestScore = score
+                bestCandidate = candidate
+            }
+        }
+
+        return bestCandidate?.amount ?: candidates.firstOrNull()?.amount
     }
 
     private fun extractMerchant(text: String): String? {
@@ -189,13 +284,17 @@ object NotificationParser {
                 "account",
             )
 
-        var words = candidate.split(Regex("\\s+"))
+        val words = candidate.split(Regex("\\s+"))
         val filtered = mutableListOf<String>()
 
         for (word in words) {
-            val lowerWord = word.lowercase(Locale.getDefault())
-            // If we hit any stop-word, truncate the merchant name here
-            if (stopWords.any { lowerWord == it || lowerWord.startsWith(it) }) {
+            val cleanWord = word.replace(Regex("[^A-Za-z0-9]"), "").lowercase(Locale.getDefault())
+            // Check if cleanWord matches any cleaned stopWord to avoid aggressive prefix triggers (e.g. ATM matching AT)
+            val isStopWord = stopWords.any { stopWord ->
+                val cleanStop = stopWord.replace(Regex("[^A-Za-z0-9]"), "").lowercase(Locale.getDefault())
+                cleanWord == cleanStop
+            }
+            if (isStopWord) {
                 break
             }
             // Skip numeric-only parts (like transaction IDs)
@@ -203,12 +302,13 @@ object NotificationParser {
                 break
             }
             // Skip dates and times (e.g., 22-06-26, 22-Jun, 12:30)
-            val isDateOrTime = word.matches(Regex("\\d{1,2}[-/](?:\\d{1,2}|[a-zA-Z]{3})[-/]\\d{2,4}")) ||
-                               word.matches(Regex("\\d{1,2}:\\d{2}(?::\\d{2})?.*"))
+            val isDateOrTime =
+                word.matches(Regex("\\d{1,2}[-/](?:\\d{1,2}|[a-zA-Z]{3})[-/]\\d{2,4}")) ||
+                    word.matches(Regex("\\d{1,2}:\\d{2}(?::\\d{2})?.*"))
             if (isDateOrTime) {
                 break
             }
-            if (merchantIgnoreKeywords.contains(lowerWord)) {
+            if (merchantIgnoreKeywords.contains(cleanWord)) {
                 continue
             }
             filtered.add(word)
@@ -246,5 +346,113 @@ object NotificationParser {
             "com.squareup.cash" -> "Cash App"
             else -> "Bank Notification"
         }
+    }
+
+    fun parseAutopay(
+        sender: String,
+        message: String,
+        packageName: String? = null
+    ): ParsedAutopay? {
+        val lowerText = message.lowercase()
+        // Check if message is an Autopay/Mandate alert
+        val isAutopay = lowerText.contains("autopay") ||
+                lowerText.contains("auto-pay") ||
+                lowerText.contains("mandate") ||
+                lowerText.contains("standing instruction") ||
+                lowerText.contains("scheduled debit") ||
+                lowerText.contains("auto-debit") ||
+                lowerText.contains("auto debit")
+
+        if (!isAutopay) return null
+
+        // 1. Extract Amount
+        var amountVal = 0.0
+        val prefixMatcher = amountPrefixPattern.matcher(message)
+        if (prefixMatcher.find()) {
+            amountVal = prefixMatcher.group(2)?.replace(",", "")?.toDoubleOrNull() ?: 0.0
+        } else {
+            val suffixMatcher = amountSuffixPattern.matcher(message)
+            if (suffixMatcher.find()) {
+                amountVal = suffixMatcher.group(1)?.replace(",", "")?.toDoubleOrNull() ?: 0.0
+            }
+        }
+        if (amountVal <= 0.0) return null
+
+        // 2. Extract Merchant
+        var merchantName = "Autopay Mandate"
+        val forPattern = Pattern.compile("(?i)(?:for|towards|to)\\s+([A-Za-z0-9\\s&*'-]+)")
+        val forMatcher = forPattern.matcher(message)
+        if (forMatcher.find()) {
+            val candidate = forMatcher.group(1) ?: ""
+            // Truncate at common boundaries
+            val cleanedCandidate = candidate
+                .split(Regex("(?i)\\b(?:is|on|scheduled|due|to|revoke|manage|register|setup|created|by|at)\\b"))[0]
+                .trim()
+            if (cleanedCandidate.isNotEmpty()) {
+                merchantName = cleanMerchantName(cleanedCandidate)
+            }
+        }
+
+        // 3. Extract Scheduled Date
+        var scheduledTime = System.currentTimeMillis() + 24 * 60 * 60 * 1000L // Default to 24h from now
+        val datePattern = Pattern.compile("\\b(\\d{1,2})[-/](\\d{1,2}|[A-Za-z]{3})[-/](\\d{2,4})\\b")
+        val dateMatcher = datePattern.matcher(message)
+        if (dateMatcher.find()) {
+            val day = dateMatcher.group(1)?.toIntOrNull() ?: 1
+            val monthStr = dateMatcher.group(2) ?: "1"
+            val yearStr = dateMatcher.group(3) ?: "26"
+
+            val month = when (monthStr.lowercase()) {
+                "jan" -> 0
+                "feb" -> 1
+                "mar" -> 2
+                "apr" -> 3
+                "may" -> 4
+                "jun" -> 5
+                "jul" -> 6
+                "aug" -> 7
+                "sep" -> 8
+                "oct" -> 9
+                "nov" -> 10
+                "dec" -> 11
+                else -> (monthStr.toIntOrNull() ?: 1) - 1
+            }
+
+            var year = yearStr.toIntOrNull() ?: 2026
+            if (year < 100) year += 2000
+
+            val cal = java.util.Calendar.getInstance()
+            cal.set(year, month, day, 10, 0, 0) // Default to 10:00 AM on that day
+            scheduledTime = cal.timeInMillis
+        }
+
+        // 4. Extract UPI Mandate ID
+        var mandateId: String? = null
+        val mandatePattern = Pattern.compile("(?i)(?:mandate|umn|instruction)\\s*(?:id|no|number)?\\s*[:=]?\\s*([a-zA-Z0-9@.-]+)")
+        val mandateMatcher = mandatePattern.matcher(message)
+        if (mandateMatcher.find()) {
+            mandateId = mandateMatcher.group(1)
+        }
+
+        // 5. Extract Payment App
+        var appName: String? = getAppNameFromPackage(packageName)
+        if (appName == "Bank Notification" || appName == "SMS Alert" || appName == null) {
+            val matchedApp = when {
+                lowerText.contains("gpay") || lowerText.contains("google pay") -> "Google Pay"
+                lowerText.contains("phonepe") -> "PhonePe"
+                lowerText.contains("paytm") -> "Paytm"
+                lowerText.contains("bhim") -> "BHIM"
+                else -> null
+            }
+            appName = matchedApp
+        }
+
+        return ParsedAutopay(
+            amount = amountVal,
+            merchant = merchantName,
+            scheduledDate = scheduledTime,
+            paymentApp = appName,
+            upiMandateId = mandateId
+        )
     }
 }

@@ -1,6 +1,12 @@
 package prasad.vennam.moneypilot.ui.settings
 
+import android.Manifest
 import android.app.Activity
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.net.Uri
+import android.os.Build
+import android.provider.Settings
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -24,6 +30,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.HelpOutline
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.rounded.Logout
@@ -35,14 +42,15 @@ import androidx.compose.material.icons.rounded.DarkMode
 import androidx.compose.material.icons.rounded.DeleteForever
 import androidx.compose.material.icons.rounded.FileDownload
 import androidx.compose.material.icons.rounded.Flag
+import androidx.compose.material.icons.rounded.FormatSize
 import androidx.compose.material.icons.rounded.Gavel
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.LightMode
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.Notifications
+import androidx.compose.material.icons.rounded.NotificationsActive
 import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.Person
-import android.content.Intent
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.PrivacyTip
 import androidx.compose.material.icons.rounded.SettingsSuggest
@@ -66,7 +74,6 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -89,11 +96,12 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.credentials.CredentialManager
 import androidx.credentials.GetCredentialRequest
+import androidx.credentials.exceptions.GetCredentialCancellationException
 import androidx.credentials.exceptions.GetCredentialException
 import androidx.credentials.exceptions.NoCredentialException
-import androidx.credentials.exceptions.GetCredentialCancellationException
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -110,13 +118,6 @@ import prasad.vennam.moneypilot.ui.viewmodel.TransactionViewModel
 import prasad.vennam.moneypilot.util.AnalyticsConstants
 import prasad.vennam.moneypilot.util.AnalyticsHelper
 import prasad.vennam.moneypilot.util.ExportHelper
-import android.Manifest
-import android.content.pm.PackageManager
-import android.net.Uri
-import android.provider.Settings
-import androidx.core.content.ContextCompat
-import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material.icons.rounded.NotificationsActive
 import prasad.vennam.moneypilot.util.TrackScreen
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -148,6 +149,7 @@ fun SettingsScreen(
     val currentTarget by mainViewModel.monthlySavingsTarget.collectAsState()
     val isBiometricEnabled by mainViewModel.isBiometricEnabled.collectAsState()
     val isDevToolEnabled by mainViewModel.isDevToolEnabled.collectAsState()
+    val isSyncingState by mainViewModel.isSyncing.collectAsState()
 
     val scope = rememberCoroutineScope()
     val isGuest = remember(userData) { userData?.email == "guest@moneypilot.app" }
@@ -182,9 +184,9 @@ fun SettingsScreen(
     var showExportFormatDialog by remember { mutableStateOf(false) }
     var showCurrencySheet by remember { mutableStateOf(false) }
     var showGoalSheet by remember { mutableStateOf(false) }
-    val currencySheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     var showThemeDialog by remember { mutableStateOf(false) }
+    var showFontScaleDialog by remember { mutableStateOf(false) }
     var showDeleteAccountConfirmation by remember { mutableStateOf(false) }
     var isDeletingAccount by remember { mutableStateOf(false) }
     var showDemoConfirmDialog by remember { mutableStateOf(false) }
@@ -196,9 +198,22 @@ fun SettingsScreen(
             UserPreferences.ThemeMode.DARK -> stringResource(R.string.dark_mode)
             else -> stringResource(R.string.system_default)
         }
+    val fontScale by mainViewModel.fontScale.collectAsState()
+    val fontScaleSubtitle =
+        when (fontScale) {
+            0.85f -> stringResource(R.string.font_scale_small)
+            1.15f -> stringResource(R.string.font_scale_large)
+            1.3f -> stringResource(R.string.font_scale_extra_large)
+            else -> stringResource(R.string.font_scale_default)
+        }
     var pendingFeatureName by remember { mutableStateOf("") }
     val credentialManager = remember { CredentialManager.create(context) }
     val restoreState by mainViewModel.restoreState.collectAsState()
+
+    val enableBiometricLockText = stringResource(R.string.enable_biometric_lock)
+    val enableBiometricSubtitleText = stringResource(R.string.enable_biometric_subtitle)
+    val authRequiresRestartText = stringResource(R.string.auth_requires_restart)
+    val disableSmsTrackingMsg = stringResource(R.string.disable_sms_tracking_msg)
 
     val authLauncher =
         rememberLauncherForActivityResult(
@@ -363,14 +378,25 @@ fun SettingsScreen(
             }
         }
 
-    val smsPermissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission()
-    ) { isGranted: Boolean ->
-        isSmsTrackingEnabled = isGranted
-        if (!isGranted) {
-            Toast.makeText(context, "SMS tracking requires permission.", Toast.LENGTH_SHORT).show()
+    val notificationPermissionLauncher =
+        rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.RequestPermission(),
+        ) { isGranted ->
+            if (isGranted) {
+                mainViewModel.triggerSync()
+                Toast.makeText(context, context.getString(R.string.sync_started_msg), Toast.LENGTH_SHORT).show()
+            }
         }
-    }
+
+    val smsPermissionLauncher =
+        rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.RequestPermission(),
+        ) { isGranted: Boolean ->
+            isSmsTrackingEnabled = isGranted
+            if (!isGranted) {
+                Toast.makeText(context, "SMS tracking requires permission.", Toast.LENGTH_SHORT).show()
+            }
+        }
 
     val currencyOptions =
         listOf(
@@ -431,7 +457,7 @@ fun SettingsScreen(
             onSave = { goal, target ->
                 mainViewModel.savePreferences(goal, target, currentCurrencyCode)
             },
-            onDismiss = { showGoalSheet = false }
+            onDismiss = { showGoalSheet = false },
         )
     }
 
@@ -484,7 +510,7 @@ fun SettingsScreen(
                     SettingsItem(
                         icon = Icons.Rounded.CurrencyExchange,
                         title = stringResource(R.string.currency),
-                        subtitle = "${currentCurrency.name} (${currentCurrency.symbol}) • $liveRateText",
+                        subtitle = stringResource(R.string.currency_subtitle_format, currentCurrency.name, currentCurrency.symbol, liveRateText),
                         isLocked = isGuest,
                         onClick = {
                             checkGuestAction("Currency Change") {
@@ -494,8 +520,8 @@ fun SettingsScreen(
                     )
                     SettingsItem(
                         icon = Icons.Rounded.Star,
-                        title = "MoneyPilot Premium",
-                        subtitle = "Remove ads and support development",
+                        title = stringResource(R.string.moneypilot_premium),
+                        subtitle = stringResource(R.string.premium_subtitle),
                         isLocked = isGuest,
                         onClick = {
                             checkGuestAction("Premium") {
@@ -527,19 +553,52 @@ fun SettingsScreen(
                             }
                         },
                     )
-                    SettingsItem(
-                        icon = Icons.Rounded.NotificationsActive,
-                        title = "Recurring Subscriptions",
-                        subtitle = "Track Netflix, Rent, utilities & billing alerts",
-                        onClick = {
-                            onNavigateToSubscriptions()
-                        },
-                    )
+
                     SettingsItem(
                         icon = Icons.Rounded.Palette,
                         title = stringResource(R.string.theme),
                         subtitle = themeSubtitle,
                         onClick = { showThemeDialog = true },
+                    )
+                    SettingsItem(
+                        icon = Icons.Rounded.FormatSize,
+                        title = stringResource(R.string.app_font_size),
+                        subtitle = fontScaleSubtitle,
+                        onClick = { showFontScaleDialog = true },
+                    )
+
+                    SettingsItem(
+                        icon = Icons.Rounded.CloudSync,
+                        title = stringResource(R.string.sync_with_google_sheets),
+                        subtitle = if (isSynced) stringResource(R.string.data_is_synced) else stringResource(R.string.sync_now_desc),
+                        isLocked = isGuest,
+                        trailingContent = {
+                            if (isSyncingState) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(20.dp),
+                                    strokeWidth = 2.dp,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        },
+                        onClick = {
+                            checkGuestAction("Google Sheets Sync") {
+                                if (!isSyncingState) {
+                                    analyticsHelper.logEvent(AnalyticsConstants.Event.SETTINGS_SYNC_CLICKED)
+                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                        if (ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                                            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                                        } else {
+                                            mainViewModel.triggerSync()
+                                            Toast.makeText(context, context.getString(R.string.sync_started_msg), Toast.LENGTH_SHORT).show()
+                                        }
+                                    } else {
+                                        mainViewModel.triggerSync()
+                                        Toast.makeText(context, context.getString(R.string.sync_started_msg), Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                            }
+                        },
                     )
                 }
             }
@@ -552,27 +611,27 @@ fun SettingsScreen(
                     val activity = context as? androidx.fragment.app.FragmentActivity
                     SettingsSwitchItem(
                         icon = Icons.Rounded.Lock,
-                        title = "Biometric Authentication",
-                        subtitle = "Require fingerprint/face to open app",
+                        title = stringResource(R.string.biometric_authentication),
+                        subtitle = stringResource(R.string.biometric_subtitle),
                         checked = isBiometricEnabled,
                         onCheckedChange = { checked ->
-                             analyticsHelper.logEvent(AnalyticsConstants.Event.SETTINGS_BIOMETRIC_TOGGLED, mapOf(AnalyticsConstants.Param.ENABLED to checked))
+                            analyticsHelper.logEvent(AnalyticsConstants.Event.SETTINGS_BIOMETRIC_TOGGLED, mapOf(AnalyticsConstants.Param.ENABLED to checked))
                             if (activity != null) {
                                 if (checked) {
                                     prasad.vennam.moneypilot.util.BiometricHelper.authenticate(
                                         activity = activity,
-                                        title = "Enable Biometric Lock",
-                                        subtitle = "Verify your identity to enable biometric lock",
+                                        title = enableBiometricLockText,
+                                        subtitle = enableBiometricSubtitleText,
                                         onSuccess = { mainViewModel.setIsBiometricEnabled(true) },
-                                        onError = { Toast.makeText(context, "Authentication failed: $it", Toast.LENGTH_SHORT).show() }
+                                        onError = { @Suppress("LocalContextGetResourceValueCall") Toast.makeText(context, context.getString(R.string.auth_failed, it), Toast.LENGTH_SHORT).show() },
                                     )
                                 } else {
                                     mainViewModel.setIsBiometricEnabled(false)
                                 }
                             } else {
-                                Toast.makeText(context, "Biometric authentication requires app restart to work correctly.", Toast.LENGTH_LONG).show()
+                                Toast.makeText(context, authRequiresRestartText, Toast.LENGTH_LONG).show()
                             }
-                        }
+                        },
                     )
                 }
             }
@@ -596,11 +655,11 @@ fun SettingsScreen(
 
                     SettingsSwitchItem(
                         icon = Icons.Rounded.NotificationsActive,
-                        title = "Auto-Track via Notifications",
-                        subtitle = "Parse notifications to auto-add expenses",
+                        title = stringResource(R.string.auto_track_notifications),
+                        subtitle = stringResource(R.string.auto_track_notifications_subtitle),
                         checked = isNotificationTrackingEnabled,
                         onCheckedChange = {
-                             analyticsHelper.logEvent(AnalyticsConstants.Event.SETTINGS_NOTIFICATION_TRACKING_TOGGLED)
+                            analyticsHelper.logEvent(AnalyticsConstants.Event.SETTINGS_NOTIFICATION_TRACKING_TOGGLED)
                             val intent = android.content.Intent(android.provider.Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)
                             context.startActivity(intent)
                         },
@@ -608,18 +667,19 @@ fun SettingsScreen(
 
                     SettingsSwitchItem(
                         icon = Icons.Rounded.Sms,
-                        title = "Auto-Track via SMS",
-                        subtitle = "Parse debit/credit SMS to auto-add expenses",
+                        title = stringResource(R.string.auto_track_sms),
+                        subtitle = stringResource(R.string.auto_track_sms_subtitle),
                         checked = isSmsTrackingEnabled,
                         onCheckedChange = { checked ->
-                             analyticsHelper.logEvent(AnalyticsConstants.Event.SETTINGS_SMS_TRACKING_TOGGLED, mapOf(AnalyticsConstants.Param.ENABLED to checked))
+                            analyticsHelper.logEvent(AnalyticsConstants.Event.SETTINGS_SMS_TRACKING_TOGGLED, mapOf(AnalyticsConstants.Param.ENABLED to checked))
                             if (checked) {
                                 smsPermissionLauncher.launch(Manifest.permission.RECEIVE_SMS)
                             } else {
-                                Toast.makeText(context, "Please disable permission from app settings to stop SMS tracking.", Toast.LENGTH_LONG).show()
-                                val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                                    data = Uri.fromParts("package", context.packageName, null)
-                                }
+                                Toast.makeText(context, disableSmsTrackingMsg, Toast.LENGTH_LONG).show()
+                                val intent =
+                                    Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                                        data = Uri.fromParts("package", context.packageName, null)
+                                    }
                                 context.startActivity(intent)
                             }
                         },
@@ -646,20 +706,20 @@ fun SettingsScreen(
                 SettingsGroup(title = stringResource(R.string.support)) {
                     SettingsItem(
                         icon = Icons.AutoMirrored.Rounded.HelpOutline,
-                        title = "Help & FAQ",
-                        subtitle = "Browse answers or contact us",
+                        title = stringResource(R.string.help_and_faq),
+                        subtitle = stringResource(R.string.help_and_faq_subtitle),
                         onClick = { onNavigateToFAQ() },
                     )
                     SettingsItem(
                         icon = Icons.Rounded.Gavel,
-                        title = "Terms of Service",
-                        subtitle = "View our terms and conditions",
+                        title = stringResource(R.string.terms_of_service),
+                        subtitle = stringResource(R.string.terms_of_service_subtitle),
                         onClick = { onNavigateToTerms() },
                     )
                     SettingsItem(
                         icon = Icons.Rounded.PrivacyTip,
-                        title = "Privacy Policy",
-                        subtitle = "How we handle your data",
+                        title = stringResource(R.string.privacy_policy),
+                        subtitle = stringResource(R.string.privacy_policy_subtitle),
                         onClick = { onNavigateToPrivacy() },
                     )
                     SettingsItem(
@@ -671,26 +731,24 @@ fun SettingsScreen(
                 }
             }
 
-            if (isGuest || prasad.vennam.moneypilot.BuildConfig.DEBUG) {
+            if (prasad.vennam.moneypilot.BuildConfig.FLAVOR == "dev") {
                 item { SectionDivider() }
 
                 item {
-                    SettingsGroup(title = "Developer Tools") {
+                    SettingsGroup(title = stringResource(R.string.developer_tools)) {
                         SettingsSwitchItem(
                             icon = Icons.Rounded.SettingsSuggest,
-                            title = "Enable DevTools",
-                            subtitle = "Unlock restricted features for testing",
+                            title = stringResource(R.string.enable_devtools),
+                            subtitle = stringResource(R.string.enable_devtools_subtitle),
                             checked = isDevToolEnabled,
-                            onCheckedChange = { mainViewModel.setDevToolEnabled(it) }
+                            onCheckedChange = { mainViewModel.setDevToolEnabled(it) },
                         )
-                        if (isGuest) {
-                            SettingsItem(
-                                icon = Icons.Rounded.PlayArrow,
-                                title = "Load Demo Data (INR)",
-                                subtitle = "Seeds rich Indian currency datasets for screenshots",
-                                onClick = { showDemoConfirmDialog = true },
-                            )
-                        }
+                        SettingsItem(
+                            icon = Icons.Rounded.PlayArrow,
+                            title = stringResource(R.string.load_demo_data),
+                            subtitle = stringResource(R.string.load_demo_data_subtitle),
+                            onClick = { showDemoConfirmDialog = true },
+                        )
                     }
                 }
             }
@@ -762,19 +820,19 @@ fun SettingsScreen(
     if (showDemoConfirmDialog) {
         AlertDialog(
             onDismissRequest = { if (!isSeedingDemoData) showDemoConfirmDialog = false },
-            title = { Text("Load Demo Data?") },
+            title = { Text(stringResource(R.string.load_demo_data_title)) },
             text = {
                 if (isSeedingDemoData) {
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp)
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
                     ) {
                         CircularProgressIndicator()
                         Spacer(modifier = Modifier.height(16.dp))
-                        Text("Seeding Indian currency demo data...", textAlign = TextAlign.Center)
+                        Text(stringResource(R.string.seeding_demo_data), textAlign = TextAlign.Center)
                     }
                 } else {
-                    Text("This will clear all your current guest data, insert a comprehensive set of Indian Rupee (₹) transaction, budget, investment, and loan history, and relaunch the app. This is perfect for generating Play Store screenshots. Do you want to proceed?")
+                    Text(stringResource(R.string.seeding_demo_data_desc))
                 }
             },
             confirmButton = {
@@ -787,9 +845,11 @@ fun SettingsScreen(
                                 showDemoConfirmDialog = false
                                 val intent = context.packageManager.getLaunchIntentForPackage(context.packageName)
                                 intent?.let {
-                                    it.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or 
-                                                Intent.FLAG_ACTIVITY_NEW_TASK or 
-                                                Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                                    it.addFlags(
+                                        Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                                            Intent.FLAG_ACTIVITY_NEW_TASK or
+                                            Intent.FLAG_ACTIVITY_CLEAR_TASK,
+                                    )
                                     context.startActivity(it)
                                     if (context is Activity) {
                                         context.finish()
@@ -797,9 +857,9 @@ fun SettingsScreen(
                                     Runtime.getRuntime().exit(0)
                                 }
                             }
-                        }
+                        },
                     ) {
-                        Text("Yes, Load & Relaunch")
+                        Text(stringResource(R.string.yes_load_relaunch))
                     }
                 }
             },
@@ -809,7 +869,7 @@ fun SettingsScreen(
                         Text(stringResource(R.string.cancel))
                     }
                 }
-            }
+            },
         )
     }
 
@@ -943,6 +1003,105 @@ fun SettingsScreen(
             confirmButton = {},
             dismissButton = {
                 TextButton(onClick = { showThemeDialog = false }) {
+                    Text(stringResource(R.string.close))
+                }
+            },
+            shape = RoundedCornerShape(20.dp),
+            containerColor = MaterialTheme.colorScheme.surface,
+            tonalElevation = 6.dp,
+        )
+    }
+
+    if (showFontScaleDialog) {
+        AlertDialog(
+            onDismissRequest = { showFontScaleDialog = false },
+            title = {
+                Text(
+                    stringResource(R.string.choose_font_size),
+                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                )
+            },
+            text = {
+                Column(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    val scales =
+                        listOf(
+                            Triple(
+                                0.85f,
+                                stringResource(R.string.font_scale_small),
+                                Icons.Rounded.FormatSize,
+                            ),
+                            Triple(
+                                1.0f,
+                                stringResource(R.string.font_scale_default),
+                                Icons.Rounded.FormatSize,
+                            ),
+                            Triple(
+                                1.15f,
+                                stringResource(R.string.font_scale_large),
+                                Icons.Rounded.FormatSize,
+                            ),
+                            Triple(
+                                1.3f,
+                                stringResource(R.string.font_scale_extra_large),
+                                Icons.Rounded.FormatSize,
+                            ),
+                        )
+                    scales.forEach { (scale, name, icon) ->
+                        val isSelected = fontScale == scale
+                        Surface(
+                            onClick = {
+                                mainViewModel.setFontScale(scale)
+                                showFontScaleDialog = false
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = MaterialTheme.shapes.medium,
+                            color = if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f) else Color.Transparent,
+                            border =
+                                BorderStroke(
+                                    width = 1.dp,
+                                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
+                                ),
+                        ) {
+                            Row(
+                                modifier =
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .padding(16.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    Icon(
+                                        imageVector = icon,
+                                        contentDescription = null,
+                                        tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Text(name, style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold))
+                                }
+                                if (isSelected) {
+                                    Icon(
+                                        imageVector = Icons.Rounded.Check,
+                                        contentDescription = "Selected",
+                                        tint = MaterialTheme.colorScheme.primary,
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { showFontScaleDialog = false }) {
                     Text(stringResource(R.string.close))
                 }
             },
@@ -1114,6 +1273,7 @@ fun SettingsItem(
     title: String,
     subtitle: String? = null,
     isLocked: Boolean = false,
+    trailingContent: @Composable (() -> Unit)? = null,
     onClick: () -> Unit,
 ) {
     Surface(
@@ -1165,6 +1325,8 @@ fun SettingsItem(
                     tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
                     modifier = Modifier.size(18.dp),
                 )
+            } else if (trailingContent != null) {
+                trailingContent()
             } else {
                 Icon(
                     imageVector = Icons.AutoMirrored.Rounded.KeyboardArrowRight,

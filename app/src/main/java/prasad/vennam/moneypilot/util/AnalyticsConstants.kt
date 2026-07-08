@@ -47,6 +47,12 @@ object AnalyticsConstants {
         const val REPORTS_TAB_SWITCHED = "reports_tab_switched"
         const val INSIGHTS_AI_RECOMMENDATION_CLICKED = "insights_ai_recommendation_clicked"
         const val NEWS_TAB_SWITCHED = "news_tab_switched"
+        
+        // Sync Events
+        const val SYNC_STARTED = "sync_started"
+        const val SYNC_SUCCESS = "sync_success"
+        const val SYNC_FAILURE = "sync_failure"
+
         const val NEWS_CATEGORY_CLICKED = "news_category_clicked"
         const val NEWS_BOOKMARK_REMOVED = "news_bookmark_removed"
         const val NEWS_BOOKMARK_ADDED = "news_bookmark_added"
@@ -69,6 +75,7 @@ object AnalyticsConstants {
         const val FLOATING_AI_BOT_CLICKED = "floating_ai_bot_clicked"
         const val LOAN_EMI_CALCULATOR_CLICKED = "loan_emi_calculator_clicked"
         const val SETTINGS_BIOMETRIC_TOGGLED = "settings_biometric_toggled"
+        const val SETTINGS_SYNC_CLICKED = "settings_sync_clicked"
         const val SETTINGS_NOTIFICATION_TRACKING_TOGGLED = "settings_notification_tracking_toggled"
         const val SETTINGS_SMS_TRACKING_TOGGLED = "settings_sms_tracking_toggled"
         const val FAQ_ASK_QUESTION_CLICKED = "faq_ask_question_clicked"

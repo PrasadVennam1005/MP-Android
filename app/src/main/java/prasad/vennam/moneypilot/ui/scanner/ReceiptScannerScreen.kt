@@ -1,6 +1,8 @@
 package prasad.vennam.moneypilot.ui.scanner
 
+import prasad.vennam.moneypilot.ui.components.BaseBottomSheet
 import android.Manifest
+import android.app.Activity
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Matrix
@@ -8,13 +10,10 @@ import android.media.ExifInterface
 import android.net.Uri
 import android.view.MotionEvent
 import android.widget.Toast
-import androidx.camera.core.FocusMeteringAction
-import java.util.concurrent.TimeUnit
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.core.*
+import androidx.camera.core.FocusMeteringAction
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.compose.foundation.Canvas
@@ -23,6 +22,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -43,37 +43,42 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.google.android.gms.ads.AdRequest
+import com.google.android.gms.ads.LoadAdError
+import com.google.android.gms.ads.rewarded.RewardedAd
+import com.google.android.gms.ads.rewarded.RewardedAdLoadCallback
 import com.google.mlkit.vision.common.InputImage
+import com.google.mlkit.vision.text.Text
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import prasad.vennam.moneypilot.R
+import prasad.vennam.moneypilot.ads.AdConfig
 import prasad.vennam.moneypilot.data.entity.Category
 import prasad.vennam.moneypilot.data.entity.Transaction
 import prasad.vennam.moneypilot.data.entity.TransactionType
 import prasad.vennam.moneypilot.ui.viewmodel.TransactionViewModel
+import prasad.vennam.moneypilot.util.AnalyticsConstants
 import prasad.vennam.moneypilot.util.AnalyticsHelper
 import prasad.vennam.moneypilot.util.LocalCurrencyCode
 import prasad.vennam.moneypilot.util.ParsedReceipt
 import prasad.vennam.moneypilot.util.PermissionGate
-import prasad.vennam.moneypilot.util.AnalyticsConstants
 import prasad.vennam.moneypilot.util.ReceiptParser
 import prasad.vennam.moneypilot.util.TrackScreen
-import prasad.vennam.moneypilot.util.inPaisa
+import prasad.vennam.moneypilot.util.toMinorUnit
 import java.util.Currency
 import java.util.concurrent.Executors
-import kotlinx.coroutines.launch
-import com.google.mlkit.vision.text.Text
-import com.google.android.gms.ads.rewarded.RewardedAd
-import com.google.android.gms.ads.rewarded.RewardedAdLoadCallback
-import com.google.android.gms.ads.AdRequest
-import com.google.android.gms.ads.LoadAdError
-import prasad.vennam.moneypilot.ads.AdConfig
-import android.app.Activity
+import java.util.concurrent.TimeUnit
 import kotlin.time.Duration.Companion.milliseconds
 
 @Composable
@@ -136,10 +141,14 @@ fun ReceiptScannerContent(
     LaunchedEffect(isTorchOn, camera) {
         try {
             camera?.cameraControl?.enableTorch(isTorchOn)
-        } catch (_: Exception) {}
+        } catch (_: Exception) {
+        }
     }
 
-    fun loadAndShowAd(onRewardEarned: () -> Unit, onFailure: () -> Unit) {
+    fun loadAndShowAd(
+        onRewardEarned: () -> Unit,
+        onFailure: () -> Unit,
+    ) {
         val activity = context as? Activity
         if (activity == null) {
             onFailure()
@@ -163,7 +172,7 @@ fun ReceiptScannerContent(
                         onRewardEarned()
                     }
                 }
-            }
+            },
         )
     }
 
@@ -178,19 +187,23 @@ fun ReceiptScannerContent(
         return ReceiptParser.parse(visionText)
     }
 
-    fun logScanEvent(result: ParsedReceipt, isGallery: Boolean) {
-        val eventName = if (isGallery) {
-            AnalyticsConstants.Event.SCANNER_GALLERY_UPLOAD
-        } else {
-            AnalyticsConstants.Event.SCANNER_PICTURE_CAPTURED
-        }
+    fun logScanEvent(
+        result: ParsedReceipt,
+        isGallery: Boolean,
+    ) {
+        val eventName =
+            if (isGallery) {
+                AnalyticsConstants.Event.SCANNER_GALLERY_UPLOAD
+            } else {
+                AnalyticsConstants.Event.SCANNER_PICTURE_CAPTURED
+            }
         analyticsHelper.logEvent(
             eventName,
             mapOf(
                 AnalyticsConstants.Param.SUCCESS to (result.amount != null),
                 AnalyticsConstants.Param.MERCHANT_FOUND to (result.merchant != null),
                 AnalyticsConstants.Param.PARSED_BY_AI to transactionViewModel.isAiReady,
-            )
+            ),
         )
     }
 
@@ -200,16 +213,20 @@ fun ReceiptScannerContent(
             isScanning = false
             showResultsSheet = true
         } else {
-            Toast.makeText(
-                context,
-                with(context) { getString(R.string.could_not_detect_amount_in_this_image_please_try_another) },
-                Toast.LENGTH_LONG
-            ).show()
+            Toast
+                .makeText(
+                    context,
+                    with(context) { getString(R.string.could_not_detect_amount_in_this_image_please_try_another) },
+                    Toast.LENGTH_LONG,
+                ).show()
         }
         isProcessing = false
     }
 
-    fun handleOcrResult(visionText: Text, isGallery: Boolean) {
+    fun handleOcrResult(
+        visionText: Text,
+        isGallery: Boolean,
+    ) {
         val rawText = visionText.text
         if (rawText.isBlank()) {
             Toast.makeText(context, with(context) { getString(R.string.could_not_detect_amount_in_this_image_please_try_another) }, Toast.LENGTH_LONG).show()
@@ -252,16 +269,16 @@ fun ReceiptScannerContent(
             uri?.let {
                 isProcessing = true
                 scope.launch {
-                    val inputImage = withContext(Dispatchers.IO) {
-                        getDownscaledInputImage(context, it)
-                    }
+                    val inputImage =
+                        withContext(Dispatchers.IO) {
+                            getDownscaledInputImage(context, it)
+                        }
                     if (inputImage != null) {
                         recognizer
                             .process(inputImage)
                             .addOnSuccessListener { visionText ->
                                 handleOcrResult(visionText, isGallery = true)
-                            }
-                            .addOnFailureListener {
+                            }.addOnFailureListener {
                                 isProcessing = false
                                 Toast.makeText(context, with(context) { getString(R.string.scanning_failed) }, Toast.LENGTH_SHORT).show()
                             }
@@ -286,12 +303,13 @@ fun ReceiptScannerContent(
 
                 try {
                     provider.unbindAll()
-                    val boundCamera = provider.bindToLifecycle(
-                        lifecycleOwner,
-                        CameraSelector.DEFAULT_BACK_CAMERA,
-                        preview,
-                        imageCapture,
-                    )
+                    val boundCamera =
+                        provider.bindToLifecycle(
+                            lifecycleOwner,
+                            CameraSelector.DEFAULT_BACK_CAMERA,
+                            preview,
+                            imageCapture,
+                        )
                     camera = boundCamera
                 } catch (e: Exception) {
                     // Ignore use case binding failures
@@ -323,13 +341,13 @@ fun ReceiptScannerContent(
                         isTorchOn = !isTorchOn
                         analyticsHelper.logEvent(
                             AnalyticsConstants.Event.SCANNER_FLASH_TOGGLED,
-                            mapOf(AnalyticsConstants.Param.IS_ON to isTorchOn)
+                            mapOf(AnalyticsConstants.Param.IS_ON to isTorchOn),
                         )
                     }) {
                         Icon(
                             imageVector = if (isTorchOn) Icons.Rounded.FlashOn else Icons.Rounded.FlashOff,
                             contentDescription = stringResource(R.string.flash),
-                            tint = Color.White
+                            tint = Color.White,
                         )
                     }
                     IconButton(onClick = {
@@ -364,9 +382,11 @@ fun ReceiptScannerContent(
                                 if (cameraControl != null) {
                                     val factory = meteringPointFactory
                                     val point = factory.createPoint(event.x, event.y)
-                                    val action = FocusMeteringAction.Builder(point, FocusMeteringAction.FLAG_AF or FocusMeteringAction.FLAG_AE)
-                                        .setAutoCancelDuration(3, TimeUnit.SECONDS)
-                                        .build()
+                                    val action =
+                                        FocusMeteringAction
+                                            .Builder(point, FocusMeteringAction.FLAG_AF or FocusMeteringAction.FLAG_AE)
+                                            .setAutoCancelDuration(3, TimeUnit.SECONDS)
+                                            .build()
                                     cameraControl.startFocusAndMetering(action)
                                 }
                                 view.performClick()
@@ -470,9 +490,10 @@ fun ReceiptScannerContent(
             }
             if (showShutter) {
                 Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(Color.White)
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .background(Color.White),
                 )
             }
         }
@@ -533,7 +554,7 @@ fun ReceiptScannerContent(
             title = {
                 Text(
                     stringResource(R.string.unlock_scans_title),
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
                 )
             },
             text = {
@@ -544,7 +565,7 @@ fun ReceiptScannerContent(
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.Center,
-                            modifier = Modifier.fillMaxWidth()
+                            modifier = Modifier.fillMaxWidth(),
                         ) {
                             CircularProgressIndicator(modifier = Modifier.size(24.dp))
                             Spacer(modifier = Modifier.width(12.dp))
@@ -583,11 +604,11 @@ fun ReceiptScannerContent(
                                 }
                                 pendingVisionText = null
                                 showUnlockDialog = false
-                            }
+                            },
                         )
                     },
                     enabled = !isAdLoading,
-                    shape = MaterialTheme.shapes.large
+                    shape = MaterialTheme.shapes.large,
                 ) {
                     Icon(Icons.Rounded.PlayArrow, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
@@ -609,7 +630,7 @@ fun ReceiptScannerContent(
                             pendingVisionText = null
                             showUnlockDialog = false
                         },
-                        enabled = !isAdLoading
+                        enabled = !isAdLoading,
                     ) {
                         Text(stringResource(R.string.basic_scan_btn))
                     }
@@ -620,12 +641,12 @@ fun ReceiptScannerContent(
                             isProcessing = false
                             pendingVisionText = null
                         },
-                        enabled = !isAdLoading
+                        enabled = !isAdLoading,
                     ) {
                         Text(stringResource(R.string.cancel))
                     }
                 }
-            }
+            },
         )
     }
 }
@@ -645,7 +666,7 @@ fun ReceiptResultsBottomSheet(
     var amount by remember { mutableStateOf(detectedData.amount?.toString() ?: "") }
     var selectedCategoryId by remember {
         mutableStateOf<Long?>(
-            detectedData.merchant?.let { onPredictCategory(it) }
+            detectedData.merchant?.let { onPredictCategory(it) },
         )
     }
 
@@ -661,11 +682,12 @@ fun ReceiptResultsBottomSheet(
     val amountVal = amount.toDoubleOrNull()
     val isAmountError = amount.isNotEmpty() && (amountVal == null || amountVal <= 0.0)
     val isFormValid = amount.isNotBlank() && !isAmountError && selectedCategoryId != null
+    val focusManager = LocalFocusManager.current
+    val keyboardController = LocalSoftwareKeyboardController.current
 
-    ModalBottomSheet(
+    BaseBottomSheet(
         onDismissRequest = onDismiss,
-        dragHandle = null,
-        containerColor = MaterialTheme.colorScheme.surface,
+        title = stringResource(R.string.confirm_details),
     ) {
         Column(
             modifier =
@@ -674,37 +696,6 @@ fun ReceiptResultsBottomSheet(
                     .padding(bottom = 32.dp)
                     .verticalScroll(rememberScrollState()),
         ) {
-            // Header
-            Row(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 24.dp, vertical = 20.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    stringResource(R.string.confirm_details),
-                    style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
-                )
-                IconButton(
-                    onClick = onDismiss,
-                    modifier =
-                        Modifier
-                            .size(32.dp)
-                            .background(
-                                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                                CircleShape,
-                            ),
-                ) {
-                    Icon(Icons.Rounded.Close, null, modifier = Modifier.size(18.dp))
-                }
-            }
-
-            HorizontalDivider(
-                modifier = Modifier.padding(bottom = 24.dp),
-                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
-            )
 
             Column(
                 modifier = Modifier.padding(horizontal = 24.dp),
@@ -740,7 +731,11 @@ fun ReceiptResultsBottomSheet(
                         } else {
                             null
                         },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Done),
+                    keyboardActions = KeyboardActions(onDone = {
+                        keyboardController?.hide()
+                        focusManager.clearFocus()
+                    }),
                     modifier = Modifier.fillMaxWidth(),
                     shape = MaterialTheme.shapes.large,
                 )
@@ -799,7 +794,7 @@ fun ReceiptResultsBottomSheet(
                         if (isFormValid) {
                             onSave(
                                 Transaction(
-                                    amount = (amount.toDoubleOrNull() ?: 0.0).inPaisa,
+                                    amount = (amount.toDoubleOrNull() ?: 0.0).toMinorUnit,
                                     timestamp = timestamp,
                                     categoryId = selectedCategoryId,
                                     note = merchant,
@@ -899,7 +894,11 @@ fun InfoRow(
     }
 }
 
-private fun getDownscaledInputImage(context: android.content.Context, uri: Uri, maxDimension: Int = 2000): InputImage? {
+private fun getDownscaledInputImage(
+    context: android.content.Context,
+    uri: Uri,
+    maxDimension: Int = 2000,
+): InputImage? {
     return try {
         // Step 1: Decode image size only
         val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
@@ -917,27 +916,31 @@ private fun getDownscaledInputImage(context: android.content.Context, uri: Uri, 
         }
 
         // Step 2: Decode bitmap with sample size
-        val outputOptions = BitmapFactory.Options().apply {
-            inSampleSize = scale
-        }
-        var bitmap = context.contentResolver.openInputStream(uri)?.use { inputStream ->
-            BitmapFactory.decodeStream(inputStream, null, outputOptions)
-        } ?: return null
+        val outputOptions =
+            BitmapFactory.Options().apply {
+                inSampleSize = scale
+            }
+        var bitmap =
+            context.contentResolver.openInputStream(uri)?.use { inputStream ->
+                BitmapFactory.decodeStream(inputStream, null, outputOptions)
+            } ?: return null
 
         // Step 3: Get orientation from EXIF
         var rotationDegrees = 0
         context.contentResolver.openInputStream(uri)?.use { inputStream ->
             val exifInterface = ExifInterface(inputStream)
-            val orientation = exifInterface.getAttributeInt(
-                ExifInterface.TAG_ORIENTATION,
-                ExifInterface.ORIENTATION_NORMAL
-            )
-            rotationDegrees = when (orientation) {
-                ExifInterface.ORIENTATION_ROTATE_90 -> 90
-                ExifInterface.ORIENTATION_ROTATE_180 -> 180
-                ExifInterface.ORIENTATION_ROTATE_270 -> 270
-                else -> 0
-            }
+            val orientation =
+                exifInterface.getAttributeInt(
+                    ExifInterface.TAG_ORIENTATION,
+                    ExifInterface.ORIENTATION_NORMAL,
+                )
+            rotationDegrees =
+                when (orientation) {
+                    ExifInterface.ORIENTATION_ROTATE_90 -> 90
+                    ExifInterface.ORIENTATION_ROTATE_180 -> 180
+                    ExifInterface.ORIENTATION_ROTATE_270 -> 270
+                    else -> 0
+                }
         }
 
         // Step 4: If rotated, perform rotation on the bitmap
@@ -953,7 +956,7 @@ private fun getDownscaledInputImage(context: android.content.Context, uri: Uri, 
 
         InputImage.fromBitmap(bitmap, rotationDegrees)
     } catch (e: Exception) {
-        e.printStackTrace()
+        android.util.Log.e("ReceiptScannerScreen", "Error preparing input image", e)
         null
     }
 }

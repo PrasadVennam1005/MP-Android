@@ -15,7 +15,10 @@ import androidx.room.PrimaryKey
             onDelete = ForeignKey.SET_NULL,
         ),
     ],
-    indices = [Index("categoryId")],
+    indices = [
+        Index("categoryId"),
+        Index("loanPaymentId"),
+    ],
 )
 data class Transaction(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
@@ -28,6 +31,7 @@ data class Transaction(
     val type: TransactionType,
     val currencyCode: String = "INR",
     val lastUpdated: Long = System.currentTimeMillis(),
+    val loanPaymentId: Long? = null,
 )
 
 enum class TransactionType {

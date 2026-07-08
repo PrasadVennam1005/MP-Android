@@ -14,6 +14,8 @@ import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.stringResource
+import prasad.vennam.moneypilot.R
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -22,6 +24,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -29,10 +32,6 @@ import prasad.vennam.moneypilot.ui.viewmodel.state.AllocationDetail
 import prasad.vennam.moneypilot.ui.viewmodel.state.AllocationProfile
 import prasad.vennam.moneypilot.util.CurrencyFormatter
 import kotlin.math.abs
-
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.LocalLayoutDirection
-import androidx.compose.ui.unit.LayoutDirection
 
 @OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 @Composable
@@ -59,9 +58,10 @@ fun AssetAllocationCard(
     }
 
     val density = LocalDensity.current
-    val stroke = remember(density) {
-        Stroke(width = with(density) { 14.dp.toPx() }, cap = StrokeCap.Round)
-    }
+    val stroke =
+        remember(density) {
+            Stroke(width = with(density) { 14.dp.toPx() }, cap = StrokeCap.Round)
+        }
 
     Card(
         modifier = modifier.fillMaxWidth(),
@@ -81,7 +81,7 @@ fun AssetAllocationCard(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 Text(
-                    text = "Asset Allocation Advisor",
+                    text = stringResource(R.string.asset_allocation_advisor),
                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                     color = MaterialTheme.colorScheme.onSurface,
                 )
@@ -129,7 +129,7 @@ fun AssetAllocationCard(
                             tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                         )
                         Text(
-                            text = "Add investments to see your asset allocation breakdown.",
+                            text = stringResource(R.string.add_investments_to_see_allocation),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = TextAlign.Center,
@@ -176,7 +176,7 @@ fun AssetAllocationCard(
                             verticalArrangement = Arrangement.Center,
                         ) {
                             Text(
-                                text = "Assets",
+                                text = stringResource(R.string.assets),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -239,13 +239,13 @@ private fun LegendRowItem(
                     color = MaterialTheme.colorScheme.onSurface,
                 )
                 Text(
-                    text = "${detail.currentPercent.toInt()}%",
+                    text = stringResource(R.string.percentage_format, detail.currentPercent.toInt()),
                     style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold),
                     color = MaterialTheme.colorScheme.onSurface,
                 )
             }
             Text(
-                text = "Target: ${detail.targetPercent.toInt()}%",
+                text = stringResource(R.string.target_percent, detail.targetPercent.toInt()),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -295,7 +295,7 @@ private fun AdvisorSection(
                     modifier = Modifier.size(20.dp),
                 )
                 Text(
-                    text = if (deviations.isEmpty()) "Optimal Alignment" else "Rebalancing Actions",
+                    text = if (deviations.isEmpty()) stringResource(R.string.optimal_alignment) else stringResource(R.string.rebalancing_actions),
                     style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
                     color = MaterialTheme.colorScheme.onSurface,
                 )
@@ -303,7 +303,7 @@ private fun AdvisorSection(
 
             if (deviations.isEmpty()) {
                 Text(
-                    text = "Your portfolio matches the $profileLabel risk allocation. Great job!",
+                    text = stringResource(R.string.portfolio_matches_risk_allocation, profileLabel),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -327,26 +327,13 @@ private fun AdvisorSection(
                                         .padding(top = 2.dp),
                             )
                             Text(
-                                text =
-                                    buildString {
-                                        if (isUnderweight) {
-                                            append("Add ")
-                                            append(CurrencyFormatter.format(detail.differenceAmount, currencyCode))
-                                            append(" to ")
-                                            append(detail.assetType)
-                                            append(" to meet your ")
-                                            append(detail.targetPercent.toInt())
-                                            append("% target.")
-                                        } else {
-                                            append("Reduce ")
-                                            append(detail.assetType)
-                                            append(" by ")
-                                            append(CurrencyFormatter.format(abs(detail.differenceAmount), currencyCode))
-                                            append(" to return to your ")
-                                            append(detail.targetPercent.toInt())
-                                            append("% limit.")
-                                        }
-                                    },
+                                text = if (isUnderweight) {
+                                    val formattedAmount = CurrencyFormatter.format(detail.differenceAmount, currencyCode)
+                                    stringResource(R.string.rebalance_add, formattedAmount, detail.assetType, detail.targetPercent.toInt())
+                                } else {
+                                    val formattedAmount = CurrencyFormatter.format(abs(detail.differenceAmount), currencyCode)
+                                    stringResource(R.string.rebalance_reduce, detail.assetType, formattedAmount, detail.targetPercent.toInt())
+                                },
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )

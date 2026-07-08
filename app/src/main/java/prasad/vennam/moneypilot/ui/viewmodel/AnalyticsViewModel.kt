@@ -24,7 +24,7 @@ import prasad.vennam.moneypilot.domain.usecase.GetCategoriesUseCase
 import prasad.vennam.moneypilot.domain.usecase.GetInvestmentsUseCase
 import prasad.vennam.moneypilot.domain.usecase.GetTransactionsUseCase
 import prasad.vennam.moneypilot.feature.ai.domain.AiRepository
-import prasad.vennam.moneypilot.util.inRupees
+import prasad.vennam.moneypilot.util.toMajorUnit
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -133,10 +133,10 @@ class AnalyticsViewModel
                     amountInMinor: Long,
                     fromCurrency: String,
                 ): Double {
-                    if (fromCurrency == currentCurrency) return amountInMinor.inRupees
+                    if (fromCurrency == currentCurrency) return amountInMinor.toMajorUnit
                     val rateFrom = rates[fromCurrency] ?: 1.0
                     val rateTo = rates[currentCurrency] ?: 1.0
-                    val amountInUSD = amountInMinor.inRupees / rateFrom
+                    val amountInUSD = amountInMinor.toMajorUnit / rateFrom
                     return amountInUSD * rateTo
                 }
 
@@ -373,19 +373,21 @@ class AnalyticsViewModel
                 }
 
                 // 4. Budget Overrun Insight
-                val currentMonthExpenses = data.transactions.filter {
-                    val transCal = Calendar.getInstance().apply { timeInMillis = it.timestamp }
-                    it.type == TransactionType.EXPENSE &&
-                        transCal.get(Calendar.MONTH) == currentMonth &&
-                        transCal.get(Calendar.YEAR) == currentYear
-                }
+                val currentMonthExpenses =
+                    data.transactions.filter {
+                        val transCal = Calendar.getInstance().apply { timeInMillis = it.timestamp }
+                        it.type == TransactionType.EXPENSE &&
+                            transCal.get(Calendar.MONTH) == currentMonth &&
+                            transCal.get(Calendar.YEAR) == currentYear
+                    }
                 val expensesByCategoryId = currentMonthExpenses.groupBy { it.categoryId }
 
                 val overruns =
                     data.budgets.mapNotNull { budget ->
                         val cat = categoriesMap[budget.categoryId]
-                        val spent = expensesByCategoryId[budget.categoryId]
-                            ?.sumOf { convertAmount(it.amount, it.currencyCode) } ?: 0.0
+                        val spent =
+                            expensesByCategoryId[budget.categoryId]
+                                ?.sumOf { convertAmount(it.amount, it.currencyCode) } ?: 0.0
 
                         val budgetAmt = convertAmount(budget.amount, budget.currencyCode)
                         if (spent > budgetAmt) {

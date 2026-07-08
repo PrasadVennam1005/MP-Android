@@ -10,6 +10,7 @@
     <uses-permission android:name="android.permission.RECEIVE_SMS" />
 
     <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <uses-feature android:name="android.hardware.telephony" android:required="false" />
 
     <queries>
         <!--
@@ -60,11 +61,37 @@
         <activity
             android:name=".MainActivity"
             android:exported="true"
+            android:windowSoftInputMode="adjustResize"
             android:theme="@style/Theme.MoneyPilot">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
                 <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+            <!-- App Links Support -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data android:scheme="http" />
+                <data android:scheme="https" />
+                <data android:host="moneypilot.app" />
+                <data android:host="www.moneypilot.app" />
+                <data android:host="prasadvennam1005.github.io" />
+
+                <!-- Explicitly defined paths for deep linking -->
+                <data android:pathPrefix="/dashboard" />
+                <data android:pathPrefix="/insights" />
+                <data android:pathPrefix="/history" />
+                <data android:pathPrefix="/premium" />
+                <data android:pathPrefix="/learn" />
+                <data android:pathPrefix="/article" />
+                <data android:pathPrefix="/moneypilot-legal" />
+                <data android:pathPrefix="/cosplit" />
+                <data android:pathPrefix="/add-transaction" />
             </intent-filter>
         </activity>
 
@@ -104,6 +131,17 @@
             <intent-filter>
                 <action android:name="prasad.vennam.moneypilot.action.APPROVE_AND_LOG" />
             </intent-filter>
+        </receiver>
+
+        <receiver
+            android:name="prasad.vennam.moneypilot.ui.widget.CoPilotGlanceWidgetReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_copilot_info" />
         </receiver>
 
         <service

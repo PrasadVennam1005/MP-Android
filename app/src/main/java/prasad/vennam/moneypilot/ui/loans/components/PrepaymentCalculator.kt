@@ -40,13 +40,13 @@ fun PrepaymentCalculator(
                     selected = isMonthly,
                     onClick = { onTypeToggle(true) },
                     shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
-                    label = { Text("Monthly") },
+                    label = { Text(stringResource(R.string.monthly)) },
                 )
                 SegmentedButton(
                     selected = !isMonthly,
                     onClick = { onTypeToggle(false) },
                     shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
-                    label = { Text("One-time") },
+                    label = { Text(stringResource(R.string.one_time)) },
                 )
             }
 
@@ -55,7 +55,7 @@ fun PrepaymentCalculator(
             OutlinedTextField(
                 value = prepaymentAmount,
                 onValueChange = onAmountChange,
-                label = { Text("Prepayment Amount") },
+                label = { Text(stringResource(R.string.prepayment_amount)) },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier.fillMaxWidth(),
                 shape = MaterialTheme.shapes.large,
@@ -74,7 +74,7 @@ fun PrepaymentCalculator(
                     )
                     PrepaymentMetric(
                         label = stringResource(R.string.months_saved),
-                        value = "${result.monthsSaved} Mo",
+                        value = stringResource(R.string.months_saved_format, result.monthsSaved.toString()),
                         modifier = Modifier.weight(1f),
                     )
                 }

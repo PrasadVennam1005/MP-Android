@@ -1,12 +1,11 @@
 package prasad.vennam.moneypilot.ui.navigation
 
 import android.app.Activity
-import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.runtime.LaunchedEffect
 import androidx.navigation3.runtime.NavBackStack
 import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.runtime.NavKey
-import prasad.vennam.moneypilot.R
 import prasad.vennam.moneypilot.ads.InterstitialAdManager
 import prasad.vennam.moneypilot.data.AppLinks
 import prasad.vennam.moneypilot.data.UserPreferences
@@ -59,9 +58,9 @@ fun moneyPilotNavEntry(
     userData: UserPreferences.UserData?,
     syncState: SyncState?,
     interstitialAdManager: InterstitialAdManager,
-    onBack: () -> Unit
-): NavEntry<NavKey> {
-    return when (key) {
+    onBack: () -> Unit,
+): NavEntry<NavKey> =
+    when (key) {
         is Destination.Auth ->
             NavEntry(key) {
                 AuthScreen(
@@ -122,6 +121,9 @@ fun moneyPilotNavEntry(
                     onNavigateToSavingGoals = {
                         backStack.add(Destination.SavingGoals)
                     },
+                    onNavigateToSubscriptions = {
+                        backStack.add(Destination.Subscriptions)
+                    },
                     onNavigateToNews = {
                         backStack.add(Destination.FinancialNews)
                     },
@@ -144,6 +146,9 @@ fun moneyPilotNavEntry(
                     },
                     onNavigateToCurrencyConverter = {
                         backStack.add(Destination.CurrencyConverter)
+                    },
+                    onNavigateToCoSplit = {
+                        backStack.add(Destination.CoSplitGroups)
                     },
                     analyticsHelper = analyticsHelper,
                 )
@@ -236,7 +241,7 @@ fun moneyPilotNavEntry(
                     prefillRate = key.prefillRate,
                     prefillTenureMonths = key.prefillTenureMonths,
                     prefillEmi = key.prefillEmi,
-                    analyticsHelper = analyticsHelper
+                    analyticsHelper = analyticsHelper,
                 )
             }
 
@@ -250,7 +255,7 @@ fun moneyPilotNavEntry(
                     syncState = syncState,
                     isPremium = isPremium,
                     onProfileClick = { backStack.add(Destination.Settings) },
-                    analyticsHelper = analyticsHelper
+                    analyticsHelper = analyticsHelper,
                 )
             }
 
@@ -438,7 +443,7 @@ fun moneyPilotNavEntry(
                     onArticleClick = { articleId ->
                         backStack.add(Destination.ArticleDetail(articleId))
                     },
-                    isPremium = isPremium
+                    isPremium = isPremium,
                 )
             }
 
@@ -451,7 +456,7 @@ fun moneyPilotNavEntry(
                     onBack = onBack,
                     onArticleClick = { articleId ->
                         backStack.add(Destination.ArticleDetail(articleId))
-                    }
+                    },
                 )
             }
 
@@ -467,10 +472,63 @@ fun moneyPilotNavEntry(
             NavEntry(key) {
                 CurrencyConverterScreen(
                     onNavigateBack = onBack,
-                    analyticsHelper = analyticsHelper
+                    analyticsHelper = analyticsHelper,
+                )
+            }
+
+        is Destination.CoSplitGroups ->
+            NavEntry(key) {
+                val splitViewModel = androidx.lifecycle.viewmodel.compose.viewModel<prasad.vennam.moneypilot.feature.cosplit.ui.CoSplitViewModel>()
+                prasad.vennam.moneypilot.ui.cosplit.CoSplitGroupsScreen(
+                    viewModel = splitViewModel,
+                    onNavigateBack = onBack,
+                    onNavigateToGroup = { groupId ->
+                        backStack.add(Destination.CoSplitGroupDetail(groupId))
+                    }
+                )
+            }
+
+        is Destination.CoSplitGroupDetail ->
+            NavEntry(key) {
+                val splitViewModel = androidx.lifecycle.viewmodel.compose.viewModel<prasad.vennam.moneypilot.feature.cosplit.ui.CoSplitViewModel>()
+                LaunchedEffect(key.groupId) {
+                    splitViewModel.selectGroupById(key.groupId)
+                }
+                prasad.vennam.moneypilot.ui.cosplit.CoSplitGroupDetailScreen(
+                    viewModel = splitViewModel,
+                    onNavigateBack = onBack,
+                    onNavigateToAddExpense = {
+                        backStack.add(Destination.CoSplitAddExpense(key.groupId))
+                    }
+                )
+            }
+
+        is Destination.CoSplitAddExpense ->
+            NavEntry(key) {
+                val splitViewModel = androidx.lifecycle.viewmodel.compose.viewModel<prasad.vennam.moneypilot.feature.cosplit.ui.CoSplitViewModel>()
+                LaunchedEffect(key.groupId) {
+                    splitViewModel.selectGroupById(key.groupId)
+                }
+                prasad.vennam.moneypilot.ui.cosplit.CoSplitAddExpenseScreen(
+                    viewModel = splitViewModel,
+                    onNavigateBack = onBack
+                )
+            }
+
+        is Destination.CoSplitJoin ->
+            NavEntry(key) {
+                val splitViewModel = androidx.lifecycle.viewmodel.compose.viewModel<prasad.vennam.moneypilot.feature.cosplit.ui.CoSplitViewModel>()
+                prasad.vennam.moneypilot.ui.cosplit.CoSplitJoinScreen(
+                    viewModel = splitViewModel,
+                    groupId = key.groupId,
+                    groupName = key.groupName,
+                    onNavigateToGroup = { groupId ->
+                        backStack.remove(key)
+                        backStack.add(Destination.CoSplitGroupDetail(groupId))
+                    },
+                    onCancel = onBack
                 )
             }
 
         else -> error("Unknown destination: $key")
     }
-}

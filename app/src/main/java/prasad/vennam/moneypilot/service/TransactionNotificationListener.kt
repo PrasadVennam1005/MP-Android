@@ -9,18 +9,28 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import prasad.vennam.moneypilot.data.entity.PendingTransaction
-import prasad.vennam.moneypilot.data.repository.MoneyPilotRepository
+import prasad.vennam.moneypilot.data.entity.AutopayAlert
+import prasad.vennam.moneypilot.data.dao.AutopayAlertDao
+import prasad.vennam.moneypilot.data.repository.TransactionRepository
+import prasad.vennam.moneypilot.data.repository.SubscriptionRepository
 import prasad.vennam.moneypilot.util.NotificationParser
-import prasad.vennam.moneypilot.util.inRupees
+import prasad.vennam.moneypilot.util.toMajorUnit
+import kotlinx.coroutines.flow.first
+import java.util.Calendar
 import javax.inject.Inject
 
 @AndroidEntryPoint
 class TransactionNotificationListener : NotificationListenerService() {
     @Inject
-    lateinit var repository: MoneyPilotRepository
+    lateinit var repository: TransactionRepository
+
+    @Inject
+    lateinit var subscriptionRepository: SubscriptionRepository
+
+    @Inject
+    lateinit var autopayAlertDao: AutopayAlertDao
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
@@ -50,6 +60,29 @@ class TransactionNotificationListener : NotificationListenerService() {
             )
         }
 
+        // Check if this is an autopay/mandate alert
+        val autopayParsed = NotificationParser.parseAutopay(title, fullBodyText, sbn.packageName)
+        if (autopayParsed != null) {
+            serviceScope.launch {
+                try {
+                    val alert = AutopayAlert(
+                        merchant = autopayParsed.merchant,
+                        amount = autopayParsed.amount,
+                        scheduledDate = autopayParsed.scheduledDate,
+                        upiMandateId = autopayParsed.upiMandateId,
+                        paymentApp = autopayParsed.paymentApp,
+                        rawMessage = fullBodyText,
+                        timestamp = System.currentTimeMillis()
+                    )
+                    autopayAlertDao.insertAutopayAlert(alert)
+                    Log.d("NotificationListener", "Successfully inserted autopay alert: ${alert.merchant} - ${alert.amount}")
+                } catch (e: Exception) {
+                    Log.e("NotificationListener", "Failed to insert autopay alert", e)
+                }
+            }
+            return // Skip further parsing as it is a scheduled future payment
+        }
+
         val parsed = NotificationParser.parse(title, fullBodyText, sbn.packageName) ?: return
         if (prasad.vennam.moneypilot.BuildConfig.DEBUG) {
             val maskedMerchant = parsed.merchant.take(2) + "..."
@@ -62,40 +95,11 @@ class TransactionNotificationListener : NotificationListenerService() {
                 val now = System.currentTimeMillis()
 
                 // 10 minutes duplicate check window
-                val timeWindowMs = 10 * 60 * 1000
+                val timeWindowMs = 10L * 60 * 1000
 
-                // Check pending transactions for duplicates
-                val currentPending = repository.allPendingTransactions.first()
-                val isPendingDuplicate =
-                    currentPending.any { pending ->
-                        Math.abs(pending.timestamp - now) < timeWindowMs &&
-                            Math.abs(pending.amount - parsed.amount) < 0.01 &&
-                            (
-                                pending.merchant.equals(parsed.merchant, ignoreCase = true) ||
-                                    pending.rawMessage.contains(parsed.merchant, ignoreCase = true)
-                            )
-                    }
-                if (isPendingDuplicate) {
+                if (repository.isDuplicateTransaction(now, timeWindowMs, parsed.amount, parsed.merchant)) {
                     if (prasad.vennam.moneypilot.BuildConfig.DEBUG) {
-                        Log.d("NotificationListener", "Skipping: duplicate pending transaction found")
-                    }
-                    return@launch
-                }
-
-                // Check approved transactions for duplicates
-                val currentTransactions = repository.allTransactions.first()
-                val isTransactionDuplicate =
-                    currentTransactions.any { trans ->
-                        Math.abs(trans.timestamp - now) < timeWindowMs &&
-                            Math.abs(trans.amount.inRupees - parsed.amount) < 0.01 &&
-                            (
-                                trans.note.equals(parsed.merchant, ignoreCase = true) ||
-                                    trans.note.contains(parsed.merchant, ignoreCase = true)
-                            )
-                    }
-                if (isTransactionDuplicate) {
-                    if (prasad.vennam.moneypilot.BuildConfig.DEBUG) {
-                        Log.d("NotificationListener", "Skipping: duplicate transaction already recorded in database")
+                        Log.d("NotificationListener", "Skipping: duplicate transaction found in pending or approved")
                     }
                     return@launch
                 }
@@ -114,10 +118,47 @@ class TransactionNotificationListener : NotificationListenerService() {
                 if (prasad.vennam.moneypilot.BuildConfig.DEBUG) {
                     Log.d("NotificationListener", "Successfully inserted pending transaction: id=${pendingTx.id}, type=${pendingTx.type}")
                 }
+
+                // 2. Auto-match active subscription renewals and advance next payment date
+                val subscriptions = subscriptionRepository.allSubscriptions.first()
+                val matchedSubscription = subscriptions.find { subscription ->
+                    val subNameClean = subscription.name.lowercase().replace(Regex("[^a-z0-9]"), "")
+                    val merchantClean = parsed.merchant.lowercase().replace(Regex("[^a-z0-9]"), "")
+                    val nameMatches = (subNameClean.isNotEmpty() && merchantClean.isNotEmpty()) &&
+                            (subNameClean.contains(merchantClean) || merchantClean.contains(subNameClean))
+                    val amountMatches = Math.abs(subscription.amount - (parsed.amount * 100).toLong()) < 500 // ₹5 allowance
+                    nameMatches && amountMatches
+                }
+
+                if (matchedSubscription != null) {
+                    Log.d("NotificationListener", "Auto-matched subscription renewal: ${matchedSubscription.name}")
+                    val nextDate = calculateNextPaymentDate(matchedSubscription.nextPaymentDate, matchedSubscription.billingCycle)
+                    subscriptionRepository.updateSubscription(
+                        matchedSubscription.copy(
+                            nextPaymentDate = nextDate,
+                            lastUpdated = System.currentTimeMillis()
+                        )
+                    )
+                    Log.d("NotificationListener", "Advanced subscription billing date to: $nextDate")
+                }
             } catch (e: Exception) {
-                Log.e("NotificationListener", "Error inserting pending transaction", e)
+                Log.e("NotificationListener", "Error inserting pending transaction or processing subscription", e)
             }
         }
+    }
+
+    private fun calculateNextPaymentDate(
+        currentDate: Long,
+        billingCycle: String,
+    ): Long {
+        val cal = Calendar.getInstance().apply { timeInMillis = currentDate }
+        when (billingCycle) {
+            "Weekly" -> cal.add(Calendar.WEEK_OF_YEAR, 1)
+            "Monthly" -> cal.add(Calendar.MONTH, 1)
+            "Yearly" -> cal.add(Calendar.YEAR, 1)
+            else -> cal.add(Calendar.MONTH, 1)
+        }
+        return cal.timeInMillis
     }
 
     override fun onDestroy() {

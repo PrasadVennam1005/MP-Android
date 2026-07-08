@@ -2,7 +2,6 @@ package prasad.vennam.moneypilot.util
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -17,37 +16,37 @@ import org.junit.Test
  * - Key screen/event/param constants resolve to expected values
  */
 class AnalyticsConstantsSmokeTest {
-
     // ── Screen constants ────────────────────────────────────────────────
 
-    private val allScreens = listOf(
-        AnalyticsConstants.Screen.DASHBOARD,
-        AnalyticsConstants.Screen.HISTORY,
-        AnalyticsConstants.Screen.LOANS,
-        AnalyticsConstants.Screen.INVESTMENTS,
-        AnalyticsConstants.Screen.REPORTS,
-        AnalyticsConstants.Screen.AUTH,
-        AnalyticsConstants.Screen.SETTINGS,
-        AnalyticsConstants.Screen.AI_CHAT,
-        AnalyticsConstants.Screen.SUBSCRIPTIONS,
-        AnalyticsConstants.Screen.SAVING_GOALS,
-        AnalyticsConstants.Screen.NOTIFICATIONS,
-        AnalyticsConstants.Screen.ANALYTICS_TAB,
-        AnalyticsConstants.Screen.CURRENCY_CONVERTER,
-        AnalyticsConstants.Screen.RECEIPT_SCANNER,
-        AnalyticsConstants.Screen.PREMIUM,
-        AnalyticsConstants.Screen.EMERGENCY_FUND,
-        AnalyticsConstants.Screen.MANAGE_CATEGORIES,
-        AnalyticsConstants.Screen.ADD_TRANSACTION,
-        AnalyticsConstants.Screen.EDIT_TRANSACTION,
-        AnalyticsConstants.Screen.FINANCIAL_SANDBOX,
-        AnalyticsConstants.Screen.FAQ,
-        AnalyticsConstants.Screen.FINANCIAL_NEWS,
-        AnalyticsConstants.Screen.INSIGHTS,
-        AnalyticsConstants.Screen.EMI_CALCULATOR,
-        AnalyticsConstants.Screen.LEARN_FINANCE,
-        AnalyticsConstants.Screen.ARTICLE_DETAIL,
-    )
+    private val allScreens =
+        listOf(
+            AnalyticsConstants.Screen.DASHBOARD,
+            AnalyticsConstants.Screen.HISTORY,
+            AnalyticsConstants.Screen.LOANS,
+            AnalyticsConstants.Screen.INVESTMENTS,
+            AnalyticsConstants.Screen.REPORTS,
+            AnalyticsConstants.Screen.AUTH,
+            AnalyticsConstants.Screen.SETTINGS,
+            AnalyticsConstants.Screen.AI_CHAT,
+            AnalyticsConstants.Screen.SUBSCRIPTIONS,
+            AnalyticsConstants.Screen.SAVING_GOALS,
+            AnalyticsConstants.Screen.NOTIFICATIONS,
+            AnalyticsConstants.Screen.ANALYTICS_TAB,
+            AnalyticsConstants.Screen.CURRENCY_CONVERTER,
+            AnalyticsConstants.Screen.RECEIPT_SCANNER,
+            AnalyticsConstants.Screen.PREMIUM,
+            AnalyticsConstants.Screen.EMERGENCY_FUND,
+            AnalyticsConstants.Screen.MANAGE_CATEGORIES,
+            AnalyticsConstants.Screen.ADD_TRANSACTION,
+            AnalyticsConstants.Screen.EDIT_TRANSACTION,
+            AnalyticsConstants.Screen.FINANCIAL_SANDBOX,
+            AnalyticsConstants.Screen.FAQ,
+            AnalyticsConstants.Screen.FINANCIAL_NEWS,
+            AnalyticsConstants.Screen.INSIGHTS,
+            AnalyticsConstants.Screen.EMI_CALCULATOR,
+            AnalyticsConstants.Screen.LEARN_FINANCE,
+            AnalyticsConstants.Screen.ARTICLE_DETAIL,
+        )
 
     @Test
     fun `screen constants are not blank`() {
@@ -81,74 +80,75 @@ class AnalyticsConstantsSmokeTest {
 
     // ── Event constants ─────────────────────────────────────────────────
 
-    private val allEvents = listOf(
-        AnalyticsConstants.Event.SCREEN_ENGAGEMENT_TIME,
-        AnalyticsConstants.Event.INVESTMENTS_REFRESH_CLICKED,
-        AnalyticsConstants.Event.INVESTMENTS_TAB_SWITCHED,
-        AnalyticsConstants.Event.LOGIN,
-        AnalyticsConstants.Event.CURRENCY_REFRESH_CLICKED,
-        AnalyticsConstants.Event.CURRENCY_MODE_SWITCHED,
-        AnalyticsConstants.Event.CURRENCY_SWAPPED,
-        AnalyticsConstants.Event.AI_CHAT_SUGGESTIONS_ICON_CLICKED,
-        AnalyticsConstants.Event.AI_CHAT_ACTION_CONFIRMED,
-        AnalyticsConstants.Event.AI_CHAT_ACTION_DISMISSED,
-        AnalyticsConstants.Event.AI_CHAT_MODEL_DOWNLOAD_CLICKED,
-        AnalyticsConstants.Event.AI_CHAT_WELCOME_SUGGESTION_CLICKED,
-        AnalyticsConstants.Event.AI_CHAT_BOTTOMSHEET_SUGGESTION_CLICKED,
-        AnalyticsConstants.Event.REPORTS_TAB_SWITCHED,
-        AnalyticsConstants.Event.INSIGHTS_AI_RECOMMENDATION_CLICKED,
-        AnalyticsConstants.Event.NEWS_TAB_SWITCHED,
-        AnalyticsConstants.Event.NEWS_CATEGORY_CLICKED,
-        AnalyticsConstants.Event.NEWS_BOOKMARK_REMOVED,
-        AnalyticsConstants.Event.NEWS_BOOKMARK_ADDED,
-        AnalyticsConstants.Event.NEWS_SHARED,
-        AnalyticsConstants.Event.TRANSACTION_ADDED,
-        AnalyticsConstants.Event.TRANSACTION_SAVED,
-        AnalyticsConstants.Event.HISTORY_TAB_SWITCHED,
-        AnalyticsConstants.Event.HISTORY_FILTERS_RESET,
-        AnalyticsConstants.Event.HISTORY_FILTERS_APPLIED,
-        AnalyticsConstants.Event.PROFILE_CLICKED,
-        AnalyticsConstants.Event.NOTIFICATION_ICON_CLICKED,
-        AnalyticsConstants.Event.AI_CHAT_TOPBAR_CLICKED,
-        AnalyticsConstants.Event.QUICK_ACTION_CLICKED,
-        AnalyticsConstants.Event.INSIGHTS_CARD_CLICKED,
-        AnalyticsConstants.Event.LEARN_FINANCE_PROMO_CLICKED,
-        AnalyticsConstants.Event.EMERGENCY_FUND_CARD_CLICKED,
-        AnalyticsConstants.Event.SAVING_GOALS_CARD_CLICKED,
-        AnalyticsConstants.Event.BUDGET_SEE_ALL_CLICKED,
-        AnalyticsConstants.Event.HISTORY_SEE_ALL_CLICKED,
-        AnalyticsConstants.Event.FLOATING_AI_BOT_CLICKED,
-        AnalyticsConstants.Event.LOAN_EMI_CALCULATOR_CLICKED,
-        AnalyticsConstants.Event.SETTINGS_BIOMETRIC_TOGGLED,
-        AnalyticsConstants.Event.SETTINGS_NOTIFICATION_TRACKING_TOGGLED,
-        AnalyticsConstants.Event.SETTINGS_SMS_TRACKING_TOGGLED,
-        AnalyticsConstants.Event.FAQ_ASK_QUESTION_CLICKED,
-        AnalyticsConstants.Event.FAQ_ITEM_EXPANDED,
-        AnalyticsConstants.Event.SAVING_GOAL_DELETED,
-        AnalyticsConstants.Event.SAVING_GOAL_DEPOSIT,
-        AnalyticsConstants.Event.SAVING_GOAL_COMPLETED,
-        AnalyticsConstants.Event.SAVING_GOAL_WITHDRAWAL,
-        AnalyticsConstants.Event.SUBSCRIPTION_DELETED,
-        AnalyticsConstants.Event.EMERGENCY_FUND_DEPOSIT,
-        AnalyticsConstants.Event.EMERGENCY_FUND_WITHDRAW,
-        AnalyticsConstants.Event.SCANNER_FLASH_TOGGLED,
-        AnalyticsConstants.Event.SCANNER_GALLERY_OPENED,
-        AnalyticsConstants.Event.SCANNER_SHUTTER_CLICKED,
-        AnalyticsConstants.Event.SCANNER_EXPENSE_SAVED,
-        AnalyticsConstants.Event.CATEGORY_SAVED,
-        AnalyticsConstants.Event.CATEGORY_DELETED,
-        AnalyticsConstants.Event.PURCHASE_ATTEMPTED,
-        AnalyticsConstants.Event.NOTIFICATIONS_FILTER_CLICKED,
-        AnalyticsConstants.Event.NOTIFICATIONS_CLEARED_ALL,
-        AnalyticsConstants.Event.CURRENCY_CHANGED,
-        AnalyticsConstants.Event.SUBSCRIPTION_ADDED,
-        AnalyticsConstants.Event.SUBSCRIPTION_UPDATED,
-        AnalyticsConstants.Event.SAVING_GOAL_ADDED,
-        AnalyticsConstants.Event.SAVING_GOAL_UPDATED,
-        AnalyticsConstants.Event.SCANNER_GALLERY_UPLOAD,
-        AnalyticsConstants.Event.SCANNER_PICTURE_CAPTURED,
-        AnalyticsConstants.Event.BUDGET_WARNING_VIEWED,
-    )
+    private val allEvents =
+        listOf(
+            AnalyticsConstants.Event.SCREEN_ENGAGEMENT_TIME,
+            AnalyticsConstants.Event.INVESTMENTS_REFRESH_CLICKED,
+            AnalyticsConstants.Event.INVESTMENTS_TAB_SWITCHED,
+            AnalyticsConstants.Event.LOGIN,
+            AnalyticsConstants.Event.CURRENCY_REFRESH_CLICKED,
+            AnalyticsConstants.Event.CURRENCY_MODE_SWITCHED,
+            AnalyticsConstants.Event.CURRENCY_SWAPPED,
+            AnalyticsConstants.Event.AI_CHAT_SUGGESTIONS_ICON_CLICKED,
+            AnalyticsConstants.Event.AI_CHAT_ACTION_CONFIRMED,
+            AnalyticsConstants.Event.AI_CHAT_ACTION_DISMISSED,
+            AnalyticsConstants.Event.AI_CHAT_MODEL_DOWNLOAD_CLICKED,
+            AnalyticsConstants.Event.AI_CHAT_WELCOME_SUGGESTION_CLICKED,
+            AnalyticsConstants.Event.AI_CHAT_BOTTOMSHEET_SUGGESTION_CLICKED,
+            AnalyticsConstants.Event.REPORTS_TAB_SWITCHED,
+            AnalyticsConstants.Event.INSIGHTS_AI_RECOMMENDATION_CLICKED,
+            AnalyticsConstants.Event.NEWS_TAB_SWITCHED,
+            AnalyticsConstants.Event.NEWS_CATEGORY_CLICKED,
+            AnalyticsConstants.Event.NEWS_BOOKMARK_REMOVED,
+            AnalyticsConstants.Event.NEWS_BOOKMARK_ADDED,
+            AnalyticsConstants.Event.NEWS_SHARED,
+            AnalyticsConstants.Event.TRANSACTION_ADDED,
+            AnalyticsConstants.Event.TRANSACTION_SAVED,
+            AnalyticsConstants.Event.HISTORY_TAB_SWITCHED,
+            AnalyticsConstants.Event.HISTORY_FILTERS_RESET,
+            AnalyticsConstants.Event.HISTORY_FILTERS_APPLIED,
+            AnalyticsConstants.Event.PROFILE_CLICKED,
+            AnalyticsConstants.Event.NOTIFICATION_ICON_CLICKED,
+            AnalyticsConstants.Event.AI_CHAT_TOPBAR_CLICKED,
+            AnalyticsConstants.Event.QUICK_ACTION_CLICKED,
+            AnalyticsConstants.Event.INSIGHTS_CARD_CLICKED,
+            AnalyticsConstants.Event.LEARN_FINANCE_PROMO_CLICKED,
+            AnalyticsConstants.Event.EMERGENCY_FUND_CARD_CLICKED,
+            AnalyticsConstants.Event.SAVING_GOALS_CARD_CLICKED,
+            AnalyticsConstants.Event.BUDGET_SEE_ALL_CLICKED,
+            AnalyticsConstants.Event.HISTORY_SEE_ALL_CLICKED,
+            AnalyticsConstants.Event.FLOATING_AI_BOT_CLICKED,
+            AnalyticsConstants.Event.LOAN_EMI_CALCULATOR_CLICKED,
+            AnalyticsConstants.Event.SETTINGS_BIOMETRIC_TOGGLED,
+            AnalyticsConstants.Event.SETTINGS_NOTIFICATION_TRACKING_TOGGLED,
+            AnalyticsConstants.Event.SETTINGS_SMS_TRACKING_TOGGLED,
+            AnalyticsConstants.Event.FAQ_ASK_QUESTION_CLICKED,
+            AnalyticsConstants.Event.FAQ_ITEM_EXPANDED,
+            AnalyticsConstants.Event.SAVING_GOAL_DELETED,
+            AnalyticsConstants.Event.SAVING_GOAL_DEPOSIT,
+            AnalyticsConstants.Event.SAVING_GOAL_COMPLETED,
+            AnalyticsConstants.Event.SAVING_GOAL_WITHDRAWAL,
+            AnalyticsConstants.Event.SUBSCRIPTION_DELETED,
+            AnalyticsConstants.Event.EMERGENCY_FUND_DEPOSIT,
+            AnalyticsConstants.Event.EMERGENCY_FUND_WITHDRAW,
+            AnalyticsConstants.Event.SCANNER_FLASH_TOGGLED,
+            AnalyticsConstants.Event.SCANNER_GALLERY_OPENED,
+            AnalyticsConstants.Event.SCANNER_SHUTTER_CLICKED,
+            AnalyticsConstants.Event.SCANNER_EXPENSE_SAVED,
+            AnalyticsConstants.Event.CATEGORY_SAVED,
+            AnalyticsConstants.Event.CATEGORY_DELETED,
+            AnalyticsConstants.Event.PURCHASE_ATTEMPTED,
+            AnalyticsConstants.Event.NOTIFICATIONS_FILTER_CLICKED,
+            AnalyticsConstants.Event.NOTIFICATIONS_CLEARED_ALL,
+            AnalyticsConstants.Event.CURRENCY_CHANGED,
+            AnalyticsConstants.Event.SUBSCRIPTION_ADDED,
+            AnalyticsConstants.Event.SUBSCRIPTION_UPDATED,
+            AnalyticsConstants.Event.SAVING_GOAL_ADDED,
+            AnalyticsConstants.Event.SAVING_GOAL_UPDATED,
+            AnalyticsConstants.Event.SCANNER_GALLERY_UPLOAD,
+            AnalyticsConstants.Event.SCANNER_PICTURE_CAPTURED,
+            AnalyticsConstants.Event.BUDGET_WARNING_VIEWED,
+        )
 
     @Test
     fun `event constants are not blank`() {
@@ -168,7 +168,7 @@ class AnalyticsConstantsSmokeTest {
         allEvents.forEach { event ->
             assertTrue(
                 "Event '$event' should be snake_case (lowercase + underscores)",
-                event.matches(Regex("^[a-z][a-z0-9_]*$"))
+                event.matches(Regex("^[a-z][a-z0-9_]*$")),
             )
         }
     }
@@ -184,48 +184,49 @@ class AnalyticsConstantsSmokeTest {
 
     // ── Param constants ─────────────────────────────────────────────────
 
-    private val allParams = listOf(
-        AnalyticsConstants.Param.SCREEN_NAME,
-        AnalyticsConstants.Param.ENGAGEMENT_TIME_SEC,
-        AnalyticsConstants.Param.TAB,
-        AnalyticsConstants.Param.METHOD,
-        AnalyticsConstants.Param.MODE,
-        AnalyticsConstants.Param.TYPE,
-        AnalyticsConstants.Param.TEXT,
-        AnalyticsConstants.Param.CATEGORY,
-        AnalyticsConstants.Param.URL,
-        AnalyticsConstants.Param.ACTION,
-        AnalyticsConstants.Param.FROM,
-        AnalyticsConstants.Param.TO,
-        AnalyticsConstants.Param.GOAL_NAME,
-        AnalyticsConstants.Param.GOAL_TARGET,
-        AnalyticsConstants.Param.GOAL_SAVED,
-        AnalyticsConstants.Param.GOAL_DEADLINE,
-        AnalyticsConstants.Param.SUBSCRIPTION_NAME,
-        AnalyticsConstants.Param.SUBSCRIPTION_AMOUNT,
-        AnalyticsConstants.Param.SUBSCRIPTION_CYCLE,
-        AnalyticsConstants.Param.SUBSCRIPTION_MODE,
-        AnalyticsConstants.Param.SUBSCRIPTION_NOTIFY,
-        AnalyticsConstants.Param.PERCENT,
-        AnalyticsConstants.Param.PAYMENT_MODE,
-        AnalyticsConstants.Param.IS_EDIT,
-        AnalyticsConstants.Param.AMOUNT,
-        AnalyticsConstants.Param.SUCCESS,
-        AnalyticsConstants.Param.MERCHANT_FOUND,
-        AnalyticsConstants.Param.PARSED_BY_AI,
-        AnalyticsConstants.Param.IS_ON,
-        AnalyticsConstants.Param.NAME,
-        AnalyticsConstants.Param.COLOR,
-        AnalyticsConstants.Param.ICON,
-        AnalyticsConstants.Param.IS_EXPENSE,
-        AnalyticsConstants.Param.PRODUCT_ID,
-        AnalyticsConstants.Param.ENABLED,
-        AnalyticsConstants.Param.QUESTION,
-        AnalyticsConstants.Param.DEPOSIT_AMOUNT,
-        AnalyticsConstants.Param.WITHDRAWAL_AMOUNT,
-        AnalyticsConstants.Param.CATEGORY_FILTERED,
-        AnalyticsConstants.Param.PAYMENT_MODE_FILTERED,
-    )
+    private val allParams =
+        listOf(
+            AnalyticsConstants.Param.SCREEN_NAME,
+            AnalyticsConstants.Param.ENGAGEMENT_TIME_SEC,
+            AnalyticsConstants.Param.TAB,
+            AnalyticsConstants.Param.METHOD,
+            AnalyticsConstants.Param.MODE,
+            AnalyticsConstants.Param.TYPE,
+            AnalyticsConstants.Param.TEXT,
+            AnalyticsConstants.Param.CATEGORY,
+            AnalyticsConstants.Param.URL,
+            AnalyticsConstants.Param.ACTION,
+            AnalyticsConstants.Param.FROM,
+            AnalyticsConstants.Param.TO,
+            AnalyticsConstants.Param.GOAL_NAME,
+            AnalyticsConstants.Param.GOAL_TARGET,
+            AnalyticsConstants.Param.GOAL_SAVED,
+            AnalyticsConstants.Param.GOAL_DEADLINE,
+            AnalyticsConstants.Param.SUBSCRIPTION_NAME,
+            AnalyticsConstants.Param.SUBSCRIPTION_AMOUNT,
+            AnalyticsConstants.Param.SUBSCRIPTION_CYCLE,
+            AnalyticsConstants.Param.SUBSCRIPTION_MODE,
+            AnalyticsConstants.Param.SUBSCRIPTION_NOTIFY,
+            AnalyticsConstants.Param.PERCENT,
+            AnalyticsConstants.Param.PAYMENT_MODE,
+            AnalyticsConstants.Param.IS_EDIT,
+            AnalyticsConstants.Param.AMOUNT,
+            AnalyticsConstants.Param.SUCCESS,
+            AnalyticsConstants.Param.MERCHANT_FOUND,
+            AnalyticsConstants.Param.PARSED_BY_AI,
+            AnalyticsConstants.Param.IS_ON,
+            AnalyticsConstants.Param.NAME,
+            AnalyticsConstants.Param.COLOR,
+            AnalyticsConstants.Param.ICON,
+            AnalyticsConstants.Param.IS_EXPENSE,
+            AnalyticsConstants.Param.PRODUCT_ID,
+            AnalyticsConstants.Param.ENABLED,
+            AnalyticsConstants.Param.QUESTION,
+            AnalyticsConstants.Param.DEPOSIT_AMOUNT,
+            AnalyticsConstants.Param.WITHDRAWAL_AMOUNT,
+            AnalyticsConstants.Param.CATEGORY_FILTERED,
+            AnalyticsConstants.Param.PAYMENT_MODE_FILTERED,
+        )
 
     @Test
     fun `param constants are not blank`() {
@@ -245,7 +246,7 @@ class AnalyticsConstantsSmokeTest {
         allParams.forEach { param ->
             assertTrue(
                 "Param '$param' should be snake_case (lowercase + underscores)",
-                param.matches(Regex("^[a-z][a-z0-9_]*$"))
+                param.matches(Regex("^[a-z][a-z0-9_]*$")),
             )
         }
     }
@@ -266,7 +267,7 @@ class AnalyticsConstantsSmokeTest {
         val overlap = allEvents.toSet().intersect(allParams.toSet())
         assertTrue(
             "Event and Param values should not collide, but found: $overlap",
-            overlap.isEmpty()
+            overlap.isEmpty(),
         )
     }
 

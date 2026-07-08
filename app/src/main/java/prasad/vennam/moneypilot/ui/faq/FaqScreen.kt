@@ -1,5 +1,8 @@
 package prasad.vennam.moneypilot.ui.faq
+import androidx.compose.ui.res.stringResource
+import prasad.vennam.moneypilot.R
 
+import prasad.vennam.moneypilot.ui.components.BaseBottomSheet
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.animation.AnimatedVisibility
@@ -11,9 +14,13 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
@@ -24,6 +31,8 @@ import androidx.compose.material.icons.automirrored.rounded.ShowChart
 import androidx.compose.material.icons.automirrored.rounded.Subject
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
+import androidx.compose.material3.adaptive.currentWindowAdaptiveInfoV2
+import androidx.window.core.layout.WindowWidthSizeClass
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -35,7 +44,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import prasad.vennam.moneypilot.util.AnalyticsConstants
 import prasad.vennam.moneypilot.util.AnalyticsHelper
 import prasad.vennam.moneypilot.util.TrackScreen
@@ -156,32 +169,37 @@ private val faqCategories =
 @Composable
 fun FaqScreen(
     analyticsHelper: AnalyticsHelper,
-    onNavigateBack: () -> Unit
+    onNavigateBack: () -> Unit,
 ) {
     TrackScreen(analyticsHelper, AnalyticsConstants.Screen.FAQ)
     val context = LocalContext.current
     var showContactSheet by remember { mutableStateOf(false) }
 
+    val adaptiveInfo = currentWindowAdaptiveInfoV2()
+    val isExpanded = adaptiveInfo.windowSizeClass.windowWidthSizeClass == WindowWidthSizeClass.EXPANDED
+
     // Track which FAQ item is expanded: category index -> item index
     val expandedStates = remember { mutableStateMapOf<String, Boolean>() }
+    var selectedCategoryIndex by remember { mutableStateOf(0) }
 
     Scaffold(
         topBar = {
             TopAppBar(
                 title = {
                     Text(
-                        "Help & FAQ",
+                        stringResource(R.string.help_and_faq),
                         style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
                     )
                 },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                ),
+                colors =
+                    TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.surface,
+                    ),
             )
         },
         floatingActionButton = {
@@ -191,34 +209,127 @@ fun FaqScreen(
                     showContactSheet = true
                 },
                 icon = { Icon(Icons.Rounded.Email, contentDescription = null) },
-                text = { Text("Ask a Question") },
+                text = { Text(stringResource(R.string.ask_a_question)) },
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary,
             )
         },
         containerColor = MaterialTheme.colorScheme.background,
     ) { innerPadding ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding),
-            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 100.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp),
-        ) {
-            // Hero header
-            item {
-                FaqHeroCard()
-            }
+        if (isExpanded) {
+            Row(
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding)
+                        .padding(16.dp),
+                horizontalArrangement = Arrangement.spacedBy(24.dp)
+            ) {
+                // Left pane: categories list selector
+                Column(
+                    modifier =
+                        Modifier
+                            .weight(1f)
+                            .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    FaqHeroCard()
 
-            // Categories
-            faqCategories.forEachIndexed { catIdx, category ->
-                item(key = "cat_$catIdx") {
+                    Text(
+                        text = "Categories",
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                        modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
+                    )
+
+                    faqCategories.forEachIndexed { index, category ->
+                        val isSelected = selectedCategoryIndex == index
+                        Card(
+                            onClick = { selectedCategoryIndex = index },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(16.dp),
+                            colors =
+                                CardDefaults.cardColors(
+                                    containerColor =
+                                        if (isSelected) {
+                                            MaterialTheme.colorScheme.primaryContainer
+                                        } else {
+                                            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
+                                        }
+                                ),
+                            border =
+                                if (isSelected) {
+                                    BorderStroke(1.dp, MaterialTheme.colorScheme.primary)
+                                } else {
+                                    null
+                                }
+                        ) {
+                            Row(
+                                modifier =
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .padding(16.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = category.icon,
+                                    contentDescription = null,
+                                    tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Spacer(modifier = Modifier.width(16.dp))
+                                Text(
+                                    text = category.title,
+                                    style =
+                                        MaterialTheme.typography.bodyLarge.copy(
+                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.SemiBold
+                                        ),
+                                    color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // Right pane: Question & answers list for selected category
+                Column(
+                    modifier =
+                        Modifier
+                            .weight(1.5f)
+                            .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(20.dp)
+                ) {
+                    val category = faqCategories[selectedCategoryIndex]
                     FaqCategorySection(
                         category = category,
                         expandedStates = expandedStates,
-                        categoryKey = "cat_$catIdx",
-                        analyticsHelper = analyticsHelper
+                        categoryKey = "cat_$selectedCategoryIndex",
+                        analyticsHelper = analyticsHelper,
                     )
+                }
+            }
+        } else {
+            LazyColumn(
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding),
+                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 100.dp),
+                verticalArrangement = Arrangement.spacedBy(20.dp),
+            ) {
+                // Hero header
+                item {
+                    FaqHeroCard()
+                }
+
+                // Categories
+                faqCategories.forEachIndexed { catIdx, category ->
+                    item(key = "cat_$catIdx") {
+                        FaqCategorySection(
+                            category = category,
+                            expandedStates = expandedStates,
+                            categoryKey = "cat_$catIdx",
+                            analyticsHelper = analyticsHelper,
+                        )
+                    }
                 }
             }
         }
@@ -226,16 +337,20 @@ fun FaqScreen(
 
     // Contact bottom sheet
     if (showContactSheet) {
+        val sendEmailTitle = stringResource(R.string.send_email)
+
         ContactBottomSheet(
-            onDismiss = { showContactSheet = false },
+            onDismiss = {
+                showContactSheet = false },
             onSendEmail = { subject, body ->
-                val intent = Intent(Intent.ACTION_SENDTO).apply {
-                    data = Uri.parse("mailto:")
-                    putExtra(Intent.EXTRA_EMAIL, arrayOf("support@moneypilotapp.com"))
-                    putExtra(Intent.EXTRA_SUBJECT, subject)
-                    putExtra(Intent.EXTRA_TEXT, body)
-                }
-                context.startActivity(Intent.createChooser(intent, "Send Email"))
+                val intent =
+                    Intent(Intent.ACTION_SENDTO).apply {
+                        data = Uri.parse("mailto:")
+                        putExtra(Intent.EXTRA_EMAIL, arrayOf("support@moneypilotapp.com"))
+                        putExtra(Intent.EXTRA_SUBJECT, subject)
+                        putExtra(Intent.EXTRA_TEXT, body)
+                    }
+                context.startActivity(Intent.createChooser(intent, sendEmailTitle))
                 showContactSheet = false
             },
         )
@@ -247,25 +362,28 @@ fun FaqScreen(
 @Composable
 private fun FaqHeroCard() {
     Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp))
-            .background(
-                Brush.linearGradient(
-                    colors = listOf(
-                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f),
-                        MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(20.dp))
+                .background(
+                    Brush.linearGradient(
+                        colors =
+                            listOf(
+                                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f),
+                                MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f),
+                            ),
                     ),
-                )
-            ).padding(24.dp),
+                ).padding(24.dp),
         contentAlignment = Alignment.Center,
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Box(
-                modifier = Modifier
-                    .size(64.dp)
-                    .clip(RoundedCornerShape(18.dp))
-                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)),
+                modifier =
+                    Modifier
+                        .size(64.dp)
+                        .clip(RoundedCornerShape(18.dp))
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
@@ -277,13 +395,13 @@ private fun FaqHeroCard() {
             }
             Spacer(Modifier.height(14.dp))
             Text(
-                "How can we help?",
+                stringResource(R.string.how_can_we_help),
                 style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.ExtraBold),
                 color = MaterialTheme.colorScheme.onSurface,
             )
             Spacer(Modifier.height(6.dp))
             Text(
-                "Browse questions below or tap \"Ask a Question\" at the bottom to email our team.",
+                stringResource(R.string.faq_description),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
@@ -316,10 +434,11 @@ private fun FaqCategorySection(
             Spacer(Modifier.width(8.dp))
             Text(
                 category.title,
-                style = MaterialTheme.typography.labelLarge.copy(
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = androidx.compose.ui.unit.TextUnit.Unspecified,
-                ),
+                style =
+                    MaterialTheme.typography.labelLarge.copy(
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = androidx.compose.ui.unit.TextUnit.Unspecified,
+                    ),
                 color = MaterialTheme.colorScheme.primary,
             )
         }
@@ -336,7 +455,7 @@ private fun FaqCategorySection(
                     if (!isExpanded) {
                         analyticsHelper.logEvent(
                             AnalyticsConstants.Event.FAQ_ITEM_EXPANDED,
-                            mapOf(AnalyticsConstants.Param.QUESTION to item.question)
+                            mapOf(AnalyticsConstants.Param.QUESTION to item.question),
                         )
                     }
                     expandedStates[key] = !isExpanded
@@ -361,14 +480,16 @@ private fun FaqItemCard(
     )
 
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .clickable(onClick = onToggle),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(16.dp))
+                .clickable(onClick = onToggle),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
-        ),
+        colors =
+            CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+            ),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -387,9 +508,10 @@ private fun FaqItemCard(
                     imageVector = Icons.Rounded.KeyboardArrowDown,
                     contentDescription = if (isExpanded) "Collapse" else "Expand",
                     tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier
-                        .size(24.dp)
-                        .rotate(rotationAngle),
+                    modifier =
+                        Modifier
+                            .size(24.dp)
+                            .rotate(rotationAngle),
                 )
             }
 
@@ -425,65 +547,32 @@ fun ContactBottomSheet(
     onDismiss: () -> Unit,
     onSendEmail: (subject: String, body: String) -> Unit,
 ) {
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-
-    var subject by remember { mutableStateOf("") }
-    var body by remember { mutableStateOf("") }
-    val isSendEnabled = subject.isNotBlank() && body.isNotBlank()
-
-    ModalBottomSheet(
+    BaseBottomSheet(
         onDismissRequest = onDismiss,
-        sheetState = sheetState,
-        containerColor = MaterialTheme.colorScheme.surface,
-        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
-        dragHandle = { BottomSheetDefaults.DragHandle() },
+        title = stringResource(R.string.ask_a_question),
     ) {
+        var subject by remember { mutableStateOf("") }
+        var body by remember { mutableStateOf("") }
+        val isSendEnabled = subject.isNotBlank() && body.isNotBlank()
+        
+        val focusManager = LocalFocusManager.current
+        val keyboardController = LocalSoftwareKeyboardController.current
+
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 24.dp)
-                .padding(bottom = 36.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp)
+                    .padding(bottom = 36.dp),
         ) {
-            // Header
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.padding(bottom = 20.dp),
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(44.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(MaterialTheme.colorScheme.primaryContainer),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        imageVector = Icons.Rounded.Email,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(22.dp),
-                    )
-                }
-                Spacer(Modifier.width(14.dp))
-                Column {
-                    Text(
-                        "Ask Our Team",
-                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                        color = MaterialTheme.colorScheme.onSurface,
-                    )
-                    Text(
-                        "We'll reply within 24 hours",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
+
 
             // Subject field
             OutlinedTextField(
                 value = subject,
                 onValueChange = { subject = it },
-                label = { Text("Subject") },
-                placeholder = { Text("e.g. Sync not working") },
+                label = { Text(stringResource(R.string.subject)) },
+                placeholder = { Text(stringResource(R.string.subject_placeholder)) },
                 leadingIcon = {
                     Icon(
                         Icons.AutoMirrored.Rounded.Subject,
@@ -494,11 +583,15 @@ fun ContactBottomSheet(
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(14.dp),
-                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = MaterialTheme.colorScheme.primary,
-                    unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
-                ),
+                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences, imeAction = ImeAction.Next),
+                keyboardActions = KeyboardActions(onNext = {
+                    focusManager.moveFocus(androidx.compose.ui.focus.FocusDirection.Down)
+                }),
+                colors =
+                    OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
+                    ),
             )
 
             Spacer(Modifier.height(14.dp))
@@ -507,8 +600,8 @@ fun ContactBottomSheet(
             OutlinedTextField(
                 value = body,
                 onValueChange = { body = it },
-                label = { Text("Message") },
-                placeholder = { Text("Describe your issue or question in detail…") },
+                label = { Text(stringResource(R.string.message)) },
+                placeholder = { Text(stringResource(R.string.message_placeholder)) },
                 leadingIcon = {
                     Icon(
                         Icons.AutoMirrored.Rounded.Notes,
@@ -517,16 +610,18 @@ fun ContactBottomSheet(
                         modifier = Modifier.padding(top = 14.dp),
                     )
                 },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(160.dp),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .height(160.dp),
                 maxLines = 8,
                 shape = RoundedCornerShape(14.dp),
                 keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = MaterialTheme.colorScheme.primary,
-                    unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
-                ),
+                colors =
+                    OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
+                    ),
             )
 
             Spacer(Modifier.height(20.dp))
@@ -535,21 +630,23 @@ fun ContactBottomSheet(
             Button(
                 onClick = { onSendEmail(subject.trim(), body.trim()) },
                 enabled = isSendEnabled,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(54.dp),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .height(54.dp),
                 shape = RoundedCornerShape(14.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary,
-                    disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                    disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                ),
+                colors =
+                    ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary,
+                        disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                        disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    ),
             ) {
                 Icon(Icons.AutoMirrored.Rounded.Send, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(10.dp))
                 Text(
-                    "Send Email",
+                    stringResource(R.string.send_email),
                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
                 )
             }
@@ -557,7 +654,7 @@ fun ContactBottomSheet(
             Spacer(Modifier.height(8.dp))
 
             Text(
-                "Opens your email app with our address pre-filled.",
+                stringResource(R.string.send_email_desc),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                 textAlign = TextAlign.Center,

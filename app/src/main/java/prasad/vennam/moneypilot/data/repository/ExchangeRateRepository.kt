@@ -1,6 +1,7 @@
 package prasad.vennam.moneypilot.data.repository
 
 import android.content.Context
+import android.util.Log
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.Types
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -89,35 +90,38 @@ class ExchangeRateRepository
                         try {
                             val alerts = userPreferences.rateAlerts.first()
                             val ratesMap = fullRates.associate { it.currencyCode to it.rateAgainstUSD }
-                            
+
                             alerts.forEach { alert ->
                                 val rateFrom = ratesMap[alert.from] ?: 0.0
                                 val rateTo = ratesMap[alert.to] ?: 0.0
                                 if (rateFrom > 0.0) {
                                     val currentRate = rateTo / rateFrom
-                                    val triggered = if (alert.isAbove) {
-                                        currentRate >= alert.targetRate
-                                    } else {
-                                        currentRate <= alert.targetRate
-                                    }
+                                    val triggered =
+                                        if (alert.isAbove) {
+                                            currentRate >= alert.targetRate
+                                        } else {
+                                            currentRate <= alert.targetRate
+                                        }
                                     if (triggered) {
                                         val title = context.getString(prasad.vennam.moneypilot.R.string.currency_alert_triggered)
-                                        val message = context.getString(
-                                            prasad.vennam.moneypilot.R.string.currency_alert_triggered_message,
-                                            alert.from,
-                                            alert.targetRate,
-                                            alert.to,
-                                            currentRate
-                                        )
-                                        
-                                        val dbNotification = Notification(
-                                            title = title,
-                                            message = message,
-                                            category = "Alerts",
-                                            timestamp = System.currentTimeMillis(),
-                                            isRead = false,
-                                            url = null
-                                        )
+                                        val message =
+                                            context.getString(
+                                                prasad.vennam.moneypilot.R.string.currency_alert_triggered_message,
+                                                alert.from,
+                                                alert.targetRate,
+                                                alert.to,
+                                                currentRate,
+                                            )
+
+                                        val dbNotification =
+                                            Notification(
+                                                title = title,
+                                                message = message,
+                                                category = "Alerts",
+                                                timestamp = System.currentTimeMillis(),
+                                                isRead = false,
+                                                url = null,
+                                            )
                                         notificationDao.insertNotification(dbNotification)
                                         sendSystemNotification(title, message)
                                         userPreferences.removeRateAlert(alert)
@@ -125,30 +129,31 @@ class ExchangeRateRepository
                                 }
                             }
                         } catch (e: Exception) {
-                            e.printStackTrace()
+                            Log.e("ExchangeRateRepository", "Error evaluating alerts", e)
                         }
                     }
                 }.onFailure {
-                    it.printStackTrace()
+                    Log.e("ExchangeRateRepository", "syncRates failed", it)
                 }
             }
         }
 
         private fun sendSystemNotification(
             title: String,
-            message: String
+            message: String,
         ) {
             val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
 
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
                 val channel =
-                    android.app.NotificationChannel(
-                        "currency_alerts_channel",
-                        context.getString(prasad.vennam.moneypilot.R.string.currency_rate_alerts_channel_name),
-                        android.app.NotificationManager.IMPORTANCE_HIGH,
-                    ).apply {
-                        description = context.getString(prasad.vennam.moneypilot.R.string.currency_rate_alerts_channel_desc)
-                    }
+                    android.app
+                        .NotificationChannel(
+                            "currency_alerts_channel",
+                            context.getString(prasad.vennam.moneypilot.R.string.currency_rate_alerts_channel_name),
+                            android.app.NotificationManager.IMPORTANCE_HIGH,
+                        ).apply {
+                            description = context.getString(prasad.vennam.moneypilot.R.string.currency_rate_alerts_channel_desc)
+                        }
                 notificationManager.createNotificationChannel(channel)
             }
 
@@ -172,8 +177,11 @@ class ExchangeRateRepository
                     .setSmallIcon(prasad.vennam.moneypilot.R.mipmap.ic_launcher)
                     .setContentTitle(title)
                     .setContentText(message)
-                    .setStyle(androidx.core.app.NotificationCompat.BigTextStyle().bigText(message))
-                    .setPriority(androidx.core.app.NotificationCompat.PRIORITY_HIGH)
+                    .setStyle(
+                        androidx.core.app.NotificationCompat
+                            .BigTextStyle()
+                            .bigText(message),
+                    ).setPriority(androidx.core.app.NotificationCompat.PRIORITY_HIGH)
                     .setContentIntent(pendingIntent)
                     .setAutoCancel(true)
 
@@ -184,7 +192,7 @@ class ExchangeRateRepository
             from: String,
             to: String,
             base: String,
-            quote: String
+            quote: String,
         ): List<FrankfurterRateResponseItem> {
             return withContext(Dispatchers.IO) {
                 try {
@@ -200,7 +208,7 @@ class ExchangeRateRepository
                         adapter.fromJson(resp.body.string()) ?: emptyList()
                     }
                 } catch (e: Exception) {
-                    e.printStackTrace()
+                    Log.e("ExchangeRateRepository", "fetchHistoricalRates failed", e)
                     emptyList()
                 }
             }
@@ -221,7 +229,7 @@ class ExchangeRateRepository
                         adapter.fromJson(resp.body.string()) ?: emptyList()
                     }
                 } catch (e: Exception) {
-                    e.printStackTrace()
+                    Log.e("ExchangeRateRepository", "fetchCurrencies failed", e)
                     emptyList()
                 }
             }
@@ -239,7 +247,7 @@ class ExchangeRateRepository
                         }
                     }
                 } catch (e: Exception) {
-                    e.printStackTrace()
+                    Log.e("ExchangeRateRepository", "detectCountryByIp (ipapi) failed", e)
                 }
 
                 try {
@@ -252,7 +260,7 @@ class ExchangeRateRepository
                         }
                     }
                 } catch (e: Exception) {
-                    e.printStackTrace()
+                    Log.e("ExchangeRateRepository", "detectCountryByIp (ipinfo) failed", e)
                 }
 
                 null

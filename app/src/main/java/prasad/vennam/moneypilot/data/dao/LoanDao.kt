@@ -9,6 +9,9 @@ interface LoanDao {
     @Query("SELECT * FROM loans")
     fun getAllLoans(): Flow<List<Loan>>
 
+    @Query("SELECT * FROM loans")
+    suspend fun getAllLoansSync(): List<Loan>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertLoan(loan: Loan)
 
