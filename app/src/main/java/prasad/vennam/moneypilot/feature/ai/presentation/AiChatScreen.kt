@@ -1424,7 +1424,7 @@ fun ActionConfirmationCard(
                     return
                 }
                 categoryError = false
-                val amount = amountState.toLongOrNull() ?: action.amount
+                val amount = amountState.toDoubleOrNull() ?: action.amount
                 val dateOffset = dateOffsetState.toIntOrNull() ?: action.dateOffset
                 currentAction =
                     AiAction.AddTransaction(
@@ -1437,8 +1437,8 @@ fun ActionConfirmationCard(
             }
 
             is AiAction.AddInvestment -> {
-                val invested = investedAmountState.toLongOrNull() ?: action.investedAmount
-                val current = currentValueState.toLongOrNull() ?: action.currentValue
+                val invested = investedAmountState.toDoubleOrNull() ?: action.investedAmount
+                val current = currentValueState.toDoubleOrNull() ?: action.currentValue
                 currentAction =
                     AiAction.AddInvestment(
                         name = investmentNameState,
@@ -1449,8 +1449,8 @@ fun ActionConfirmationCard(
             }
 
             is AiAction.AddLoan -> {
-                val total = loanTotalAmountState.toLongOrNull() ?: action.totalAmount
-                val emi = loanEmiAmountState.toLongOrNull() ?: action.emiAmount
+                val total = loanTotalAmountState.toDoubleOrNull() ?: action.totalAmount
+                val emi = loanEmiAmountState.toDoubleOrNull() ?: action.emiAmount
                 val interest = loanInterestRateState.toDoubleOrNull() ?: action.interestRate
                 val tenure = loanTenureMonthsState.toIntOrNull() ?: action.tenureMonths
                 val nextEmi = loanNextEmiDaysState.toIntOrNull() ?: action.nextEmiDays

@@ -846,8 +846,8 @@
     <string name="ai_failed_to_send">Failed to send: %1$s</string>
     <string name="ai_error_prefix">Error: %1$s</string>
     <string name="ai_action_cancelled">Action cancelled.</string>
-    <string name="ai_expense_added">₹%1$d Expense added successfully!</string>
-    <string name="ai_income_added">₹%1$d Income added successfully!</string>
+    <string name="ai_expense_added">₹%1$s Expense added successfully!</string>
+    <string name="ai_income_added">₹%1$s Income added successfully!</string>
     <string name="ai_investment_added">Investment \"%1$s\" added successfully!</string>
     <string name="ai_loan_added">Loan \"%1$s\" added successfully!</string>
     <string name="ai_not_ready">AI not ready. Please try again later.</string>

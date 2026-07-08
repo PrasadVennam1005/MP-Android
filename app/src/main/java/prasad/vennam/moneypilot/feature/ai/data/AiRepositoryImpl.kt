@@ -520,6 +520,11 @@ class AiRepositoryImpl
         override suspend fun executeAction(action: AiAction): Result<String> =
             withContext(Dispatchers.IO) {
                 return@withContext try {
+                    val userCurrency = try {
+                        prasad.vennam.moneypilot.data.UserPreferences(context).currency.first()
+                    } catch (e: Exception) {
+                        "INR"
+                    }
                     when (action) {
                         is AiAction.AddTransaction -> {
                             val categories = categoryRepository.allCategories.first()
@@ -534,19 +539,24 @@ class AiRepositoryImpl
                                     (action.dateOffset * 24 * 60 * 60 * 1000L)
                             transactionRepository.insertTransaction(
                                 Transaction(
-                                    amount = action.amount * 100,
+                                    amount = (action.amount * 100).toLong(),
                                     timestamp = timestamp,
                                     categoryId = categoryId,
                                     note = action.note,
                                     type = action.type,
                                     paymentMode = "Cash",
-                                    currencyCode = "INR",
+                                    currencyCode = userCurrency,
                                 ),
                             )
-                            val successMsg = if (action.type == TransactionType.EXPENSE) {
-                                context.getString(R.string.ai_expense_added, action.amount)
+                            val formattedAmt = if (action.amount % 1 == 0.0) {
+                                action.amount.toLong().toString()
                             } else {
-                                context.getString(R.string.ai_income_added, action.amount)
+                                String.format(java.util.Locale.US, "%.2f", action.amount)
+                            }
+                            val successMsg = if (action.type == TransactionType.EXPENSE) {
+                                context.getString(R.string.ai_expense_added, formattedAmt)
+                            } else {
+                                context.getString(R.string.ai_income_added, formattedAmt)
                             }
                             _state.value = LlmState.Ready()
                             Result.success(successMsg)
@@ -557,10 +567,10 @@ class AiRepositoryImpl
                                 Investment(
                                     name = action.name,
                                     type = action.type,
-                                    investedAmount = action.investedAmount * 100,
-                                    currentValue = action.currentValue * 100,
+                                    investedAmount = (action.investedAmount * 100).toLong(),
+                                    currentValue = (action.currentValue * 100).toLong(),
                                     startDate = System.currentTimeMillis(),
-                                    currencyCode = "INR",
+                                    currencyCode = userCurrency,
                                 ),
                             )
                             _state.value = LlmState.Ready()
@@ -574,11 +584,11 @@ class AiRepositoryImpl
                             loanRepository.insertLoan(
                                 Loan(
                                     name = action.name,
-                                    totalAmount = action.totalAmount * 100,
-                                    outstandingAmount = action.totalAmount * 100,
-                                    emiAmount = action.emiAmount * 100,
+                                    totalAmount = (action.totalAmount * 100).toLong(),
+                                    outstandingAmount = (action.totalAmount * 100).toLong(),
+                                    emiAmount = (action.emiAmount * 100).toLong(),
                                     nextEmiDate = nextEmiTimestamp,
-                                    currencyCode = "INR",
+                                    currencyCode = userCurrency,
                                 ),
                             )
                             _state.value = LlmState.Ready()

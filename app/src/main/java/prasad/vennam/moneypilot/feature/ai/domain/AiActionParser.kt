@@ -28,7 +28,7 @@ object AiActionParser {
     // Matches [ACTION:TYPE|key=value|...] including multi-line variants
     private val ACTION_REGEX =
         Regex(
-            """\[ACTION:([A-Z_]+)\|([^\]]+)\]""",
+            """\[\s*ACTION\s*:\s*([A-Z_]+)\s*\|\s*([^\]]+)\]""",
             setOf(RegexOption.IGNORE_CASE),
         )
 
@@ -86,15 +86,23 @@ object AiActionParser {
         type: TransactionType,
         rawText: String,
     ): AiAction.AddTransaction {
-        var amount = parseAmount(params["amount"] ?: params["amt"] ?: "0")
-        amount = checkAndCorrectSuffixes(amount, rawText)
+        var rawAmount = parseAmount(params["amount"] ?: params["amt"] ?: "0")
+        rawAmount = checkAndCorrectSuffixes(rawAmount, rawText)
+
+        val actualAmount = kotlin.math.abs(rawAmount)
+        val actualType = if (rawAmount < 0) {
+            if (type == TransactionType.EXPENSE) TransactionType.INCOME else TransactionType.EXPENSE
+        } else {
+            type
+        }
+
         val category = params["category"] ?: params["cat"] ?: "Other"
         val note = params["note"] ?: params["description"] ?: params["desc"] ?: ""
         val date = params["date"] ?: "today"
         val offset = parseDateOffset(date)
         return AiAction.AddTransaction(
-            amount = amount,
-            type = type,
+            amount = actualAmount,
+            type = actualType,
             categoryName = category.trim(),
             note = note.trim(),
             dateOffset = offset,
@@ -106,8 +114,15 @@ object AiActionParser {
         val invType = params["type"] ?: params["investment_type"] ?: "Mutual Fund"
         var invested = parseAmount(params["amount"] ?: params["invested"] ?: params["invested_amount"] ?: "0")
         invested = checkAndCorrectSuffixes(invested, rawText)
-        var current = parseAmount(params["current_value"] ?: params["current"] ?: params["value"] ?: invested.toString())
+        var current = parseAmount(params["current_value"] ?: params["current"] ?: params["value"] ?: "0")
         current = checkAndCorrectSuffixes(current, rawText)
+
+        if (invested <= 0.0 && current > 0.0) {
+            invested = current
+        } else if (current <= 0.0 && invested > 0.0) {
+            current = invested
+        }
+
         return AiAction.AddInvestment(
             name = name.trim(),
             type = invType.trim(),
@@ -123,7 +138,15 @@ object AiActionParser {
         var emi = parseAmount(params["emi"] ?: params["emi_amount"] ?: params["monthly_emi"] ?: "0")
         emi = checkAndCorrectSuffixes(emi, rawText)
         val rate = params["interest"]?.replace("%", "")?.toDoubleOrNull() ?: params["rate"]?.replace("%", "")?.toDoubleOrNull() ?: 0.0
-        val tenure = params["tenure"]?.toIntOrNull() ?: params["months"]?.toIntOrNull() ?: 12
+
+        var tenure = params["tenure"]?.toIntOrNull() ?: params["months"]?.toIntOrNull() ?: 0
+        if (tenure <= 0 && emi > 0) {
+            tenure = (total / emi).toInt().coerceAtLeast(1)
+        }
+        if (tenure <= 0) {
+            tenure = 12
+        }
+
         val nextEmiDays = (params["next_emi_days"] ?: params["days"] ?: "30").toIntOrNull() ?: 30
         return AiAction.AddLoan(
             name = name.trim(),
@@ -135,20 +158,21 @@ object AiActionParser {
         )
     }
 
-    private fun checkAndCorrectSuffixes(parsedAmount: Long, text: String): Long {
-        if (parsedAmount <= 0) return parsedAmount
+    private fun checkAndCorrectSuffixes(parsedAmount: Double, text: String): Double {
+        if (parsedAmount <= 0.0) return parsedAmount
         val cleanedText = text.lowercase().replace(",", "")
 
         // Match: amount immediately followed by a suffix (with optional space/symbol)
         // e.g. "30k", "30 k", "30l", "30 lakh", "30 thousand", "30cr"
-        val regex = Regex("""\b$parsedAmount\s*(k|thousand|thousands|l|lakh|lakhs|cr|crore|crores)\b""")
+        val wholePart = parsedAmount.toLong()
+        val regex = Regex("""\b$wholePart\s*(k|thousand|thousands|l|lakh|lakhs|cr|crore|crores)\b""")
         val match = regex.find(cleanedText)
         if (match != null) {
             val suffix = match.groupValues[1]
             return when {
-                suffix.startsWith("k") || suffix.startsWith("thousand") -> parsedAmount * 1000
-                suffix == "l" || suffix.startsWith("lakh") -> parsedAmount * 100_000
-                suffix == "cr" || suffix.startsWith("crore") -> parsedAmount * 10_000_000
+                suffix.startsWith("k") || suffix.startsWith("thousand") -> parsedAmount * 1000.0
+                suffix == "l" || suffix.startsWith("lakh") -> parsedAmount * 100_000.0
+                suffix == "cr" || suffix.startsWith("crore") -> parsedAmount * 10_000_000.0
                 else -> parsedAmount
             }
         }
@@ -159,9 +183,9 @@ object AiActionParser {
 
     /**
      * Parses amount strings like "500", "1,500", "1.5L", "50000", "50 thousand"
-     * Returns whole Rupees as Long.
+     * Returns Rupees as Double.
      */
-    private fun parseAmount(raw: String): Long {
+    private fun parseAmount(raw: String): Double {
         val cleaned = raw.replace(",", "").trim().lowercase()
         return when {
             cleaned.endsWith("l") || cleaned.endsWith("lakh") || cleaned.endsWith("lakhs") -> {
@@ -172,7 +196,7 @@ object AiActionParser {
                         .replace("l", "")
                         .trim()
                         .toDoubleOrNull() ?: 0.0
-                (num * 100_000).toLong()
+                num * 100_000.0
             }
             cleaned.endsWith("cr") || cleaned.endsWith("crore") -> {
                 val num =
@@ -181,7 +205,7 @@ object AiActionParser {
                         .replace("cr", "")
                         .trim()
                         .toDoubleOrNull() ?: 0.0
-                (num * 10_000_000).toLong()
+                num * 10_000_000.0
             }
             cleaned.endsWith("k") || cleaned.endsWith("thousand") -> {
                 val num =
@@ -190,9 +214,9 @@ object AiActionParser {
                         .replace("k", "")
                         .trim()
                         .toDoubleOrNull() ?: 0.0
-                (num * 1000).toLong()
+                num * 1000.0
             }
-            else -> cleaned.toDoubleOrNull()?.toLong() ?: 0L
+            else -> cleaned.toDoubleOrNull() ?: 0.0
         }
     }
 

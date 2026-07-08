@@ -118,6 +118,21 @@ class AiViewModel
         fun sendMessage(text: String) {
             if (text.isBlank()) return
 
+            val pending = _pendingAction.value
+            if (pending != null) {
+                val cleaned = text.lowercase().trim()
+                val confirmWords = setOf("yes", "y", "confirm", "do it", "add", "add it", "ok", "okay", "approve")
+                val dismissWords = setOf("no", "n", "cancel", "dismiss", "reject", "dont", "don't", "stop")
+
+                if (cleaned in confirmWords) {
+                    confirmAction(pending)
+                    return
+                } else if (cleaned in dismissWords) {
+                    dismissAction()
+                    return
+                }
+            }
+
             // Clear any pending action when user sends a new message
             _pendingAction.value = null
 

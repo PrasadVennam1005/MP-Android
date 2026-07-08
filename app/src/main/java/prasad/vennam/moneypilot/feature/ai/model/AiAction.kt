@@ -14,14 +14,14 @@ import prasad.vennam.moneypilot.data.entity.TransactionType
 sealed class AiAction {
     /**
      * Add an EXPENSE or INCOME transaction.
-     * @param amount   Amount in whole Rupees (e.g. 500 means ₹500)
+     * @param amount   Amount in whole or fractional Rupees (e.g. 500.50 means ₹500.50)
      * @param type     EXPENSE or INCOME
      * @param categoryName  Raw category name from the model (fuzzy-matched to DB category)
      * @param note     Free-text note / merchant name
      * @param dateOffset  Days relative to today (0 = today, -1 = yesterday)
      */
     data class AddTransaction(
-        val amount: Long,
+        val amount: Double,
         val type: TransactionType,
         val categoryName: String,
         val note: String,
@@ -32,31 +32,39 @@ sealed class AiAction {
      * Add an investment entry.
      * @param name           Investment name (e.g. "HDFC Top 100")
      * @param type           Investment type (Stock, Mutual Fund, Crypto, FD, Gold, Real Estate)
-     * @param investedAmount Amount invested in whole Rupees
-     * @param currentValue   Current value in whole Rupees (defaults to investedAmount if not specified)
+     * @param investedAmount Amount invested in Rupees
+     * @param currentValue   Current value in Rupees (defaults to investedAmount if not specified)
      */
     data class AddInvestment(
         val name: String,
         val type: String,
-        val investedAmount: Long,
-        val currentValue: Long,
+        val investedAmount: Double,
+        val currentValue: Double,
     ) : AiAction()
 
     /**
      * Add a loan entry.
      * @param name         Loan name / lender (e.g. "SBI Home Loan")
-     * @param totalAmount  Principal amount in whole Rupees
-     * @param emiAmount    Monthly EMI in whole Rupees
+     * @param totalAmount  Principal amount in Rupees
+     * @param emiAmount    Monthly EMI in Rupees
      * @param nextEmiDays  Days from today until next EMI (default 30)
      */
     data class AddLoan(
         val name: String,
-        val totalAmount: Long,
-        val emiAmount: Long,
+        val totalAmount: Double,
+        val emiAmount: Double,
         val interestRate: Double = 0.0,
         val tenureMonths: Int = 12,
         val nextEmiDays: Int = 30,
     ) : AiAction()
+}
+
+private fun formatAmount(value: Double): String {
+    return if (value % 1 == 0.0) {
+        value.toLong().toString()
+    } else {
+        String.format(java.util.Locale.US, "%.2f", value)
+    }
 }
 
 /** Human-readable summary for the confirmation card */
@@ -70,10 +78,10 @@ fun AiAction.displaySummary(): String =
                 -1 -> "yesterday"
                 else -> "${kotlin.math.abs(dateOffset)} days ago"
             }
-            "Add ₹$amount $typeLabel · $categoryName · $noteDisplay · $dateLabel"
+            "Add ₹${formatAmount(amount)} $typeLabel · $categoryName · $noteDisplay · $dateLabel"
         }
         is AiAction.AddInvestment ->
-            "Add ₹$investedAmount investment in $name ($type)"
+            "Add ₹${formatAmount(investedAmount)} investment in $name ($type)"
         is AiAction.AddLoan ->
-            "Add loan \"$name\" · Principal ₹$totalAmount · EMI ₹$emiAmount/month"
+            "Add loan \"$name\" · Principal ₹${formatAmount(totalAmount)} · EMI ₹${formatAmount(emiAmount)}/month"
     }
