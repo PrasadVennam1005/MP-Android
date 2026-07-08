@@ -483,6 +483,7 @@ fun moneyPilotNavEntry(
                 val splitViewModel = androidx.lifecycle.viewmodel.compose.viewModel<prasad.vennam.moneypilot.feature.cosplit.ui.CoSplitViewModel>()
                 prasad.vennam.moneypilot.ui.cosplit.CoSplitGroupsScreen(
                     viewModel = splitViewModel,
+                    analyticsHelper = analyticsHelper,
                     onNavigateBack = onBack,
                     onNavigateToGroup = { groupId ->
                         backStack.add(Destination.CoSplitGroupDetail(groupId))
@@ -498,6 +499,7 @@ fun moneyPilotNavEntry(
                 }
                 prasad.vennam.moneypilot.ui.cosplit.CoSplitGroupDetailScreen(
                     viewModel = splitViewModel,
+                    analyticsHelper = analyticsHelper,
                     onNavigateBack = onBack,
                     onNavigateToAddExpense = {
                         backStack.add(Destination.CoSplitAddExpense(key.groupId))
@@ -513,6 +515,7 @@ fun moneyPilotNavEntry(
                 }
                 prasad.vennam.moneypilot.ui.cosplit.CoSplitAddExpenseScreen(
                     viewModel = splitViewModel,
+                    analyticsHelper = analyticsHelper,
                     onNavigateBack = onBack
                 )
             }
@@ -524,6 +527,7 @@ fun moneyPilotNavEntry(
                     viewModel = splitViewModel,
                     groupId = key.groupId,
                     groupName = key.groupName,
+                    analyticsHelper = analyticsHelper,
                     onNavigateToGroup = { groupId ->
                         backStack.remove(key)
                         backStack.add(Destination.CoSplitGroupDetail(groupId))

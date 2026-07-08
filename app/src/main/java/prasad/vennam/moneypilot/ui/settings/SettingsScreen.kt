@@ -67,6 +67,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.ui.unit.sp
+import androidx.compose.material.icons.rounded.Payment
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
@@ -187,6 +190,7 @@ fun SettingsScreen(
 
     var showThemeDialog by remember { mutableStateOf(false) }
     var showFontScaleDialog by remember { mutableStateOf(false) }
+    var showUpiIdDialog by remember { mutableStateOf(false) }
     var showDeleteAccountConfirmation by remember { mutableStateOf(false) }
     var isDeletingAccount by remember { mutableStateOf(false) }
     var showDemoConfirmDialog by remember { mutableStateOf(false) }
@@ -555,6 +559,18 @@ fun SettingsScreen(
                     )
 
                     SettingsItem(
+                        icon = Icons.Rounded.Payment,
+                        title = "Link UPI ID",
+                        subtitle = if (userData?.upiId.isNullOrBlank()) "For CoSplit group settlements" else userData!!.upiId!!,
+                        isLocked = isGuest,
+                        onClick = {
+                            checkGuestAction("Link UPI ID") {
+                                showUpiIdDialog = true
+                            }
+                        },
+                    )
+
+                    SettingsItem(
                         icon = Icons.Rounded.Palette,
                         title = stringResource(R.string.theme),
                         subtitle = themeSubtitle,
@@ -915,6 +931,67 @@ fun SettingsScreen(
             shape = RoundedCornerShape(20.dp),
             containerColor = MaterialTheme.colorScheme.surface,
             tonalElevation = 6.dp,
+        )
+    }
+
+    if (showUpiIdDialog) {
+        var upiInput by remember { mutableStateOf(userData?.upiId ?: "") }
+        var errorText by remember { mutableStateOf<String?>(null) }
+        
+        AlertDialog(
+            onDismissRequest = { showUpiIdDialog = false },
+            title = { Text("Link UPI ID", fontWeight = FontWeight.Bold) },
+            text = {
+                Column {
+                    Text(
+                        text = "Link your UPI ID (VPA) so other group members can pay you directly via their preferred UPI app.",
+                        fontSize = 13.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    OutlinedTextField(
+                        value = upiInput,
+                        onValueChange = {
+                            upiInput = it
+                            errorText = null
+                        },
+                        label = { Text("UPI ID / VPA") },
+                        placeholder = { Text("example@upi") },
+                        shape = RoundedCornerShape(12.dp),
+                        isError = errorText != null,
+                        supportingText = {
+                            errorText?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val trimmed = upiInput.trim()
+                        if (trimmed.isEmpty()) {
+                            mainViewModel.updateUpiId("")
+                            showUpiIdDialog = false
+                        } else if (!trimmed.contains("@")) {
+                            errorText = "Invalid UPI ID format (must contain '@')"
+                        } else {
+                            mainViewModel.updateUpiId(trimmed)
+                            analyticsHelper.logEvent(AnalyticsConstants.Event.CO_SPLIT_UPI_LINKED)
+                            showUpiIdDialog = false
+                            Toast.makeText(context, "UPI ID linked successfully", Toast.LENGTH_SHORT).show()
+                        }
+                    },
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Text("Save")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showUpiIdDialog = false }) {
+                    Text("Cancel")
+                }
+            }
         )
     }
 

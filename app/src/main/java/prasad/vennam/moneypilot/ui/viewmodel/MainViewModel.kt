@@ -150,7 +150,8 @@ class MainViewModel
                     val profileMap = hashMapOf(
                         "name" to userData.name,
                         "email" to email,
-                        "photoUrl" to (userData.photoUrl ?: "")
+                        "photoUrl" to (userData.photoUrl ?: ""),
+                        "upiId" to (userData.upiId ?: "")
                     )
                     FirebaseFirestore.getInstance().collection("users").document(email)
                         .set(profileMap)
@@ -163,6 +164,16 @@ class MainViewModel
                 }
                 
                 onComplete()
+            }
+        }
+
+        fun updateUpiId(upiId: String) {
+            viewModelScope.launch {
+                val current = userData.value
+                if (current != null) {
+                    val updated = current.copy(upiId = upiId)
+                    saveUserData(updated) {}
+                }
             }
         }
 

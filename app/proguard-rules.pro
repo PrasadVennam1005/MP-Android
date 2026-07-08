@@ -22,6 +22,7 @@
 -keep class prasad.vennam.moneypilot.data.model.** { *; }
 -keep class prasad.vennam.moneypilot.util.FinancePriceFetcher$** { *; }
 -keep class prasad.vennam.moneypilot.feature.ai.model.** { *; }
+-keep class prasad.vennam.moneypilot.feature.cosplit.data.model.** { *; }
 -keep class prasad.vennam.moneypilot.feature.ai.service.** { *; }
 -keep class prasad.vennam.moneypilot.util.QuotesManager$Quote { *; }
 -keep class prasad.vennam.moneypilot.util.ParsedReceipt { *; }

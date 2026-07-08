@@ -8,6 +8,7 @@ import kotlinx.coroutines.launch
 import prasad.vennam.moneypilot.data.UserPreferences
 import prasad.vennam.moneypilot.feature.cosplit.data.model.CoSplitGroup
 import prasad.vennam.moneypilot.feature.cosplit.data.model.CoSplitExpense
+import prasad.vennam.moneypilot.feature.cosplit.data.model.CoSplitSettlementRoute
 import prasad.vennam.moneypilot.feature.cosplit.data.repository.CoSplitRepository
 import prasad.vennam.moneypilot.feature.cosplit.util.AiParsedSplit
 import prasad.vennam.moneypilot.feature.cosplit.util.AiReceiptLineItem
@@ -38,6 +39,12 @@ class CoSplitViewModel @Inject constructor(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = ""
+    )
+
+    val isPremium: StateFlow<Boolean> = userPreferences.isPremium.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = false
     )
 
     private val _selectedGroup = MutableStateFlow<CoSplitGroup?>(null)
@@ -79,7 +86,7 @@ class CoSplitViewModel @Inject constructor(
             initialValue = emptyList()
         )
 
-    val simplifiedSettlements: StateFlow<List<String>> = _selectedGroup
+    val simplifiedSettlements: StateFlow<List<CoSplitSettlementRoute>> = _selectedGroup
         .map { group ->
             if (group == null) emptyList() else generateSimplifiedSettlements(group.balances, group.memberNames)
         }
@@ -216,7 +223,7 @@ class CoSplitViewModel @Inject constructor(
     fun explainSimplifiedSettlements() {
         viewModelScope.launch {
             _isAiLoading.value = true
-            val explanation = aiHelper.explainSettlements(simplifiedSettlements.value)
+            val explanation = aiHelper.explainSettlements(simplifiedSettlements.value.map { it.displayText })
             _aiSettlementExplanation.value = explanation
             _isAiLoading.value = false
         }
@@ -266,8 +273,19 @@ class CoSplitViewModel @Inject constructor(
         return repository.getUserProfile(email)
     }
 
-    fun generateSimplifiedSettlements(balances: Map<String, Double>, memberNames: Map<String, String> = emptyMap()): List<String> {
-        val list = mutableListOf<String>()
+    suspend fun getUserUpiId(email: String): String? {
+        return repository.getUserUpiId(email)
+    }
+
+    fun saveUserUpiId(email: String, upiId: String, onResult: (Boolean) -> Unit = {}) {
+        viewModelScope.launch {
+            val result = repository.saveUserUpiId(email, upiId)
+            onResult(result.isSuccess)
+        }
+    }
+
+    fun generateSimplifiedSettlements(balances: Map<String, Double>, memberNames: Map<String, String> = emptyMap()): List<CoSplitSettlementRoute> {
+        val list = mutableListOf<CoSplitSettlementRoute>()
         // Filter out members with essentially zero balance
         val members = balances.filterValues { kotlin.math.abs(it) > 0.05 }.toMutableMap()
 
@@ -282,7 +300,15 @@ class CoSplitViewModel @Inject constructor(
             val debtorName = memberNames[debtor.key] ?: debtor.key
             val creditorName = memberNames[creditor.key] ?: creditor.key
 
-            list.add("$debtorName pays $creditorName ₹${String.format("%.2f", amountToSettle)}")
+            list.add(
+                CoSplitSettlementRoute(
+                    debtorEmail = debtor.key,
+                    debtorName = debtorName,
+                    creditorEmail = creditor.key,
+                    creditorName = creditorName,
+                    amount = amountToSettle
+                )
+            )
 
             val nextDebtorVal = debtor.value + amountToSettle
             val nextCreditorVal = creditor.value - amountToSettle

@@ -306,6 +306,33 @@ class CoSplitRepositoryImpl @Inject constructor() : CoSplitRepository {
         }
     }
 
+    override suspend fun getUserUpiId(email: String): String? {
+        val cleanEmail = email.trim().lowercase()
+        return try {
+            val doc = firestore.collection("users").document(cleanEmail).get().await()
+            if (doc.exists()) {
+                doc.getString("upiId")
+            } else null
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    override suspend fun saveUserUpiId(email: String, upiId: String): Result<Unit> = runCatching {
+        val cleanEmail = email.trim().lowercase()
+        val docRef = firestore.collection("users").document(cleanEmail)
+        val doc = docRef.get().await()
+        if (doc.exists()) {
+            docRef.update("upiId", upiId.trim()).await()
+        } else {
+            val profileMap = hashMapOf(
+                "email" to cleanEmail,
+                "upiId" to upiId.trim()
+            )
+            docRef.set(profileMap).await()
+        }
+    }
+
     private fun calculateSplitAmounts(
         amount: Double,
         splitType: String,

@@ -26,6 +26,7 @@ class UserPreferences
             val name: String,
             val email: String,
             val photoUrl: String? = null,
+            val upiId: String? = null,
         )
 
         /** Named constants for the theme mode integer stored in DataStore. */
@@ -45,6 +46,9 @@ class UserPreferences
         private val userPhotoUrlKey =
             androidx.datastore.preferences.core
                 .stringPreferencesKey("user_photo_url")
+        private val userUpiIdKey =
+            androidx.datastore.preferences.core
+                .stringPreferencesKey("user_upi_id")
         private val isSyncedKey = booleanPreferencesKey("is_synced")
         private val spreadsheetIdKey =
             androidx.datastore.preferences.core
@@ -265,6 +269,7 @@ class UserPreferences
                             name = name,
                             email = preferences[userEmailKey] ?: "",
                             photoUrl = preferences[userPhotoUrlKey],
+                            upiId = preferences[userUpiIdKey],
                         )
                     } else {
                         null
@@ -280,6 +285,7 @@ class UserPreferences
                 }
                 preferences[userEmailKey] = userData.email
                 userData.photoUrl?.let { preferences[userPhotoUrlKey] = it }
+                userData.upiId?.let { preferences[userUpiIdKey] = it } ?: preferences.remove(userUpiIdKey)
                 preferences[isOnboardingCompletedKey] = true
             }
         }
@@ -290,6 +296,7 @@ class UserPreferences
                 preferences.remove(userNameKey)
                 preferences.remove(userEmailKey)
                 preferences.remove(userPhotoUrlKey)
+                preferences.remove(userUpiIdKey)
                 preferences.remove(isSyncedKey)
                 preferences.remove(spreadsheetIdKey)
             }

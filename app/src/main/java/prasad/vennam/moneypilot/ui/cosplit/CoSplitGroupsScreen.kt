@@ -25,14 +25,20 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import prasad.vennam.moneypilot.feature.cosplit.data.model.CoSplitGroup
 import prasad.vennam.moneypilot.feature.cosplit.ui.CoSplitViewModel
+import prasad.vennam.moneypilot.util.AnalyticsConstants
+import prasad.vennam.moneypilot.util.AnalyticsHelper
+import prasad.vennam.moneypilot.util.TrackScreen
+import prasad.vennam.moneypilot.ui.components.AdBannerView
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CoSplitGroupsScreen(
     viewModel: CoSplitViewModel,
+    analyticsHelper: AnalyticsHelper,
     onNavigateBack: () -> Unit,
     onNavigateToGroup: (String) -> Unit
 ) {
+    TrackScreen(analyticsHelper, AnalyticsConstants.Screen.CO_SPLIT_GROUPS)
     val groups by viewModel.groups.collectAsState()
     val email by viewModel.userEmail.collectAsState()
     val isGuest = email.isBlank() || email == "guest@moneypilot.app"
@@ -68,12 +74,17 @@ fun CoSplitGroupsScreen(
             )
         }
     ) { paddingValues ->
-        Box(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
                 .background(MaterialTheme.colorScheme.background)
         ) {
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+            ) {
             if (isGuest) {
                 Column(
                     modifier = Modifier
@@ -180,7 +191,13 @@ fun CoSplitGroupsScreen(
                 }
             }
         }
+        val isPremium by viewModel.isPremium.collectAsState()
+        AdBannerView(
+            isPremium = isPremium,
+            modifier = Modifier.fillMaxWidth()
+        )
     }
+}
 
     if (showCreateDialog) {
         var isSaving by remember { mutableStateOf(false) }

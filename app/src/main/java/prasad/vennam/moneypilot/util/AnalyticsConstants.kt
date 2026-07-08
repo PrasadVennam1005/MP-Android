@@ -28,6 +28,10 @@ object AnalyticsConstants {
         const val EMI_CALCULATOR = "EmiCalculator"
         const val LEARN_FINANCE = "LearnFinance"
         const val ARTICLE_DETAIL = "ArticleDetail"
+        const val CO_SPLIT_GROUPS = "CoSplitGroups"
+        const val CO_SPLIT_GROUP_DETAIL = "CoSplitGroupDetail"
+        const val CO_SPLIT_ADD_EXPENSE = "CoSplitAddExpense"
+        const val CO_SPLIT_JOIN = "CoSplitJoin"
     }
 
     object Event {
@@ -104,6 +108,11 @@ object AnalyticsConstants {
         const val SCANNER_GALLERY_UPLOAD = "scanner_gallery_upload"
         const val SCANNER_PICTURE_CAPTURED = "scanner_picture_captured"
         const val BUDGET_WARNING_VIEWED = "budget_warning_viewed"
+        
+        // CoSplit Events
+        const val CO_SPLIT_PAYMENT_INITIATED = "cosplit_payment_initiated"
+        const val CO_SPLIT_UPI_LINKED = "cosplit_upi_linked"
+        const val CO_SPLIT_MANUAL_UPI_SAVED = "cosplit_manual_upi_saved"
     }
 
     object Param {

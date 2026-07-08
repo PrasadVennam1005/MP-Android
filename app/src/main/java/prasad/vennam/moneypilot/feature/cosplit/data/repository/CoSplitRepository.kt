@@ -50,4 +50,8 @@ interface CoSplitRepository {
     suspend fun updateGroupMembers(groupId: String, members: List<String>, memberNames: Map<String, String>): Result<Unit>
 
     suspend fun getUserProfile(email: String): String?
+
+    suspend fun getUserUpiId(email: String): String?
+
+    suspend fun saveUserUpiId(email: String, upiId: String): Result<Unit>
 }

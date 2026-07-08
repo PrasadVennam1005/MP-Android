@@ -18,15 +18,21 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
 import prasad.vennam.moneypilot.feature.cosplit.ui.CoSplitViewModel
+import prasad.vennam.moneypilot.util.AnalyticsConstants
+import prasad.vennam.moneypilot.util.AnalyticsHelper
+import prasad.vennam.moneypilot.util.TrackScreen
+import prasad.vennam.moneypilot.ui.components.AdBannerView
 
 @Composable
 fun CoSplitJoinScreen(
     viewModel: CoSplitViewModel,
     groupId: String,
     groupName: String,
+    analyticsHelper: AnalyticsHelper,
     onNavigateToGroup: (String) -> Unit,
     onCancel: () -> Unit
 ) {
+    TrackScreen(analyticsHelper, AnalyticsConstants.Screen.CO_SPLIT_JOIN)
     val groups by viewModel.groups.collectAsState()
     val email by viewModel.userEmail.collectAsState()
     val coroutineScope = rememberCoroutineScope()
@@ -41,13 +47,19 @@ fun CoSplitJoinScreen(
         }
     }
 
-    Box(
+    val isPremium by viewModel.isPremium.collectAsState()
+    Column(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
-            .padding(24.dp),
-        contentAlignment = Alignment.Center
     ) {
+        Box(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth()
+                .padding(24.dp),
+            contentAlignment = Alignment.Center
+        ) {
         Card(
             modifier = Modifier
                 .fillMaxWidth()
@@ -156,5 +168,10 @@ fun CoSplitJoinScreen(
                 }
             }
         }
+        }
+        AdBannerView(
+            isPremium = isPremium,
+            modifier = Modifier.fillMaxWidth()
+        )
     }
 }

@@ -30,22 +30,30 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.platform.LocalContext
 import android.widget.Toast
 import prasad.vennam.moneypilot.feature.cosplit.data.model.CoSplitExpense
+import prasad.vennam.moneypilot.feature.cosplit.data.model.CoSplitSettlementRoute
 import prasad.vennam.moneypilot.feature.cosplit.ui.CoSplitViewModel
+import prasad.vennam.moneypilot.util.AnalyticsConstants
+import prasad.vennam.moneypilot.util.AnalyticsHelper
+import prasad.vennam.moneypilot.util.TrackScreen
+import prasad.vennam.moneypilot.ui.components.AdBannerView
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CoSplitGroupDetailScreen(
     viewModel: CoSplitViewModel,
+    analyticsHelper: AnalyticsHelper,
     onNavigateBack: () -> Unit,
     onNavigateToAddExpense: () -> Unit
 ) {
+    TrackScreen(analyticsHelper, AnalyticsConstants.Screen.CO_SPLIT_GROUP_DETAIL)
     val group by viewModel.selectedGroup.collectAsState()
     val expenses by viewModel.expenses.collectAsState()
     val settlements by viewModel.simplifiedSettlements.collectAsState()
     val aiExplanation by viewModel.aiSettlementExplanation.collectAsState()
     val isAiLoading by viewModel.isAiLoading.collectAsState()
     val email by viewModel.userEmail.collectAsState()
+    val isPremium by viewModel.isPremium.collectAsState()
 
     val context = LocalContext.current
     LaunchedEffect(viewModel) {
@@ -67,6 +75,12 @@ fun CoSplitGroupDetailScreen(
     var showMenu by remember { mutableStateOf(false) }
     var showDeleteConfirmDialog by remember { mutableStateOf(false) }
     var showEditGroupDialog by remember { mutableStateOf(false) }
+
+    val scope = rememberCoroutineScope()
+    var selectedRouteForPayment by remember { mutableStateOf<CoSplitSettlementRoute?>(null) }
+    var isLoadingPaymentDetails by remember { mutableStateOf(false) }
+    var showUpiInputDialg by remember { mutableStateOf(false) }
+    var showPaymentConfirmDialog by remember { mutableStateOf(false) }
 
     if (group == null) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -341,20 +355,61 @@ fun CoSplitGroupDetailScreen(
                                     )
                                 } else {
                                     settlements.forEach { route ->
-                                        Row(
+                                        val isCurrentUserDebtor = route.debtorEmail == email
+                                        Column(
                                             modifier = Modifier
                                                 .fillMaxWidth()
-                                                .padding(vertical = 8.dp),
-                                            verticalAlignment = Alignment.CenterVertically
+                                                .padding(vertical = 8.dp)
                                         ) {
-                                            Icon(
-                                                Icons.Rounded.ArrowForward,
-                                                contentDescription = null,
-                                                tint = MaterialTheme.colorScheme.primary,
-                                                modifier = Modifier.size(16.dp)
-                                            )
-                                            Spacer(modifier = Modifier.width(8.dp))
-                                            Text(route, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.SpaceBetween
+                                            ) {
+                                                Row(
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    modifier = Modifier.weight(1f)
+                                                ) {
+                                                    Icon(
+                                                        Icons.Rounded.ArrowForward,
+                                                        contentDescription = null,
+                                                        tint = MaterialTheme.colorScheme.primary,
+                                                        modifier = Modifier.size(16.dp)
+                                                    )
+                                                    Spacer(modifier = Modifier.width(8.dp))
+                                                    Text(route.displayText, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                                                }
+                                                if (isCurrentUserDebtor) {
+                                                    Button(
+                                                        onClick = {
+                                                            selectedRouteForPayment = route
+                                                            analyticsHelper.logEvent(
+                                                                AnalyticsConstants.Event.CO_SPLIT_PAYMENT_INITIATED,
+                                                                mapOf(
+                                                                    AnalyticsConstants.Param.AMOUNT to route.amount,
+                                                                    AnalyticsConstants.Param.TYPE to "UPI"
+                                                                )
+                                                            )
+                                                            scope.launch {
+                                                                isLoadingPaymentDetails = true
+                                                                val upiId = viewModel.getUserUpiId(route.creditorEmail)
+                                                                isLoadingPaymentDetails = false
+                                                                if (!upiId.isNullOrBlank()) {
+                                                                    triggerUpiPayment(context, upiId, route.creditorName, route.amount)
+                                                                    showPaymentConfirmDialog = true
+                                                                } else {
+                                                                    showUpiInputDialg = true
+                                                                }
+                                                            }
+                                                        },
+                                                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                                                        modifier = Modifier.height(32.dp),
+                                                        shape = RoundedCornerShape(8.dp)
+                                                    ) {
+                                                        Text("Pay UPI", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                                    }
+                                                }
+                                            }
                                         }
                                     }
 
@@ -400,6 +455,10 @@ fun CoSplitGroupDetailScreen(
                     }
                 }
             }
+            AdBannerView(
+                isPremium = isPremium,
+                modifier = Modifier.fillMaxWidth()
+            )
         }
     }
 
@@ -506,6 +565,150 @@ fun CoSplitGroupDetailScreen(
             },
             isSaving = isSaving
         )
+    }
+
+    if (isLoadingPaymentDetails) {
+        AlertDialog(
+            onDismissRequest = {},
+            confirmButton = {},
+            title = null,
+            text = {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    modifier = Modifier.padding(16.dp)
+                ) {
+                    CircularProgressIndicator(modifier = Modifier.size(36.dp))
+                    Text("Fetching UPI details...", fontSize = 14.sp)
+                }
+            }
+        )
+    }
+
+    if (showUpiInputDialg && selectedRouteForPayment != null) {
+        var upiInput by remember { mutableStateOf("") }
+        var saveForFuture by remember { mutableStateOf(true) }
+        
+        AlertDialog(
+            onDismissRequest = { showUpiInputDialg = false },
+            title = { Text("Enter Recipient UPI ID", fontWeight = FontWeight.Bold) },
+            text = {
+                Column {
+                    Text(
+                        "${selectedRouteForPayment!!.creditorName} hasn't linked a UPI ID yet. Enter their UPI ID to pay:",
+                        fontSize = 13.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    OutlinedTextField(
+                        value = upiInput,
+                        onValueChange = { upiInput = it },
+                        label = { Text("UPI ID (VPA)") },
+                        placeholder = { Text("example@upi") },
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.clickable { saveForFuture = !saveForFuture }
+                    ) {
+                        Checkbox(
+                            checked = saveForFuture,
+                            onCheckedChange = { saveForFuture = it }
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            "Save to ${selectedRouteForPayment!!.creditorName}'s profile for future payments",
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val trimmed = upiInput.trim()
+                        if (trimmed.contains("@")) {
+                            if (saveForFuture) {
+                                viewModel.saveUserUpiId(selectedRouteForPayment!!.creditorEmail, trimmed)
+                                analyticsHelper.logEvent(AnalyticsConstants.Event.CO_SPLIT_MANUAL_UPI_SAVED)
+                            }
+                            triggerUpiPayment(context, trimmed, selectedRouteForPayment!!.creditorName, selectedRouteForPayment!!.amount)
+                            showUpiInputDialg = false
+                            showPaymentConfirmDialog = true
+                        } else {
+                            Toast.makeText(context, "Invalid UPI ID", Toast.LENGTH_SHORT).show()
+                        }
+                    },
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Text("Proceed to Pay")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showUpiInputDialg = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    if (showPaymentConfirmDialog && selectedRouteForPayment != null) {
+        AlertDialog(
+            onDismissRequest = { showPaymentConfirmDialog = false },
+            title = { Text("Confirm Settlement", fontWeight = FontWeight.Bold) },
+            text = {
+                Text(
+                    "Did you successfully pay ₹${String.format("%.2f", selectedRouteForPayment!!.amount)} to ${selectedRouteForPayment!!.creditorName} via UPI?\n\nIf yes, we can record this settlement automatically.",
+                    fontSize = 14.sp
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.settleUp(
+                            payerEmail = selectedRouteForPayment!!.debtorEmail,
+                            receiverEmail = selectedRouteForPayment!!.creditorEmail,
+                            amount = selectedRouteForPayment!!.amount
+                        ) { success ->
+                            if (success) {
+                                Toast.makeText(context, "Settlement recorded!", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                        showPaymentConfirmDialog = false
+                        selectedRouteForPayment = null
+                    },
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Text("Yes, Record it")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        showPaymentConfirmDialog = false
+                        selectedRouteForPayment = null
+                    }
+                ) {
+                    Text("No, Cancel")
+                }
+            }
+        )
+    }
+}
+
+private fun triggerUpiPayment(context: android.content.Context, upiId: String, name: String, amount: Double) {
+    try {
+        val upiUri = android.net.Uri.parse(
+            "upi://pay?pa=$upiId&pn=${java.net.URLEncoder.encode(name, "UTF-8")}&am=${String.format("%.2f", amount)}&cu=INR&tn=${java.net.URLEncoder.encode("CoSplit Settlement", "UTF-8")}"
+        )
+        val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, upiUri)
+        val chooser = android.content.Intent.createChooser(intent, "Pay with UPI app")
+        context.startActivity(chooser)
+    } catch (e: Exception) {
+        android.widget.Toast.makeText(context, "Could not open UPI apps", android.widget.Toast.LENGTH_SHORT).show()
     }
 }
 

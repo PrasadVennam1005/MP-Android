@@ -31,13 +31,19 @@ import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 import kotlinx.coroutines.launch
 import prasad.vennam.moneypilot.feature.cosplit.ui.CoSplitViewModel
 import prasad.vennam.moneypilot.feature.cosplit.util.AiReceiptLineItem
+import prasad.vennam.moneypilot.util.AnalyticsConstants
+import prasad.vennam.moneypilot.util.AnalyticsHelper
+import prasad.vennam.moneypilot.util.TrackScreen
+import prasad.vennam.moneypilot.ui.components.AdBannerView
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CoSplitAddExpenseScreen(
     viewModel: CoSplitViewModel,
+    analyticsHelper: AnalyticsHelper,
     onNavigateBack: () -> Unit
 ) {
+    TrackScreen(analyticsHelper, AnalyticsConstants.Screen.CO_SPLIT_ADD_EXPENSE)
     val context = LocalContext.current
     val group by viewModel.selectedGroup.collectAsState()
     val userEmail by viewModel.userEmail.collectAsState()
@@ -138,15 +144,20 @@ fun CoSplitAddExpenseScreen(
             )
         }
     ) { paddingValues ->
-        LazyColumn(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
                 .imePadding()
                 .background(MaterialTheme.colorScheme.background)
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            LazyColumn(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
             item {
                 OutlinedTextField(
                     value = description,
@@ -292,6 +303,12 @@ fun CoSplitAddExpenseScreen(
                     Text("Save Expense", fontSize = 16.sp, fontWeight = FontWeight.Bold)
                 }
             }
+            }
+            val isPremium by viewModel.isPremium.collectAsState()
+            AdBannerView(
+                isPremium = isPremium,
+                modifier = Modifier.fillMaxWidth()
+            )
         }
     }
 
