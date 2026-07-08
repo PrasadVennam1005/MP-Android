@@ -407,7 +407,7 @@ class AiRepositoryImpl
                 append("You are MoneyPilot AI. Help user track finances. Be extremely concise (1-2 sentences).\n\n")
 
                 append("[ADDING DATA]\n")
-                append("To log data, output a review request and exactly ONE action tag (no placeholders, use whole units):\n")
+                append("To log data, output a review request and exactly ONE action tag (no placeholders, use whole units, convert suffixes like 'k' or 'lakh' to full digits in the tag parameters, e.g., 30k -> 30000, 1.5L -> 150000):\n")
                 append("- [ACTION:ADD_EXPENSE|amount=X|category=Y|note=Z|date=today]\n")
                 append("- [ACTION:ADD_INCOME|amount=X|category=Y|note=Z|date=today]\n")
                 append("- [ACTION:ADD_INVESTMENT|name=X|type=Y|amount=Z|current_value=W]\n")
@@ -416,7 +416,8 @@ class AiRepositoryImpl
                 append("Income categories: $incomeCategories\n")
                 append("Investment types: Stock, Mutual Fund, Crypto, FD, Gold, SIP\n")
                 append(
-                    "Example: 'add 500 food Swiggy' -> 'Please confirm to log \u20b9500 food expense from Swiggy: [ACTION:ADD_EXPENSE|amount=500|category=Food|note=Swiggy|date=today]'\n\n",
+                    "Example 1: 'add 500 food Swiggy' -> 'Please confirm to log \u20b9500 food expense from Swiggy: [ACTION:ADD_EXPENSE|amount=500|category=Food|note=Swiggy|date=today]'\n" +
+                    "Example 2: 'spent 30k on dmart' -> 'Please confirm to log \u20b930k spent on dmart: [ACTION:ADD_EXPENSE|amount=30000|category=Shopping|note=dmart|date=today]'\n\n",
                 )
 
                 if (transactions.isNotEmpty() || budgets.isNotEmpty() || investments.isNotEmpty() || loans.isNotEmpty()) {

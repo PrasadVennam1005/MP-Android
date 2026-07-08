@@ -60,10 +60,10 @@ object AiActionParser {
         val action: AiAction? =
             try {
                 when (actionType) {
-                    "ADD_EXPENSE" -> parseTransaction(params, TransactionType.EXPENSE)
-                    "ADD_INCOME" -> parseTransaction(params, TransactionType.INCOME)
-                    "ADD_INVESTMENT" -> parseInvestment(params)
-                    "ADD_LOAN" -> parseLoan(params)
+                    "ADD_EXPENSE" -> parseTransaction(params, TransactionType.EXPENSE, rawResponse)
+                    "ADD_INCOME" -> parseTransaction(params, TransactionType.INCOME, rawResponse)
+                    "ADD_INVESTMENT" -> parseInvestment(params, rawResponse)
+                    "ADD_LOAN" -> parseLoan(params, rawResponse)
                     else -> {
                         Log.w(TAG, "Unknown action type: $actionType")
                         null
@@ -84,8 +84,10 @@ object AiActionParser {
     private fun parseTransaction(
         params: Map<String, String>,
         type: TransactionType,
+        rawText: String,
     ): AiAction.AddTransaction {
-        val amount = parseAmount(params["amount"] ?: params["amt"] ?: "0")
+        var amount = parseAmount(params["amount"] ?: params["amt"] ?: "0")
+        amount = checkAndCorrectSuffixes(amount, rawText)
         val category = params["category"] ?: params["cat"] ?: "Other"
         val note = params["note"] ?: params["description"] ?: params["desc"] ?: ""
         val date = params["date"] ?: "today"
@@ -99,11 +101,13 @@ object AiActionParser {
         )
     }
 
-    private fun parseInvestment(params: Map<String, String>): AiAction.AddInvestment {
+    private fun parseInvestment(params: Map<String, String>, rawText: String): AiAction.AddInvestment {
         val name = params["name"] ?: params["fund"] ?: params["stock"] ?: "Investment"
         val invType = params["type"] ?: params["investment_type"] ?: "Mutual Fund"
-        val invested = parseAmount(params["amount"] ?: params["invested"] ?: params["invested_amount"] ?: "0")
-        val current = parseAmount(params["current_value"] ?: params["current"] ?: params["value"] ?: invested.toString())
+        var invested = parseAmount(params["amount"] ?: params["invested"] ?: params["invested_amount"] ?: "0")
+        invested = checkAndCorrectSuffixes(invested, rawText)
+        var current = parseAmount(params["current_value"] ?: params["current"] ?: params["value"] ?: invested.toString())
+        current = checkAndCorrectSuffixes(current, rawText)
         return AiAction.AddInvestment(
             name = name.trim(),
             type = invType.trim(),
@@ -112,10 +116,12 @@ object AiActionParser {
         )
     }
 
-    private fun parseLoan(params: Map<String, String>): AiAction.AddLoan {
+    private fun parseLoan(params: Map<String, String>, rawText: String): AiAction.AddLoan {
         val name = params["name"] ?: params["lender"] ?: "Loan"
-        val total = parseAmount(params["amount"] ?: params["total"] ?: params["principal"] ?: "0")
-        val emi = parseAmount(params["emi"] ?: params["emi_amount"] ?: params["monthly_emi"] ?: "0")
+        var total = parseAmount(params["amount"] ?: params["total"] ?: params["principal"] ?: "0")
+        total = checkAndCorrectSuffixes(total, rawText)
+        var emi = parseAmount(params["emi"] ?: params["emi_amount"] ?: params["monthly_emi"] ?: "0")
+        emi = checkAndCorrectSuffixes(emi, rawText)
         val rate = params["interest"]?.replace("%", "")?.toDoubleOrNull() ?: params["rate"]?.replace("%", "")?.toDoubleOrNull() ?: 0.0
         val tenure = params["tenure"]?.toIntOrNull() ?: params["months"]?.toIntOrNull() ?: 12
         val nextEmiDays = (params["next_emi_days"] ?: params["days"] ?: "30").toIntOrNull() ?: 30
@@ -127,6 +133,26 @@ object AiActionParser {
             tenureMonths = tenure,
             nextEmiDays = nextEmiDays,
         )
+    }
+
+    private fun checkAndCorrectSuffixes(parsedAmount: Long, text: String): Long {
+        if (parsedAmount <= 0) return parsedAmount
+        val cleanedText = text.lowercase().replace(",", "")
+
+        // Match: amount immediately followed by a suffix (with optional space/symbol)
+        // e.g. "30k", "30 k", "30l", "30 lakh", "30 thousand", "30cr"
+        val regex = Regex("""\b$parsedAmount\s*(k|thousand|thousands|l|lakh|lakhs|cr|crore|crores)\b""")
+        val match = regex.find(cleanedText)
+        if (match != null) {
+            val suffix = match.groupValues[1]
+            return when {
+                suffix.startsWith("k") || suffix.startsWith("thousand") -> parsedAmount * 1000
+                suffix == "l" || suffix.startsWith("lakh") -> parsedAmount * 100_000
+                suffix == "cr" || suffix.startsWith("crore") -> parsedAmount * 10_000_000
+                else -> parsedAmount
+            }
+        }
+        return parsedAmount
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────
