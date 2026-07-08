@@ -162,6 +162,7 @@ fun FinancialSandboxScreen(
                 Column(
                     modifier = Modifier
                         .weight(1f)
+                        .imePadding()
                         .verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(20.dp)
                 ) {
@@ -236,6 +237,7 @@ fun FinancialSandboxScreen(
                     Modifier
                         .fillMaxSize()
                         .padding(innerPadding)
+                        .imePadding()
                         .verticalScroll(rememberScrollState())
                         .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(20.dp),

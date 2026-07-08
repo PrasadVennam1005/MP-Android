@@ -89,6 +89,7 @@ fun BaseBottomSheet(
                         .widthIn(max = 600.dp)
                         .fillMaxWidth()
                         .heightIn(max = maxHeight)
+                        .imePadding()
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = null,

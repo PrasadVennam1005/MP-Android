@@ -44,10 +44,17 @@ enum class InsightType {
     WARNING,
 }
 
+enum class InsightActionType {
+    ADJUST_BUDGET,
+    VIEW_TRANSACTIONS,
+    ANALYZE_PORTFOLIO,
+}
+
 data class FinancialInsight(
     val title: String,
     val description: String,
     val type: InsightType,
+    val actionType: InsightActionType? = null,
 )
 
 sealed class AiRecommendationState {
@@ -88,6 +95,10 @@ data class AnalyticsState(
     val spendingByCategory: Map<Category?, Double> = emptyMap(),
     val assetAllocations: List<AssetAllocation> = emptyList(),
     val insights: List<FinancialInsight> = emptyList(),
+    val incomeChangePct: Double? = null,
+    val expenseChangePct: Double? = null,
+    val netSavingsChangePct: Double? = null,
+    val savingsRateChangePct: Double? = null,
 )
 
 private data class AnalyticsRawData(
@@ -164,6 +175,30 @@ class AnalyticsViewModel
                         }
                     }
 
+                // Filter transactions for the previous period to calculate period-over-period change
+                val prevFilteredTransactions =
+                    data.transactions.filter { transaction ->
+                        val transCal = Calendar.getInstance().apply { timeInMillis = transaction.timestamp }
+                        when (filter) {
+                            TimeFilter.THIS_MONTH -> {
+                                val prevMonthCal = Calendar.getInstance().apply { add(Calendar.MONTH, -1) }
+                                transCal.get(Calendar.MONTH) == prevMonthCal.get(Calendar.MONTH) &&
+                                        transCal.get(Calendar.YEAR) == prevMonthCal.get(Calendar.YEAR)
+                            }
+                            TimeFilter.LAST_3_MONTHS -> {
+                                val limit1 = Calendar.getInstance().apply { add(Calendar.MONTH, -3) }
+                                val limit2 = Calendar.getInstance().apply { add(Calendar.MONTH, -6) }
+                                transCal.after(limit2) && !transCal.after(limit1)
+                            }
+                            TimeFilter.LAST_6_MONTHS -> {
+                                val limit1 = Calendar.getInstance().apply { add(Calendar.MONTH, -6) }
+                                val limit2 = Calendar.getInstance().apply { add(Calendar.MONTH, -12) }
+                                transCal.after(limit2) && !transCal.after(limit1)
+                            }
+                            TimeFilter.ALL_TIME -> false
+                        }
+                    }
+
                 // Calculate Totals
                 val totalIncome =
                     filteredTransactions
@@ -175,6 +210,35 @@ class AnalyticsViewModel
                         .sumOf { convertAmount(it.amount, it.currencyCode) }
                 val netSavings = totalIncome - totalExpense
                 val savingsRate = if (totalIncome > 0.0) (netSavings / totalIncome) * 100.0 else 0.0
+
+                // Calculate Previous Totals
+                val prevIncome =
+                    prevFilteredTransactions
+                        .filter { it.type == TransactionType.INCOME }
+                        .sumOf { convertAmount(it.amount, it.currencyCode) }
+                val prevExpense =
+                    prevFilteredTransactions
+                        .filter { it.type == TransactionType.EXPENSE }
+                        .sumOf { convertAmount(it.amount, it.currencyCode) }
+                val prevNetSavings = prevIncome - prevExpense
+                val prevSavingsRate = if (prevIncome > 0.0) (prevNetSavings / prevIncome) * 100.0 else 0.0
+
+                // Calculate Changes
+                val incomeChangePct = if (filter != TimeFilter.ALL_TIME && prevIncome > 0.0) {
+                    ((totalIncome - prevIncome) / prevIncome) * 100.0
+                } else null
+
+                val expenseChangePct = if (filter != TimeFilter.ALL_TIME && prevExpense > 0.0) {
+                    ((totalExpense - prevExpense) / prevExpense) * 100.0
+                } else null
+
+                val netSavingsChangePct = if (filter != TimeFilter.ALL_TIME && prevNetSavings != 0.0) {
+                    ((netSavings - prevNetSavings) / Math.abs(prevNetSavings)) * 100.0
+                } else null
+
+                val savingsRateChangePct = if (filter != TimeFilter.ALL_TIME && prevSavingsRate > 0.0) {
+                    ((savingsRate - prevSavingsRate) / prevSavingsRate) * 100.0
+                } else null
 
                 // Calculate Spending Breakdown by Category
                 val categoriesMap = data.categories.associateBy { it.id }
@@ -305,6 +369,7 @@ class AnalyticsViewModel
                                         savingsRate,
                                     )}% this period. Consider reviewing non-essential spending.",
                                     type = InsightType.WARNING,
+                                    actionType = InsightActionType.VIEW_TRANSACTIONS,
                                 ),
                             )
                         }
@@ -337,6 +402,7 @@ class AnalyticsViewModel
                                     catPct,
                                 )}% of total expenses.",
                                 type = InsightType.INFO,
+                                actionType = InsightActionType.VIEW_TRANSACTIONS,
                             ),
                         )
                     }
@@ -356,6 +422,7 @@ class AnalyticsViewModel
                                     gainPct,
                                 )}% (+${String.format("%.2f", gain)} $currentCurrency).",
                                 type = InsightType.SUCCESS,
+                                actionType = InsightActionType.ANALYZE_PORTFOLIO,
                             ),
                         )
                     } else if (gain < 0.0) {
@@ -367,6 +434,7 @@ class AnalyticsViewModel
                                     Math.abs(gainPct),
                                 )}% (${String.format("%.2f", gain)} $currentCurrency).",
                                 type = InsightType.WARNING,
+                                actionType = InsightActionType.ANALYZE_PORTFOLIO,
                             ),
                         )
                     }
@@ -406,6 +474,7 @@ class AnalyticsViewModel
                                 overruns.first().second,
                             )} $currentCurrency).",
                             type = InsightType.WARNING,
+                            actionType = InsightActionType.ADJUST_BUDGET,
                         ),
                     )
                 }
@@ -421,6 +490,10 @@ class AnalyticsViewModel
                     spendingByCategory = spendingByCategory,
                     assetAllocations = assetAllocations,
                     insights = insights,
+                    incomeChangePct = incomeChangePct,
+                    expenseChangePct = expenseChangePct,
+                    netSavingsChangePct = netSavingsChangePct,
+                    savingsRateChangePct = savingsRateChangePct,
                 )
             }.flowOn(Dispatchers.Default)
                 .stateIn(

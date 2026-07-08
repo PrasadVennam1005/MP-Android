@@ -46,6 +46,7 @@ import androidx.compose.ui.unit.sp
 import androidx.window.core.layout.WindowWidthSizeClass
 import prasad.vennam.moneypilot.R
 import prasad.vennam.moneypilot.data.entity.TimeFrame
+import prasad.vennam.moneypilot.ui.components.KPICard
 import prasad.vennam.moneypilot.util.CurrencyFormatter
 import prasad.vennam.moneypilot.util.LocalCurrencyCode
 
@@ -158,14 +159,18 @@ fun KPISection(
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
             ) {
                 rowKpis.forEach { kpi ->
+                    val displayValue = when {
+                        kpi.value != null -> kpi.value
+                        kpi.amount != null -> CurrencyFormatter.format(kpi.amount, currencyCode)
+                        else -> ""
+                    }
                     KPICard(
                         title = kpi.title,
-                        amount = kpi.amount,
-                        value = kpi.value,
+                        value = displayValue,
                         icon = kpi.icon,
                         containerColor = kpi.containerColor,
                         contentColor = kpi.contentColor,
-                        currencyCode = currencyCode,
+                        useDashboardStyle = true,
                         modifier = Modifier.weight(1f),
                     )
                 }
@@ -188,86 +193,3 @@ data class KPIData(
     val contentColor: Color,
     val value: String? = null,
 )
-
-@Composable
-fun KPICard(
-    title: String,
-    amount: Double? = null,
-    value: String? = null,
-    icon: ImageVector,
-    containerColor: Color,
-    contentColor: Color,
-    currencyCode: String = "",
-    modifier: Modifier = Modifier,
-) {
-    val displayValue = when {
-        value != null -> value
-        amount != null -> CurrencyFormatter.format(amount, currencyCode)
-        else -> ""
-    }
-
-    Card(
-        modifier = modifier.height(130.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = containerColor
-        ),
-        shape = MaterialTheme.shapes.extraLarge,
-        border = androidx.compose.foundation.BorderStroke(
-            0.5.dp,
-            contentColor.copy(alpha = 0.15f)
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Box(modifier = Modifier.fillMaxSize()) {
-
-            Column(
-                modifier = Modifier
-                    .padding(16.dp)
-                    .fillMaxSize(),
-                verticalArrangement = Arrangement.SpaceBetween
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Surface(
-                        modifier = Modifier.size(36.dp),
-                        color = contentColor.copy(alpha = 0.1f),
-                        shape = CircleShape,
-                        border = androidx.compose.foundation.BorderStroke(0.5.dp, contentColor.copy(alpha = 0.2f))
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(
-                                imageVector = icon,
-                                contentDescription = null,
-                                tint = contentColor,
-                                modifier = Modifier.size(18.dp)
-                            )
-                        }
-                    }
-                }
-
-                Column {
-                    Text(
-                        text = title,
-                        style = MaterialTheme.typography.labelMedium.copy(
-                            fontWeight = FontWeight.Bold
-                        ),
-                        color = contentColor.copy(alpha = 0.8f),
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = displayValue,
-                        style = MaterialTheme.typography.titleLarge.copy(
-                            fontWeight = FontWeight.ExtraBold,
-                            fontSize = 20.sp
-                        ),
-                        color = contentColor,
-                        maxLines = 1
-                    )
-                }
-            }
-        }
-    }
-}

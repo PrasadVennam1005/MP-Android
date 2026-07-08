@@ -147,6 +147,7 @@ fun CoSplitGroupDetailScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
+                .imePadding()
                 .background(MaterialTheme.colorScheme.background)
         ) {
             // Tab Selector

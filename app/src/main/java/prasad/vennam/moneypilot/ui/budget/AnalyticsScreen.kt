@@ -4,6 +4,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -36,6 +37,7 @@ import prasad.vennam.moneypilot.ui.viewmodel.AnalyticsViewModel
 import prasad.vennam.moneypilot.ui.viewmodel.AssetAllocation
 import prasad.vennam.moneypilot.ui.viewmodel.FinancialInsight
 import prasad.vennam.moneypilot.ui.viewmodel.InsightType
+import prasad.vennam.moneypilot.ui.viewmodel.InsightActionType
 import prasad.vennam.moneypilot.ui.viewmodel.TimeFilter
 import androidx.compose.ui.platform.LocalConfiguration
 import prasad.vennam.moneypilot.util.AnalyticsConstants
@@ -49,6 +51,9 @@ fun AnalyticsScreen(
     analyticsHelper: AnalyticsHelper,
     isPremium: Boolean = false,
     modifier: Modifier = Modifier,
+    onNavigateToTab: (Int) -> Unit = {},
+    onNavigateToTransactions: () -> Unit = {},
+    onNavigateToInvestments: () -> Unit = {},
 ) {
     TrackScreen(analyticsHelper, AnalyticsConstants.Screen.ANALYTICS_TAB)
     val state by viewModel.uiState.collectAsState()
@@ -78,7 +83,12 @@ fun AnalyticsScreen(
                 modifier =
                     Modifier
                         .fillMaxSize(),
-                contentPadding = innerPadding,
+                contentPadding = PaddingValues(
+                    start = 16.dp,
+                    end = 16.dp,
+                    top = 16.dp,
+                    bottom = innerPadding.calculateBottomPadding() + 16.dp,
+                ),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
                 if (!isPremium) {
@@ -87,8 +97,7 @@ fun AnalyticsScreen(
                             isPremium = isPremium,
                             modifier =
                                 Modifier
-                                    .fillMaxWidth()
-                                    .padding(top = 16.dp),
+                                    .fillMaxWidth(),
                         )
                     }
                 }
@@ -100,10 +109,7 @@ fun AnalyticsScreen(
                     )
                 }
 
-                // 2. KPI Cards Grid
-                item {
-                    KPIGrid(state = state, currencyCode = currencyCode)
-                }
+
 
                 // 3. Line Chart Card
                 item {
@@ -162,13 +168,14 @@ fun AnalyticsScreen(
                                     val sortedList =
                                         state.spendingByCategory
                                             .toList()
-                                            .map { (it.first?.name ?: "Other") to it.second }
                                             .sortedByDescending { it.second }
 
                                     SpendingDonutChart(
-                                        sortedSpending = sortedList,
+                                        sortedSpending = sortedList.map { (it.first?.name ?: "Other") to it.second },
                                         colors = chartColors,
-                                        modifier = Modifier.size(120.dp),
+                                        modifier = Modifier
+                                            .size(120.dp)
+                                            .clickable { onNavigateToTransactions() },
                                     )
                                     Spacer(modifier = Modifier.width(24.dp))
                                     Column(
@@ -179,7 +186,9 @@ fun AnalyticsScreen(
                                             Row(
                                                 verticalAlignment = Alignment.CenterVertically,
                                                 horizontalArrangement = Arrangement.SpaceBetween,
-                                                modifier = Modifier.fillMaxWidth(),
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .clickable { onNavigateToTransactions() },
                                             ) {
                                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                                     Box(
@@ -190,7 +199,7 @@ fun AnalyticsScreen(
                                                     )
                                                     Spacer(modifier = Modifier.width(8.dp))
                                                     Text(
-                                                        text = pair.first,
+                                                        text = pair.first?.name ?: "Other",
                                                         style = MaterialTheme.typography.bodySmall,
                                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                                     )
@@ -248,7 +257,16 @@ fun AnalyticsScreen(
                         )
                     }
                     items(state.insights, key = { it.title }) { insight ->
-                        InsightCard(insight = insight)
+                        InsightCard(
+                            insight = insight,
+                            onActionClick = { action ->
+                                when (action) {
+                                    InsightActionType.ADJUST_BUDGET -> onNavigateToTab(0)
+                                    InsightActionType.VIEW_TRANSACTIONS -> onNavigateToTransactions()
+                                    InsightActionType.ANALYZE_PORTFOLIO -> onNavigateToInvestments()
+                                }
+                            }
+                        )
                     }
                 }
             }
@@ -299,105 +317,7 @@ fun TimeFilterRow(
     }
 }
 
-@Composable
-fun KPIGrid(
-    state: AnalyticsState,
-    currencyCode: String,
-) {
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            KPICard(
-                title = stringResource(R.string.income),
-                value = CurrencyFormatter.format(state.totalIncome, currencyCode),
-                icon = {
-                    Icon(
-                        Icons.AutoMirrored.Rounded.TrendingUp,
-                        contentDescription = "Income",
-                        tint = MaterialTheme.colorScheme.secondary,
-                    )
-                },
-                modifier = Modifier.weight(1f),
-            )
-            KPICard(
-                title = stringResource(R.string.expenses),
-                value = CurrencyFormatter.format(state.totalExpense, currencyCode),
-                icon = {
-                    Icon(
-                        Icons.AutoMirrored.Rounded.TrendingDown,
-                        contentDescription = "Expenses",
-                        tint = MaterialTheme.colorScheme.primary,
-                    )
-                },
-                modifier = Modifier.weight(1f),
-            )
-        }
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            KPICard(
-                title = stringResource(R.string.net_savings),
-                value = CurrencyFormatter.format(state.netSavings, currencyCode),
-                icon = null,
-                modifier = Modifier.weight(1f),
-                textColor = if (state.netSavings >= 0) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.primary,
-            )
-            KPICard(
-                title = stringResource(R.string.savings_rate),
-                value = "${String.format("%.1f", state.savingsRate)}%",
-                icon = null,
-                modifier = Modifier.weight(1f),
-                textColor = if (state.savingsRate >= 20.0) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.onSurface,
-            )
-        }
-    }
-}
 
-@Composable
-fun KPICard(
-    title: String,
-    value: String,
-    icon: @Composable (() -> Unit)?,
-    modifier: Modifier = Modifier,
-    textColor: Color = MaterialTheme.colorScheme.onSurface,
-) {
-    Card(
-        modifier = modifier,
-        shape = MaterialTheme.shapes.extraLarge, // 20dp premium corners
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-    ) {
-        Column(
-            modifier =
-                Modifier
-                    .padding(16.dp)
-                    .fillMaxWidth(),
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                icon?.invoke()
-            }
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = value,
-                style = MaterialTheme.typography.titleLarge.copy(fontSize = 20.sp),
-                fontWeight = FontWeight.Bold,
-                color = textColor,
-            )
-        }
-    }
-}
 
 @Composable
 fun AssetAllocationRow(
@@ -463,7 +383,10 @@ fun AssetAllocationRow(
 }
 
 @Composable
-fun InsightCard(insight: FinancialInsight) {
+fun InsightCard(
+    insight: FinancialInsight,
+    onActionClick: (InsightActionType) -> Unit = {},
+) {
     val (bgColor, contentColor) =
         when (insight.type) {
             InsightType.SUCCESS ->
@@ -512,6 +435,24 @@ fun InsightCard(insight: FinancialInsight) {
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurface,
                 )
+                if (insight.actionType != null) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    TextButton(
+                        onClick = { onActionClick(insight.actionType) },
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                        colors = ButtonDefaults.textButtonColors(contentColor = contentColor),
+                    ) {
+                        val actionText = when (insight.actionType) {
+                            InsightActionType.ADJUST_BUDGET -> "Adjust Budget"
+                            InsightActionType.VIEW_TRANSACTIONS -> "View Transactions"
+                            InsightActionType.ANALYZE_PORTFOLIO -> "Analyze Portfolio"
+                        }
+                        Text(
+                            text = actionText,
+                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                        )
+                    }
+                }
             }
         }
     }

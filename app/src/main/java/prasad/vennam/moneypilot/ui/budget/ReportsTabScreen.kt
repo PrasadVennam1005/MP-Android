@@ -67,6 +67,8 @@ fun ReportsTabScreen(
     analyticsHelper: AnalyticsHelper,
     onProfileClick: () -> Unit,
     modifier: Modifier = Modifier,
+    onNavigateToTransactions: () -> Unit = {},
+    onNavigateToInvestments: () -> Unit = {},
 ) {
     TrackScreen(analyticsHelper, AnalyticsConstants.Screen.REPORTS)
     var selectedTab by remember { mutableStateOf(0) }
@@ -245,6 +247,9 @@ fun ReportsTabScreen(
                         viewModel = analyticsViewModel,
                         analyticsHelper = analyticsHelper,
                         isPremium = isPremium,
+                        onNavigateToTab = { selectedTab = it },
+                        onNavigateToTransactions = onNavigateToTransactions,
+                        onNavigateToInvestments = onNavigateToInvestments,
                     )
                 }
             }

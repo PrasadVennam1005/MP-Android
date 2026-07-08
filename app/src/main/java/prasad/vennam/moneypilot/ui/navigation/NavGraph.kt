@@ -256,6 +256,8 @@ fun moneyPilotNavEntry(
                     isPremium = isPremium,
                     onProfileClick = { backStack.add(Destination.Settings) },
                     analyticsHelper = analyticsHelper,
+                    onNavigateToTransactions = { backStack.add(Destination.History) },
+                    onNavigateToInvestments = { backStack.add(Destination.Investments) },
                 )
             }
 
