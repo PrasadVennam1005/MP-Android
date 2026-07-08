@@ -1763,7 +1763,7 @@ fun autoMatchCategory(
     categories: List<Category>,
 ): Category? {
     val nameLower = merchant.lowercase()
-    val isExpense = type == "EXPENSE"
+    val isExpense = type.equals("EXPENSE", ignoreCase = true)
 
     val targetCategoryName =
         if (isExpense) {
@@ -1780,24 +1780,39 @@ fun autoMatchCategory(
                         nameLower.contains("diesel") ||
                         nameLower.contains("gas station") -> "Transport"
 
-                nameLower.contains("starbucks") ||
-                        nameLower.contains("swiggy") ||
-                        nameLower.contains("zomato") ||
-                        nameLower.contains("ubereats") ||
-                        nameLower.contains("food") ||
-                        nameLower.contains("restaurant") ||
-                        nameLower.contains("cafe") ||
-                        nameLower.contains("dining") ||
-                        nameLower.contains("pizza") ||
-                        nameLower.contains("mcdonald") ||
-                        nameLower.contains("burger") -> "Food"
-
                 nameLower.contains("netflix") ||
                         nameLower.contains("spotify") ||
                         nameLower.contains("youtube") ||
                         nameLower.contains("disney") ||
                         nameLower.contains("prime video") ||
-                        nameLower.contains("movie") ||
+                        nameLower.contains("hulu") ||
+                        nameLower.contains("google one") ||
+                        nameLower.contains("apple") ||
+                        nameLower.contains("sub") ||
+                        nameLower.contains("subscription") -> "Subscription"
+
+                nameLower.contains("starbucks") ||
+                        nameLower.contains("swiggy") ||
+                        nameLower.contains("zomato") ||
+                        nameLower.contains("ubereats") ||
+                        nameLower.contains("restaurant") ||
+                        nameLower.contains("cafe") ||
+                        nameLower.contains("dining") ||
+                        nameLower.contains("pizza") ||
+                        nameLower.contains("mcdonald") ||
+                        nameLower.contains("burger") -> "Dining"
+
+                nameLower.contains("grocery") ||
+                        nameLower.contains("groceries") ||
+                        nameLower.contains("supermarket") ||
+                        nameLower.contains("walmart") ||
+                        nameLower.contains("target") ||
+                        nameLower.contains("dmart") ||
+                        nameLower.contains("costco") -> "Groceries"
+
+                nameLower.contains("food") -> "Food"
+
+                nameLower.contains("movie") ||
                         nameLower.contains("cinema") ||
                         nameLower.contains("game") ||
                         nameLower.contains("steam") ||
@@ -1808,11 +1823,7 @@ fun autoMatchCategory(
                         nameLower.contains("flipkart") ||
                         nameLower.contains("myntra") ||
                         nameLower.contains("shopping") ||
-                        nameLower.contains("store") ||
-                        nameLower.contains("supermarket") ||
-                        nameLower.contains("grocery") ||
-                        nameLower.contains("walmart") ||
-                        nameLower.contains("target") -> "Shopping"
+                        nameLower.contains("store") -> "Shopping"
 
                 nameLower.contains("hospital") ||
                         nameLower.contains("clinic") ||
@@ -1857,17 +1868,16 @@ fun autoMatchCategory(
             when {
                 nameLower.contains("salary") || nameLower.contains("payroll") || nameLower.contains("wage") -> "Salary"
                 nameLower.contains("freelance") || nameLower.contains("gigs") || nameLower.contains("consulting") -> "Freelance"
-                nameLower.contains("interest") ||
-                        nameLower.contains("dividend") ||
-                        nameLower.contains("mutual fund") ||
+                nameLower.contains("interest") -> "Interest"
+                nameLower.contains("dividend") -> "Dividend"
+                nameLower.contains("mutual fund") ||
                         nameLower.contains("stock") ||
                         nameLower.contains("crypto") ||
                         nameLower.contains("investment") -> "Investments"
 
                 nameLower.contains("rental") || nameLower.contains("tenant") -> "Rental"
-                nameLower.contains("gift") || nameLower.contains("present") -> "Gifts"
                 nameLower.contains("refund") || nameLower.contains("cashback") || nameLower.contains("reward") -> "Refund"
-                else -> "Salary"
+                else -> "Other Income"
             }
         }
 
