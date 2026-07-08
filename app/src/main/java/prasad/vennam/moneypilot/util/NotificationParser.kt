@@ -11,17 +11,16 @@ data class ParsedNotification(
 )
 
 object NotificationParser {
-    // Regex for matching amount (e.g., Rs. 500, Rs 500.50, INR 1500, $50, 20.50 USD)
+    // Regex for matching amount (e.g., Rs. 500, Rs 500.50, INR 1500, $50, 20.50 USD) - Captured currency prefix
     private val amountPrefixPattern =
         Pattern.compile(
-            "(?i)(?:rs\\.?|inr|usd|eur|gbp|aed|sar|aud|cad|sgd|cny|jpy|krw|inr|\\$|€|£|¥|₩)\\s*([\\d,]+(?:\\.\\d{1,2})?)",
+            "(?i)(rs\\.?|inr|usd|eur|gbp|aed|sar|aud|cad|sgd|cny|jpy|krw|\\$|€|£|¥|₩)\\s*([\\d,]+(?:\\.\\d{1,2})?)",
         )
     private val amountSuffixPattern =
         Pattern.compile(
-            "(?i)([\\d,]+(?:\\.\\d{1,2})?)\\s*(?:rs\\.?|inr|usd|eur|gbp|rupees|dollars|euros|cents|paisa)",
+            "(?i)([\\d,]+(?:\\.\\d{1,2})?)\\s*(rs\\.?|inr|usd|eur|gbp|rupees|dollars|euros|cents|paisa)",
         )
 
-    // Keywords to classify transactions
     private val expenseKeywords =
         setOf(
             "debited",
@@ -94,6 +93,12 @@ object NotificationParser {
             "(?i)(?:a/c|acct|account|card|ending|xx)\\s*(?:no\\.?\\s*)?\\b([*Xx]*\\d{3,4})\\b",
         )
 
+    private data class AmountCandidate(
+        val amount: Double,
+        val index: Int,
+        val currency: String,
+    )
+
     fun parse(
         title: String,
         text: String,
@@ -102,14 +107,30 @@ object NotificationParser {
         val fullText = "$title $text".replace("\n", " ").trim()
         val lowerText = fullText.lowercase(Locale.getDefault())
 
-        // 1. Discard non-financial alerts (OTPs, simple security checks, etc.) early
+        // 1. Discard credit card bills / statement due notifications early
+        val isStatementNotice = lowerText.contains("statement for") || 
+                                lowerText.contains("statement of") ||
+                                lowerText.contains("bill of") || 
+                                lowerText.contains("total amount due") || 
+                                lowerText.contains("minimum due") || 
+                                lowerText.contains("due by") || 
+                                lowerText.contains("due on")
+        if (isStatementNotice) return null
+
+        // 2. Discard aggregated system tray summaries
+        val isGroupedAlert = lowerText.contains("transactions successful") || 
+                             lowerText.contains("new alerts") || 
+                             lowerText.contains("notifications")
+        if (isGroupedAlert) return null
+
+        // 3. Discard non-financial alerts (OTPs, simple security checks, etc.) early
         val isOtp = lowerText.contains("otp") || lowerText.contains("verification code") || lowerText.contains("one time password") || lowerText.contains("one-time password")
         if (isOtp) return null
 
-        // 2. Extract Amount (utilizing lookback check to prioritize transaction over balance)
+        // 4. Extract Amount (utilizing lookback check to prioritize transaction over balance)
         val amount = extractAmount(fullText) ?: return null
 
-        // 3. Classify transaction type and check if it contains actual debit/credit keywords
+        // 5. Classify transaction type and check if it contains actual debit/credit keywords
         val hasIncomeKeyword = incomeKeywords.any { lowerText.contains(it) }
         val hasExpenseKeyword = expenseKeywords.any { lowerText.contains(it) }
         
@@ -128,10 +149,10 @@ object NotificationParser {
             else -> "EXPENSE"
         }
 
-        // 4. Extract Merchant
+        // 6. Extract Merchant
         val merchant = extractMerchant(fullText) ?: getAppNameFromPackage(packageName)
 
-        // 5. Extract Bank/Source Account info
+        // 7. Extract Bank/Source Account info
         val bankAccount = extractBankAccount(fullText) ?: getAppNameFromPackage(packageName)
 
         return ParsedNotification(
@@ -147,14 +168,15 @@ object NotificationParser {
         val balanceKeywords = listOf("bal", "balance", "available", "avl")
         val txKeywords = listOf("debited", "credited", "spent", "paid", "charged", "received", "sent", "withdrawn", "purchase", "payment", "txn", "debit", "credit")
 
-        val candidates = mutableListOf<Pair<Double, Int>>()
+        val candidates = mutableListOf<AmountCandidate>()
 
         // prefix matches
         var matcher = amountPrefixPattern.matcher(text)
         while (matcher.find()) {
-            val amount = matcher.group(1)?.replace(",", "")?.toDoubleOrNull()
+            val currencySymbol = matcher.group(1)?.lowercase() ?: ""
+            val amount = matcher.group(2)?.replace(",", "")?.toDoubleOrNull()
             if (amount != null && amount > 0) {
-                candidates.add(Pair(amount, matcher.start()))
+                candidates.add(AmountCandidate(amount, matcher.start(), currencySymbol))
             }
         }
 
@@ -162,32 +184,43 @@ object NotificationParser {
         matcher = amountSuffixPattern.matcher(text)
         while (matcher.find()) {
             val amount = matcher.group(1)?.replace(",", "")?.toDoubleOrNull()
+            val currencySymbol = matcher.group(2)?.lowercase() ?: ""
             if (amount != null && amount > 0) {
-                candidates.add(Pair(amount, matcher.start()))
+                candidates.add(AmountCandidate(amount, matcher.start(), currencySymbol))
             }
         }
 
         if (candidates.isEmpty()) return null
-        if (candidates.size == 1) return candidates[0].first
+        if (candidates.size == 1) return candidates[0].amount
 
         // Sort by occurrence index
-        candidates.sortBy { it.second }
+        candidates.sortBy { it.index }
 
-        var bestCandidate: Pair<Double, Int>? = null
+        var bestCandidate: AmountCandidate? = null
         var bestScore = -1
 
         for (candidate in candidates) {
-            val index = candidate.second
+            val index = candidate.index
             val startLookback = maxOf(0, index - 25)
             val lookbackText = lowerText.substring(startLookback, index)
 
             val isPrecededByBalance = balanceKeywords.any { lookbackText.contains(it) }
             val isPrecededByTx = txKeywords.any { lookbackText.contains(it) }
 
-            val score = when {
+            // Score based on preceding keywords
+            var score = when {
                 isPrecededByBalance -> 0
-                isPrecededByTx -> 2
-                else -> 1
+                isPrecededByTx -> 20
+                else -> 10
+            }
+
+            // Score boost: Prioritize local/home currencies (INR/Rs/₹) over foreign ones (USD/$) when multiple values exist
+            val isHomeCurrency = candidate.currency.contains("inr") || 
+                                 candidate.currency.contains("rs") || 
+                                 candidate.currency.contains("₹") || 
+                                 candidate.currency.contains("rupees")
+            if (isHomeCurrency) {
+                score += 5
             }
 
             if (score > bestScore) {
@@ -196,7 +229,7 @@ object NotificationParser {
             }
         }
 
-        return bestCandidate?.first ?: candidates.firstOrNull()?.first
+        return bestCandidate?.amount ?: candidates.firstOrNull()?.amount
     }
 
     private fun extractMerchant(text: String): String? {
