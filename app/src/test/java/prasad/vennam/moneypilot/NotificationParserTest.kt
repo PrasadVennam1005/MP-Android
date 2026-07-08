@@ -92,4 +92,66 @@ class NotificationParserTest {
         assertEquals("EXPENSE", result.type)
         assertEquals("AmazonPay", result.merchant) // Should extract the UPI info correctly
     }
+
+    @Test
+    fun testParseMultiCurrencyConversion() {
+        val title = "Conversion Alert"
+        val text = "USD 50.00 converted to INR 4,100.00 debited from A/c ending 1234."
+        val result = NotificationParser.parse(title, text, "com.google.android.apps.messaging")
+
+        assertNotNull(result)
+        assertEquals(4100.0, result!!.amount, 0.0) // Should prioritize local currency (INR)
+        assertEquals("EXPENSE", result.type)
+        assertEquals("A/c XX1234", result.bankAccount)
+    }
+
+    @Test
+    fun testParseIgnoreCreditCardBill() {
+        val title = "Card Bill"
+        val text = "Your credit card statement for a/c ending 9876 has been generated. Total amount due: Rs 5,500.00, Minimum due: Rs 250.00 by 20-July."
+        val result = NotificationParser.parse(title, text, "com.google.android.apps.messaging")
+
+        assertNull(result) // Statement/billing notices should be ignored
+    }
+
+    @Test
+    fun testParseIgnoreAggregatedNotification() {
+        val title = "PhonePe"
+        val text = "3 transactions successful."
+        val result = NotificationParser.parse(title, text, "com.phonepe.app")
+
+        assertNull(result) // Grouped summary notifications should be ignored
+    }
+
+    @Test
+    fun testParseCashWithdrawal() {
+        val title = "ATM Withdrawal"
+        val text = "Cash withdrawal of Rs. 10,000.00 from A/c ending 1234 at SBI ATM."
+        val result = NotificationParser.parse(title, text, "com.google.android.apps.messaging")
+
+        assertNotNull(result)
+        assertEquals(10000.0, result!!.amount, 0.0)
+        assertEquals("EXPENSE", result.type)
+        assertEquals("SBI ATM", result.merchant)
+    }
+
+    @Test
+    fun testParseRefundCashback() {
+        val title = "Amazon Pay"
+        val text = "Congratulations! Cashback of Rs. 150.00 credited to your A/c ending 4321 for Amazon transaction."
+        val result = NotificationParser.parse(title, text, "com.google.android.apps.messaging")
+
+        assertNotNull(result)
+        assertEquals(150.0, result!!.amount, 0.0)
+        assertEquals("INCOME", result.type)
+    }
+
+    @Test
+    fun testParseIgnoreOTPAlert() {
+        val title = "Axis Bank"
+        val text = "123456 is the OTP for your transaction of Rs. 5,000.00 at Flipkart. Do not share this code."
+        val result = NotificationParser.parse(title, text, "com.google.android.apps.messaging")
+
+        assertNull(result) // OTP alerts must be ignored
+    }
 }

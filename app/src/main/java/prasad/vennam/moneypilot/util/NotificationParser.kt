@@ -276,13 +276,17 @@ object NotificationParser {
                 "account",
             )
 
-        var words = candidate.split(Regex("\\s+"))
+        val words = candidate.split(Regex("\\s+"))
         val filtered = mutableListOf<String>()
 
         for (word in words) {
-            val lowerWord = word.lowercase(Locale.getDefault())
-            // If we hit any stop-word, truncate the merchant name here
-            if (stopWords.any { lowerWord == it || lowerWord.startsWith(it) }) {
+            val cleanWord = word.replace(Regex("[^A-Za-z0-9]"), "").lowercase(Locale.getDefault())
+            // Check if cleanWord matches any cleaned stopWord to avoid aggressive prefix triggers (e.g. ATM matching AT)
+            val isStopWord = stopWords.any { stopWord ->
+                val cleanStop = stopWord.replace(Regex("[^A-Za-z0-9]"), "").lowercase(Locale.getDefault())
+                cleanWord == cleanStop
+            }
+            if (isStopWord) {
                 break
             }
             // Skip numeric-only parts (like transaction IDs)
@@ -296,7 +300,7 @@ object NotificationParser {
             if (isDateOrTime) {
                 break
             }
-            if (merchantIgnoreKeywords.contains(lowerWord)) {
+            if (merchantIgnoreKeywords.contains(cleanWord)) {
                 continue
             }
             filtered.add(word)
