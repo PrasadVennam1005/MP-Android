@@ -12,14 +12,20 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import prasad.vennam.moneypilot.data.entity.PendingTransaction
 import prasad.vennam.moneypilot.data.repository.TransactionRepository
+import prasad.vennam.moneypilot.data.repository.SubscriptionRepository
 import prasad.vennam.moneypilot.util.NotificationParser
 import prasad.vennam.moneypilot.util.toMajorUnit
+import kotlinx.coroutines.flow.first
+import java.util.Calendar
 import javax.inject.Inject
 
 @AndroidEntryPoint
 class TransactionNotificationListener : NotificationListenerService() {
     @Inject
     lateinit var repository: TransactionRepository
+
+    @Inject
+    lateinit var subscriptionRepository: SubscriptionRepository
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
@@ -84,10 +90,47 @@ class TransactionNotificationListener : NotificationListenerService() {
                 if (prasad.vennam.moneypilot.BuildConfig.DEBUG) {
                     Log.d("NotificationListener", "Successfully inserted pending transaction: id=${pendingTx.id}, type=${pendingTx.type}")
                 }
+
+                // 2. Auto-match active subscription renewals and advance next payment date
+                val subscriptions = subscriptionRepository.allSubscriptions.first()
+                val matchedSubscription = subscriptions.find { subscription ->
+                    val subNameClean = subscription.name.lowercase().replace(Regex("[^a-z0-9]"), "")
+                    val merchantClean = parsed.merchant.lowercase().replace(Regex("[^a-z0-9]"), "")
+                    val nameMatches = (subNameClean.isNotEmpty() && merchantClean.isNotEmpty()) &&
+                            (subNameClean.contains(merchantClean) || merchantClean.contains(subNameClean))
+                    val amountMatches = Math.abs(subscription.amount - (parsed.amount * 100).toLong()) < 500 // ₹5 allowance
+                    nameMatches && amountMatches
+                }
+
+                if (matchedSubscription != null) {
+                    Log.d("NotificationListener", "Auto-matched subscription renewal: ${matchedSubscription.name}")
+                    val nextDate = calculateNextPaymentDate(matchedSubscription.nextPaymentDate, matchedSubscription.billingCycle)
+                    subscriptionRepository.updateSubscription(
+                        matchedSubscription.copy(
+                            nextPaymentDate = nextDate,
+                            lastUpdated = System.currentTimeMillis()
+                        )
+                    )
+                    Log.d("NotificationListener", "Advanced subscription billing date to: $nextDate")
+                }
             } catch (e: Exception) {
-                Log.e("NotificationListener", "Error inserting pending transaction", e)
+                Log.e("NotificationListener", "Error inserting pending transaction or processing subscription", e)
             }
         }
+    }
+
+    private fun calculateNextPaymentDate(
+        currentDate: Long,
+        billingCycle: String,
+    ): Long {
+        val cal = Calendar.getInstance().apply { timeInMillis = currentDate }
+        when (billingCycle) {
+            "Weekly" -> cal.add(Calendar.WEEK_OF_YEAR, 1)
+            "Monthly" -> cal.add(Calendar.MONTH, 1)
+            "Yearly" -> cal.add(Calendar.YEAR, 1)
+            else -> cal.add(Calendar.MONTH, 1)
+        }
+        return cal.timeInMillis
     }
 
     override fun onDestroy() {
