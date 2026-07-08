@@ -216,6 +216,43 @@ fun AiChatScreen(
         }
     }
 
+    val downloadWarning = uiState.downloadWarning
+    if (downloadWarning != null) {
+        when (downloadWarning) {
+            is DownloadWarning.InsufficientStorage -> {
+                AlertDialog(
+                    onDismissRequest = { viewModel.clearDownloadWarning() },
+                    title = { Text("Insufficient Storage") },
+                    text = { Text("The local AI model requires at least ${downloadWarning.requiredMB}MB of free space, but your device only has ${downloadWarning.availableMB}MB available. Please free up some disk space and try again.") },
+                    confirmButton = {
+                        TextButton(onClick = { viewModel.clearDownloadWarning() }) {
+                            Text("OK")
+                        }
+                    },
+                    shape = RoundedCornerShape(28.dp)
+                )
+            }
+            is DownloadWarning.MobileData -> {
+                AlertDialog(
+                    onDismissRequest = { viewModel.clearDownloadWarning() },
+                    title = { Text("Download on Mobile Data?") },
+                    text = { Text("You are currently on mobile data. Downloading the local AI model (approx. ${downloadWarning.requiredMB}MB) will consume significant data. Do you want to continue?") },
+                    confirmButton = {
+                        TextButton(onClick = { viewModel.downloadModel(force = true) }) {
+                            Text("Download Anyway")
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { viewModel.clearDownloadWarning() }) {
+                            Text("Cancel")
+                        }
+                    },
+                    shape = RoundedCornerShape(28.dp)
+                )
+            }
+        }
+    }
+
     Scaffold(
         snackbarHost = {
             SnackbarHost(
@@ -677,7 +714,7 @@ private fun DownloadModelCard(
                         )
                         .clickable {
                             analyticsHelper.logEvent(AnalyticsConstants.Event.AI_CHAT_MODEL_DOWNLOAD_CLICKED)
-                            viewModel.downloadModel()
+                            viewModel.checkAndDownloadModel()
                         },
                 contentAlignment = Alignment.Center,
             ) {

@@ -12,6 +12,11 @@ import prasad.vennam.moneypilot.feature.ai.domain.AiRepository
 import prasad.vennam.moneypilot.feature.ai.model.*
 import javax.inject.Inject
 
+sealed interface DownloadWarning {
+    data class InsufficientStorage(val requiredMB: Long, val availableMB: Long) : DownloadWarning
+    data class MobileData(val requiredMB: Long) : DownloadWarning
+}
+
 /**
  * UI State for the AI Chat screen.
  */
@@ -22,6 +27,7 @@ data class AiUiState(
     val pendingAction: AiAction? = null,
     val isLocalModelAvailable: Boolean = false,
     val aiMode: Int = prasad.vennam.moneypilot.data.UserPreferences.AiMode.UNDECIDED,
+    val downloadWarning: DownloadWarning? = null,
 )
 
 @HiltViewModel
@@ -45,6 +51,9 @@ class AiViewModel
             viewModelScope.launch { aiRepository.setUserConsent(true) }
         }
 
+        private val _downloadWarning = MutableStateFlow<DownloadWarning?>(null)
+        val downloadWarning: StateFlow<DownloadWarning?> = _downloadWarning.asStateFlow()
+
         // Consolidating multiple flows into a single UI State for better predictability
         val uiState: StateFlow<AiUiState> =
             combine(
@@ -53,7 +62,8 @@ class AiViewModel
                 aiRepository.downloadProgress,
                 _pendingAction,
                 aiRepository.isLocalModelAvailable,
-                aiRepository.aiMode
+                aiRepository.aiMode,
+                _downloadWarning
             ) { args ->
                 @Suppress("UNCHECKED_CAST")
                 AiUiState(
@@ -62,7 +72,8 @@ class AiViewModel
                     downloadProgress = args[2] as Float,
                     pendingAction = args[3] as AiAction?,
                     isLocalModelAvailable = args[4] as Boolean,
-                    aiMode = args[5] as Int
+                    aiMode = args[5] as Int,
+                    downloadWarning = args[6] as DownloadWarning?
                 )
             }.stateIn(
                 scope = viewModelScope,
@@ -129,18 +140,71 @@ class AiViewModel
             viewModelScope.launch {
                 aiRepository.setAiMode(mode)
                 if (mode == prasad.vennam.moneypilot.data.UserPreferences.AiMode.LOCAL) {
-                    downloadModel()
+                    checkAndDownloadModel()
                 }
             }
         }
 
-        fun downloadModel() {
+        fun clearDownloadWarning() {
+            _downloadWarning.value = null
+        }
+
+        fun checkAndDownloadModel() {
+            val destinationDir = context.getExternalFilesDir(null) ?: context.filesDir
+            val usableSpace = destinationDir.usableSpace
+            val isEmu = isEmulator()
+            val requiredSpaceBytes = if (isEmu) 2_000_000_000L else 3_000_000_000L
+
+            if (usableSpace < requiredSpaceBytes) {
+                val requiredMB = requiredSpaceBytes / (1024 * 1024)
+                val availableMB = usableSpace / (1024 * 1024)
+                _downloadWarning.value = DownloadWarning.InsufficientStorage(requiredMB, availableMB)
+                return
+            }
+
+            // Check if connected via mobile data
+            val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
+            val activeNetwork = connectivityManager.activeNetwork
+            val capabilities = connectivityManager.getNetworkCapabilities(activeNetwork)
+            val isWifi = capabilities?.hasTransport(android.net.NetworkCapabilities.TRANSPORT_WIFI) ?: false
+            val isCellular = capabilities?.hasTransport(android.net.NetworkCapabilities.TRANSPORT_CELLULAR) ?: false
+
+            if (isCellular && !isWifi) {
+                val requiredMB = requiredSpaceBytes / (1024 * 1024)
+                _downloadWarning.value = DownloadWarning.MobileData(requiredMB)
+                return
+            }
+
+            downloadModel()
+        }
+
+        fun downloadModel(force: Boolean = false) {
+            if (force) {
+                clearDownloadWarning()
+            }
             // Prevent duplicate triggers
             if (aiRepository.state.value is LlmState.Downloading) return
 
             viewModelScope.launch {
                 aiRepository.downloadModel()
             }
+        }
+
+        private fun isEmulator(): Boolean {
+            val fingerprint = android.os.Build.FINGERPRINT ?: ""
+            val model = android.os.Build.MODEL ?: ""
+            val manufacturer = android.os.Build.MANUFACTURER ?: ""
+            val brand = android.os.Build.BRAND ?: ""
+            val device = android.os.Build.DEVICE ?: ""
+            val product = android.os.Build.PRODUCT ?: ""
+
+            return fingerprint.contains("generic") ||
+                fingerprint.startsWith("unknown") ||
+                model.contains("google_sdk") ||
+                model.contains("sdk_gphone64_arm64") ||
+                manufacturer.contains("google") ||
+                (brand.startsWith("google") && device.startsWith("emu64a")) ||
+                product == "sdk_gphone64_arm64"
         }
 
         fun confirmAction(action: AiAction) {
