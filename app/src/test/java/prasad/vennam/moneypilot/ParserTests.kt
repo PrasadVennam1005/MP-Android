@@ -149,7 +149,7 @@ class ParserTests {
         assertNotNull(action)
         val addExpense = action as AiAction.AddTransaction
         assertEquals(TransactionType.EXPENSE, addExpense.type)
-        assertEquals(500L, addExpense.amount)
+        assertEquals(500.0, addExpense.amount, 0.0)
         assertEquals("Food", addExpense.categoryName)
         assertEquals("Swiggy", addExpense.note)
         assertEquals(0, addExpense.dateOffset)
@@ -164,10 +164,28 @@ class ParserTests {
         assertNotNull(action)
         val addIncome = action as AiAction.AddTransaction
         assertEquals(TransactionType.INCOME, addIncome.type)
-        assertEquals(2500L, addIncome.amount)
+        assertEquals(2500.0, addIncome.amount, 0.0)
         assertEquals("Salary", addIncome.categoryName)
         assertEquals("Internship", addIncome.note)
         assertEquals(-1, addIncome.dateOffset)
+    }
+
+    @Test
+    fun testAiActionParser_parsesCustomPastDates() {
+        val rawResponse1 = "[ACTION:ADD_EXPENSE|amount=300|category=Entertainment|note=Movie|date=3 days ago]"
+        val (action1, _) = AiActionParser.parse(rawResponse1)
+        assertNotNull(action1)
+        assertEquals(-3, (action1 as AiAction.AddTransaction).dateOffset)
+
+        val rawResponse2 = "[ACTION:ADD_EXPENSE|amount=100|category=Food|note=Snacks|date=5]"
+        val (action2, _) = AiActionParser.parse(rawResponse2)
+        assertNotNull(action2)
+        assertEquals(-5, (action2 as AiAction.AddTransaction).dateOffset)
+
+        val rawResponse3 = "[ACTION:ADD_INCOME|amount=1000|category=Bonus|note=Performance|date=now]"
+        val (action3, _) = AiActionParser.parse(rawResponse3)
+        assertNotNull(action3)
+        assertEquals(0, (action3 as AiAction.AddTransaction).dateOffset)
     }
 
     @Test
@@ -180,8 +198,8 @@ class ParserTests {
         val addInvestment = action as AiAction.AddInvestment
         assertEquals("Nifty 50", addInvestment.name)
         assertEquals("Mutual Fund", addInvestment.type)
-        assertEquals(150000L, addInvestment.investedAmount)
-        assertEquals(160000L, addInvestment.currentValue)
+        assertEquals(150000.0, addInvestment.investedAmount, 0.0)
+        assertEquals(160000.0, addInvestment.currentValue, 0.0)
     }
 
     @Test
@@ -193,8 +211,8 @@ class ParserTests {
         assertNotNull(action)
         val addLoan = action as AiAction.AddLoan
         assertEquals("HDFC Home Loan", addLoan.name)
-        assertEquals(5000000L, addLoan.totalAmount)
-        assertEquals(45000L, addLoan.emiAmount)
+        assertEquals(5000000.0, addLoan.totalAmount, 0.0)
+        assertEquals(45000.0, addLoan.emiAmount, 0.0)
         assertEquals(15, addLoan.nextEmiDays)
     }
 
