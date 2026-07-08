@@ -12,6 +12,7 @@ import org.junit.Before
 import org.junit.Test
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.verify
+import prasad.vennam.moneypilot.data.dao.AutopayAlertDao
 import prasad.vennam.moneypilot.data.entity.Subscription
 import prasad.vennam.moneypilot.data.repository.SubscriptionRepository
 import prasad.vennam.moneypilot.data.repository.CategoryRepository
@@ -21,6 +22,7 @@ import org.mockito.Mockito.`when` as whenever
 class SubscriptionViewModelTest {
     private val subscriptionRepository = mock(SubscriptionRepository::class.java)
     private val categoryRepository = mock(CategoryRepository::class.java)
+    private val autopayAlertDao = mock(AutopayAlertDao::class.java)
     private val testDispatcher = UnconfinedTestDispatcher()
 
     @Before
@@ -28,6 +30,7 @@ class SubscriptionViewModelTest {
         Dispatchers.setMain(testDispatcher)
         whenever(subscriptionRepository.allSubscriptions).thenReturn(flowOf(emptyList()))
         whenever(categoryRepository.allCategories).thenReturn(flowOf(emptyList()))
+        whenever(autopayAlertDao.getAllAutopayAlerts()).thenReturn(flowOf(emptyList()))
     }
 
     @After
@@ -38,7 +41,7 @@ class SubscriptionViewModelTest {
     @Test
     fun testSaveSubscriptionNew() =
         runTest {
-            val viewModel = SubscriptionViewModel(subscriptionRepository, categoryRepository)
+            val viewModel = SubscriptionViewModel(subscriptionRepository, categoryRepository, autopayAlertDao)
             val newSubscription =
                 Subscription(
                     id = 0L,
@@ -56,7 +59,7 @@ class SubscriptionViewModelTest {
     @Test
     fun testSaveSubscriptionExisting() =
         runTest {
-            val viewModel = SubscriptionViewModel(subscriptionRepository, categoryRepository)
+            val viewModel = SubscriptionViewModel(subscriptionRepository, categoryRepository, autopayAlertDao)
             val existingSubscription =
                 Subscription(
                     id = 10L,
@@ -74,7 +77,7 @@ class SubscriptionViewModelTest {
     @Test
     fun testDeleteSubscription() =
         runTest {
-            val viewModel = SubscriptionViewModel(subscriptionRepository, categoryRepository)
+            val viewModel = SubscriptionViewModel(subscriptionRepository, categoryRepository, autopayAlertDao)
             val target =
                 Subscription(
                     id = 5L,

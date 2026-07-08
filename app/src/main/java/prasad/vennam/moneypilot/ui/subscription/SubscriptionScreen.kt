@@ -18,6 +18,7 @@ import androidx.compose.material3.adaptive.currentWindowAdaptiveInfoV2
 import androidx.window.core.layout.WindowWidthSizeClass
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -41,6 +42,9 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import prasad.vennam.moneypilot.R
 import prasad.vennam.moneypilot.data.entity.Category
 import prasad.vennam.moneypilot.data.entity.Subscription
+import prasad.vennam.moneypilot.data.entity.AutopayAlert
+import android.content.Intent
+import android.net.Uri
 import prasad.vennam.moneypilot.ui.budget.utils.getCategoryIcon
 import prasad.vennam.moneypilot.ui.viewmodel.SubscriptionViewModel
 import prasad.vennam.moneypilot.util.AnalyticsConstants
@@ -63,7 +67,9 @@ fun SubscriptionScreen(
     TrackScreen(analyticsHelper, AnalyticsConstants.Screen.SUBSCRIPTIONS)
     val subscriptions by viewModel.allSubscriptions.collectAsState()
     val categories by viewModel.allCategories.collectAsState()
+    val autopayAlerts by viewModel.autopayAlerts.collectAsState()
     val currencyCode = LocalCurrencyCode.current
+    var selectedTab by remember { mutableIntStateOf(0) }
 
     val adaptiveInfo = currentWindowAdaptiveInfoV2()
     val isExpanded = adaptiveInfo.windowSizeClass.windowWidthSizeClass == WindowWidthSizeClass.EXPANDED
@@ -115,7 +121,7 @@ fun SubscriptionScreen(
             )
         },
         floatingActionButton = {
-            if (isFabVisible) {
+            if (isFabVisible && selectedTab == 0) {
                 FloatingActionButton(
                     onClick = {
                         selectedSubscriptionForEdit = null
@@ -131,73 +137,120 @@ fun SubscriptionScreen(
         },
         containerColor = MaterialTheme.colorScheme.background,
     ) { padding ->
-        Box(
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .padding(padding),
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
         ) {
-            if (subscriptions.isEmpty()) {
-                EmptySubscriptionsState()
-            } else if (isExpanded) {
-                LazyVerticalGrid(
-                    columns = GridCells.Fixed(2),
-                    state = lazyGridState,
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    items(subscriptions, key = { it.id }) { subscription ->
-                        SubscriptionCard(
-                            subscription = subscription,
-                            category = categories.find { it.id == subscription.categoryId },
-                            currencyCode = currencyCode,
-                            onEdit = {
-                                selectedSubscriptionForEdit = subscription
-                                showFormSheet = true
-                            },
-                            onDelete = {
-                                analyticsHelper.logEvent(
-                                    AnalyticsConstants.Event.SUBSCRIPTION_DELETED,
-                                    mapOf(
-                                        AnalyticsConstants.Param.SUBSCRIPTION_NAME to subscription.name,
-                                        AnalyticsConstants.Param.SUBSCRIPTION_AMOUNT to subscription.amount.toMajorUnit,
-                                    ),
-                                )
-                                viewModel.deleteSubscription(subscription)
-                            },
-                        )
+            TabRow(
+                selectedTabIndex = selectedTab,
+                containerColor = MaterialTheme.colorScheme.background,
+                contentColor = MaterialTheme.colorScheme.primary,
+            ) {
+                Tab(
+                    selected = selectedTab == 0,
+                    onClick = { selectedTab = 0 },
+                    text = { Text(stringResource(R.string.subscriptions), fontWeight = FontWeight.Bold) }
+                )
+                val pendingAutopayCount = autopayAlerts.count { it.status == "PENDING" }
+                Tab(
+                    selected = selectedTab == 1,
+                    onClick = { selectedTab = 1 },
+                    text = {
+                        BadgedBox(
+                            badge = {
+                                if (pendingAutopayCount > 0) {
+                                    Badge(
+                                        containerColor = MaterialTheme.colorScheme.error,
+                                        contentColor = MaterialTheme.colorScheme.onError
+                                    ) {
+                                        Text(pendingAutopayCount.toString())
+                                    }
+                                }
+                            }
+                        ) {
+                            Text("Autopay Alerts", fontWeight = FontWeight.Bold)
+                        }
                     }
-                }
-            } else {
-                LazyColumn(
-                    state = lazyListState,
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    items(subscriptions, key = { it.id }) { subscription ->
-                        SubscriptionCard(
-                            subscription = subscription,
-                            category = categories.find { it.id == subscription.categoryId },
-                            currencyCode = currencyCode,
-                            onEdit = {
-                                selectedSubscriptionForEdit = subscription
-                                showFormSheet = true
-                            },
-                            onDelete = {
-                                analyticsHelper.logEvent(
-                                    AnalyticsConstants.Event.SUBSCRIPTION_DELETED,
-                                    mapOf(
-                                        AnalyticsConstants.Param.SUBSCRIPTION_NAME to subscription.name,
-                                        AnalyticsConstants.Param.SUBSCRIPTION_AMOUNT to subscription.amount.toMajorUnit,
-                                    ),
+                )
+            }
+
+            Box(modifier = Modifier.weight(1f)) {
+                if (selectedTab == 0) {
+                    if (subscriptions.isEmpty()) {
+                        EmptySubscriptionsState()
+                    } else if (isExpanded) {
+                        LazyVerticalGrid(
+                            columns = GridCells.Fixed(2),
+                            state = lazyGridState,
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        ) {
+                            items(subscriptions, key = { it.id }) { subscription ->
+                                SubscriptionCard(
+                                    subscription = subscription,
+                                    category = categories.find { it.id == subscription.categoryId },
+                                    currencyCode = currencyCode,
+                                    onEdit = {
+                                        selectedSubscriptionForEdit = subscription
+                                        showFormSheet = true
+                                    },
+                                    onDelete = {
+                                        analyticsHelper.logEvent(
+                                            AnalyticsConstants.Event.SUBSCRIPTION_DELETED,
+                                            mapOf(
+                                                AnalyticsConstants.Param.SUBSCRIPTION_NAME to subscription.name,
+                                                AnalyticsConstants.Param.SUBSCRIPTION_AMOUNT to subscription.amount.toMajorUnit,
+                                            ),
+                                        )
+                                        viewModel.deleteSubscription(subscription)
+                                    },
                                 )
-                                viewModel.deleteSubscription(subscription)
-                            },
-                        )
+                            }
+                        }
+                    } else {
+                        LazyColumn(
+                            state = lazyListState,
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp),
+                        ) {
+                            items(subscriptions, key = { it.id }) { subscription ->
+                                SubscriptionCard(
+                                    subscription = subscription,
+                                    category = categories.find { it.id == subscription.categoryId },
+                                    currencyCode = currencyCode,
+                                    onEdit = {
+                                        selectedSubscriptionForEdit = subscription
+                                        showFormSheet = true
+                                    },
+                                    onDelete = {
+                                        analyticsHelper.logEvent(
+                                            AnalyticsConstants.Event.SUBSCRIPTION_DELETED,
+                                            mapOf(
+                                                AnalyticsConstants.Param.SUBSCRIPTION_NAME to subscription.name,
+                                                AnalyticsConstants.Param.SUBSCRIPTION_AMOUNT to subscription.amount.toMajorUnit,
+                                            ),
+                                        )
+                                        viewModel.deleteSubscription(subscription)
+                                    },
+                                )
+                            }
+                        }
                     }
+                } else {
+                    AutopayAlertsContent(
+                        autopayAlerts = autopayAlerts,
+                        currencyCode = currencyCode,
+                        onCancelClick = { alert, newStatus ->
+                            viewModel.updateAutopayAlertStatus(alert, newStatus)
+                        },
+                        onDeleteClick = { alert ->
+                            viewModel.deleteAutopayAlert(alert)
+                        }
+                    )
                 }
             }
         }
@@ -633,4 +686,334 @@ fun SubscriptionFormBottomSheet(
             DatePicker(state = datePickerState)
         }
     }
+}
+
+@Composable
+fun AutopayAlertsContent(
+    autopayAlerts: List<AutopayAlert>,
+    currencyCode: String,
+    onCancelClick: (AutopayAlert, String) -> Unit,
+    onDeleteClick: (AutopayAlert) -> Unit
+) {
+    if (autopayAlerts.isEmpty()) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.padding(32.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.NotificationsActive,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.4f),
+                    modifier = Modifier.size(72.dp)
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = "No active autopay alerts found",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "MoneyPilot automatically tracks UPI autopay and bank standing instruction alerts from your incoming notifications and messages.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center
+                )
+            }
+        }
+    } else {
+        var showCancelDialogFor by remember { mutableStateOf<AutopayAlert?>(null) }
+
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            items(autopayAlerts, key = { it.id }) { alert ->
+                AutopayAlertCard(
+                    alert = alert,
+                    currencyCode = currencyCode,
+                    onCancelClick = { showCancelDialogFor = alert },
+                    onDeleteClick = { onDeleteClick(alert) }
+                )
+            }
+        }
+
+        if (showCancelDialogFor != null) {
+            val alert = showCancelDialogFor!!
+            AutopayCancelDialog(
+                alert = alert,
+                onDismiss = { showCancelDialogFor = null },
+                onMarkCancelled = {
+                    onCancelClick(alert, "CANCELLED")
+                    showCancelDialogFor = null
+                }
+            )
+        }
+    }
+}
+
+@Composable
+fun AutopayAlertCard(
+    alert: AutopayAlert,
+    currencyCode: String,
+    onCancelClick: () -> Unit,
+    onDeleteClick: () -> Unit
+) {
+    val formattedAmount = CurrencyFormatter.format(alert.amount, currencyCode)
+    val formattedDate = SimpleDateFormat("dd MMM yyyy", Locale.getDefault()).format(Date(alert.scheduledDate))
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+        )
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = alert.merchant,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "Auto-debit scheduled: $formattedDate",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                Text(
+                    text = formattedAmount,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Black,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Origin App Tag
+                if (alert.paymentApp != null) {
+                    val appColor = when (alert.paymentApp) {
+                        "Google Pay" -> Color(0xFF1A73E8)
+                        "PhonePe" -> Color(0xFF5F259F)
+                        "Paytm" -> Color(0xFF00B9F5)
+                        "BHIM" -> Color(0xFFF37021)
+                        else -> MaterialTheme.colorScheme.secondary
+                    }
+                    Box(
+                        modifier = Modifier
+                            .background(appColor.copy(alpha = 0.15f), RoundedCornerShape(8.dp))
+                            .border(androidx.compose.foundation.BorderStroke(1.dp, appColor.copy(alpha = 0.3f)), RoundedCornerShape(8.dp))
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                    ) {
+                        Text(
+                            text = alert.paymentApp,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = appColor,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .background(MaterialTheme.colorScheme.outline.copy(alpha = 0.1f), RoundedCornerShape(8.dp))
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                    ) {
+                        Text(
+                            text = "Standing Instruction",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
+
+                // Status Badge
+                val (statusText, badgeColor) = when (alert.status) {
+                    "PENDING" -> "Active" to Color(0xFFFFB300)
+                    "CANCELLED" -> "Cancelled" to MaterialTheme.colorScheme.error
+                    else -> "Executed" to MaterialTheme.colorScheme.primary
+                }
+
+                Box(
+                    modifier = Modifier
+                        .background(badgeColor.copy(alpha = 0.15f), RoundedCornerShape(8.dp))
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                ) {
+                    Text(
+                        text = statusText,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = badgeColor,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Divider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(onClick = onDeleteClick) {
+                    Icon(
+                        imageVector = Icons.Rounded.Delete,
+                        contentDescription = "Delete",
+                        tint = MaterialTheme.colorScheme.error.copy(alpha = 0.8f)
+                    )
+                }
+
+                if (alert.status == "PENDING") {
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Button(
+                        onClick = onCancelClick,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.errorContainer,
+                            contentColor = MaterialTheme.colorScheme.onErrorContainer
+                        ),
+                        shape = RoundedCornerShape(12.dp),
+                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.Cancel,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "Cancel Autopay",
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun AutopayCancelDialog(
+    alert: AutopayAlert,
+    onDismiss: () -> Unit,
+    onMarkCancelled: () -> Unit
+) {
+    val context = LocalContext.current
+    val openApp = { packageName: String ->
+        try {
+            val intent = context.packageManager.getLaunchIntentForPackage(packageName)
+            if (intent != null) {
+                context.startActivity(intent)
+            } else {
+                val playIntent = Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=$packageName"))
+                context.startActivity(playIntent)
+            }
+        } catch (e: Exception) {
+            val webIntent = Intent(Intent.ACTION_VIEW, Uri.parse("https://play.google.com/store/apps/details?id=$packageName"))
+            context.startActivity(webIntent)
+        }
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = "Cancel Autopay Mandate",
+                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.titleMedium
+            )
+        },
+        text = {
+            Column {
+                Text(
+                    text = "Autopay mandates are secured by bank/UPI protocols. To revoke this mandate, please manage it within your payment app:",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    // Google Pay shortcut
+                    OutlinedButton(
+                        onClick = { openApp("com.google.android.apps.nbu.paisa.user") },
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(12.dp),
+                        contentPadding = PaddingValues(4.dp)
+                    ) {
+                        Text("Google Pay", style = MaterialTheme.typography.labelSmall, maxLines = 1)
+                    }
+
+                    // PhonePe shortcut
+                    OutlinedButton(
+                        onClick = { openApp("com.phonepe.app") },
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(12.dp),
+                        contentPadding = PaddingValues(4.dp)
+                    ) {
+                        Text("PhonePe", style = MaterialTheme.typography.labelSmall, maxLines = 1)
+                    }
+
+                    // Paytm shortcut
+                    OutlinedButton(
+                        onClick = { openApp("net.one97.paytm") },
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(12.dp),
+                        contentPadding = PaddingValues(4.dp)
+                    ) {
+                        Text("Paytm", style = MaterialTheme.typography.labelSmall, maxLines = 1)
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = "After you revoke it, mark it as revoked below so MoneyPilot stops tracking or counting future debits.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = onMarkCancelled,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.error,
+                    contentColor = MaterialTheme.colorScheme.onError
+                ),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Text("Mark as Revoked")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Dismiss")
+            }
+        }
+    )
 }

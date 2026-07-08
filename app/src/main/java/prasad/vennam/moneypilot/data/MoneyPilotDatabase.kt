@@ -18,7 +18,9 @@ import prasad.vennam.moneypilot.data.dao.PendingTransactionDao
 import prasad.vennam.moneypilot.data.dao.SavingGoalDao
 import prasad.vennam.moneypilot.data.dao.SubscriptionDao
 import prasad.vennam.moneypilot.data.dao.TransactionDao
+import prasad.vennam.moneypilot.data.dao.AutopayAlertDao
 import prasad.vennam.moneypilot.data.entity.BookmarkedArticle
+import prasad.vennam.moneypilot.data.entity.AutopayAlert
 import prasad.vennam.moneypilot.data.entity.BookmarkedFinanceArticle
 import prasad.vennam.moneypilot.data.entity.Budget
 import prasad.vennam.moneypilot.data.entity.Category
@@ -49,8 +51,9 @@ import prasad.vennam.moneypilot.data.entity.Transaction
         BookmarkedFinanceArticle::class,
         Subscription::class,
         SavingGoal::class,
+        AutopayAlert::class,
     ],
-    version = 11,
+    version = 12,
     exportSchema = true,
 )
 @TypeConverters(Converters::class)
@@ -82,6 +85,8 @@ abstract class MoneyPilotDatabase : RoomDatabase() {
     abstract fun subscriptionDao(): SubscriptionDao
 
     abstract fun savingGoalDao(): SavingGoalDao
+
+    abstract fun autopayAlertDao(): AutopayAlertDao
 
     companion object {
         val MIGRATION_1_2 =

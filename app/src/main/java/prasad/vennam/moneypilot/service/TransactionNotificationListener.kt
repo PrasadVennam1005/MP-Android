@@ -11,6 +11,8 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import prasad.vennam.moneypilot.data.entity.PendingTransaction
+import prasad.vennam.moneypilot.data.entity.AutopayAlert
+import prasad.vennam.moneypilot.data.dao.AutopayAlertDao
 import prasad.vennam.moneypilot.data.repository.TransactionRepository
 import prasad.vennam.moneypilot.data.repository.SubscriptionRepository
 import prasad.vennam.moneypilot.util.NotificationParser
@@ -26,6 +28,9 @@ class TransactionNotificationListener : NotificationListenerService() {
 
     @Inject
     lateinit var subscriptionRepository: SubscriptionRepository
+
+    @Inject
+    lateinit var autopayAlertDao: AutopayAlertDao
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
@@ -53,6 +58,29 @@ class TransactionNotificationListener : NotificationListenerService() {
                 "NotificationListener",
                 "Intercepted notification: title='$maskedTitle', body='$maskedBody' from pkg='${sbn.packageName}'",
             )
+        }
+
+        // Check if this is an autopay/mandate alert
+        val autopayParsed = NotificationParser.parseAutopay(title, fullBodyText, sbn.packageName)
+        if (autopayParsed != null) {
+            serviceScope.launch {
+                try {
+                    val alert = AutopayAlert(
+                        merchant = autopayParsed.merchant,
+                        amount = autopayParsed.amount,
+                        scheduledDate = autopayParsed.scheduledDate,
+                        upiMandateId = autopayParsed.upiMandateId,
+                        paymentApp = autopayParsed.paymentApp,
+                        rawMessage = fullBodyText,
+                        timestamp = System.currentTimeMillis()
+                    )
+                    autopayAlertDao.insertAutopayAlert(alert)
+                    Log.d("NotificationListener", "Successfully inserted autopay alert: ${alert.merchant} - ${alert.amount}")
+                } catch (e: Exception) {
+                    Log.e("NotificationListener", "Failed to insert autopay alert", e)
+                }
+            }
+            return // Skip further parsing as it is a scheduled future payment
         }
 
         val parsed = NotificationParser.parse(title, fullBodyText, sbn.packageName) ?: return

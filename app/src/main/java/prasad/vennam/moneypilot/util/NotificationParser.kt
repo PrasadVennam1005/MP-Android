@@ -10,6 +10,14 @@ data class ParsedNotification(
     val bankAccount: String,
 )
 
+data class ParsedAutopay(
+    val amount: Double,
+    val merchant: String,
+    val scheduledDate: Long,
+    val paymentApp: String?,
+    val upiMandateId: String?,
+)
+
 object NotificationParser {
     // Regex for matching amount (e.g., Rs. 500, Rs 500.50, INR 1500, $50, 20.50 USD) - Captured currency prefix
     private val amountPrefixPattern =
@@ -338,5 +346,113 @@ object NotificationParser {
             "com.squareup.cash" -> "Cash App"
             else -> "Bank Notification"
         }
+    }
+
+    fun parseAutopay(
+        sender: String,
+        message: String,
+        packageName: String? = null
+    ): ParsedAutopay? {
+        val lowerText = message.lowercase()
+        // Check if message is an Autopay/Mandate alert
+        val isAutopay = lowerText.contains("autopay") ||
+                lowerText.contains("auto-pay") ||
+                lowerText.contains("mandate") ||
+                lowerText.contains("standing instruction") ||
+                lowerText.contains("scheduled debit") ||
+                lowerText.contains("auto-debit") ||
+                lowerText.contains("auto debit")
+
+        if (!isAutopay) return null
+
+        // 1. Extract Amount
+        var amountVal = 0.0
+        val prefixMatcher = amountPrefixPattern.matcher(message)
+        if (prefixMatcher.find()) {
+            amountVal = prefixMatcher.group(2)?.replace(",", "")?.toDoubleOrNull() ?: 0.0
+        } else {
+            val suffixMatcher = amountSuffixPattern.matcher(message)
+            if (suffixMatcher.find()) {
+                amountVal = suffixMatcher.group(1)?.replace(",", "")?.toDoubleOrNull() ?: 0.0
+            }
+        }
+        if (amountVal <= 0.0) return null
+
+        // 2. Extract Merchant
+        var merchantName = "Autopay Mandate"
+        val forPattern = Pattern.compile("(?i)(?:for|towards|to)\\s+([A-Za-z0-9\\s&*'-]+)")
+        val forMatcher = forPattern.matcher(message)
+        if (forMatcher.find()) {
+            val candidate = forMatcher.group(1) ?: ""
+            // Truncate at common boundaries
+            val cleanedCandidate = candidate
+                .split(Regex("(?i)\\b(?:is|on|scheduled|due|to|revoke|manage|register|setup|created|by|at)\\b"))[0]
+                .trim()
+            if (cleanedCandidate.isNotEmpty()) {
+                merchantName = cleanMerchantName(cleanedCandidate)
+            }
+        }
+
+        // 3. Extract Scheduled Date
+        var scheduledTime = System.currentTimeMillis() + 24 * 60 * 60 * 1000L // Default to 24h from now
+        val datePattern = Pattern.compile("\\b(\\d{1,2})[-/](\\d{1,2}|[A-Za-z]{3})[-/](\\d{2,4})\\b")
+        val dateMatcher = datePattern.matcher(message)
+        if (dateMatcher.find()) {
+            val day = dateMatcher.group(1)?.toIntOrNull() ?: 1
+            val monthStr = dateMatcher.group(2) ?: "1"
+            val yearStr = dateMatcher.group(3) ?: "26"
+
+            val month = when (monthStr.lowercase()) {
+                "jan" -> 0
+                "feb" -> 1
+                "mar" -> 2
+                "apr" -> 3
+                "may" -> 4
+                "jun" -> 5
+                "jul" -> 6
+                "aug" -> 7
+                "sep" -> 8
+                "oct" -> 9
+                "nov" -> 10
+                "dec" -> 11
+                else -> (monthStr.toIntOrNull() ?: 1) - 1
+            }
+
+            var year = yearStr.toIntOrNull() ?: 2026
+            if (year < 100) year += 2000
+
+            val cal = java.util.Calendar.getInstance()
+            cal.set(year, month, day, 10, 0, 0) // Default to 10:00 AM on that day
+            scheduledTime = cal.timeInMillis
+        }
+
+        // 4. Extract UPI Mandate ID
+        var mandateId: String? = null
+        val mandatePattern = Pattern.compile("(?i)(?:mandate|umn|instruction)\\s*(?:id|no|number)?\\s*[:=]?\\s*([a-zA-Z0-9@.-]+)")
+        val mandateMatcher = mandatePattern.matcher(message)
+        if (mandateMatcher.find()) {
+            mandateId = mandateMatcher.group(1)
+        }
+
+        // 5. Extract Payment App
+        var appName: String? = getAppNameFromPackage(packageName)
+        if (appName == "Bank Notification" || appName == "SMS Alert" || appName == null) {
+            val matchedApp = when {
+                lowerText.contains("gpay") || lowerText.contains("google pay") -> "Google Pay"
+                lowerText.contains("phonepe") -> "PhonePe"
+                lowerText.contains("paytm") -> "Paytm"
+                lowerText.contains("bhim") -> "BHIM"
+                else -> null
+            }
+            appName = matchedApp
+        }
+
+        return ParsedAutopay(
+            amount = amountVal,
+            merchant = merchantName,
+            scheduledDate = scheduledTime,
+            paymentApp = appName,
+            upiMandateId = mandateId
+        )
     }
 }

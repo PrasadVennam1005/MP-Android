@@ -11,6 +11,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import prasad.vennam.moneypilot.data.entity.PendingTransaction
+import prasad.vennam.moneypilot.data.entity.AutopayAlert
+import prasad.vennam.moneypilot.data.dao.AutopayAlertDao
 import prasad.vennam.moneypilot.data.repository.TransactionRepository
 import prasad.vennam.moneypilot.util.NotificationParser
 import prasad.vennam.moneypilot.util.toMajorUnit
@@ -20,6 +22,9 @@ import javax.inject.Inject
 class SmsReceiver : BroadcastReceiver() {
     @Inject
     lateinit var repository: TransactionRepository
+
+    @Inject
+    lateinit var autopayAlertDao: AutopayAlertDao
 
     private val receiverScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
@@ -43,6 +48,32 @@ class SmsReceiver : BroadcastReceiver() {
             val maskedSender = sender.take(3) + "..."
             val maskedBody = fullBodyText.take(5) + "...(length=${fullBodyText.length})"
             Log.d("SmsReceiver", "Intercepted SMS: sender='$maskedSender', body='$maskedBody'")
+        }
+
+        // Check if this is an autopay/mandate alert
+        val autopayParsed = NotificationParser.parseAutopay(sender, fullBodyText, null)
+        if (autopayParsed != null) {
+            val pendingResult = goAsync()
+            receiverScope.launch {
+                try {
+                    val alert = AutopayAlert(
+                        merchant = autopayParsed.merchant,
+                        amount = autopayParsed.amount,
+                        scheduledDate = autopayParsed.scheduledDate,
+                        upiMandateId = autopayParsed.upiMandateId,
+                        paymentApp = autopayParsed.paymentApp,
+                        rawMessage = fullBodyText,
+                        timestamp = System.currentTimeMillis()
+                    )
+                    autopayAlertDao.insertAutopayAlert(alert)
+                    Log.d("SmsReceiver", "Successfully inserted autopay alert from SMS: ${alert.merchant} - ${alert.amount}")
+                } catch (e: Exception) {
+                    Log.e("SmsReceiver", "Failed to insert autopay alert from SMS", e)
+                } finally {
+                    pendingResult.finish()
+                }
+            }
+            return // Skip further parsing as it is a scheduled future payment
         }
 
         // Parse utilizing the existing NotificationParser patterns

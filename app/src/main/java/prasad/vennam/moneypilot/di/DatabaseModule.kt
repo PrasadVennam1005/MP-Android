@@ -31,6 +31,7 @@ import prasad.vennam.moneypilot.data.dao.NotificationDao
 import prasad.vennam.moneypilot.data.dao.PendingTransactionDao
 import prasad.vennam.moneypilot.data.dao.SavingGoalDao
 import prasad.vennam.moneypilot.data.dao.SubscriptionDao
+import prasad.vennam.moneypilot.data.dao.AutopayAlertDao
 import prasad.vennam.moneypilot.data.dao.TransactionDao
 import prasad.vennam.moneypilot.data.entity.Category
 import prasad.vennam.moneypilot.data.repository.DataManagementRepository
@@ -181,6 +182,10 @@ object DatabaseModule {
     @Provides
     @Singleton
     fun provideSavingGoalDao(database: MoneyPilotDatabase): SavingGoalDao = database.savingGoalDao()
+
+    @Provides
+    @Singleton
+    fun provideAutopayAlertDao(database: MoneyPilotDatabase): AutopayAlertDao = database.autopayAlertDao()
 
     @Provides
     @Singleton

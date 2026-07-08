@@ -154,4 +154,21 @@ class NotificationParserTest {
 
         assertNull(result) // OTP alerts must be ignored
     }
+
+    @Test
+    fun testParseAutopayAlerts() {
+        val message1 = "Autopay mandate of Rs 199.00 for Netflix is scheduled on 09-Jul-26. To revoke, login to GPay."
+        val parsed1 = NotificationParser.parseAutopay("HDFCBank", message1)
+        assertNotNull(parsed1)
+        assertEquals(199.0, parsed1!!.amount, 0.0)
+        assertEquals("Netflix", parsed1.merchant)
+        assertEquals("Google Pay", parsed1.paymentApp)
+
+        val message2 = "Standing instruction of Rs 1,500.00 to HDFC Life is scheduled on 12-07-26."
+        val parsed2 = NotificationParser.parseAutopay("ICICIBank", message2)
+        assertNotNull(parsed2)
+        assertEquals(1500.0, parsed2!!.amount, 0.0)
+        assertEquals("HDFC Life", parsed2.merchant)
+        assertNull(parsed2.paymentApp)
+    }
 }
