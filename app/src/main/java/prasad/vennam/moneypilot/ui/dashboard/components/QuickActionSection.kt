@@ -3,17 +3,23 @@ package prasad.vennam.moneypilot.ui.dashboard.components
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.unit.sp
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material.icons.automirrored.rounded.Article
@@ -77,14 +83,14 @@ fun QuickActionSection(
         QuickActionData(stringResource(R.string.income), Icons.Rounded.AddCircleOutline, MaterialTheme.colorScheme.secondary, onAddIncome),
         QuickActionData(stringResource(R.string.investment), Icons.Rounded.AccountBalanceWallet, MaterialTheme.colorScheme.primary, onAddInvestment),
         QuickActionData(stringResource(R.string.loans), Icons.Rounded.AccountBalanceWallet, MaterialTheme.colorScheme.tertiary, onAddLoan),
-        QuickActionData(stringResource(R.string.scan), Icons.Rounded.Camera, MaterialTheme.colorScheme.outline, onScanReceipt, isGuest),
-        QuickActionData("CoSplit", Icons.Rounded.Person, Color(0xFF00C853), onNavigateToCoSplit),
+        QuickActionData(stringResource(R.string.scan), Icons.Rounded.Camera, MaterialTheme.colorScheme.outline, onScanReceipt, isGuest, "BETA"),
+        QuickActionData("CoSplit", Icons.Rounded.Person, Color(0xFF00C853), onNavigateToCoSplit, false, "NEW"),
         QuickActionData(stringResource(R.string.emergency_fund), Icons.Rounded.Shield, Color(0xFF067F68), onNavigateToEmergencyFund),
         QuickActionData(stringResource(R.string.news), Icons.AutoMirrored.Rounded.Article, Color(0xFFF57C00), onNavigateToNews),
-        QuickActionData(stringResource(R.string.sandbox), Icons.Rounded.Calculate, Color(0xFF8E24AA), onNavigateToSandbox),
+        QuickActionData(stringResource(R.string.sandbox), Icons.Rounded.Calculate, Color(0xFF8E24AA), onNavigateToSandbox, false, "BETA"),
         QuickActionData(stringResource(R.string.emi_calculator), Icons.Rounded.Calculate, Color(0xFF0288D1), onNavigateToEmiCalculator),
         QuickActionData("Converter", Icons.Rounded.CurrencyExchange, MaterialTheme.colorScheme.primary, onNavigateToCurrencyConverter),
-        QuickActionData(stringResource(R.string.subscriptions), Icons.Rounded.NotificationsActive, Color(0xFFE91E63), onNavigateToSubscriptions)
+        QuickActionData(stringResource(R.string.subscriptions), Icons.Rounded.NotificationsActive, Color(0xFFE91E63), onNavigateToSubscriptions, false, "NEW")
     )
 
     val columns = if (isExpanded) 5 else 3
@@ -106,7 +112,8 @@ fun QuickActionSection(
                         action.color,
                         action.onClick,
                         Modifier.weight(1f),
-                        action.disabled
+                        action.disabled,
+                        action.badgeText
                     )
                 }
                 if (rowActions.size < columns) {
@@ -125,6 +132,7 @@ data class QuickActionData(
     val color: Color,
     val onClick: () -> Unit,
     val disabled: Boolean = false,
+    val badgeText: String? = null,
 )
 
 @Composable
@@ -135,6 +143,7 @@ fun QuickActionButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     disabled: Boolean = false,
+    badgeText: String? = null,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
@@ -148,40 +157,77 @@ fun QuickActionButton(
         label = "QuickActionButtonPressedScale",
     )
 
-    OutlinedCard(
-        onClick = if (disabled) ({}) else onClick,
-        modifier =
-            modifier
-                .height(90.dp)
-                .graphicsLayer {
-                    alpha = if (disabled) 0.5f else 1f
-                    scaleX = scale
-                    scaleY = scale
-                },
-        shape = MaterialTheme.shapes.large,
-        border =
-            CardDefaults
-                .outlinedCardBorder()
-                .copy(brush = Brush.linearGradient(listOf(color.copy(alpha = 0.5f), color))),
-        interactionSource = interactionSource,
-    ) {
-        Column(
+    Box(modifier = modifier) {
+        OutlinedCard(
+            onClick = if (disabled) ({}) else onClick,
             modifier =
                 Modifier
-                    .fillMaxSize()
-                    .padding(8.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
+                    .fillMaxWidth()
+                    .height(90.dp)
+                    .graphicsLayer {
+                        alpha = if (disabled) 0.5f else 1f
+                        scaleX = scale
+                        scaleY = scale
+                    },
+            shape = MaterialTheme.shapes.large,
+            border =
+                CardDefaults
+                    .outlinedCardBorder()
+                    .copy(brush = Brush.linearGradient(listOf(color.copy(alpha = 0.5f), color))),
+            interactionSource = interactionSource,
         ) {
-            Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(24.dp))
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                label,
-                style = MaterialTheme.typography.labelMedium,
-                textAlign = TextAlign.Center,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
+            Column(
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .padding(8.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
+            ) {
+                Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(24.dp))
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    label,
+                    style = MaterialTheme.typography.labelMedium,
+                    textAlign = TextAlign.Center,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+
+        // Draw the badge overlay floating at the top right corner of the button
+        // with a surface-colored border so it overlaps the card curves cleanly.
+        if (badgeText != null && !disabled) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .offset(x = 4.dp, y = (-4).dp)
+                    .border(
+                        width = 1.5.dp,
+                        color = MaterialTheme.colorScheme.surface,
+                        shape = androidx.compose.foundation.shape.CircleShape
+                    )
+                    .background(
+                        color = when (badgeText.uppercase()) {
+                            "NEW" -> Color(0xFF2563EB) // Primary Blue
+                            "BETA" -> Color(0xFF10B981) // Emerald Green
+                            else -> MaterialTheme.colorScheme.secondary
+                        },
+                        shape = androidx.compose.foundation.shape.CircleShape
+                    )
+                    .padding(horizontal = 6.dp, vertical = 2.dp)
+            ) {
+                Text(
+                    text = badgeText,
+                    color = Color.White,
+                    style = MaterialTheme.typography.labelSmall.copy(
+                        fontSize = 8.sp,
+                        fontWeight = FontWeight.Bold
+                    ),
+                    maxLines = 1
+                )
+            }
         }
     }
 }
