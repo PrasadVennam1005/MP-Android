@@ -7,8 +7,8 @@ import org.junit.Test
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.`when` as whenever
 import prasad.vennam.moneypilot.data.UserPreferences
+import prasad.vennam.moneypilot.domain.usecase.*
 import prasad.vennam.moneypilot.feature.cosplit.data.model.CoSplitGroup
-import prasad.vennam.moneypilot.feature.cosplit.data.repository.CoSplitRepository
 import prasad.vennam.moneypilot.feature.cosplit.ui.CoSplitViewModel
 import prasad.vennam.moneypilot.feature.cosplit.util.CoSplitAiHelper
 
@@ -18,10 +18,41 @@ class CoSplitTests {
     fun testDebtSimplification_calculatesCorrectRoutes() {
         val mockPrefs = mock(UserPreferences::class.java)
         whenever(mockPrefs.userData).thenReturn(flowOf(null))
-        val mockRepo = mock(CoSplitRepository::class.java)
+        whenever(mockPrefs.isPremium).thenReturn(flowOf(false))
         val mockAi = mock(CoSplitAiHelper::class.java)
+        
+        // Mock all use cases
+        val getGroupsUseCase = mock(GetCoSplitGroupsUseCase::class.java)
+        val getGroupUseCase = mock(GetCoSplitGroupUseCase::class.java)
+        val createCoSplitGroupUseCase = mock(CreateCoSplitGroupUseCase::class.java)
+        val joinCoSplitGroupUseCase = mock(JoinCoSplitGroupUseCase::class.java)
+        val deleteCoSplitGroupUseCase = mock(DeleteCoSplitGroupUseCase::class.java)
+        val updateCoSplitGroupMembersUseCase = mock(UpdateCoSplitGroupMembersUseCase::class.java)
+        val getExpensesUseCase = mock(GetCoSplitExpensesUseCase::class.java)
+        val addExpenseUseCase = mock(AddCoSplitExpenseUseCase::class.java)
+        val deleteExpenseUseCase = mock(DeleteCoSplitExpenseUseCase::class.java)
+        val settleUpUseCase = mock(SettleCoSplitUpUseCase::class.java)
+        val getUserUpiIdUseCase = mock(GetCoSplitUserUpiIdUseCase::class.java)
+        val saveUserUpiIdUseCase = mock(SaveCoSplitUserUpiIdUseCase::class.java)
+        val getUserProfileUseCase = mock(GetCoSplitUserProfileUseCase::class.java)
 
-        val viewModel = CoSplitViewModel(mockPrefs, mockRepo, mockAi)
+        val viewModel = CoSplitViewModel(
+            userPreferences = mockPrefs,
+            getGroupsUseCase = getGroupsUseCase,
+            getGroupUseCase = getGroupUseCase,
+            createCoSplitGroupUseCase = createCoSplitGroupUseCase,
+            joinCoSplitGroupUseCase = joinCoSplitGroupUseCase,
+            deleteCoSplitGroupUseCase = deleteCoSplitGroupUseCase,
+            updateCoSplitGroupMembersUseCase = updateCoSplitGroupMembersUseCase,
+            getExpensesUseCase = getExpensesUseCase,
+            addExpenseUseCase = addExpenseUseCase,
+            deleteExpenseUseCase = deleteExpenseUseCase,
+            settleUpUseCase = settleUpUseCase,
+            getUserUpiIdUseCase = getUserUpiIdUseCase,
+            saveUserUpiIdUseCase = saveUserUpiIdUseCase,
+            getUserProfileUseCase = getUserProfileUseCase,
+            aiHelper = mockAi
+        )
 
         // Case 1: Simple settlement where Alice owes Bob 10
         val balances1 = mapOf(
@@ -30,7 +61,7 @@ class CoSplitTests {
         )
         val routes1 = viewModel.generateSimplifiedSettlements(balances1)
         assertEquals(1, routes1.size)
-        assertEquals("alice@gmail.com pays bob@gmail.com ₹10.00", routes1[0])
+        assertEquals("alice@gmail.com pays bob@gmail.com ₹10.00", routes1[0].displayText)
 
         // Case 2: Three-way debt simplification
         // Alice owes Bob 20 (net balance Alice: -20, Bob: +20)
@@ -45,8 +76,8 @@ class CoSplitTests {
         )
         val routes2 = viewModel.generateSimplifiedSettlements(balances2)
         assertEquals(2, routes2.size)
-        assertTrue(routes2.contains("alice@gmail.com pays bob@gmail.com ₹10.00"))
-        assertTrue(routes2.contains("charlie@gmail.com pays bob@gmail.com ₹10.00"))
+        assertTrue(routes2.any { it.displayText == "alice@gmail.com pays bob@gmail.com ₹10.00" })
+        assertTrue(routes2.any { it.displayText == "charlie@gmail.com pays bob@gmail.com ₹10.00" })
     }
 
     @Test

@@ -37,6 +37,8 @@ import prasad.vennam.moneypilot.util.AnalyticsHelper
 import prasad.vennam.moneypilot.util.TrackScreen
 import prasad.vennam.moneypilot.ui.components.AdBannerView
 import kotlinx.coroutines.launch
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTag
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -487,8 +489,12 @@ fun CoSplitGroupDetailScreen(
     }
 
     if (showSettleDialog) {
+        val firstRoute = settlements.firstOrNull()
         SettleUpDialog(
             members = group!!.members,
+            initialPayer = firstRoute?.debtorEmail ?: group!!.members.firstOrNull() ?: "",
+            initialReceiver = firstRoute?.creditorEmail ?: group!!.members.getOrNull(1) ?: "",
+            initialAmount = if (firstRoute != null) String.format("%.2f", firstRoute.amount) else "",
             onDismiss = { showSettleDialog = false },
             onSettle = { payer, receiver, amount ->
                 viewModel.settleUp(payer, receiver, amount) { success ->
@@ -910,12 +916,15 @@ fun ExpenseItem(
 @Composable
 fun SettleUpDialog(
     members: List<String>,
+    initialPayer: String = members.firstOrNull() ?: "",
+    initialReceiver: String = members.getOrNull(1) ?: "",
+    initialAmount: String = "",
     onDismiss: () -> Unit,
     onSettle: (String, String, Double) -> Unit
 ) {
-    var payer by remember { mutableStateOf(members.firstOrNull() ?: "") }
-    var receiver by remember { mutableStateOf(members.getOrNull(1) ?: "") }
-    var amountText by remember { mutableStateOf("") }
+    var payer by remember { mutableStateOf(initialPayer) }
+    var receiver by remember { mutableStateOf(if (initialReceiver.isNotBlank()) initialReceiver else members.firstOrNull { it != initialPayer } ?: "") }
+    var amountText by remember { mutableStateOf(initialAmount) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -947,7 +956,7 @@ fun SettleUpDialog(
                     onValueChange = { amountText = it },
                     label = { Text("Amount (₹)") },
                     shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth().semantics { testTag = "settle_amount_field" }
                 )
             }
         },
@@ -959,7 +968,7 @@ fun SettleUpDialog(
                         onSettle(payer, receiver, amount)
                     }
                 },
-                enabled = amountText.toDoubleOrNull() != null,
+                enabled = (amountText.toDoubleOrNull() ?: 0.0) > 0.0,
                 shape = RoundedCornerShape(10.dp)
             ) {
                 Text("Confirm")

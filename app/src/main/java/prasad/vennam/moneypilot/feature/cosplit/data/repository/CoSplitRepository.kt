@@ -7,6 +7,8 @@ import prasad.vennam.moneypilot.feature.cosplit.data.model.CoSplitExpense
 interface CoSplitRepository {
     fun getGroups(userEmail: String): Flow<List<CoSplitGroup>>
     
+    fun getGroup(groupId: String): Flow<CoSplitGroup?>
+    
     suspend fun createGroup(
         name: String,
         members: List<String>,

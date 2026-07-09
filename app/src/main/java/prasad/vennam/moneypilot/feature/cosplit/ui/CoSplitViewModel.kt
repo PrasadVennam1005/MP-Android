@@ -13,13 +13,26 @@ import prasad.vennam.moneypilot.feature.cosplit.data.repository.CoSplitRepositor
 import prasad.vennam.moneypilot.feature.cosplit.util.AiParsedSplit
 import prasad.vennam.moneypilot.feature.cosplit.util.AiReceiptLineItem
 import prasad.vennam.moneypilot.feature.cosplit.util.CoSplitAiHelper
+import prasad.vennam.moneypilot.domain.usecase.*
 import javax.inject.Inject
 
 @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class CoSplitViewModel @Inject constructor(
     private val userPreferences: UserPreferences,
-    private val repository: CoSplitRepository,
+    private val getGroupsUseCase: GetCoSplitGroupsUseCase,
+    private val getGroupUseCase: GetCoSplitGroupUseCase,
+    private val createCoSplitGroupUseCase: CreateCoSplitGroupUseCase,
+    private val joinCoSplitGroupUseCase: JoinCoSplitGroupUseCase,
+    private val deleteCoSplitGroupUseCase: DeleteCoSplitGroupUseCase,
+    private val updateCoSplitGroupMembersUseCase: UpdateCoSplitGroupMembersUseCase,
+    private val getExpensesUseCase: GetCoSplitExpensesUseCase,
+    private val addExpenseUseCase: AddCoSplitExpenseUseCase,
+    private val deleteExpenseUseCase: DeleteCoSplitExpenseUseCase,
+    private val settleUpUseCase: SettleCoSplitUpUseCase,
+    private val getUserUpiIdUseCase: GetCoSplitUserUpiIdUseCase,
+    private val saveUserUpiIdUseCase: SaveCoSplitUserUpiIdUseCase,
+    private val getUserProfileUseCase: GetCoSplitUserProfileUseCase,
     private val aiHelper: CoSplitAiHelper
 ) : ViewModel() {
 
@@ -47,15 +60,15 @@ class CoSplitViewModel @Inject constructor(
         initialValue = false
     )
 
-    private val _selectedGroup = MutableStateFlow<CoSplitGroup?>(null)
-    val selectedGroup: StateFlow<CoSplitGroup?> = _selectedGroup.asStateFlow()
+    private val _selectedGroupId = MutableStateFlow<String?>(null)
+    val selectedGroupId: StateFlow<String?> = _selectedGroupId.asStateFlow()
 
     val groups: StateFlow<List<CoSplitGroup>> = userEmail
         .flatMapLatest { email ->
             if (email.isBlank() || email == "guest@moneypilot.app") {
                 flowOf(emptyList())
             } else {
-                repository.getGroups(email)
+                getGroupsUseCase(email)
                     .catch { e ->
                         _error.emit("Database error: ${e.message}")
                         emit(emptyList())
@@ -68,12 +81,30 @@ class CoSplitViewModel @Inject constructor(
             initialValue = emptyList()
         )
 
-    val expenses: StateFlow<List<CoSplitExpense>> = _selectedGroup
+    val selectedGroup: StateFlow<CoSplitGroup?> = _selectedGroupId
+        .flatMapLatest { groupId ->
+            if (groupId == null) {
+                flowOf(null)
+            } else {
+                getGroupUseCase(groupId)
+                    .catch { e ->
+                        _error.emit("Database error: ${e.message}")
+                        emit(null)
+                    }
+            }
+        }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = null
+        )
+
+    val expenses: StateFlow<List<CoSplitExpense>> = selectedGroup
         .flatMapLatest { group ->
             if (group == null) {
                 flowOf(emptyList())
             } else {
-                repository.getExpenses(group.id)
+                getExpensesUseCase(group.id)
                     .catch { e ->
                         _error.emit("Database error: ${e.message}")
                         emit(emptyList())
@@ -86,7 +117,7 @@ class CoSplitViewModel @Inject constructor(
             initialValue = emptyList()
         )
 
-    val simplifiedSettlements: StateFlow<List<CoSplitSettlementRoute>> = _selectedGroup
+    val simplifiedSettlements: StateFlow<List<CoSplitSettlementRoute>> = selectedGroup
         .map { group ->
             if (group == null) emptyList() else generateSimplifiedSettlements(group.balances, group.memberNames)
         }
@@ -106,27 +137,12 @@ class CoSplitViewModel @Inject constructor(
     val error = _error.asSharedFlow()
 
     fun selectGroup(group: CoSplitGroup?) {
-        _selectedGroup.value = group
+        _selectedGroupId.value = group?.id
         _aiSettlementExplanation.value = ""
     }
 
     fun selectGroupById(groupId: String) {
-        val group = groups.value.find { it.id == groupId }
-        if (group != null) {
-            _selectedGroup.value = group
-        } else {
-            viewModelScope.launch {
-                groups.firstOrNull { list ->
-                    val found = list.find { it.id == groupId }
-                    if (found != null) {
-                        _selectedGroup.value = found
-                        true
-                    } else {
-                        false
-                    }
-                }
-            }
-        }
+        _selectedGroupId.value = groupId
     }
 
     fun createGroup(name: String, members: List<String>, memberNames: Map<String, String>, onResult: (Boolean) -> Unit) {
@@ -138,7 +154,7 @@ class CoSplitViewModel @Inject constructor(
                 onResult(false)
                 return@launch
             }
-            val result = repository.createGroup(name, members, memberNames, id, email)
+            val result = createCoSplitGroupUseCase(name, members, memberNames, id, email)
             if (result.isFailure) {
                 _error.emit(result.exceptionOrNull()?.message ?: "Failed to create group")
             }
@@ -155,14 +171,14 @@ class CoSplitViewModel @Inject constructor(
         onResult: (Boolean) -> Unit
     ) {
         viewModelScope.launch {
-            val group = _selectedGroup.value
+            val group = selectedGroup.value
             val id = userId.value
             if (group == null) {
                 _error.emit("No group selected")
                 onResult(false)
                 return@launch
             }
-            val result = repository.addExpense(
+            val result = addExpenseUseCase(
                 groupId = group.id,
                 description = description,
                 amount = amount,
@@ -180,8 +196,8 @@ class CoSplitViewModel @Inject constructor(
 
     fun deleteExpense(expenseId: String) {
         viewModelScope.launch {
-            val group = _selectedGroup.value ?: return@launch
-            val result = repository.deleteExpense(group.id, expenseId)
+            val group = selectedGroup.value ?: return@launch
+            val result = deleteExpenseUseCase(group.id, expenseId)
             if (result.isFailure) {
                 _error.emit(result.exceptionOrNull()?.message ?: "Failed to delete expense")
             }
@@ -190,9 +206,9 @@ class CoSplitViewModel @Inject constructor(
 
     fun settleUp(payerEmail: String, receiverEmail: String, amount: Double, onResult: (Boolean) -> Unit) {
         viewModelScope.launch {
-            val group = _selectedGroup.value ?: return@launch
+            val group = selectedGroup.value ?: return@launch
             val id = userId.value
-            val result = repository.settleUp(group.id, payerEmail, receiverEmail, amount, id)
+            val result = settleUpUseCase(group.id, payerEmail, receiverEmail, amount, id)
             if (result.isFailure) {
                 _error.emit(result.exceptionOrNull()?.message ?: "Failed to settle up")
             }
@@ -201,7 +217,7 @@ class CoSplitViewModel @Inject constructor(
     }
 
     fun parseSplitCommand(commandText: String, onParsed: (AiParsedSplit?) -> Unit) {
-        val group = _selectedGroup.value ?: return
+        val group = selectedGroup.value ?: return
         val currentEmail = userEmail.value
         viewModelScope.launch {
             _isAiLoading.value = true
@@ -237,7 +253,7 @@ class CoSplitViewModel @Inject constructor(
                 onResult(false)
                 return@launch
             }
-            val result = repository.joinGroup(groupId, email)
+            val result = joinCoSplitGroupUseCase(groupId, email)
             if (result.isFailure) {
                 _error.emit(result.exceptionOrNull()?.message ?: "Failed to join group")
             }
@@ -247,12 +263,12 @@ class CoSplitViewModel @Inject constructor(
 
     fun deleteGroup(groupId: String, onResult: (Boolean) -> Unit) {
         viewModelScope.launch {
-            val result = repository.deleteGroup(groupId)
+            val result = deleteCoSplitGroupUseCase(groupId)
             if (result.isFailure) {
                 _error.emit(result.exceptionOrNull()?.message ?: "Failed to delete group")
             } else {
-                if (_selectedGroup.value?.id == groupId) {
-                    _selectedGroup.value = null
+                if (_selectedGroupId.value == groupId) {
+                    _selectedGroupId.value = null
                 }
             }
             onResult(result.isSuccess)
@@ -261,7 +277,7 @@ class CoSplitViewModel @Inject constructor(
 
     fun updateGroupMembers(groupId: String, members: List<String>, memberNames: Map<String, String>, onResult: (Boolean) -> Unit) {
         viewModelScope.launch {
-            val result = repository.updateGroupMembers(groupId, members, memberNames)
+            val result = updateCoSplitGroupMembersUseCase(groupId, members, memberNames)
             if (result.isFailure) {
                 _error.emit(result.exceptionOrNull()?.message ?: "Failed to update members")
             }
@@ -270,16 +286,16 @@ class CoSplitViewModel @Inject constructor(
     }
 
     suspend fun getUserProfile(email: String): String? {
-        return repository.getUserProfile(email)
+        return getUserProfileUseCase(email)
     }
 
     suspend fun getUserUpiId(email: String): String? {
-        return repository.getUserUpiId(email)
+        return getUserUpiIdUseCase(email)
     }
 
     fun saveUserUpiId(email: String, upiId: String, onResult: (Boolean) -> Unit = {}) {
         viewModelScope.launch {
-            val result = repository.saveUserUpiId(email, upiId)
+            val result = saveUserUpiIdUseCase(email, upiId)
             onResult(result.isSuccess)
         }
     }

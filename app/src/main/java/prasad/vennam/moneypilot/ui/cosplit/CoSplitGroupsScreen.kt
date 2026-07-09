@@ -104,7 +104,8 @@ fun CoSplitGroupsScreen(
                         "CoSplit is not available for Guest accounts.",
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 18.sp,
-                        color = MaterialTheme.colorScheme.onBackground
+                        color = MaterialTheme.colorScheme.onBackground,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(

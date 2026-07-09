@@ -175,11 +175,9 @@ class CoSplitE2eTest {
                 composeTestRule.onAllNodes(hasText("Record Settlement")).fetchSemanticsNodes().isNotEmpty()
             }
             
-            // Input settlement amount - target the editable text field inside the dialog
-            composeTestRule.onNode(hasSetTextAction() and hasAnyAncestor(hasText("Record Settlement"))).performTextInput("50")
-            androidx.test.espresso.Espresso.closeSoftKeyboard()
-            
-            // Wait for Confirm button to be enabled (amount must be parseable as double)
+            // The dialog is pre-seeded with the correct payer (Friend One), receiver (Test Pilot),
+            // and amount (50.00) from the first settlement route — no manual input needed.
+            // Wait for Confirm button to be enabled (amount is pre-seeded and > 0)
             composeTestRule.waitUntil(timeoutMillis = 5000) {
                 composeTestRule.onAllNodes(hasText("Confirm") and isEnabled()).fetchSemanticsNodes().isNotEmpty()
             }

@@ -15,9 +15,14 @@ service cloud.firestore {
 
     // CoSplit Groups Collection
     match /cosplit_groups/{groupId} {
-      allow read: if isAuthenticated() && (request.auth.token.email in resource.data.members);
+      allow read: if isAuthenticated();
       allow create: if isAuthenticated();
-      allow update: if isAuthenticated() && (request.auth.token.email in resource.data.members);
+      allow update: if isAuthenticated() && (
+        (request.auth.token.email in resource.data.members) || 
+        (request.auth.token.email in request.resource.data.members && 
+         request.resource.data.members.size() == resource.data.members.size() + 1 &&
+         request.resource.data.balances[request.auth.token.email] == 0.0)
+      );
       allow delete: if isAuthenticated() && resource.data.createdById == request.auth.uid;
 
       // Expenses Subcollection
