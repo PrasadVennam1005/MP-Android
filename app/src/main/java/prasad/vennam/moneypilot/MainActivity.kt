@@ -3,6 +3,9 @@ package prasad.vennam.moneypilot
 import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -11,6 +14,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.AccountBalance
+import androidx.compose.material.icons.outlined.AccountBalanceWallet
+import androidx.compose.material.icons.outlined.BarChart
+import androidx.compose.material.icons.outlined.Dashboard
+import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.rounded.AccountBalance
 import androidx.compose.material.icons.rounded.AccountBalanceWallet
 import androidx.compose.material.icons.rounded.BarChart
@@ -20,8 +28,11 @@ import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.NavigationBarItemDefaults
+import androidx.compose.material3.NavigationRailItemDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfoV2
+import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteDefaults
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffoldDefaults
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteType
@@ -36,8 +47,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.fragment.app.FragmentActivity
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation3.runtime.rememberNavBackStack
@@ -109,7 +123,7 @@ class MainActivity : FragmentActivity() {
 
         setContent {
             val mainViewModel: MainViewModel = hiltViewModel()
-            
+
             // Handle incoming deep link or notification redirect from initial intent
             LaunchedEffect(Unit) {
                 intent?.let { intent ->
@@ -349,13 +363,68 @@ fun MoneyPilotApp(
     CompositionLocalProvider(LocalCurrencyCode provides currencyCode) {
         val showNavigation =
             isLoggedIn &&
-                (
-                    currentDestination is Destination.Dashboard ||
-                        currentDestination is Destination.History ||
-                        currentDestination is Destination.Loans ||
-                        currentDestination is Destination.Investments ||
-                        currentDestination is Destination.Reports
+                    (
+                            currentDestination is Destination.Dashboard ||
+                                    currentDestination is Destination.History ||
+                                    currentDestination is Destination.Loans ||
+                                    currentDestination is Destination.Investments ||
+                                    currentDestination is Destination.Reports
+                            )
+        val suiteItemColors = if (showNavigation) {
+            NavigationSuiteDefaults.itemColors(
+                navigationBarItemColors = NavigationBarItemDefaults.colors(
+                    selectedIconColor = MaterialTheme.colorScheme.primary,
+                    selectedTextColor = MaterialTheme.colorScheme.primary,
+                    indicatorColor = Color.Transparent,
+                    unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                    unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                ),
+                navigationRailItemColors = NavigationRailItemDefaults.colors(
+                    selectedIconColor = MaterialTheme.colorScheme.primary,
+                    selectedTextColor = MaterialTheme.colorScheme.primary,
+                    indicatorColor = Color.Transparent,
+                    unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                    unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                 )
+            )
+        } else {
+            null
+        }
+
+        val isDashboardSelected = showNavigation && currentDestination is Destination.Dashboard
+        val dashboardScale by animateFloatAsState(
+            targetValue = if (isDashboardSelected) 1.15f else 1.0f,
+            animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
+            label = "DashboardScale"
+        )
+
+        val isHistorySelected = showNavigation && currentDestination is Destination.History
+        val historyScale by animateFloatAsState(
+            targetValue = if (isHistorySelected) 1.15f else 1.0f,
+            animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
+            label = "HistoryScale"
+        )
+
+        val isLoansSelected = showNavigation && currentDestination is Destination.Loans
+        val loansScale by animateFloatAsState(
+            targetValue = if (isLoansSelected) 1.15f else 1.0f,
+            animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
+            label = "LoansScale"
+        )
+
+        val isInvestmentsSelected = showNavigation && currentDestination is Destination.Investments
+        val investmentsScale by animateFloatAsState(
+            targetValue = if (isInvestmentsSelected) 1.15f else 1.0f,
+            animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
+            label = "InvestmentsScale"
+        )
+
+        val isReportsSelected = showNavigation && currentDestination is Destination.Reports
+        val reportsScale by animateFloatAsState(
+            targetValue = if (isReportsSelected) 1.15f else 1.0f,
+            animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
+            label = "ReportsScale"
+        )
 
         NavigationSuiteScaffold(
             layoutType =
@@ -365,72 +434,131 @@ fun MoneyPilotApp(
                     NavigationSuiteType.None
                 },
             containerColor = MaterialTheme.colorScheme.background,
+            navigationSuiteColors = NavigationSuiteDefaults.colors(
+                navigationBarContainerColor = MaterialTheme.colorScheme.surface,
+                navigationRailContainerColor = MaterialTheme.colorScheme.surface,
+            ),
             navigationSuiteItems = {
-                if (showNavigation) {
+                if (showNavigation && suiteItemColors != null) {
                     item(
-                        selected = currentDestination is Destination.Dashboard,
+                        selected = isDashboardSelected,
                         onClick = {
                             backStack.clear()
                             backStack.add(Destination.Dashboard)
                         },
-                        icon = { Icon(Icons.Rounded.Dashboard, contentDescription = stringResource(R.string.dashboard)) },
-                        label = { Text(stringResource(R.string.dashboard)) },
+                        icon = {
+                            Icon(
+                                imageVector = if (isDashboardSelected) Icons.Rounded.Dashboard else Icons.Outlined.Dashboard,
+                                contentDescription = stringResource(R.string.dashboard),
+                                modifier = Modifier.scale(dashboardScale)
+                            )
+                        },
+                        label = {
+                            Text(
+                                text = stringResource(R.string.dashboard),
+                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                                maxLines = 1,
+                                softWrap = false
+                            )
+                        },
                         alwaysShowLabel = currentDestination is Destination.Dashboard,
+                        colors = suiteItemColors,
                     )
                     item(
-                        selected = currentDestination is Destination.History,
+                        selected = isHistorySelected,
                         onClick = {
                             backStack.clear()
                             backStack.add(Destination.History)
                         },
                         icon = {
                             Icon(
-                                Icons.Rounded.History,
+                                imageVector = if (isHistorySelected) Icons.Rounded.History else Icons.Outlined.History,
                                 contentDescription = stringResource(R.string.transactions),
+                                modifier = Modifier.scale(historyScale)
                             )
                         },
-                        label = { Text(stringResource(R.string.transactions)) },
+                        label = {
+                            Text(
+                                text = stringResource(R.string.transactions),
+                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                                maxLines = 1,
+                                softWrap = false
+                            )
+                        },
                         alwaysShowLabel = currentDestination is Destination.History,
+                        colors = suiteItemColors,
                     )
                     item(
-                        selected = currentDestination is Destination.Loans,
+                        selected = isLoansSelected,
                         onClick = {
                             backStack.clear()
                             backStack.add(Destination.Loans())
                         },
                         icon = {
                             Icon(
-                                Icons.Rounded.AccountBalance,
+                                imageVector = if (isLoansSelected) Icons.Rounded.AccountBalance else Icons.Outlined.AccountBalance,
                                 contentDescription = stringResource(R.string.loans),
+                                modifier = Modifier.scale(loansScale)
                             )
                         },
-                        label = { Text(stringResource(R.string.loans)) },
+                        label = {
+                            Text(
+                                text = stringResource(R.string.loans),
+                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                                maxLines = 1,
+                                softWrap = false
+                            )
+                        },
                         alwaysShowLabel = currentDestination is Destination.Loans,
+                        colors = suiteItemColors,
                     )
                     item(
-                        selected = currentDestination is Destination.Investments,
+                        selected = isInvestmentsSelected,
                         onClick = {
                             backStack.clear()
                             backStack.add(Destination.Investments)
                         },
                         icon = {
                             Icon(
-                                Icons.Rounded.AccountBalanceWallet,
+                                imageVector = if (isInvestmentsSelected) Icons.Rounded.AccountBalanceWallet else Icons.Outlined.AccountBalanceWallet,
                                 contentDescription = stringResource(R.string.investments),
+                                modifier = Modifier.scale(investmentsScale)
                             )
                         },
-                        label = { Text(stringResource(R.string.investments)) },
+                        label = {
+                            Text(
+                                text = stringResource(R.string.investments),
+                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                                maxLines = 1,
+                                softWrap = false
+                            )
+                        },
                         alwaysShowLabel = currentDestination is Destination.Investments,
+                        colors = suiteItemColors,
                     )
                     item(
-                        selected = currentDestination is Destination.Reports,
+                        selected = isReportsSelected,
                         onClick = {
                             backStack.clear()
                             backStack.add(Destination.Reports)
                         },
-                        icon = { Icon(Icons.Rounded.BarChart, contentDescription = stringResource(R.string.reports)) },
-                        label = { Text(stringResource(R.string.reports)) },
+                        icon = {
+                            Icon(
+                                imageVector = if (isReportsSelected) Icons.Rounded.BarChart else Icons.Outlined.BarChart,
+                                contentDescription = stringResource(R.string.reports),
+                                modifier = Modifier.scale(reportsScale)
+                            )
+                        },
+                        label = {
+                            Text(
+                                text = stringResource(R.string.reports),
+                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                                maxLines = 1,
+                                softWrap = false
+                            )
+                        },
                         alwaysShowLabel = currentDestination is Destination.Reports,
+                        colors = suiteItemColors,
                     )
                 }
             },

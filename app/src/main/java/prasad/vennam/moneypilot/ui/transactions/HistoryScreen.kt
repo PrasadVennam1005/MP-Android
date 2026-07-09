@@ -32,6 +32,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Category
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.FilterList
@@ -168,6 +169,7 @@ fun HistoryScreen(
     val filteredTransactions =
         remember(transactions, searchQuery, selectedCategoryId, selectedPaymentMode, activeType, categories) {
             val categoryMap = categories.associateBy { it.id }
+            android.util.Log.d("HistoryFilter", "All categories: ${categories.map { "${it.name}(id=${it.id}, isExpense=${it.isExpense})" }}")
             val query = searchQuery.trim().lowercase(java.util.Locale.getDefault())
             
             transactions.filter { transaction ->
@@ -190,6 +192,13 @@ fun HistoryScreen(
                     selectedCategoryId == null || transaction.categoryId == selectedCategoryId
                 val matchesPayment =
                     selectedPaymentMode == null || transaction.paymentMode == selectedPaymentMode
+
+                if (transaction.note.contains("Dinner", ignoreCase = true)) {
+                    android.util.Log.d(
+                        "HistoryFilter",
+                        "Dinner: id=${transaction.id}, note=${transaction.note}, categoryId=${transaction.categoryId}, selectedCategoryId=$selectedCategoryId, matchesCategory=$matchesCategory, activeType=$activeType, matchesType=$matchesType"
+                    )
+                }
 
                 matchesType && (query.isEmpty() || matchesSearch) && matchesCategory && matchesPayment
             }
@@ -249,8 +258,54 @@ fun HistoryScreen(
                     query = searchQuery,
                     onQueryChange = { searchQuery = it },
                     onFilterClick = { showFilterSheet = true },
+                    hasActiveFilters = selectedCategoryId != null || selectedPaymentMode != null,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                 )
+
+                // Active filter chips — show applied category and payment mode
+                val selectedCategory = categories.find { it.id == selectedCategoryId }
+                if (selectedCategory != null || selectedPaymentMode != null) {
+                    LazyRow(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp)
+                            .padding(bottom = 8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        if (selectedCategory != null) {
+                            item {
+                                FilterChip(
+                                    selected = true,
+                                    onClick = { selectedCategoryId = null },
+                                    label = { Text(selectedCategory.name) },
+                                    trailingIcon = {
+                                        Icon(
+                                            Icons.Rounded.Close,
+                                            contentDescription = "Clear category filter",
+                                            modifier = Modifier.size(14.dp)
+                                        )
+                                    }
+                                )
+                            }
+                        }
+                        if (selectedPaymentMode != null) {
+                            item {
+                                FilterChip(
+                                    selected = true,
+                                    onClick = { selectedPaymentMode = null },
+                                    label = { Text(selectedPaymentMode!!) },
+                                    trailingIcon = {
+                                        Icon(
+                                            Icons.Rounded.Close,
+                                            contentDescription = "Clear payment filter",
+                                            modifier = Modifier.size(14.dp)
+                                        )
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
 
                 if (fixedType == null) {
                     val tabs = listOf(stringResource(R.string.expenses), stringResource(R.string.income))
@@ -270,7 +325,9 @@ fun HistoryScreen(
                                         mapOf(AnalyticsConstants.Param.TYPE to newType.name),
                                     )
                                     selectedTabType = newType
-                                    selectedCategoryId = null // Reset category filter on tab switch
+                                    // Reset all filters on tab switch to avoid cross-type filter bleed
+                                    selectedCategoryId = null
+                                    selectedPaymentMode = null
                                 },
                                 text = { Text(title, fontWeight = FontWeight.Bold) },
                             )
@@ -310,8 +367,9 @@ fun HistoryScreen(
                     .padding(innerPadding)
                     .fillMaxSize(),
         ) {
+            val isFilterActive = selectedCategoryId != null || selectedPaymentMode != null
             if (transactionItemStates.isEmpty()) {
-                EmptyState(searchQuery.isNotEmpty())
+                EmptyState(searchQuery.isNotEmpty() || isFilterActive)
             } else if (isExpanded) {
                 LazyVerticalGrid(
                     columns = GridCells.Adaptive(360.dp),
@@ -391,26 +449,27 @@ fun HistoryScreen(
     if (showFilterSheet) {
         FilterBottomSheet(
             categories = categories.filter { it.isExpense == (activeType == TransactionType.EXPENSE) },
-            selectedCategoryId = selectedCategoryId,
-            selectedPaymentMode = selectedPaymentMode,
-            onCategorySelect = { selectedCategoryId = it },
-            onPaymentModeSelect = { selectedPaymentMode = it },
+            initialCategoryId = selectedCategoryId,
+            initialPaymentMode = selectedPaymentMode,
             onReset = {
                 analyticsHelper.logEvent(AnalyticsConstants.Event.HISTORY_FILTERS_RESET)
                 selectedCategoryId = null
                 selectedPaymentMode = null
                 showFilterSheet = false
             },
-            onDismiss = {
+            onApply = { categoryId, paymentMode ->
                 analyticsHelper.logEvent(
                     AnalyticsConstants.Event.HISTORY_FILTERS_APPLIED,
                     mapOf(
-                        AnalyticsConstants.Param.CATEGORY_FILTERED to (selectedCategoryId != null),
-                        AnalyticsConstants.Param.PAYMENT_MODE_FILTERED to (selectedPaymentMode != null),
+                        AnalyticsConstants.Param.CATEGORY_FILTERED to (categoryId != null),
+                        AnalyticsConstants.Param.PAYMENT_MODE_FILTERED to (paymentMode != null),
                     ),
                 )
+                selectedCategoryId = categoryId
+                selectedPaymentMode = paymentMode
                 showFilterSheet = false
             },
+            onDismiss = { showFilterSheet = false },
         )
     }
 }
@@ -420,6 +479,7 @@ fun SearchBar(
     query: String,
     onQueryChange: (String) -> Unit,
     onFilterClick: () -> Unit,
+    hasActiveFilters: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     TextField(
@@ -436,7 +496,9 @@ fun SearchBar(
                 Icon(
                     Icons.Rounded.FilterList,
                     contentDescription = stringResource(R.string.filter),
-                    tint = MaterialTheme.colorScheme.primary,
+                    // Tint badge-style when filters are active
+                    tint = if (hasActiveFilters) MaterialTheme.colorScheme.primary
+                           else MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         },
@@ -649,13 +711,16 @@ fun FintechTransactionCard(
 @Composable
 fun FilterBottomSheet(
     categories: List<Category>,
-    selectedCategoryId: Long?,
-    selectedPaymentMode: String?,
-    onCategorySelect: (Long?) -> Unit,
-    onPaymentModeSelect: (String?) -> Unit,
+    initialCategoryId: Long?,
+    initialPaymentMode: String?,
     onReset: () -> Unit,
+    onApply: (categoryId: Long?, paymentMode: String?) -> Unit,
     onDismiss: () -> Unit,
 ) {
+    // Local draft state — only committed to parent on Apply
+    var draftCategoryId by remember { mutableStateOf(initialCategoryId) }
+    var draftPaymentMode by remember { mutableStateOf(initialPaymentMode) }
+
     BaseBottomSheet(
         onDismissRequest = onDismiss,
         title = stringResource(R.string.filters),
@@ -690,15 +755,15 @@ fun FilterBottomSheet(
             ) {
                 item {
                     FilterChip(
-                        selected = selectedCategoryId == null,
-                        onClick = { onCategorySelect(null) },
+                        selected = draftCategoryId == null,
+                        onClick = { draftCategoryId = null },
                         label = { Text(stringResource(R.string.all)) },
                     )
                 }
                 items(categories, key = { it.id }) { category ->
                     FilterChip(
-                        selected = selectedCategoryId == category.id,
-                        onClick = { onCategorySelect(category.id) },
+                        selected = draftCategoryId == category.id,
+                        onClick = { draftCategoryId = category.id },
                         label = { Text(category.name) },
                     )
                 }
@@ -720,15 +785,15 @@ fun FilterBottomSheet(
             ) {
                 item {
                     FilterChip(
-                        selected = selectedPaymentMode == null,
-                        onClick = { onPaymentModeSelect(null) },
+                        selected = draftPaymentMode == null,
+                        onClick = { draftPaymentMode = null },
                         label = { Text(stringResource(R.string.all)) },
                     )
                 }
                 items(modes, key = { it.name }) { mode ->
                     FilterChip(
-                        selected = selectedPaymentMode == mode.name,
-                        onClick = { onPaymentModeSelect(mode.name) },
+                        selected = draftPaymentMode == mode.name,
+                        onClick = { draftPaymentMode = mode.name },
                         label = { Text(mode.name) },
                         leadingIcon = {
                             Icon(
@@ -742,7 +807,7 @@ fun FilterBottomSheet(
             }
 
             Button(
-                onClick = onDismiss,
+                onClick = { onApply(draftCategoryId, draftPaymentMode) },
                 modifier =
                     Modifier
                         .fillMaxWidth()
@@ -757,21 +822,21 @@ fun FilterBottomSheet(
 }
 
 @Composable
-fun EmptyState(isSearching: Boolean) {
+fun EmptyState(isFiltering: Boolean) {
     Column(
         modifier = Modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
         Icon(
-            if (isSearching) Icons.Rounded.SearchOff else Icons.Rounded.History,
+            if (isFiltering) Icons.Rounded.SearchOff else Icons.Rounded.History,
             contentDescription = null,
             modifier = Modifier.size(80.dp),
             tint = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
         )
         Spacer(modifier = Modifier.height(16.dp))
         Text(
-            if (isSearching) stringResource(R.string.no_results_found) else stringResource(R.string.no_transactions_yet),
+            if (isFiltering) stringResource(R.string.no_results_found) else stringResource(R.string.no_transactions_yet),
             style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.outline,
         )
