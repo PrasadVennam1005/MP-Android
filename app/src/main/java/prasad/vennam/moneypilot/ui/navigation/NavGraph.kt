@@ -150,6 +150,9 @@ fun moneyPilotNavEntry(
                     onNavigateToCoSplit = {
                         backStack.add(Destination.CoSplitGroups)
                     },
+                    onNavigateToPremium = {
+                        backStack.add(Destination.PremiumScreen)
+                    },
                     analyticsHelper = analyticsHelper,
                 )
             }
@@ -171,6 +174,10 @@ fun moneyPilotNavEntry(
                 AiChatScreen(
                     analyticsHelper = analyticsHelper,
                     onBackClick = onBack,
+                    isPremium = isPremium,
+                    onNavigateToPremium = {
+                        backStack.add(Destination.PremiumScreen)
+                    }
                 )
             }
 
@@ -311,11 +318,21 @@ fun moneyPilotNavEntry(
 
         is Destination.ReceiptScanner ->
             NavEntry(key) {
-                ReceiptScannerScreen(
-                    onNavigateBack = onBack,
-                    transactionViewModel = transactionViewModel,
-                    analyticsHelper = analyticsHelper,
-                )
+                if (!isPremium) {
+                    val context = LocalContext.current
+                    LaunchedEffect(Unit) {
+                        android.widget.Toast.makeText(context, "Receipt scanning is exclusively available to Premium users!", android.widget.Toast.LENGTH_LONG).show()
+                        backStack.remove(key)
+                        backStack.add(Destination.PremiumScreen)
+                    }
+                    androidx.compose.foundation.layout.Box {}
+                } else {
+                    ReceiptScannerScreen(
+                        onNavigateBack = onBack,
+                        transactionViewModel = transactionViewModel,
+                        analyticsHelper = analyticsHelper,
+                    )
+                }
             }
 
         is Destination.Notifications ->
@@ -409,10 +426,20 @@ fun moneyPilotNavEntry(
 
         is Destination.FinancialSandbox ->
             NavEntry(key) {
-                FinancialSandboxScreen(
-                    onBack = onBack,
-                    analyticsHelper = analyticsHelper,
-                )
+                if (!isPremium) {
+                    val context = LocalContext.current
+                    LaunchedEffect(Unit) {
+                        android.widget.Toast.makeText(context, "Financial Sandbox is exclusively available to Premium users!", android.widget.Toast.LENGTH_LONG).show()
+                        backStack.remove(key)
+                        backStack.add(Destination.PremiumScreen)
+                    }
+                    androidx.compose.foundation.layout.Box {}
+                } else {
+                    FinancialSandboxScreen(
+                        onBack = onBack,
+                        analyticsHelper = analyticsHelper,
+                    )
+                }
             }
 
         is Destination.EmiCalculator ->
@@ -480,15 +507,25 @@ fun moneyPilotNavEntry(
 
         is Destination.CoSplitGroups ->
             NavEntry(key) {
-                val splitViewModel = androidx.lifecycle.viewmodel.compose.viewModel<prasad.vennam.moneypilot.feature.cosplit.ui.CoSplitViewModel>()
-                prasad.vennam.moneypilot.ui.cosplit.CoSplitGroupsScreen(
-                    viewModel = splitViewModel,
-                    analyticsHelper = analyticsHelper,
-                    onNavigateBack = onBack,
-                    onNavigateToGroup = { groupId ->
-                        backStack.add(Destination.CoSplitGroupDetail(groupId))
+                if (!isPremium) {
+                    val context = LocalContext.current
+                    LaunchedEffect(Unit) {
+                        android.widget.Toast.makeText(context, "CoSplit bill sharing is exclusively available to Premium users!", android.widget.Toast.LENGTH_LONG).show()
+                        backStack.remove(key)
+                        backStack.add(Destination.PremiumScreen)
                     }
-                )
+                    androidx.compose.foundation.layout.Box {}
+                } else {
+                    val splitViewModel = androidx.lifecycle.viewmodel.compose.viewModel<prasad.vennam.moneypilot.feature.cosplit.ui.CoSplitViewModel>()
+                    prasad.vennam.moneypilot.ui.cosplit.CoSplitGroupsScreen(
+                        viewModel = splitViewModel,
+                        analyticsHelper = analyticsHelper,
+                        onNavigateBack = onBack,
+                        onNavigateToGroup = { groupId ->
+                            backStack.add(Destination.CoSplitGroupDetail(groupId))
+                        }
+                    )
+                }
             }
 
         is Destination.CoSplitGroupDetail ->

@@ -74,6 +74,7 @@ fun QuickActionSection(
     onNavigateToSubscriptions: () -> Unit,
     onNavigateToCoSplit: () -> Unit,
     isGuest: Boolean,
+    isPremium: Boolean,
 ) {
     val adaptiveInfo = currentWindowAdaptiveInfoV2()
     val isExpanded = adaptiveInfo.windowSizeClass.windowWidthSizeClass != WindowWidthSizeClass.COMPACT
@@ -83,11 +84,11 @@ fun QuickActionSection(
         QuickActionData(stringResource(R.string.income), Icons.Rounded.AddCircleOutline, MaterialTheme.colorScheme.secondary, onAddIncome),
         QuickActionData(stringResource(R.string.investment), Icons.Rounded.AccountBalanceWallet, MaterialTheme.colorScheme.primary, onAddInvestment),
         QuickActionData(stringResource(R.string.loans), Icons.Rounded.AccountBalanceWallet, MaterialTheme.colorScheme.tertiary, onAddLoan),
-        QuickActionData(stringResource(R.string.scan), Icons.Rounded.Camera, MaterialTheme.colorScheme.outline, onScanReceipt, isGuest, "BETA"),
-        QuickActionData("CoSplit", Icons.Rounded.Person, Color(0xFF00C853), onNavigateToCoSplit, false, "NEW"),
+        QuickActionData(stringResource(R.string.scan), Icons.Rounded.Camera, MaterialTheme.colorScheme.outline, onScanReceipt, isGuest, if (isPremium) "BETA" else "PRO"),
+        QuickActionData("CoSplit", Icons.Rounded.Person, Color(0xFF00C853), onNavigateToCoSplit, false, if (isPremium) "NEW" else "PRO"),
         QuickActionData(stringResource(R.string.emergency_fund), Icons.Rounded.Shield, Color(0xFF067F68), onNavigateToEmergencyFund),
         QuickActionData(stringResource(R.string.news), Icons.AutoMirrored.Rounded.Article, Color(0xFFF57C00), onNavigateToNews),
-        QuickActionData(stringResource(R.string.sandbox), Icons.Rounded.Calculate, Color(0xFF8E24AA), onNavigateToSandbox, false, "BETA"),
+        QuickActionData(stringResource(R.string.sandbox), Icons.Rounded.Calculate, Color(0xFF8E24AA), onNavigateToSandbox, false, if (isPremium) "BETA" else "PRO"),
         QuickActionData(stringResource(R.string.emi_calculator), Icons.Rounded.Calculate, Color(0xFF0288D1), onNavigateToEmiCalculator),
         QuickActionData("Converter", Icons.Rounded.CurrencyExchange, MaterialTheme.colorScheme.primary, onNavigateToCurrencyConverter),
         QuickActionData(stringResource(R.string.subscriptions), Icons.Rounded.NotificationsActive, Color(0xFFE91E63), onNavigateToSubscriptions, false, "NEW")

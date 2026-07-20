@@ -228,11 +228,11 @@ class AiRepositoryImpl
             return File(dir, modelFileName)
         }
 
-        override suspend fun initialize() {
+        override suspend fun initialize() = withContext(Dispatchers.IO) {
             if (_state.value is LlmState.Ready ||
                 _state.value is LlmState.Initializing ||
                 _state.value is LlmState.Downloading
-            ) return
+            ) return@withContext
 
             val modelFile = getModelFile()
             Log.d(TAG, "Initializing. model=${modelFile.absolutePath} exists=${modelFile.exists()} size=${modelFile.length()}")
@@ -253,14 +253,14 @@ class AiRepositoryImpl
                     }
                     _state.value = LlmState.Ready()
                 }
-                return
+                return@withContext
             }
 
             // --- Priority 2: Local Gemma model (no API key configured) ---
             if (!modelFile.exists() || modelFile.length() == 0L) {
                 Log.d(TAG, "No API key and no local model — staying Idle so UI can prompt download.")
                 _state.value = LlmState.Idle
-                return
+                return@withContext
             }
 
             _state.value = LlmState.Initializing
@@ -752,7 +752,7 @@ class AiRepositoryImpl
                         val finalDate = System.currentTimeMillis() + (action.dateOffset * 24 * 60 * 60 * 1000L)
                         return@withContext ParsedReceipt(
                             merchant = action.note.trim().ifBlank { null },
-                            amount = action.amount.toDouble(),
+                            amount = action.amount,
                             date = finalDate,
                         )
                     }
@@ -761,6 +761,11 @@ class AiRepositoryImpl
                 }
                 return@withContext null
             }
+
+        override fun stopGeneration() {
+            llmService.stopGeneration()
+            _state.value = LlmState.Ready(null)
+        }
 
         override fun cleanup() {
             llmService.close()

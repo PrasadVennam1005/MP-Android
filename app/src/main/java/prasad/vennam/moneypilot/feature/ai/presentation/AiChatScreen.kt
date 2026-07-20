@@ -104,6 +104,8 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.VerticalDivider
+import androidx.compose.material3.PrimaryTabRow
+import androidx.compose.material3.Tab
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfoV2
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -165,6 +167,8 @@ import androidx.compose.material3.TextButton
 fun AiChatScreen(
     onBackClick: () -> Unit,
     analyticsHelper: AnalyticsHelper,
+    isPremium: Boolean,
+    onNavigateToPremium: () -> Unit,
     viewModel: AiViewModel = hiltViewModel(),
     analyticsViewModel: AnalyticsViewModel = hiltViewModel(),
 ) {
@@ -176,6 +180,12 @@ fun AiChatScreen(
     val pendingAction = uiState.pendingAction
     val aiMode = uiState.aiMode
 
+    LaunchedEffect(isPremium, aiMode) {
+        if (!isPremium && aiMode == prasad.vennam.moneypilot.data.UserPreferences.AiMode.CLOUD) {
+            viewModel.setAiMode(prasad.vennam.moneypilot.data.UserPreferences.AiMode.LOCAL)
+        }
+    }
+
     val analyticsUiState by analyticsViewModel.uiState.collectAsState()
     val aiRecState by analyticsViewModel.aiRecommendation.collectAsState()
     val currencyCode = LocalCurrencyCode.current
@@ -185,6 +195,12 @@ fun AiChatScreen(
     val adaptiveInfo = currentWindowAdaptiveInfoV2()
     val isExpanded = adaptiveInfo.windowSizeClass.windowWidthSizeClass == WindowWidthSizeClass.EXPANDED
     val gridState = rememberLazyGridState()
+
+    DisposableEffect(Unit) {
+        onDispose {
+            viewModel.stopGeneration()
+        }
+    }
 
     val insights =
         remember(analyticsUiState, currencyCode) {
@@ -202,6 +218,7 @@ fun AiChatScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val focusRequester = remember { FocusRequester() }
     var showSuggestionsBottomSheet by remember { mutableStateOf(false) }
+    var selectedTab by remember { mutableIntStateOf(0) }
 
     LaunchedEffect(Unit) {
         viewModel.actionFeedback.collect { feedback ->
@@ -395,7 +412,9 @@ fun AiChatScreen(
                                     .focusRequester(focusRequester),
                             placeholder = {
                                 Text(
-                                    if (aiState is LlmState.RateLimited) {
+                                    if (aiState is LlmState.Generating) {
+                                        "AI is typing..."
+                                    } else if (aiState is LlmState.RateLimited) {
                                         stringResource(R.string.ai_rate_limited_title)
                                     } else if (pendingAction != null) {
                                         stringResource(R.string.review_action_placeholder)
@@ -416,22 +435,27 @@ fun AiChatScreen(
                                     focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
                                     unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.15f),
                                 ),
-                            enabled = aiState is LlmState.Ready || aiState is LlmState.Generating || aiState is LlmState.ActionConfirm,
+                            enabled = aiState is LlmState.Ready || aiState is LlmState.ActionConfirm,
                         )
                         Spacer(modifier = Modifier.width(8.dp))
 
-                        // Custom Gradient Send Button
-                        // Fix #4: Disallow sending when a confirmation card is pending
-                        // Fix #1: Content description reflects whether we're sending or confirming
-                        val buttonEnabled =
+                        // Custom Gradient Send/Stop Button
+                        val isGenerating = aiState is LlmState.Generating
+                        val buttonEnabled = if (isGenerating) {
+                            true
+                        } else {
                             inputText.isNotBlank() &&
                                     pendingAction == null &&
-                                    (aiState is LlmState.Ready || aiState is LlmState.Generating || aiState is LlmState.ActionConfirm)
+                                    (aiState is LlmState.Ready || aiState is LlmState.ActionConfirm)
+                        }
 
-                        val sendContentDesc = if (pendingAction != null)
+                        val sendContentDesc = if (isGenerating) {
+                            "Stop generating"
+                        } else if (pendingAction != null) {
                             stringResource(R.string.confirm_action)
-                        else
+                        } else {
                             stringResource(R.string.send_message)
+                        }
 
                         Box(
                             modifier =
@@ -448,27 +472,40 @@ fun AiChatScreen(
                                     .clickable(
                                         enabled = buttonEnabled,
                                         onClick = {
-                                            // Fix #8: require consent before sending to cloud, but skip if local model is ready
-                                            val localModelAvailable = uiState.isLocalModelAvailable
-                                            val apiKeyConfigured = prasad.vennam.moneypilot.BuildConfig.GEMINI_API_KEY
-                                                .trim().removeSurrounding("\"").isNotBlank()
-                                            val needsConsent = !localModelAvailable && apiKeyConfigured && !isConsentGranted
-                                            if (needsConsent) {
-                                                showConsentDialog = true
+                                            if (isGenerating) {
+                                                viewModel.stopGeneration()
                                             } else {
-                                                viewModel.sendMessage(inputText)
-                                                inputText = ""
+                                                // Fix #8: require consent before sending to cloud, but skip if local model is ready
+                                                val localModelAvailable = uiState.isLocalModelAvailable
+                                                val apiKeyConfigured = prasad.vennam.moneypilot.BuildConfig.GEMINI_API_KEY
+                                                    .trim().removeSurrounding("\"").isNotBlank()
+                                                val needsConsent = !localModelAvailable && apiKeyConfigured && !isConsentGranted
+                                                if (needsConsent) {
+                                                    showConsentDialog = true
+                                                } else {
+                                                    viewModel.sendMessage(inputText)
+                                                    inputText = ""
+                                                }
                                             }
                                         },
                                     ),
                             contentAlignment = Alignment.Center,
                         ) {
-                            Icon(
-                                Icons.AutoMirrored.Rounded.Send,
-                                contentDescription = sendContentDesc,
-                                tint = if (buttonEnabled) Color.White else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
-                                modifier = Modifier.size(20.dp),
-                            )
+                            if (isGenerating) {
+                                Icon(
+                                    Icons.Rounded.Cancel,
+                                    contentDescription = sendContentDesc,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(20.dp),
+                                )
+                            } else {
+                                Icon(
+                                    Icons.AutoMirrored.Rounded.Send,
+                                    contentDescription = sendContentDesc,
+                                    tint = if (buttonEnabled) Color.White else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                                    modifier = Modifier.size(20.dp),
+                                )
+                            }
                         }
                     }
                 }
@@ -554,27 +591,90 @@ fun AiChatScreen(
                                 }
                             },
                             viewModel = viewModel,
-                            aiMode = aiMode
+                            aiMode = aiMode,
+                            isPremium = isPremium,
+                            onNavigateToPremium = onNavigateToPremium
                         )
                     }
                 }
             } else {
-                AiChatBody(
-                    aiState = aiState,
-                    downloadProgress = downloadProgress,
-                    messages = messages,
-                    listState = listState,
-                    analyticsHelper = analyticsHelper,
-                    onSuggestionClick = { text ->
-                        inputText = text
-                        try {
-                            focusRequester.requestFocus()
-                        } catch (ignored: Exception) {
+                PrimaryTabRow(
+                    selectedTabIndex = selectedTab,
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    contentColor = MaterialTheme.colorScheme.primary,
+                ) {
+                    Tab(
+                        selected = selectedTab == 0,
+                        onClick = { selectedTab = 0 },
+                        text = {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.Rounded.AutoAwesome,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = "Copilot Chat",
+                                    fontWeight = if (selectedTab == 0) FontWeight.Bold else FontWeight.Normal
+                                )
+                            }
                         }
-                    },
-                    viewModel = viewModel,
-                    aiMode = aiMode
-                )
+                    )
+                    Tab(
+                        selected = selectedTab == 1,
+                        onClick = { selectedTab = 1 },
+                        text = {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.Rounded.Analytics,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = "Insights",
+                                    fontWeight = if (selectedTab == 1) FontWeight.Bold else FontWeight.Normal
+                                )
+                            }
+                        }
+                    )
+                }
+
+                Box(modifier = Modifier.weight(1f)) {
+                    if (selectedTab == 0) {
+                        AiChatBody(
+                            aiState = aiState,
+                            downloadProgress = downloadProgress,
+                            messages = messages,
+                            listState = listState,
+                            analyticsHelper = analyticsHelper,
+                            onSuggestionClick = { text ->
+                                inputText = text
+                                try {
+                                    focusRequester.requestFocus()
+                                } catch (ignored: Exception) {
+                                }
+                            },
+                            viewModel = viewModel,
+                            aiMode = aiMode,
+                            isPremium = isPremium,
+                            onNavigateToPremium = onNavigateToPremium
+                        )
+                    } else {
+                        InsightsContent(
+                            uiState = analyticsUiState,
+                            aiRecState = aiRecState,
+                            insights = insights,
+                            currencyCode = currencyCode,
+                            isExpanded = false,
+                            gridState = gridState,
+                            analyticsHelper = analyticsHelper,
+                            onNavigateToAiChat = {},
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    }
+                }
             }
         }
     }
@@ -583,8 +683,11 @@ fun AiChatScreen(
 
 @Composable
 fun AiSelectionDialog(
+    isPremium: Boolean,
+    onNavigateToPremium: () -> Unit,
     onSelection: (Int) -> Unit,
 ) {
+    val context = LocalContext.current
     AlertDialog(
         onDismissRequest = { /* Force selection */ },
         title = {
@@ -624,15 +727,50 @@ fun AiSelectionDialog(
 
                 // Option 2: Cloud AI
                 Card(
-                    onClick = { onSelection(prasad.vennam.moneypilot.data.UserPreferences.AiMode.CLOUD) },
+                    onClick = {
+                        if (isPremium) {
+                            onSelection(prasad.vennam.moneypilot.data.UserPreferences.AiMode.CLOUD)
+                        } else {
+                            android.widget.Toast.makeText(context, "Gemini Cloud AI is exclusively available to Premium users!", android.widget.Toast.LENGTH_LONG).show()
+                            onNavigateToPremium()
+                        }
+                    },
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f)),
                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.1f))
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Rounded.AutoAwesome, null, tint = MaterialTheme.colorScheme.primary)
-                            Spacer(Modifier.width(8.dp))
-                            Text("Fast & Powerful", fontWeight = FontWeight.Bold)
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Rounded.AutoAwesome, null, tint = MaterialTheme.colorScheme.primary)
+                                Spacer(Modifier.width(8.dp))
+                                Text("Fast & Powerful", fontWeight = FontWeight.Bold)
+                            }
+                            if (!isPremium) {
+                                Box(
+                                    modifier = Modifier
+                                        .background(
+                                            brush = Brush.linearGradient(
+                                                colors = listOf(
+                                                    MaterialTheme.colorScheme.primary,
+                                                    MaterialTheme.colorScheme.tertiary
+                                                )
+                                            ),
+                                            shape = RoundedCornerShape(8.dp)
+                                        )
+                                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                                ) {
+                                    Text(
+                                        text = "PRO",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        color = Color.White
+                                    )
+                                }
+                            }
                         }
                         Spacer(Modifier.height(4.dp))
                         Text(
@@ -739,9 +877,13 @@ private fun AiChatBody(
     onSuggestionClick: (String) -> Unit,
     viewModel: AiViewModel,
     aiMode: Int,
+    isPremium: Boolean,
+    onNavigateToPremium: () -> Unit,
 ) {
     if (aiMode == prasad.vennam.moneypilot.data.UserPreferences.AiMode.UNDECIDED) {
         AiSelectionDialog(
+            isPremium = isPremium,
+            onNavigateToPremium = onNavigateToPremium,
             onSelection = { viewModel.setAiMode(it) }
         )
     } else if (aiState is LlmState.Idle) {
@@ -855,6 +997,8 @@ private fun AiChatBody(
             WelcomeScreen(
                 analyticsHelper = analyticsHelper,
                 onSuggestionClick = onSuggestionClick,
+                isPremium = isPremium,
+                onNavigateToPremium = onNavigateToPremium
             )
         } else {
             LazyColumn(
@@ -1248,6 +1392,8 @@ fun TypingDotsIndicator(tint: Color) {
 fun WelcomeScreen(
     analyticsHelper: AnalyticsHelper,
     onSuggestionClick: (String) -> Unit,
+    isPremium: Boolean,
+    onNavigateToPremium: () -> Unit,
 ) {
     val context = LocalContext.current
     var nativeAd by remember { mutableStateOf<NativeAd?>(null) }
@@ -1342,6 +1488,67 @@ fun WelcomeScreen(
             textAlign = TextAlign.Center,
             modifier = Modifier.padding(horizontal = 24.dp),
         )
+
+        if (!isPremium) {
+            Spacer(modifier = Modifier.height(24.dp))
+            Card(
+                onClick = onNavigateToPremium,
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f)
+                ),
+                shape = RoundedCornerShape(16.dp),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp)
+            ) {
+                Row(
+                    modifier = Modifier.padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(
+                                Brush.linearGradient(
+                                    listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.tertiary)
+                                )
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            Icons.Rounded.AutoAwesome,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Upgrade for Fast Cloud AI",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = "Get instant cloud replies powered by Gemini PRO with detailed financial suggestions.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Rounded.ArrowForward,
+                        contentDescription = "Upgrade",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
+        }
 
         Spacer(modifier = Modifier.height(32.dp))
 

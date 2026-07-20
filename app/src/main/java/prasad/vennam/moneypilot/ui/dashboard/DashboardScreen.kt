@@ -113,6 +113,7 @@ import prasad.vennam.moneypilot.ui.dashboard.components.CategoryBreakdownBottomS
 import prasad.vennam.moneypilot.ui.dashboard.components.CreditCardBillCard
 import prasad.vennam.moneypilot.ui.dashboard.components.DashboardTopBar
 import prasad.vennam.moneypilot.ui.dashboard.components.ExpenseChartCard
+import prasad.vennam.moneypilot.ui.dashboard.components.FinancialHealthCard
 import prasad.vennam.moneypilot.ui.dashboard.components.KPISection
 import prasad.vennam.moneypilot.ui.dashboard.components.LearnFinancePromoCard
 import prasad.vennam.moneypilot.ui.dashboard.components.LoanSection
@@ -160,6 +161,7 @@ fun DashboardScreen(
     onNavigateToLearnFinance: () -> Unit,
     onNavigateToCurrencyConverter: () -> Unit,
     onNavigateToCoSplit: () -> Unit,
+    onNavigateToPremium: () -> Unit,
 ) {
     TrackScreen(analyticsHelper, AnalyticsConstants.Screen.DASHBOARD)
 
@@ -610,6 +612,28 @@ fun DashboardScreen(
                             )
                         }
 
+                        item {
+                            val budgetExceededCount = remember(dashboardState.budgetProgresses) {
+                                dashboardState.budgetProgresses.count { it.spent > it.limit }
+                            }
+                            val emergencyFund = dashboardState.emergencyFund
+                            val hasEmergencyFund = remember(emergencyFund) {
+                                emergencyFund != null && emergencyFund.currentSaved > 0
+                            }
+                            FinancialHealthCard(
+                                savingsRate = dashboardState.savingsRate,
+                                totalDebt = dashboardState.totalDebt,
+                                periodIncome = dashboardState.periodIncome,
+                                totalInvestment = dashboardState.totalInvestment,
+                                hasEmergencyFund = hasEmergencyFund,
+                                budgetExceededCount = budgetExceededCount,
+                                isPremium = isPremium,
+                                onNavigateToPremium = onNavigateToPremium,
+                                onNavigateToAiChat = onNavigateToAiChat,
+                                modifier = Modifier.padding(vertical = 8.dp)
+                            )
+                        }
+
                         // Ad 1: Inline Ad between KPI and Quick Actions
 
                         item {
@@ -646,8 +670,13 @@ fun DashboardScreen(
                                     onNavigateToLoans()
                                 },
                                 onScanReceipt = {
-                                    analyticsHelper.logEvent(AnalyticsConstants.Event.QUICK_ACTION_CLICKED, mapOf(AnalyticsConstants.Param.ACTION to "scan_receipt"))
-                                    onNavigateToScanner()
+                                    if (isPremium) {
+                                        analyticsHelper.logEvent(AnalyticsConstants.Event.QUICK_ACTION_CLICKED, mapOf(AnalyticsConstants.Param.ACTION to "scan_receipt"))
+                                        onNavigateToScanner()
+                                    } else {
+                                        android.widget.Toast.makeText(context, "Receipt scanning is exclusively available to Premium users!", android.widget.Toast.LENGTH_LONG).show()
+                                        onNavigateToPremium()
+                                    }
                                 },
                                 onNavigateToEmergencyFund = {
                                     analyticsHelper.logEvent(AnalyticsConstants.Event.QUICK_ACTION_CLICKED, mapOf(AnalyticsConstants.Param.ACTION to "emergency_fund"))
@@ -658,8 +687,13 @@ fun DashboardScreen(
                                     onNavigateToNews()
                                 },
                                 onNavigateToSandbox = {
-                                    analyticsHelper.logEvent(AnalyticsConstants.Event.QUICK_ACTION_CLICKED, mapOf(AnalyticsConstants.Param.ACTION to "sandbox"))
-                                    onNavigateToSandbox()
+                                    if (isPremium) {
+                                        analyticsHelper.logEvent(AnalyticsConstants.Event.QUICK_ACTION_CLICKED, mapOf(AnalyticsConstants.Param.ACTION to "sandbox"))
+                                        onNavigateToSandbox()
+                                    } else {
+                                        android.widget.Toast.makeText(context, "Financial Sandbox is exclusively available to Premium users!", android.widget.Toast.LENGTH_LONG).show()
+                                        onNavigateToPremium()
+                                    }
                                 },
                                 onNavigateToEmiCalculator = {
                                     analyticsHelper.logEvent(AnalyticsConstants.Event.QUICK_ACTION_CLICKED, mapOf(AnalyticsConstants.Param.ACTION to "emi_calculator"))
@@ -674,10 +708,16 @@ fun DashboardScreen(
                                     onNavigateToSubscriptions()
                                 },
                                 onNavigateToCoSplit = {
-                                    analyticsHelper.logEvent(AnalyticsConstants.Event.QUICK_ACTION_CLICKED, mapOf(AnalyticsConstants.Param.ACTION to "cosplit"))
-                                    onNavigateToCoSplit()
+                                    if (isPremium) {
+                                        analyticsHelper.logEvent(AnalyticsConstants.Event.QUICK_ACTION_CLICKED, mapOf(AnalyticsConstants.Param.ACTION to "cosplit"))
+                                        onNavigateToCoSplit()
+                                    } else {
+                                        android.widget.Toast.makeText(context, "CoSplit bill sharing is exclusively available to Premium users!", android.widget.Toast.LENGTH_LONG).show()
+                                        onNavigateToPremium()
+                                    }
                                 },
                                 isGuest = isGuest && !prasad.vennam.moneypilot.BuildConfig.DEBUG && !isDevToolEnabled,
+                                isPremium = isPremium,
                             )
                         }
 

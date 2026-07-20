@@ -258,6 +258,11 @@ class AiViewModel
             }
         }
 
+        fun stopGeneration() {
+            aiRepository.stopGeneration()
+            updateLastAiMessage(content = context.getString(R.string.ai_generation_stopped), isTyping = false)
+        }
+
         override fun onCleared() {
             super.onCleared()
             aiRepository.cleanup()

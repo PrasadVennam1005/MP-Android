@@ -851,6 +851,7 @@
     <string name="ai_investment_added">Investment \"%1$s\" added successfully!</string>
     <string name="ai_loan_added">Loan \"%1$s\" added successfully!</string>
     <string name="ai_not_ready">AI not ready. Please try again later.</string>
+    <string name="ai_generation_stopped">AI generation stopped by user.</string>
 
     <!-- AI Chat: send button label when confirming a pending action -->
     <string name="send_message">Send message</string>

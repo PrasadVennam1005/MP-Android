@@ -51,6 +51,7 @@ class LlmService(
     val partialResponses: SharedFlow<LlmResponse> = _partialResponses.asSharedFlow()
 
     private val accumulated = StringBuilder()
+    private var activeGenerationJob: kotlinx.coroutines.Job? = null
 
     // Detect if running on an emulator; lower token limits to avoid OOM
     private val isEmulator: Boolean by lazy {
@@ -184,7 +185,8 @@ class LlmService(
         conversation = convo
         accumulated.clear()
 
-        serviceScope.launch {
+        activeGenerationJob?.cancel()
+        activeGenerationJob = serviceScope.launch {
             try {
                 Log.d(TAG, "Starting token collection. Prompt preview: ${prompt.take(150)}...")
                 var tokenCount = 0
@@ -208,7 +210,8 @@ class LlmService(
         accumulated.clear()
         _partialResponses.tryEmit(LlmResponse("Thinking...", false))
 
-        serviceScope.launch {
+        activeGenerationJob?.cancel()
+        activeGenerationJob = serviceScope.launch {
             try {
                 when (val result = generateCloudResponse(prompt)) {
                     is CloudResult.Success -> {
@@ -237,6 +240,20 @@ class LlmService(
                 _partialResponses.tryEmit(LlmResponse(errMsg, true))
             }
         }
+    }
+
+    fun stopGeneration() {
+        Log.d(TAG, "stopGeneration called, cancelling active generation job.")
+        activeGenerationJob?.cancel()
+        activeGenerationJob = null
+        try {
+            conversation?.close()
+        } catch (e: Exception) {
+            Log.w(TAG, "Error closing conversation (ignored): ${e.message}")
+        } finally {
+            conversation = null
+        }
+        _partialResponses.tryEmit(LlmResponse(accumulated.toString(), true))
     }
 
     suspend fun generateCloudResponse(prompt: String): CloudResult =

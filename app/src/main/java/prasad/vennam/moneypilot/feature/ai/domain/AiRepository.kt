@@ -34,5 +34,7 @@ interface AiRepository {
 
     suspend fun parseReceiptText(ocrText: String): ParsedReceipt?
 
+    fun stopGeneration()
+
     fun cleanup()
 }

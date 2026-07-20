@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Google Play Console Setup Guide — MoneyPilot</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0c0f1d;
+            --sidebar-color: #12162b;
+            --card-color: #181d38;
+            --accent-primary: #3b82f6;
+            --accent-secondary: #10b981;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --border-color: #293056;
+            --card-hover-border: #4f46e5;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            display: flex;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Sidebar Styling */
+        .sidebar {
+            width: 280px;
+            background-color: var(--sidebar-color);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            padding: 24px;
+            position: fixed;
+            height: 100vh;
+            left: 0;
+            top: 0;
+        }
+
+        .logo-section {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 40px;
+        }
+
+        .logo-icon {
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, var(--accent-primary), #6366f1);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.2rem;
+            color: white;
+            box-shadow: 0 0 20px rgba(59, 130, 246, 0.4);
+        }
+
+        .logo-text {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.25rem;
+            font-weight: 700;
+            background: linear-gradient(to right, #ffffff, #94a3b8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .nav-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            border-radius: 12px;
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 1px solid transparent;
+        }
+
+        .nav-item:hover {
+            color: var(--text-primary);
+            background-color: rgba(255, 255, 255, 0.03);
+        }
+
+        .nav-item.active {
+            color: var(--text-primary);
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(99, 102, 241, 0.05));
+            border-color: rgba(59, 130, 246, 0.3);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Main Content Styling */
+        .main-content {
+            margin-left: 280px;
+            flex: 1;
+            padding: 48px;
+            max-width: 1000px;
+        }
+
+        .header {
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 2.25rem;
+            font-weight: 700;
+            margin-bottom: 12px;
+        }
+
+        .header p {
+            color: var(--text-secondary);
+            font-size: 1.05rem;
+            line-height: 1.6;
+        }
+
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.4s ease-out forwards;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Form Card / UI Mockups */
+        .step-card {
+            background-color: var(--card-color);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 32px;
+            margin-bottom: 24px;
+            position: relative;
+            transition: border-color 0.3s;
+        }
+
+        .step-card:hover {
+            border-color: var(--border-color);
+        }
+
+        .step-badge {
+            position: absolute;
+            top: 24px;
+            left: -12px;
+            background: linear-gradient(135deg, var(--accent-primary), #6366f1);
+            color: white;
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+        }
+
+        .step-title {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 16px;
+            padding-left: 20px;
+        }
+
+        .step-description {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            line-height: 1.6;
+            margin-bottom: 20px;
+            padding-left: 20px;
+        }
+
+        /* Mock UI Elements */
+        .mock-console-field {
+            background-color: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+
+        .mock-label {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        .mock-value {
+            font-family: monospace;
+            font-size: 1rem;
+            color: var(--accent-primary);
+            word-break: break-all;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .btn-copy {
+            background-color: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+
+        .btn-copy:hover {
+            background-color: var(--accent-primary);
+            border-color: var(--accent-primary);
+        }
+
+        .checklist-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 12px 16px;
+            background-color: rgba(255, 255, 255, 0.01);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            margin-bottom: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .checklist-item:hover {
+            border-color: rgba(59, 130, 246, 0.5);
+            background-color: rgba(59, 130, 246, 0.02);
+        }
+
+        .checklist-checkbox {
+            width: 18px;
+            height: 18px;
+            border-radius: 4px;
+            border: 2px solid var(--text-secondary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            margin-top: 2px;
+            transition: all 0.2s;
+        }
+
+        .checklist-item.checked .checklist-checkbox {
+            background-color: var(--accent-secondary);
+            border-color: var(--accent-secondary);
+        }
+
+        .checklist-item.checked .checklist-checkbox::after {
+            content: "✓";
+            color: white;
+            font-size: 0.75rem;
+            font-weight: bold;
+        }
+
+        .checklist-text {
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+
+        .checklist-item.checked .checklist-text {
+            color: var(--text-secondary);
+            text-decoration: line-through;
+        }
+
+        /* License Form */
+        .key-input-area {
+            width: 100%;
+            height: 120px;
+            background-color: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 16px;
+            color: var(--text-primary);
+            font-family: monospace;
+            font-size: 0.9rem;
+            resize: none;
+            outline: none;
+            margin-bottom: 16px;
+        }
+
+        .key-input-area:focus {
+            border-color: var(--accent-primary);
+        }
+
+        .btn-action {
+            background-color: var(--accent-primary);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        .btn-action:hover {
+            opacity: 0.9;
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <div class="logo-section">
+            <div class="logo-icon">MP</div>
+            <div class="logo-text">MoneyPilot</div>
+        </div>
+        <ul class="nav-list">
+            <li class="nav-item active" onclick="switchTab('prereqs')">1. Prerequisites</li>
+            <li class="nav-item" onclick="switchTab('onetime')">2. One-Time Product</li>
+            <li class="nav-item" onclick="switchTab('sub')">3. Subscription</li>
+            <li class="nav-item" onclick="switchTab('license')">4. Setup License Key</li>
+        </ul>
+    </div>
+
+    <div class="main-content">
+        <div class="header">
+            <h1>Google Play Console Setup Guide</h1>
+            <p>Follow this step-by-step checklist to configure licensing, in-app purchases, and recurring subscriptions in the Google Play Console for MoneyPilot.</p>
+        </div>
+
+        <!-- Tab 1: Prerequisites -->
+        <div id="prereqs" class="tab-content active">
+            <div class="step-card">
+                <div class="step-badge">Step 1</div>
+                <h3 class="step-title">Deploy Build to Internal Testing</h3>
+                <p class="step-description">Google Play requires you to upload an Android App Bundle (AAB) containing the Billing permission to a testing track before you can create billing products.</p>
+                <div class="checklist">
+                    <div class="checklist-item" onclick="toggleChecklist(this)">
+                        <div class="checklist-checkbox"></div>
+                        <div class="checklist-text">Build the release bundle: Run <strong>./gradlew bundleRelease</strong> in your terminal.</div>
+                    </div>
+                    <div class="checklist-item" onclick="toggleChecklist(this)">
+                        <div class="checklist-checkbox"></div>
+                        <div class="checklist-text">Open Google Play Console and select your app.</div>
+                    </div>
+                    <div class="checklist-item" onclick="toggleChecklist(this)">
+                        <div class="checklist-checkbox"></div>
+                        <div class="checklist-text">Navigate to <strong>Testing > Internal testing</strong>.</div>
+                    </div>
+                    <div class="checklist-item" onclick="toggleChecklist(this)">
+                        <div class="checklist-checkbox"></div>
+                        <div class="checklist-text">Create a new release and upload your AAB bundle. Publish the internal release.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab 2: One-time Product -->
+        <div id="onetime" class="tab-content">
+            <div class="step-card">
+                <div class="step-badge">Step 2</div>
+                <h3 class="step-title">Configure Lifetime Premium Upgrade</h3>
+                <p class="step-description">Create a one-time in-app product to represent the lifetime premium upgrade.</p>
+                <div class="mock-console-field">
+                    <div class="mock-label">Product ID</div>
+                    <div class="mock-value">
+                        <span>premium_upgrade_lifetime_1499</span>
+                        <button class="btn-copy" onclick="copyText('premium_upgrade_lifetime_1499')">Copy</button>
+                    </div>
+                </div>
+                <div class="mock-console-field">
+                    <div class="mock-label">Product Name</div>
+                    <div class="mock-value">MoneyPilot Premium (Lifetime)</div>
+                </div>
+                <div class="checklist">
+                    <div class="checklist-item" onclick="toggleChecklist(this)">
+                        <div class="checklist-checkbox"></div>
+                        <div class="checklist-text">Navigate to <strong>Monetize > Products > One-time products</strong>.</div>
+                    </div>
+                    <div class="checklist-item" onclick="toggleChecklist(this)">
+                        <div class="checklist-checkbox"></div>
+                        <div class="checklist-text">Click <strong>Create product</strong>.</div>
+                    </div>
+                    <div class="checklist-item" onclick="toggleChecklist(this)">
+                        <div class="checklist-checkbox"></div>
+                        <div class="checklist-text">Paste the <strong>Product ID</strong> copied above.</div>
+                    </div>
+                    <div class="checklist-item" onclick="toggleChecklist(this)">
+                        <div class="checklist-checkbox"></div>
+                        <div class="checklist-text">Enter the details, set the price, and click <strong>Save</strong> and then <strong>Activate</strong>.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab 3: Subscription -->
+        <div id="sub" class="tab-content">
+            <div class="step-card">
+                <div class="step-badge">Step 3</div>
+                <h3 class="step-title">Configure Monthly Subscription</h3>
+                <p class="step-description">Create a subscription product to support monthly recurring billing.</p>
+                <div class="mock-console-field">
+                    <div class="mock-label">Product ID</div>
+                    <div class="mock-value">
+                        <span>premium_subscription_monthly</span>
+                        <button class="btn-copy" onclick="copyText('premium_subscription_monthly')">Copy</button>
+                    </div>
+                </div>
+                <div class="mock-console-field">
+                    <div class="mock-label">Product Name</div>
+                    <div class="mock-value">MoneyPilot Premium (Monthly)</div>
+                </div>
+                <div class="checklist">
+                    <div class="checklist-item" onclick="toggleChecklist(this)">
+                        <div class="checklist-checkbox"></div>
+                        <div class="checklist-text">Navigate to <strong>Monetize > Products > Subscriptions</strong>.</div>
+                    </div>
+                    <div class="checklist-item" onclick="toggleChecklist(this)">
+                        <div class="checklist-checkbox"></div>
+                        <div class="checklist-text">Click <strong>Create subscription</strong>.</div>
+                    </div>
+                    <div class="checklist-item" onclick="toggleChecklist(this)">
+                        <div class="checklist-checkbox"></div>
+                        <div class="checklist-text">Use the subscription <strong>Product ID</strong> copied above.</div>
+                    </div>
+                    <div class="checklist-item" onclick="toggleChecklist(this)">
+                        <div class="checklist-checkbox"></div>
+                        <div class="checklist-text">Add a <strong>Base Plan</strong>, set it to Auto-Renew, and define the monthly pricing.</div>
+                    </div>
+                    <div class="checklist-item" onclick="toggleChecklist(this)">
+                        <div class="checklist-checkbox"></div>
+                        <div class="checklist-text">Click <strong>Save</strong> and then <strong>Activate</strong>.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab 4: License Key -->
+        <div id="license" class="tab-content">
+            <div class="step-card">
+                <div class="step-badge">Step 4</div>
+                <h3 class="step-title">Configure App License Key</h3>
+                <p class="step-description">Retrieve your app's public licensing key to authorize secure signature checking.</p>
+                <div class="checklist">
+                    <div class="checklist-item" onclick="toggleChecklist(this)">
+                        <div class="checklist-checkbox"></div>
+                        <div class="checklist-text">In your Play Console, go to <strong>Monetize > Play Games Services > Setup and management > Configuration</strong> (or <strong>Monetization setup</strong>).</div>
+                    </div>
+                    <div class="checklist-item" onclick="toggleChecklist(this)">
+                        <div class="checklist-checkbox"></div>
+                        <div class="checklist-text">Find the <strong>Licensing & in-app billing</strong> section and copy the Base64 public key.</div>
+                    </div>
+                </div>
+                <div style="margin-top: 24px;">
+                    <div class="mock-label">Paste Play Console Licensing Public Key</div>
+                    <textarea class="key-input-area" id="key-input" placeholder="MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA..."></textarea>
+                    <button class="btn-action" onclick="alert('Copy your key and paste it as the BASE64_PLAY_CONSOLE_KEY constant value in BillingManager.kt.')">Generate Setup Instructions</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            document.getElementById(tabId).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        function toggleChecklist(element) {
+            element.classList.toggle('checked');
+        }
+
+        function copyText(text) {
+            navigator.clipboard.writeText(text);
+            alert('Copied to clipboard: ' + text);
+        }
+    </script>
+</body>
+</html>

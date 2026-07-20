@@ -151,6 +151,7 @@ fun SettingsScreen(
     val currentGoal by mainViewModel.financialGoal.collectAsState()
     val currentTarget by mainViewModel.monthlySavingsTarget.collectAsState()
     val isBiometricEnabled by mainViewModel.isBiometricEnabled.collectAsState()
+    val isPremium by mainViewModel.isPremium.collectAsState()
     val isDevToolEnabled by mainViewModel.isDevToolEnabled.collectAsState()
     val isSyncingState by mainViewModel.isSyncing.collectAsState()
 
@@ -631,21 +632,26 @@ fun SettingsScreen(
                         subtitle = stringResource(R.string.biometric_subtitle),
                         checked = isBiometricEnabled,
                         onCheckedChange = { checked ->
-                            analyticsHelper.logEvent(AnalyticsConstants.Event.SETTINGS_BIOMETRIC_TOGGLED, mapOf(AnalyticsConstants.Param.ENABLED to checked))
-                            if (activity != null) {
-                                if (checked) {
-                                    prasad.vennam.moneypilot.util.BiometricHelper.authenticate(
-                                        activity = activity,
-                                        title = enableBiometricLockText,
-                                        subtitle = enableBiometricSubtitleText,
-                                        onSuccess = { mainViewModel.setIsBiometricEnabled(true) },
-                                        onError = { @Suppress("LocalContextGetResourceValueCall") Toast.makeText(context, context.getString(R.string.auth_failed, it), Toast.LENGTH_SHORT).show() },
-                                    )
-                                } else {
-                                    mainViewModel.setIsBiometricEnabled(false)
-                                }
+                            if (!isPremium && checked) {
+                                Toast.makeText(context, "Biometric authentication is exclusively available to Premium users!", Toast.LENGTH_LONG).show()
+                                onNavigateToPremium()
                             } else {
-                                Toast.makeText(context, authRequiresRestartText, Toast.LENGTH_LONG).show()
+                                analyticsHelper.logEvent(AnalyticsConstants.Event.SETTINGS_BIOMETRIC_TOGGLED, mapOf(AnalyticsConstants.Param.ENABLED to checked))
+                                if (activity != null) {
+                                    if (checked) {
+                                        prasad.vennam.moneypilot.util.BiometricHelper.authenticate(
+                                            activity = activity,
+                                            title = enableBiometricLockText,
+                                            subtitle = enableBiometricSubtitleText,
+                                            onSuccess = { mainViewModel.setIsBiometricEnabled(true) },
+                                            onError = { @Suppress("LocalContextGetResourceValueCall") Toast.makeText(context, context.getString(R.string.auth_failed, it), Toast.LENGTH_SHORT).show() },
+                                        )
+                                    } else {
+                                        mainViewModel.setIsBiometricEnabled(false)
+                                    }
+                                } else {
+                                    Toast.makeText(context, authRequiresRestartText, Toast.LENGTH_LONG).show()
+                                }
                             }
                         },
                     )

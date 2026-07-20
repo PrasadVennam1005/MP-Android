@@ -36,6 +36,25 @@ fun AdBannerView(
 ) {
     if (isPremium) return
 
+    val isEmulator = remember {
+        val fingerprint = android.os.Build.FINGERPRINT ?: ""
+        val model = android.os.Build.MODEL ?: ""
+        val manufacturer = android.os.Build.MANUFACTURER ?: ""
+        val brand = android.os.Build.BRAND ?: ""
+        val device = android.os.Build.DEVICE ?: ""
+        val product = android.os.Build.PRODUCT ?: ""
+
+        fingerprint.contains("generic") ||
+            fingerprint.startsWith("unknown") ||
+            model.contains("google_sdk") ||
+            model.contains("sdk_gphone64_arm64") ||
+            manufacturer.contains("google") ||
+            (brand.startsWith("google") && device.startsWith("emu64a")) ||
+            product == "sdk_gphone64_arm64"
+    }
+
+    if (isEmulator) return
+
     val context = LocalContext.current
 
     BoxWithConstraints(

@@ -1,12 +1,17 @@
 package prasad.vennam.moneypilot.ui.premium
 
 import android.app.Activity
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfoV2
@@ -16,14 +21,19 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.android.billingclient.api.BillingClient
 import com.android.billingclient.api.ProductDetails
 import prasad.vennam.moneypilot.R
+import prasad.vennam.moneypilot.billing.BillingManager
 import prasad.vennam.moneypilot.util.AnalyticsConstants
 import prasad.vennam.moneypilot.util.AnalyticsHelper
 import prasad.vennam.moneypilot.util.TrackScreen
@@ -46,12 +56,15 @@ fun PremiumScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(id = R.string.premium_title)) },
+                title = { Text(stringResource(id = R.string.premium_title), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(id = R.string.back))
                     }
                 },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background
+                )
             )
         },
     ) { padding ->
@@ -59,24 +72,43 @@ fun PremiumScreen(
             modifier =
                 Modifier
                     .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.background)
                     .padding(padding)
                     .verticalScroll(rememberScrollState())
                     .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Icon(
-                imageVector = Icons.Default.Star,
-                contentDescription = null,
-                modifier = Modifier.size(80.dp),
-                tint = MaterialTheme.colorScheme.primary,
-            )
+            // Header Section with Gold/Amber Star
+            Box(
+                modifier = Modifier
+                    .size(100.dp)
+                    .background(
+                        brush = Brush.radialGradient(
+                            colors = listOf(
+                                MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
+                                Color.Transparent
+                            )
+                        ),
+                        shape = CircleShape
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Star,
+                    contentDescription = null,
+                    modifier = Modifier.size(64.dp),
+                    tint = Color(0xFFF59E0B), // Beautiful gold star
+                )
+            }
 
             Spacer(modifier = Modifier.height(16.dp))
 
             Text(
                 text = stringResource(id = R.string.upgrade_to_premium),
                 style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
+                fontWeight = FontWeight.ExtraBold,
+                textAlign = TextAlign.Center,
+                color = MaterialTheme.colorScheme.onBackground
             )
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -85,8 +117,73 @@ fun PremiumScreen(
                 text = stringResource(id = R.string.premium_description),
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(horizontal = 16.dp)
             )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Premium Features Checklist
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+                ),
+                shape = RoundedCornerShape(16.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Text(
+                        text = "Everything included in Premium:",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    val features = listOf(
+                        "Ad-Free Experience" to "Remove all banner and interstitial ads.",
+                        "AI Co-Pilot Assistant" to "Get intelligent insights and financial advice.",
+                        "Unlimited Sync & Backups" to "Keep your financial data synced across all devices.",
+                        "Custom Tags & Labels" to "Organize transactions with personalized categories.",
+                        "Advanced Analytics" to "Beautiful charts, trends, and projections.",
+                        "Premium Widgets" to "Access exclusive lockscreen and home widgets."
+                    )
+
+                    features.forEach { (title, desc) ->
+                        Row(
+                            verticalAlignment = Alignment.Top,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Check,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.secondary,
+                                modifier = Modifier
+                                    .size(20.dp)
+                                    .padding(top = 2.dp)
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column {
+                                Text(
+                                    text = title,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = desc,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                }
+            }
 
             Spacer(modifier = Modifier.height(32.dp))
 
@@ -97,9 +194,10 @@ fun PremiumScreen(
                         CardDefaults.cardColors(
                             containerColor = MaterialTheme.colorScheme.primaryContainer,
                         ),
+                    shape = RoundedCornerShape(20.dp)
                 ) {
                     Column(
-                        modifier = Modifier.padding(16.dp),
+                        modifier = Modifier.padding(24.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
                         Text(
@@ -112,7 +210,7 @@ fun PremiumScreen(
                         Text(
                             text = stringResource(id = R.string.premium_thank_you),
                             color = MaterialTheme.colorScheme.onPrimaryContainer,
-                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                            textAlign = TextAlign.Center,
                         )
                     }
                 }
@@ -120,14 +218,24 @@ fun PremiumScreen(
                 if (products.isEmpty()) {
                     CircularProgressIndicator()
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text(stringResource(id = R.string.loading_products))
+                    Text(stringResource(id = R.string.loading_products), color = MaterialTheme.colorScheme.onBackground)
                 } else {
+                    // Sort products: basic monthly first, standard monthly second, lifetime best value last
+                    val sortedProducts = products.sortedBy {
+                        when (it.productId) {
+                            "premium_subscription_monthly_49" -> 1
+                            "premium_subscription_monthly" -> 2
+                            BillingManager.PRODUCT_LIFETIME -> 3
+                            else -> 4
+                        }
+                    }
+
                     if (isExpanded) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(16.dp)
                         ) {
-                            products.forEach { product ->
+                            sortedProducts.forEach { product ->
                                 Box(modifier = Modifier.weight(1f)) {
                                     ProductCard(
                                         product = product,
@@ -143,7 +251,7 @@ fun PremiumScreen(
                             }
                         }
                     } else {
-                        products.forEach { product ->
+                        sortedProducts.forEach { product ->
                             ProductCard(
                                 product = product,
                                 onPurchaseClick = {
@@ -168,43 +276,155 @@ fun ProductCard(
     product: ProductDetails,
     onPurchaseClick: () -> Unit,
 ) {
+    val isLifetime = product.productId == BillingManager.PRODUCT_LIFETIME
+    
+    // Clean up fallback titles dynamically
+    val displayName = when (product.productId) {
+        BillingManager.PRODUCT_LIFETIME -> "MoneyPilot Premium (Lifetime)"
+        BillingManager.PRODUCT_SUBSCRIPTION -> "MoneyPilot Premium (Monthly)"
+        "premium_subscription_monthly_49" -> "MoneyPilot Premium (Basic Monthly)"
+        else -> product.name.replace("_", " ").split(" ").joinToString(" ") { it.replaceFirstChar { char -> char.uppercase() } }
+    }
+
+    val displayDesc = when (product.productId) {
+        BillingManager.PRODUCT_LIFETIME -> "Pay once, enjoy forever. Access all features and future updates."
+        BillingManager.PRODUCT_SUBSCRIPTION -> "Unlock full access with a standard monthly subscription."
+        "premium_subscription_monthly_49" -> "Unlock standard features with our basic monthly plan."
+        else -> product.description
+    }
+
+    // Card Colors & Text Colors
+    val cardBgColor = if (isLifetime) {
+        MaterialTheme.colorScheme.primaryContainer
+    } else {
+        MaterialTheme.colorScheme.surface
+    }
+
+    val onCardTextColor = if (isLifetime) {
+        MaterialTheme.colorScheme.onPrimaryContainer
+    } else {
+        MaterialTheme.colorScheme.onSurface
+    }
+
+    val onCardDescColor = if (isLifetime) {
+        MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+    } else {
+        MaterialTheme.colorScheme.onSurfaceVariant
+    }
+
+    val cardBorder = if (isLifetime) {
+        BorderStroke(
+            width = 2.dp,
+            brush = Brush.linearGradient(
+                colors = listOf(
+                    MaterialTheme.colorScheme.primary,
+                    MaterialTheme.colorScheme.tertiary
+                )
+            )
+        )
+    } else {
+        BorderStroke(
+            width = 1.dp,
+            color = MaterialTheme.colorScheme.outlineVariant
+        )
+    }
+
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(20.dp))
+            .border(cardBorder, shape = RoundedCornerShape(20.dp)),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = cardBgColor),
+        elevation = CardDefaults.cardElevation(defaultElevation = if (isLifetime) 0.dp else 1.dp),
     ) {
         Column(
-            modifier = Modifier.padding(16.dp),
+            modifier = Modifier.padding(20.dp),
         ) {
-            Text(
-                text = product.name,
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = product.description,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-
-            val price =
-                if (product.productType == BillingClient.ProductType.INAPP) {
-                    product.oneTimePurchaseOfferDetails?.formattedPrice ?: "N/A"
-                } else {
-                    product.subscriptionOfferDetails
-                        ?.firstOrNull()
-                        ?.pricingPhases
-                        ?.pricingPhaseList
-                        ?.firstOrNull()
-                        ?.formattedPrice ?: "N/A"
+            // Placement of badge at the top
+            if (isLifetime) {
+                Box(
+                    modifier = Modifier
+                        .background(
+                            brush = Brush.linearGradient(
+                                colors = listOf(
+                                    MaterialTheme.colorScheme.primary,
+                                    MaterialTheme.colorScheme.tertiary
+                                )
+                            ),
+                            shape = RoundedCornerShape(8.dp)
+                        )
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                ) {
+                    Text(
+                        text = "BEST VALUE",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = Color.White
+                    )
                 }
+                Spacer(modifier = Modifier.height(12.dp))
+            }
+
+            Text(
+                text = displayName,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.ExtraBold,
+                color = onCardTextColor
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Text(
+                text = displayDesc,
+                style = MaterialTheme.typography.bodyMedium,
+                color = onCardDescColor,
+            )
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            val price = if (product.productType == BillingClient.ProductType.INAPP) {
+                product.oneTimePurchaseOfferDetails?.formattedPrice ?: "N/A"
+            } else {
+                product.subscriptionOfferDetails
+                    ?.firstOrNull()
+                    ?.pricingPhases
+                    ?.pricingPhaseList
+                    ?.firstOrNull()
+                    ?.formattedPrice ?: "N/A"
+            }
+
+            // Button label logic
+            val buttonLabel = if (price.contains("Free", ignoreCase = true) || price == "₹0.00") {
+                "Start Free Trial"
+            } else {
+                stringResource(id = R.string.buy_for_price, price)
+            }
+
+            // Button colors matching card context
+            val buttonColors = if (isLifetime) {
+                ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
+                )
+            } else {
+                ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
+                )
+            }
 
             Button(
                 onClick = onPurchaseClick,
                 modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                colors = buttonColors
             ) {
-                Text(text = stringResource(id = R.string.buy_for_price, price))
+                Text(
+                    text = buttonLabel,
+                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.bodyLarge
+                )
             }
         }
     }
