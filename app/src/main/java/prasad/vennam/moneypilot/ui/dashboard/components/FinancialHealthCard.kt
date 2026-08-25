@@ -345,3 +345,22 @@ private fun calculateFinancialHealthScore(
 
     return score.coerceIn(0, 100)
 }
+
+@androidx.compose.ui.tooling.preview.Preview(showBackground = true)
+@Composable
+private fun FinancialHealthCardPreview() {
+    prasad.vennam.moneypilot.ui.theme.MoneyPilotTheme {
+        FinancialHealthCard(
+            savingsRate = 0.25,
+            totalDebt = 500.0,
+            periodIncome = 4000.0,
+            totalInvestment = 12000.0,
+            hasEmergencyFund = true,
+            budgetExceededCount = 0,
+            isPremium = true,
+            onNavigateToPremium = {},
+            onNavigateToAiChat = {}
+        )
+    }
+}
+

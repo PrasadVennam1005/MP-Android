@@ -102,10 +102,6 @@ fun DetailedReportScreen(
             }
         }
 
-//        item {
-//            ExportActions(onExport = { /* TODO: Implement Export */ })
-//        }
-
         item { Spacer(modifier = Modifier.height(24.dp)) }
     }
 }

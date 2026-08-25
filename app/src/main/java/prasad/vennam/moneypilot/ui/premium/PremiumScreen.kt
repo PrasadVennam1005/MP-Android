@@ -32,6 +32,8 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.android.billingclient.api.BillingClient
 import com.android.billingclient.api.ProductDetails
+import androidx.compose.ui.tooling.preview.Preview
+import prasad.vennam.moneypilot.ui.theme.MoneyPilotTheme
 import prasad.vennam.moneypilot.R
 import prasad.vennam.moneypilot.billing.BillingManager
 import prasad.vennam.moneypilot.util.AnalyticsConstants
@@ -105,137 +107,97 @@ fun PremiumScreen(
 
             Text(
                 text = stringResource(id = R.string.upgrade_to_premium),
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.ExtraBold,
+                style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
                 textAlign = TextAlign.Center,
-                color = MaterialTheme.colorScheme.onBackground
             )
 
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
                 text = stringResource(id = R.string.premium_description),
-                style = MaterialTheme.typography.bodyLarge,
+                style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
-                modifier = Modifier.padding(horizontal = 16.dp)
             )
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Premium Features Checklist
+            // Features List Card
             Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 8.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
-                ),
-                shape = RoundedCornerShape(16.dp)
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
+                shape = RoundedCornerShape(16.dp),
             ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Text(
-                        text = "Everything included in Premium:",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-
+                Column(modifier = Modifier.padding(16.dp)) {
                     val features = listOf(
-                        "Ad-Free Experience" to "Remove all banner and interstitial ads.",
-                        "AI Co-Pilot Assistant" to "Get intelligent insights and financial advice.",
-                        "Unlimited Sync & Backups" to "Keep your financial data synced across all devices.",
-                        "Custom Tags & Labels" to "Organize transactions with personalized categories.",
-                        "Advanced Analytics" to "Beautiful charts, trends, and projections.",
-                        "Premium Widgets" to "Access exclusive lockscreen and home widgets."
+                        "Ad-Free Experience",
+                        "AI Co-Pilot Assistant",
+                        "Unlimited Sync & Backups",
+                        "Custom Tags & Labels",
+                        "Advanced Analytics",
+                        "Premium Widgets"
                     )
 
-                    features.forEach { (title, desc) ->
+                    features.forEach { feature ->
                         Row(
-                            verticalAlignment = Alignment.Top,
-                            modifier = Modifier.fillMaxWidth()
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(vertical = 6.dp),
                         ) {
                             Icon(
-                                imageVector = Icons.Default.Check,
+                                Icons.Default.Check,
                                 contentDescription = null,
-                                tint = MaterialTheme.colorScheme.secondary,
-                                modifier = Modifier
-                                    .size(20.dp)
-                                    .padding(top = 2.dp)
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(20.dp),
                             )
                             Spacer(modifier = Modifier.width(12.dp))
-                            Column {
-                                Text(
-                                    text = title,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                                Text(
-                                    text = desc,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
+                            Text(text = feature, style = MaterialTheme.typography.bodyMedium)
                         }
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
             if (isPremium) {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    colors =
-                        CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.primaryContainer,
-                        ),
-                    shape = RoundedCornerShape(20.dp)
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+                    shape = RoundedCornerShape(16.dp),
                 ) {
                     Column(
                         modifier = Modifier.padding(24.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
-                        Text(
-                            text = stringResource(id = R.string.you_are_premium),
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        Icon(
+                            imageVector = Icons.Default.Check,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                            modifier = Modifier.size(48.dp),
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = stringResource(id = R.string.premium_thank_you),
+                            text = stringResource(id = R.string.you_are_premium),
+                            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
                             color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        )
+                        Text(
+                            text = stringResource(id = R.string.premium_thank_you),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f),
                             textAlign = TextAlign.Center,
                         )
                     }
                 }
             } else {
                 if (products.isEmpty()) {
-                    CircularProgressIndicator()
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(stringResource(id = R.string.loading_products), color = MaterialTheme.colorScheme.onBackground)
+                    CircularProgressIndicator(modifier = Modifier.padding(32.dp))
                 } else {
-                    // Sort products: basic monthly first, standard monthly second, lifetime best value last
-                    val sortedProducts = products.sortedBy {
-                        when (it.productId) {
-                            "premium_subscription_monthly_49" -> 1
-                            "premium_subscription_monthly" -> 2
-                            BillingManager.PRODUCT_LIFETIME -> 3
-                            else -> 4
-                        }
-                    }
-
                     if (isExpanded) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(16.dp)
                         ) {
-                            sortedProducts.forEach { product ->
+                            products.forEach { product ->
                                 Box(modifier = Modifier.weight(1f)) {
                                     ProductCard(
                                         product = product,
@@ -251,7 +213,7 @@ fun PremiumScreen(
                             }
                         }
                     } else {
-                        sortedProducts.forEach { product ->
+                        products.forEach { product ->
                             ProductCard(
                                 product = product,
                                 onPurchaseClick = {
@@ -425,6 +387,44 @@ fun ProductCard(
                     fontWeight = FontWeight.Bold,
                     style = MaterialTheme.typography.bodyLarge
                 )
+            }
+        }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun PremiumActiveCardPreview() {
+    MoneyPilotTheme {
+        Box(modifier = Modifier.padding(16.dp)) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+                shape = RoundedCornerShape(16.dp),
+            ) {
+                Column(
+                    modifier = Modifier.padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Check,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                        modifier = Modifier.size(48.dp),
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = stringResource(id = R.string.you_are_premium),
+                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    )
+                    Text(
+                        text = stringResource(id = R.string.premium_thank_you),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f),
+                        textAlign = TextAlign.Center,
+                    )
+                }
             }
         }
     }

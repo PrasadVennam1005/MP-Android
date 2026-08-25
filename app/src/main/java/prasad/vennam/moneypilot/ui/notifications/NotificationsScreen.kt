@@ -40,6 +40,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -49,6 +50,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import kotlinx.coroutines.launch
 import prasad.vennam.moneypilot.R
 import prasad.vennam.moneypilot.data.entity.Notification
+import prasad.vennam.moneypilot.ui.theme.MoneyPilotTheme
 import prasad.vennam.moneypilot.ui.viewmodel.NotificationViewModel
 import prasad.vennam.moneypilot.util.AnalyticsConstants
 import prasad.vennam.moneypilot.util.AnalyticsHelper
@@ -760,3 +762,34 @@ private fun formatTime(timestamp: Long): String {
         SimpleDateFormat("MMM dd", locale).format(date)
     }
 }
+
+@Preview(showBackground = true)
+@Composable
+private fun NotificationItemCardPreview() {
+    MoneyPilotTheme {
+        Box(modifier = Modifier.padding(16.dp)) {
+            NotificationItemCard(
+                notification = Notification(
+                    id = 1L,
+                    title = "Monthly Budget Alert",
+                    message = "You have spent 85% of your Dining budget.",
+                    category = "Budget",
+                    timestamp = System.currentTimeMillis(),
+                    isRead = false,
+                    url = null
+                ),
+                onNavigateToWeb = { _, _ -> },
+                onLogSubscriptionClick = {}
+            )
+        }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun EmptyNotificationsStatePreview() {
+    MoneyPilotTheme {
+        EmptyNotificationsState(category = "All")
+    }
+}
+
